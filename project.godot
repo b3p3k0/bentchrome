@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Bent Chrome"
 config/description="Top-down vehicular combat game with grimy dystopian flair"
-run/main_scene="res://scenes/ui/PlayerSelect.tscn"
+run/main_scene="res://scenes/ui/SplashScreen.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 

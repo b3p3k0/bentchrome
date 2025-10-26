@@ -1,0 +1,127 @@
+[gd_scene load_steps=5 format=3 uid="uid://b4n8xqkl3hcvb"]
+
+[ext_resource type="Texture2D" uid="uid://c5p0u1oxj0aom" path="res://assets/img/story/splashscreen.png" id="1_4w8v6"]
+[ext_resource type="Script" path="res://scripts/ui/splash_screen.gd" id="2_6sgjf"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_welcome"]
+font_size = 24
+
+[sub_resource type="LabelSettings" id="LabelSettings_help"]
+font_size = 14
+
+[node name="SplashScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("2_6sgjf")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("1_4w8v6")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.3)
+mouse_filter = 2
+
+[node name="UIGrid" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 3
+
+[node name="Cell0" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell1" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell2" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell3" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell4" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell5" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell6" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Cell7" type="MarginContainer" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="MenuBox" type="VBoxContainer" parent="UIGrid/Cell7"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+alignment = 1
+
+[node name="WelcomeLabel" type="Label" parent="UIGrid/Cell7/MenuBox"]
+layout_mode = 2
+text = "Welcome to Bent Chrome"
+label_settings = SubResource("LabelSettings_welcome")
+horizontal_alignment = 1
+vertical_alignment = 1
+modulate = Color(0.8, 1, 1, 1)
+
+[node name="StartButton" type="Button" parent="UIGrid/Cell7/MenuBox"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+focus_mode = 2
+text = "Start 1P"
+
+[node name="HelpLabel" type="Label" parent="UIGrid/Cell7/MenuBox"]
+layout_mode = 2
+text = "Enter / Space / A to start"
+label_settings = SubResource("LabelSettings_help")
+horizontal_alignment = 1
+vertical_alignment = 1
+modulate = Color(0.7, 0.7, 0.7, 1)
+
+[node name="Cell8" type="Control" parent="UIGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
