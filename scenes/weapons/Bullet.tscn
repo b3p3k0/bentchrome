@@ -3,11 +3,11 @@
 [ext_resource type="Script" path="res://scripts/weapons/bullet.gd" id="1_4t8q9"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_8h4k2"]
-size = Vector2(8, 16)
+size = Vector2(8, 8)
 
 [node name="Bullet" type="Area2D"]
 collision_layer = 4
-collision_mask = 6
+collision_mask = 11
 script = ExtResource("1_4t8q9")
 
 [node name="Visual" type="ColorRect" parent="."]
@@ -17,9 +17,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -4.0
-offset_top = -8.0
+offset_top = -4.0
 offset_right = 4.0
-offset_bottom = 8.0
+offset_bottom = 4.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(1, 0.8, 0, 1)

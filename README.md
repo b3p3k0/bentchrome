@@ -14,19 +14,38 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 ## Getting Started & Controls
 
-- Movement: `WASD` or left stick. It’s drift-heavy; oversteer is a feature.
+### Player Selection
+When you first boot up Bent Chrome, you'll land in the Player Selection screen where you can browse through 9 hardened drivers and their combat-ready rides. Each character has unique stats and backstory that affect their performance in the arena.
+
+**Player Selection Controls:**
+- Navigate: `A/D`, `Left/Right arrows`, `D-pad Left/Right`, or `left stick X-axis` to scroll through characters
+- More Info: `W` or `Square/West face button` to open detailed character bio and expanded stats
+- Confirm: `Enter`, `Space`, or `Cross/South face button` to select your driver and enter the arena
+- Close Bio: `W` or `Square/West face button` again to close the character bio popup
+
+Each character has five core combat statistics rated 1-5:
+- **Acceleration**: How quickly your vehicle reaches top speed
+- **Top Speed**: Maximum velocity in straight-line runs
+- **Handling**: Responsiveness and control precision
+- **Armor**: Resistance to collision damage and weapons fire
+- **Special Power**: Effectiveness of special weapon systems
+
+After confirming your selection, you'll drop directly into the Test Arena to put your chosen driver through their paces.
+
+### Combat Controls
+- Movement: `WASD` moves strictly up/down/left/right with acceleration/deceleration for 16-bit arcade feel. Last key pressed wins; no diagonal movement. Controllers follow the same 4-direction rules (`arrow keys`, `D-pad`, `left stick` also supported).
 - Aim/Fire: mouse or right stick to aim, left click / right trigger to hose bullets.
-- Special Weapon: `Space` / north face button. Cooldown regenerates—don’t hoard it.
+- Special Weapon: `Space` / north face button. Cooldown regenerates—don't hoard it.
 - Turbo: `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes.
 - Camera: mouse edge-pan or right stick nudge, depending on your input poison.
-- HUD: flashing red means you’re about to join the scrap heap. Hunt for repair pods or lean into the fireworks.
+- HUD: flashing red means you're about to join the scrap heap. Hunt for repair pods or lean into the fireworks.
 
 First arena (Arena) is the tutorial crash-test. Freeway introduces overpasses and multipoint ambushes. Expect hidden pickups tucked behind debris piles; if you see a suspicious billboard, ram it.
 
 ## FAQs
 
 **Keyboard or controller?**  
-Both. Controller gets the comfy curves, keyboard got tuned so it doesn’t feel like steering a forklift in molasses.
+Both. Both inputs use the same 4-direction movement with responsive acceleration/deceleration for precise arcade control.
 
 **Can I remap controls?**  
 Yep—Settings > Controls. If something refuses to bind, log an issue and we’ll slap it back into shape.
@@ -39,6 +58,9 @@ Campaign checkpoints between arenas, inventory persists, permadeath stays in the
 
 **Performance target?**  
 Locked 60 FPS on mid-range GPUs. Send logs and specs if it dips; we’ll optimize instead of guessing.
+
+**Sometimes my weapon fires in the "wrong" direction**
+This is by design - get good and learn how to do trick shots ;)
 
 **"wHy DiD u UsE aI???"**
 Because I can't code and I can't draw and instead of spending hours learning how to do both I did this instead. ¯\\\_(ツ)\_/¯

@@ -6,13 +6,16 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1m9k5"]
 size = Vector2(40, 60)
 
-[node name="PlayerCar" type="CharacterBody2D" groups=["player"]]
-collision_layer = 1
+[node name="PlayerCar" type="CharacterBody2D" groups=["player", "vehicles"]]
+collision_layer = 2
+collision_mask = 9
 script = ExtResource("1_7k2m8")
 bullet_scene = ExtResource("2_h9k3v")
 fire_rate = 5.0
 
-[node name="Visual" type="ColorRect" parent="."]
+[node name="Visuals" type="Node2D" parent="."]
+
+[node name="Visual" type="ColorRect" parent="Visuals"]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -26,6 +29,35 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.8, 0.2, 0.2, 1)
 
+[node name="FrontMarker" type="ColorRect" parent="Visuals"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -15.0
+offset_top = -35.0
+offset_right = 15.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0.8, 0.8, 1)
+
+[node name="MuzzleFlash" type="ColorRect" parent="Visuals"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -39.0
+offset_right = 4.0
+offset_bottom = -31.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.8, 0, 1)
+visible = false
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_1m9k5")
 
@@ -36,3 +68,12 @@ position = Vector2(0, -35)
 volume_db = -80.0
 autoplay = false
 ; TODO assign machine gun SFX
+
+[node name="CollisionSensor" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 8
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionSensor"]
+shape = SubResource("RectangleShape2D_1m9k5")

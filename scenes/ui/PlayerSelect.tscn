@@ -1,0 +1,290 @@
+[gd_scene load_steps=3 format=3 uid="uid://b9wp3xgv4pu7x"]
+
+[ext_resource type="Script" path="res://scripts/ui/player_select.gd" id="1_select"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.05, 0.05, 0.1, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.6, 0.7, 1)
+
+[node name="PlayerSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_select")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.1, 0.12, 1)
+
+[node name="PortraitContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+
+[node name="Portrait" type="TextureRect" parent="PortraitContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+stretch_mode = 4
+
+[node name="InfoOverlay" type="MarginContainer" parent="PortraitContainer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -200.0
+offset_right = 250.0
+offset_bottom = 200.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PortraitContainer/InfoOverlay"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="CarName" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Bumper"
+horizontal_alignment = 1
+
+[node name="DriverName" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Tank Morrison"
+horizontal_alignment = 1
+
+[node name="VSeparator" type="VSeparator" parent="PortraitContainer/InfoOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StatsContainer" type="GridContainer" parent="PortraitContainer/InfoOverlay/VBoxContainer"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 8
+
+[node name="AccelLabel" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Acceleration:"
+horizontal_alignment = 2
+
+[node name="AccelValue" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "2"
+
+[node name="SpeedLabel" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Top Speed:"
+horizontal_alignment = 2
+
+[node name="SpeedValue" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "3"
+
+[node name="HandlingLabel" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Handling:"
+horizontal_alignment = 2
+
+[node name="HandlingValue" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "2"
+
+[node name="ArmorLabel" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Armor:"
+horizontal_alignment = 2
+
+[node name="ArmorValue" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "5"
+
+[node name="SpecialLabel" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Special Power:"
+horizontal_alignment = 2
+
+[node name="SpecialValue" type="Label" parent="PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "4"
+
+[node name="NavigationHelpers" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LeftArrow" type="Label" parent="NavigationHelpers"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 50.0
+offset_top = -12.0
+offset_right = 80.0
+offset_bottom = 12.0
+theme_override_font_sizes/font_size = 24
+text = "<"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RightArrow" type="Label" parent="NavigationHelpers"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -12.0
+offset_right = -50.0
+offset_bottom = 12.0
+theme_override_font_sizes/font_size = 24
+text = ">"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BottomInstructions" type="VBoxContainer" parent="NavigationHelpers"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = -20.0
+theme_override_constants/separation = 8
+
+[node name="ScrollHelp" type="Label" parent="NavigationHelpers/BottomInstructions"]
+layout_mode = 2
+text = "Scroll with arrow keys or A/D"
+horizontal_alignment = 1
+
+[node name="MoreInfoHelp" type="Label" parent="NavigationHelpers/BottomInstructions"]
+layout_mode = 2
+text = "Press W / □ for bio"
+horizontal_alignment = 1
+
+[node name="ConfirmHelp" type="Label" parent="NavigationHelpers/BottomInstructions"]
+layout_mode = 2
+text = "Enter / Space / ✕ to confirm"
+horizontal_alignment = 1
+
+[node name="MoreInfoDialog" type="PopupPanel" parent="."]
+initial_position = 1
+size = Vector2i(600, 400)
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="DialogContent" type="MarginContainer" parent="MoreInfoDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MoreInfoDialog/DialogContent"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Title" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Bumper - Tank Morrison"
+horizontal_alignment = 1
+
+[node name="FlavorText" type="RichTextLabel" parent="MoreInfoDialog/DialogContent/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Tank earned his nickname the hard way - by turning every fender-bender into a demolition derby. His reinforced bumper has seen more action than a prizefighter's fists. When the dust settles, Tank's still rolling."
+scroll_active = false
+
+[node name="StatsTitle" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Combat Statistics"
+horizontal_alignment = 1
+
+[node name="DetailedStats" type="GridContainer" parent="MoreInfoDialog/DialogContent/VBoxContainer"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 30
+theme_override_constants/v_separation = 8
+
+[node name="AccelLabel2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "Acceleration:"
+horizontal_alignment = 2
+
+[node name="AccelValue2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "2/5"
+
+[node name="SpeedLabel2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "Top Speed:"
+horizontal_alignment = 2
+
+[node name="SpeedValue2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "3/5"
+
+[node name="HandlingLabel2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "Handling:"
+horizontal_alignment = 2
+
+[node name="HandlingValue2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "2/5"
+
+[node name="ArmorLabel2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "Armor:"
+horizontal_alignment = 2
+
+[node name="ArmorValue2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "5/5"
+
+[node name="SpecialLabel2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "Special Power:"
+horizontal_alignment = 2
+
+[node name="SpecialValue2" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats"]
+layout_mode = 2
+text = "4/5"
+
+[node name="CloseHelp" type="Label" parent="MoreInfoDialog/DialogContent/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Press W / □ to close"
+horizontal_alignment = 1

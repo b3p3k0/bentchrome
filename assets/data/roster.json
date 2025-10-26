@@ -1,0 +1,131 @@
+{
+  // Writers: update values as needed
+  "characters": [
+    {
+      "id": "bumper",
+      "car_name": "Bumper",
+      "driver_name": "Tank Morrison",
+      "flavor": "Tank earned his nickname the hard way - by turning every fender-bender into a demolition derby. His reinforced bumper has seen more action than a prizefighter's fists. When the dust settles, Tank's still rolling.",
+      "stats": {
+        "acceleration": 2,
+        "top_speed": 3,
+        "handling": 2,
+        "armor": 5,
+        "special_power": 4
+      },
+      "portrait": "res://assets/img/bios/bumper.png"
+    },
+    {
+      "id": "cricket",
+      "car_name": "Cricket",
+      "driver_name": "Jinx Reilly",
+      "flavor": "Small, fast, and twice as mean as anything twice her size. Jinx bounces between cover like her namesake insect, striking when you least expect it. Don't let the compact frame fool you - this Cricket has a hell of a bite.",
+      "stats": {
+        "acceleration": 5,
+        "top_speed": 4,
+        "handling": 5,
+        "armor": 1,
+        "special_power": 3
+      },
+      "portrait": "res://assets/img/bios/cricket.png"
+    },
+    {
+      "id": "ghost",
+      "car_name": "Ghost",
+      "driver_name": "Shade Walker",
+      "flavor": "Appears out of nowhere, strikes without warning, vanishes before you can retaliate. Walker's mastery of hit-and-run tactics has earned him a reputation that borders on supernatural. Some say he's not quite human anymore.",
+      "stats": {
+        "acceleration": 4,
+        "top_speed": 5,
+        "handling": 4,
+        "armor": 2,
+        "special_power": 5
+      },
+      "portrait": "res://assets/img/bios/ghost.png"
+    },
+    {
+      "id": "hammertoe",
+      "car_name": "Hammertoe",
+      "driver_name": "Brick Kowalski",
+      "flavor": "Subtlety died the day Brick got behind the wheel. His approach to vehicular combat is refreshingly direct: ram first, ask questions later. The heavily armored Hammertoe has never met an obstacle it couldn't flatten.",
+      "stats": {
+        "acceleration": 1,
+        "top_speed": 2,
+        "handling": 1,
+        "armor": 5,
+        "special_power": 4
+      },
+      "portrait": "res://assets/img/bios/hammertoe.png"
+    },
+    {
+      "id": "kandykane",
+      "car_name": "Kandy Kane",
+      "driver_name": "Sugar Rush",
+      "flavor": "Sweet on the outside, explosive on the inside. Sugar's deceptively cheerful demeanor masks a pyromaniac's love for carnage. Her candy-striped ride delivers treats that go boom rather than satisfy your sweet tooth.",
+      "stats": {
+        "acceleration": 3,
+        "top_speed": 4,
+        "handling": 3,
+        "armor": 2,
+        "special_power": 5
+      },
+      "portrait": "res://assets/img/bios/kandykane.png"
+    },
+    {
+      "id": "mrghastly",
+      "car_name": "Mr. Ghastly",
+      "driver_name": "Doc Mortis",
+      "flavor": "Death rides shotgun with the good doctor. Mortis treats every engagement like a clinical study in mortality, cataloguing each impact with scientific precision. His bedside manner is as cold as his victims.",
+      "stats": {
+        "acceleration": 2,
+        "top_speed": 3,
+        "handling": 4,
+        "armor": 3,
+        "special_power": 5
+      },
+      "portrait": "res://assets/img/bios/mrghastly.png"
+    },
+    {
+      "id": "razorback",
+      "car_name": "Razorback",
+      "driver_name": "Spike Hernandez",
+      "flavor": "Sharp edges and sharper reflexes define Spike's driving style. The Razorback's serrated armor isn't just for show - it's a promise. Get too close and you'll find out why they call him the human cheese grater.",
+      "stats": {
+        "acceleration": 4,
+        "top_speed": 4,
+        "handling": 3,
+        "armor": 3,
+        "special_power": 3
+      },
+      "portrait": "res://assets/img/bios/razorback.png"
+    },
+    {
+      "id": "smoky",
+      "car_name": "Smoky",
+      "driver_name": "Ash Cinder",
+      "flavor": "Where Ash goes, smoke follows - usually from the wreckage of her enemies. Her exhaust pipes belch more than fumes; they breathe fire like an angry dragon. The Smoky doesn't just burn rubber, it burns everything.",
+      "stats": {
+        "acceleration": 3,
+        "top_speed": 5,
+        "handling": 2,
+        "armor": 2,
+        "special_power": 4
+      },
+      "portrait": "res://assets/img/bios/smoky.png"
+    },
+    {
+      "id": "splatcat",
+      "car_name": "Splat Cat",
+      "driver_name": "Felix Mayhem",
+      "flavor": "Nine lives ain't enough for the kind of stunts Felix pulls. This alley cat treats physics like a suggestion and gravity like a personal insult. The Splat Cat always lands on its wheels, usually on top of someone else.",
+      "stats": {
+        "acceleration": 5,
+        "top_speed": 3,
+        "handling": 5,
+        "armor": 1,
+        "special_power": 2
+      },
+      "portrait": "res://assets/img/bios/splatcat.png"
+    }
+  ]
+}
