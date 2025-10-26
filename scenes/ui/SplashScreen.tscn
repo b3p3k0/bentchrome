@@ -110,7 +110,15 @@ modulate = Color(0.8, 1, 1, 1)
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 focus_mode = 2
+focus_neighbor_bottom = NodePath("../StoryButton")
 text = "Start 1P"
+
+[node name="StoryButton" type="Button" parent="UIGrid/Cell7/MenuBox"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+focus_mode = 2
+focus_neighbor_top = NodePath("../StartButton")
+text = "Story"
 
 [node name="HelpLabel" type="Label" parent="UIGrid/Cell7/MenuBox"]
 layout_mode = 2
