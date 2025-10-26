@@ -1,0 +1,65 @@
+[gd_scene load_steps=5 format=3 uid="uid://bfqm2xgv3pu6w"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_horizontal"]
+size = Vector2(1340, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_vertical"]
+size = Vector2(40, 780)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_top"]
+size = Vector2(1340, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_bottom"]
+size = Vector2(1340, 40)
+
+[node name="TestArena" type="Node2D"]
+
+[node name="Floor" type="ColorRect" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -640.0
+offset_top = -360.0
+offset_right = 640.0
+offset_bottom = 360.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.227451, 0.227451, 0.227451, 1)
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="WallTop" type="StaticBody2D" parent="Walls"]
+position = Vector2(0, -20)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/WallTop"]
+shape = SubResource("RectangleShape2D_wall_top")
+
+[node name="WallBottom" type="StaticBody2D" parent="Walls"]
+position = Vector2(0, 740)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/WallBottom"]
+shape = SubResource("RectangleShape2D_wall_bottom")
+
+[node name="WallLeft" type="StaticBody2D" parent="Walls"]
+position = Vector2(-20, 360)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/WallLeft"]
+shape = SubResource("RectangleShape2D_wall_vertical")
+
+[node name="WallRight" type="StaticBody2D" parent="Walls"]
+position = Vector2(1300, 360)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/WallRight"]
+shape = SubResource("RectangleShape2D_wall_vertical")
+
+[node name="AudioPlaceholders" type="Node2D" parent="."]
+
+[node name="EngineIdleAudio" type="AudioStreamPlayer2D" parent="AudioPlaceholders"]
+autoplay = false
+; TODO: assign engine idle SFX when assets arrive
+
+[node name="WeaponEffectsAudio" type="AudioStreamPlayer2D" parent="AudioPlaceholders"]
+autoplay = false
+; TODO: assign weapon SFX when assets arrive

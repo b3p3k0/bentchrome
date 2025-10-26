@@ -1,0 +1,177 @@
+BENT CHROME – MASTER DESIGN DOCUMENT v0.3
+------------------------------------------
+
+1. OVERVIEW
+------------
+Title: Bent Chrome
+Genre: Top-down vehicular combat
+Style: 16-bit retro arcade with grimy dystopian flair
+Inspirations: Twisted Metal, GTA (1997), Escape from L.A., Running Man, Cyberpunk 2020
+Engine target: Godot 4 (preferred) or Unity 2D
+Platforms: Linux, Windows, macOS
+Input: Keyboard, Mouse, USB/BT controllers (SDL2 or native API)
+
+Core Pillars:
+- Speed and destruction
+- Distinct vehicle feel
+- Environmental chaos and verticality
+- Tight combat flow and scavenging pressure
+- Exploration rewarded through secrets and boosts
+
+
+2. CORE GAMEPLAY
+-----------------
+Loop:
+1. Enter arena → engage enemies
+2. Scavenge for weapons and power-ups
+3. Destroy opponents and structures for score and survival
+4. Survive until victory or meet level objective
+
+Movement:
+- Eight-direction drive model with inertia and drift
+- Surface modifiers:
+  * Road – standard handling
+  * Dirt – reduced traction
+  * Shallow water – passable, slows vehicle and affects handling
+  * Deep water – impassable
+- Jumps and pits for vertical variety
+
+Combat:
+- Machine Guns: standard, infinite ammo
+- Primary Weapons: missiles, mines, or other collidable gimmicks. Limited ammo; replenished through pickups.
+- Special Weapon: unique to each car, regenerates automatically up to a per-car maximum.
+- Power-ups: temporary boosts (speed, armor, overdrive, etc.)
+- Pickups: found in destructible objects or hidden locations.
+
+Health:
+- Major restore points: fully restore health; up to three total uses per level (shared cooldown).
+- Minor health boosts: randomly restore 10–30% HP.
+- On respawn, player begins with a limited predefined loadout.
+- Inventory (primary ammo, etc.) carries forward between levels.
+
+Opponents:
+- Each level contains 1–7 enemy vehicles.
+- Each car has a predefined spawn point.
+- Cars are randomly assigned to spawn points at level start.
+
+
+3. VEHICLE DESIGN
+------------------
+Philosophy: every vehicle has unique handling, weapons, and silhouette readability from top-down.
+
+Parameters:
+- Speed, armor, handling
+- Machine Gun: common baseline weapon
+- Primary Weapon: ammo-limited, replenished by pickups
+- Special Weapon: unique per car, auto-recharges at set rate and max
+- Visual and thematic consistency with driver backstory
+
+
+4. ENEMY AND AI
+----------------
+Archetypes:
+- Aggressor: relentlessly chases player
+- Ambusher: uses cover and attacks opportunistically
+- Defender: guards territory or objectives
+- Mini-boss: unique mechanic or terrain exploit
+- Boss: scripted pattern, high HP, unique weapon
+
+AI behavior should create variety and unpredictability through movement, targeting, and aggression variance.
+
+
+5. LEVELS AND PROGRESSION
+--------------------------
+Total: 6 levels (2 small, 3 medium, 1 large)
+
+LEVEL ORDER:
+1. **Arena (Small)**  
+   - 1 enemy  
+   - Compact test level and intro stage  
+   - Used for player onboarding and control tutorial  
+
+2. **Freeway (Medium)**  
+   - 3 enemies  
+   - Tall, vertical map design  
+   - Multi-level freeway interchange with overpasses and ramps  
+
+3. **Suburbs (Medium)**  
+   - 5 enemies  
+   - Flat terrain, destructible houses and fences, small trees  
+   - Wide streets, minimal elevation change  
+
+4. **Junkyard (Mini-Boss Arena, Small+)**  
+   - Single mini-boss fight  
+   - Destructible piles of crushed cars can be toppled for damage  
+   - Limited open space and debris hazards  
+
+5. **Downtown (Large)**  
+   - 7 enemies  
+   - Final main arena before boss fight  
+   - Expansive city center surrounded by indestructible skyscrapers  
+   - Central park and public square with a large statue or monument as landmark  
+   - Some destructible mid-rise buildings, barricades, and elevated highways on edges  
+   - Acts as transition to final encounter  
+
+6. **Central Park (Medium, Boss Arena)**  
+   - Boss fight stage  
+   - Set within the central park section of the Downtown map  
+   - Traps the player in the remaining accessible zone after Level 5  
+   - Layout continuity is critical: terrain, objects, and skyline should visually match Level 5’s depiction  
+   - Smaller playable area emphasizing claustrophobia and climax tension  
+   - The boss leverages the environment (e.g., environmental hazards, destructible obstacles, dynamic cover)
+
+Exploration and Secrets:
+- Hidden spots grant small health boosts, power-ups, or humorous easter eggs.
+- Exploration is secondary but rewarded.
+
+Environment Features:
+- Destructible props encourage active destruction.
+- Verticality through ramps, overpasses, rooftops, and pits.
+- Environmental hazards such as explosive barrels, electrical boxes, or crumbling debris.
+
+
+6. ATMOSPHERE AND AESTHETIC
+----------------------------
+Tone: grimy, decaying near-future dystopia; a commercialized bloodsport world.
+Visuals:
+- Corroded steel, cracked asphalt, flickering neon, holo-ads
+- Industrial haze and smog layers
+- Signs and graffiti reflecting over-commercialized culture
+
+Audio:
+- Synth-industrial and heavy metal fusion soundtrack
+- Engine growls, collisions, gunfire, ambient dystopian PA chatter
+
+
+7. TECHNICAL FRAMEWORK
+-----------------------
+Engine: Godot 4 (GDScript + optional C# modules)
+Physics: Tilemap terrain + lightweight rigid-body vehicles
+Rendering: 2D sprites with pseudo-lighting overlays
+Input: SDL2 or native controller API abstraction
+Packaging: AppImage (Linux), with optional Flatpak later
+Target Performance: 60 FPS locked on mid-range GPUs
+
+
+8. FUTURE EXPANSION HOOKS
+--------------------------
+- Local or online multiplayer
+- Vehicle customization
+- Replay and photo modes
+- Alternate campaign paths or endless survival mode
+
+
+9. DESIGN GOALS SUMMARY
+------------------------
+| Pillar         | Focus                                    |
+|----------------|-------------------------------------------|
+| Speed          | Tight control, low latency                |
+| Destruction    | Chain reactions, breakable props          |
+| Improvisation  | Scavenging under fire                     |
+| Readability    | Clear top-down silhouettes                |
+| Verticality    | Ramps, pits, multi-tier areas             |
+| Dystopian Tone | Cohesive art, sound, and world design     |
+| Replayability  | Persistent inventory, multiple car loadouts|
+
+------------------------------------------
+END OF DOCUMENT

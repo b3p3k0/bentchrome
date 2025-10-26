@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3 uid="uid://clwjfve5rnpsy"]
+
+[ext_resource type="PackedScene" uid="uid://b8qm3xgv2pu5w" path="res://scenes/vehicles/PlayerCar.tscn" id="1_m7d9k"]
+[ext_resource type="PackedScene" uid="uid://bfqm2xgv3pu6w" path="res://scenes/environment/TestArena.tscn" id="2_arena"]
+[ext_resource type="Script" path="res://scripts/ui/speed_debug.gd" id="3_debug"]
+
+[node name="Main" type="Node2D"]
+
+[node name="TestArena" parent="." instance=ExtResource("2_arena")]
+
+[node name="PlayerCar" parent="." instance=ExtResource("1_m7d9k")]
+position = Vector2(640, 360)
+
+[node name="Camera2D" type="Camera2D" parent="PlayerCar"]
+enabled = true
+zoom = Vector2(1, 1)
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+
+[node name="DebugUI" type="CanvasLayer" parent="."]
+
+[node name="SpeedLabel" type="Label" parent="DebugUI"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -30.0
+offset_right = 150.0
+offset_bottom = -10.0
+text = "Speed: 0"
+script = ExtResource("3_debug")
