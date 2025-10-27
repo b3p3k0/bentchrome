@@ -10,3 +10,6 @@ export_presets.cfg
 Thumbs.db
 *.log
 *.tmp
+
+# Future planning documents (not part of current game)
+docs/future_cars.txt
