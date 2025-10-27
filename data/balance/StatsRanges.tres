@@ -1,0 +1,11 @@
+[gd_resource type="Stats" script_class="StatMap" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/balance/StatMap.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+accel = 5
+speed = 5
+handling = 5
+armor = 5
+special_power = 5

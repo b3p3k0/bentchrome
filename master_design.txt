@@ -28,7 +28,8 @@ Loop:
 4. Survive until victory or meet level objective
 
 Movement:
-- Eight-direction drive model with inertia and drift
+- Strict 4-direction snap with light stat-driven polish (eight directional vectors for movement, not input model)
+- Cardinal input only (WASD): no diagonals, no analog steering - preserves arcade precision
 - Surface modifiers:
   * Road – standard handling
   * Dirt – reduced traction

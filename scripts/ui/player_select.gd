@@ -2,9 +2,50 @@ extends Control
 
 ## PlayerSelect - Character selection screen with portrait display and navigation
 
-const REQUIRED_ACTIONS = ["select_prev_car", "select_next_car", "select_more_info", "select_confirm"]
+const REQUIRED_ACTIONS = [
+	"move_up",
+	"move_down",
+	"move_left",
+	"move_right",
+	"fire_primary",
+	"fire_special",
+	"select_prev_car",
+	"select_next_car",
+	"select_more_info",
+	"select_confirm"
+]
 
 const ACTION_DEFINITIONS := {
+	"move_up": [
+		{"type": "key", "code": Key.KEY_W},
+		{"type": "key", "code": Key.KEY_UP},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_UP},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_Y, "value": -1.0}
+	],
+	"move_down": [
+		{"type": "key", "code": Key.KEY_S},
+		{"type": "key", "code": Key.KEY_DOWN},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_DOWN},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_Y, "value": 1.0}
+	],
+	"move_left": [
+		{"type": "key", "code": Key.KEY_A},
+		{"type": "key", "code": Key.KEY_LEFT},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_LEFT},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0}
+	],
+	"move_right": [
+		{"type": "key", "code": Key.KEY_D},
+		{"type": "key", "code": Key.KEY_RIGHT},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_RIGHT},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0}
+	],
+	"fire_primary": [
+		{"type": "key", "code": Key.KEY_SPACE}
+	],
+	"fire_special": [
+		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
+	],
 	"select_prev_car": [
 		{"type": "key", "code": Key.KEY_A},
 		{"type": "key", "code": Key.KEY_LEFT}
@@ -27,27 +68,25 @@ var roster := []
 var current_index := 0
 var is_dialog_open := false
 var portrait_cache := {}
+var _temporary_selection_events: Dictionary = {}
 
 @onready var portrait := $PortraitContainer/Portrait
-@onready var car_name_label := $PortraitContainer/InfoOverlay/VBoxContainer/CarName
-@onready var driver_name_label := $PortraitContainer/InfoOverlay/VBoxContainer/DriverName
-@onready var accel_value := $PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer/AccelValue
-@onready var speed_value := $PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer/SpeedValue
-@onready var handling_value := $PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer/HandlingValue
-@onready var armor_value := $PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer/ArmorValue
-@onready var special_value := $PortraitContainer/InfoOverlay/VBoxContainer/StatsContainer/SpecialValue
+@onready var car_name_label := $TopInfo/VBoxContainer/CarName
+@onready var driver_name_label := $TopInfo/VBoxContainer/DriverName
+@onready var accel_value := $StatsPanel/StatsContainer/AccelValue
+@onready var speed_value := $StatsPanel/StatsContainer/SpeedValue
+@onready var handling_value := $StatsPanel/StatsContainer/HandlingValue
+@onready var armor_value := $StatsPanel/StatsContainer/ArmorValue
+@onready var special_value := $StatsPanel/StatsContainer/SpecialValue
 
 @onready var dialog := $MoreInfoDialog
 @onready var dialog_title := $MoreInfoDialog/DialogContent/VBoxContainer/Title
 @onready var dialog_flavor := $MoreInfoDialog/DialogContent/VBoxContainer/FlavorText
-@onready var dialog_accel := $MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats/AccelValue2
-@onready var dialog_speed := $MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats/SpeedValue2
-@onready var dialog_handling := $MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats/HandlingValue2
-@onready var dialog_armor := $MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats/ArmorValue2
-@onready var dialog_special := $MoreInfoDialog/DialogContent/VBoxContainer/DetailedStats/SpecialValue2
+@onready var special_weapon_text := $MoreInfoDialog/DialogContent/VBoxContainer/SpecialWeaponText
 
 func _ready():
 	_ensure_required_actions()
+	_add_temporary_selection_bindings()
 
 	if not SelectionState.load_roster("res://assets/data/roster.json"):
 		push_error("Failed to load character roster")
@@ -61,9 +100,16 @@ func _ready():
 	# Connect dialog close signal to sync is_dialog_open flag
 	dialog.popup_hide.connect(_on_dialog_hidden)
 
+	# Make dialog non-exclusive so _unhandled_input continues receiving events
+	dialog.exclusive = false
+	dialog.window_input.connect(_on_dialog_window_input)
+
 	current_index = 0
 	update_display()
 	print("Player Selection initialized with ", roster.size(), " characters")
+
+func _exit_tree():
+	_remove_temporary_selection_bindings()
 
 func _unhandled_input(event):
 	# Use discrete navigation only (no continuous hold-to-scroll)
@@ -107,6 +153,19 @@ func _register_action(action_name: String) -> void:
 			var key_event := InputEventKey.new()
 			key_event.physical_keycode = definition.code
 			event = key_event
+		elif definition.type == "joy_button":
+			var joy_event := InputEventJoypadButton.new()
+			joy_event.button_index = definition.button
+			event = joy_event
+		elif definition.type == "joy_axis":
+			var axis_event := InputEventJoypadMotion.new()
+			axis_event.axis = definition.axis
+			axis_event.axis_value = definition.value
+			event = axis_event
+		elif definition.type == "mouse_button":
+			var mouse_event := InputEventMouseButton.new()
+			mouse_event.button_index = definition.button
+			event = mouse_event
 
 		if event != null:
 			InputMap.action_add_event(action_name, event)
@@ -127,6 +186,11 @@ func navigate_next():
 
 func _on_dialog_hidden():
 	is_dialog_open = false
+
+func _on_dialog_window_input(event: InputEvent) -> void:
+	if event.is_action_pressed("select_more_info"):
+		dialog.hide()
+		get_viewport().set_input_as_handled()
 
 func toggle_more_info_dialog():
 	if is_dialog_open:
@@ -185,17 +249,10 @@ func update_dialog_content():
 	var car_name = entry.get("car_name", "Unknown")
 	var driver_name = entry.get("driver_name", "Unknown Driver")
 	var flavor = entry.get("flavor", "No description available.")
-	var stats = entry.get("stats", {})
 
 	dialog_title.text = car_name + " - " + driver_name
 	dialog_flavor.text = flavor
-
-	# Update detailed stats with x/5 format
-	dialog_accel.text = str(stats.get("acceleration", 1)) + "/5"
-	dialog_speed.text = str(stats.get("top_speed", 1)) + "/5"
-	dialog_handling.text = str(stats.get("handling", 1)) + "/5"
-	dialog_armor.text = str(stats.get("armor", 1)) + "/5"
-	dialog_special.text = str(stats.get("special_power", 1)) + "/5"
+	special_weapon_text.text = entry.get("special_weapon", "No special weapon listed.")
 
 func confirm_selection():
 	if roster.size() == 0 or current_index >= roster.size():
@@ -209,3 +266,39 @@ func confirm_selection():
 
 	# Transition to main game scene
 	get_tree().change_scene_to_file("res://scenes/main/Main.tscn")
+
+func _add_temporary_selection_bindings():
+	_add_selection_binding("select_prev_car", Key.KEY_A)
+	_add_selection_binding("select_next_car", Key.KEY_D)
+	_add_selection_binding("select_more_info", Key.KEY_W)
+
+func _add_selection_binding(action_name: String, keycode: Key) -> void:
+	if not InputMap.has_action(action_name):
+		return
+
+	if _action_has_key(action_name, keycode):
+		return
+
+	var event := InputEventKey.new()
+	event.physical_keycode = keycode
+	InputMap.action_add_event(action_name, event)
+
+	if not _temporary_selection_events.has(action_name):
+		_temporary_selection_events[action_name] = []
+	_temporary_selection_events[action_name].append(event)
+
+func _remove_temporary_selection_bindings():
+	for action_name in _temporary_selection_events.keys():
+		for event in _temporary_selection_events[action_name]:
+			if InputMap.has_action(action_name):
+				InputMap.action_erase_event(action_name, event)
+	_temporary_selection_events.clear()
+
+func _action_has_key(action_name: String, keycode: Key) -> bool:
+	if not InputMap.has_action(action_name):
+		return false
+
+	for event in InputMap.action_get_events(action_name):
+		if event is InputEventKey and event.physical_keycode == keycode:
+			return true
+	return false

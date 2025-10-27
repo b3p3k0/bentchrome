@@ -13,12 +13,16 @@
         "armor": 7,
         "special_power": 7
       },
+      "colors": {
+        "primary": "#ff3da8",
+        "accent": "#ffd4f0"
+      },
       "portrait": "res://assets/img/bios/bumper.png"
     },
     {
       "id": "cricket",
      "car_name": "Cricket",
-    "driver_name": "Kyrsta",
+    "driver_name": "Mae Hemm",
     "flavor": "A dirt-track prodigy with bubble-gum confidence. The bright green midget car rockets out of corners. It skitters at the edge of control on pavement. Fragile panels keep weight down but punish mistakes. She lives for straight-line charges and risky lines.",
     "special_weapon": "Leap: locks the nearest target in range, then full-throttle body-check. Ignores destructible cover and grants 2 seconds of brief invulnerability after impact. Massive hit and speed drain if it connects.",
     "stats": {
@@ -27,6 +31,10 @@
       "handling": 4,
       "armor": 4,
       "special_power": 8
+      },
+      "colors": {
+        "primary": "#31ff57",
+        "accent": "#0a8a2c"
       },
       "portrait": "res://assets/img/bios/cricket.png"
     },
@@ -43,6 +51,10 @@
       "armor": 3,
       "special_power": 6
       },
+      "colors": {
+        "primary": "#fdfdfd",
+        "accent": "#d7e3ff"
+      },
       "portrait": "res://assets/img/bios/ghost.png"
     },
     {
@@ -58,9 +70,14 @@
       "armor": 7,
       "special_power": 7
       },
+      "colors": {
+        "primary": "#8a42ff",
+        "accent": "#5212a4"
+      },
       "portrait": "res://assets/img/bios/hammertoe.png"
     },
     {
+      "id": "kandykane",
       "car_name": "Kandy Kane",
     "driver_name": "Kandy Kane",
     "flavor": "A sadistic clown queen wrapped in leather and laughter. Her battered ice cream truck lures crowds, then scatters them. She delights in chaos and close-quarters carnage. The rig is heavy and stubborn but inexorable once rolling. Expect brute control and sustained pressure over finesse.",
@@ -71,6 +88,10 @@
       "handling": 3,
       "armor": 8,
       "special_power": 8
+      },
+      "colors": {
+        "primary": "#ff9ec8",
+        "accent": "#ff5a9d"
       },
       "portrait": "res://assets/img/bios/kandykane.png"
     },
@@ -87,10 +108,15 @@
       "armor": 2,
       "special_power": 9
     },
+    "colors": {
+      "primary": "#ff3344",
+      "accent": "#a60011"
+    },
     "portrait": "res://assets/img/bios/mrghastly.png"
     },
     {
       "id": "razorback",
+      "car_name":"Razorback",
       "driver_name": "Big Sarge",
     "flavor": "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes.",
     "special_weapon": "Red Glare: a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches.",
@@ -100,6 +126,10 @@
       "handling": 4,
       "armor": 8,
       "special_power": 7
+      },
+      "colors": {
+        "primary": "#1f6f3a",
+        "accent": "#0d4020"
       },
       "portrait": "res://assets/img/bios/razorback.png"
     },
@@ -116,9 +146,14 @@
       "armor": 7,
       "special_power": 7
       },
+      "colors": {
+        "primary": "#123a6b",
+        "accent": "#0a203c"
+      },
       "portrait": "res://assets/img/bios/smoky.png"
     },
     {
+      "id": "splatcat",
      "car_name": "Splat Cat",
     "driver_name": "Juan Dough",
     "flavor": "A fast-talking courier with nine lives and unpaid parking tickets. The compact ride is quick, nimble, and streetwise. Armor sits in the middle; evasive driving is the real defense. He thrives in traffic and dirty lines. Delivery guaranteed, signature optional.",
@@ -129,6 +164,10 @@
       "handling": 7,
       "armor": 5,
       "special_power": 8
+      },
+      "colors": {
+        "primary": "#c9541a",
+        "accent": "#ff8a41"
       },
       "portrait": "res://assets/img/bios/splatcat.png"
     }

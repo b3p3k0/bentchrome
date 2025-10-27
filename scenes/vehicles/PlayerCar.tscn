@@ -15,7 +15,7 @@ fire_rate = 5.0
 
 [node name="Visuals" type="Node2D" parent="."]
 
-[node name="Visual" type="ColorRect" parent="Visuals"]
+[node name="BodyColor" type="ColorRect" parent="Visuals"]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -29,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.8, 0.2, 0.2, 1)
 
-[node name="FrontMarker" type="ColorRect" parent="Visuals"]
+[node name="AccentColor" type="ColorRect" parent="Visuals"]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
