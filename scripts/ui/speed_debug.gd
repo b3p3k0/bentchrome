@@ -16,4 +16,10 @@ func _ready():
 func _process(_delta):
 	if player_car:
 		var speed = player_car.velocity.length()
-		text = "Speed: %.0f" % speed
+		var cap = speed
+		if player_car.has_method("get_effective_max_speed"):
+			cap = player_car.get_effective_max_speed()
+		elif player_car.has_method("get_max_speed"):
+			cap = player_car.get("max_speed")
+
+		text = "Speed: %.0f / %.0f" % [speed, cap]

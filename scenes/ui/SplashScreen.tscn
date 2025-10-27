@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://b4n8xqkl3hcvb"]
 
-[ext_resource type="Texture2D" uid="uid://c5p0u1oxj0aom" path="res://assets/img/story/splashscreen.png" id="1_4w8v6"]
+[ext_resource type="Texture2D" path="res://assets/img/story/splashscreen.png" id="1_4w8v6"]
 [ext_resource type="Script" path="res://scripts/ui/splash_screen.gd" id="2_6sgjf"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_welcome"]

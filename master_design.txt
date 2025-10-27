@@ -28,13 +28,17 @@ Loop:
 4. Survive until victory or meet level objective
 
 Movement:
-- Strict 4-direction snap with light stat-driven polish (eight directional vectors for movement, not input model)
+- Strict 4-direction snap with enhanced stat-driven polish (eight directional vectors for movement, not input model)
 - Cardinal input only (WASD): no diagonals, no analog steering - preserves arcade precision
-- Surface modifiers:
-  * Road – standard handling
-  * Dirt – reduced traction
-  * Shallow water – passable, slows vehicle and affects handling
-  * Deep water – impassable
+- Resource-driven stat curves provide pronounced vehicle differences while maintaining mid-tier baseline
+- Enhanced surface modifiers with stronger terrain penalties (~10-15% more pronounced):
+  * Road – standard handling, acceleration, speed, and braking
+  * Sand – heavily reduced acceleration (50%), speed (70%), handling (50%), and braking (70%)
+  * Grass – moderately reduced acceleration (75%), speed (85%), handling (70%), and braking (90%)
+  * Ice – reduced acceleration (55%) and handling (25%), increased speed (110%), poor braking (40%)
+  * Snow – reduced acceleration (50%), speed (70%), handling (50%), and braking (60%)
+- Terrain transitions smoothed over ~0.2s with ease-out curves for noticeable but non-jarring changes
+- Throttle curves allow fast-acceleration vehicles to reach ~60% max speed quickly while slow vehicles ramp gradually
 - Jumps and pits for vertical variety
 
 Combat:

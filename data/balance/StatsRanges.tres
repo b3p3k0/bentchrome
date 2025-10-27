@@ -1,11 +1,24 @@
-[gd_resource type="Stats" script_class="StatMap" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/balance/StatMap.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/balance/StatRanges.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-accel = 5
-speed = 5
-handling = 5
-armor = 5
-special_power = 5
+max_speed_min = 170.0
+max_speed_max = 285.0
+accel_min = 450.0
+accel_max = 1200.0
+decel_min = 320.0
+decel_max = 800.0
+brake_min = 900.0
+brake_max = 1500.0
+handling_lock_min = 0.22
+handling_lock_max = 0.05
+handling_drag_min = 1.25
+handling_drag_max = 0.7
+handling_snap_min = 0.35
+handling_snap_max = 0.9
+armor_min = 55.0
+armor_max = 155.0
+special_min = 0.8
+special_max = 1.2

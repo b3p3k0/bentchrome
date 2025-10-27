@@ -47,15 +47,13 @@ const ACTION_DEFINITIONS := {
 		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
 	],
 	"select_prev_car": [
-		{"type": "key", "code": Key.KEY_A},
 		{"type": "key", "code": Key.KEY_LEFT}
 	],
 	"select_next_car": [
-		{"type": "key", "code": Key.KEY_D},
 		{"type": "key", "code": Key.KEY_RIGHT}
 	],
 	"select_more_info": [
-		{"type": "key", "code": Key.KEY_W}
+		{"type": "joy_button", "button": JOY_BUTTON_X}
 	],
 	"select_confirm": [
 		{"type": "key", "code": Key.KEY_ENTER},

@@ -1,6 +1,13 @@
-[gd_scene load_steps=17 format=3 uid="uid://bfqm2xgv3pu6w"]
+[gd_scene load_steps=35 format=3 uid="uid://bfqm2xgv3pu6w"]
 
 [ext_resource type="Script" path="res://scripts/environment/destructible_prop.gd" id="1_destructible_prop"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="2_speckle"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_horizontal"]
+size = Vector2(1800, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_vertical"]
+size = Vector2(80, 4420)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_indestructible_1"]
 size = Vector2(240, 160)
@@ -50,6 +57,74 @@ size = Vector2(200, 140)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_10"]
 size = Vector2(220, 160)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_11"]
+size = Vector2(40, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_12"]
+size = Vector2(60, 30)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_13"]
+size = Vector2(90, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_14"]
+size = Vector2(120, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_15"]
+size = Vector2(150, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_16"]
+size = Vector2(60, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_17"]
+size = Vector2(80, 50)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_18"]
+size = Vector2(100, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_19"]
+size = Vector2(90, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_20"]
+size = Vector2(70, 50)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_21"]
+size = Vector2(40, 70)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_destructible_22"]
+size = Vector2(90, 60)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_Asphalt"]
+shader = ExtResource("2_speckle")
+shader_parameter/base_color = Color(0.15, 0.15, 0.15, 1)
+shader_parameter/speckle_color = Color(0.1, 0.1, 0.1, 1)
+shader_parameter/density = 0.25
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 24.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_Grass"]
+shader = ExtResource("2_speckle")
+shader_parameter/base_color = Color(0.24, 0.5, 0.22, 1)
+shader_parameter/speckle_color = Color(0.18, 0.38, 0.16, 1)
+shader_parameter/density = 0.45
+shader_parameter/intensity = 0.3
+shader_parameter/scale = 18.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_Sand"]
+shader = ExtResource("2_speckle")
+shader_parameter/base_color = Color(0.8, 0.7, 0.5, 1)
+shader_parameter/speckle_color = Color(0.72, 0.6, 0.42, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.25
+shader_parameter/scale = 20.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_Water"]
+shader = ExtResource("2_speckle")
+shader_parameter/base_color = Color(0.38, 0.6, 0.66, 1)
+shader_parameter/speckle_color = Color(0.28, 0.48, 0.54, 1)
+shader_parameter/density = 0.55
+shader_parameter/intensity = 0.3
+shader_parameter/scale = 28.0
+
 [node name="TestArena" type="Node2D"]
 
 [node name="Floor" type="ColorRect" parent="."]
@@ -65,6 +140,7 @@ offset_bottom = 2250.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.15, 0.15, 0.15, 1)
+material = SubResource("ShaderMaterial_Asphalt")
 
 [node name="Terrain" type="Node2D" parent="."]
 
@@ -72,47 +148,58 @@ color = Color(0.15, 0.15, 0.15, 1)
 
 [node name="GrassRing" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.24, 0.5, 0.22, 1)
-polygon = PackedVector2Array(840.0,0.0, 823.86,421.395, 776.059,826.596, 698.434,1200.032, 593.97,1527.351, 466.679,1795.974, 321.454,1995.58, 163.876,2118.496, 0.0,2160.0, -163.876,2118.496, -321.454,1995.58, -466.679,1795.974, -593.97,1527.351, -698.434,1200.032, -776.059,826.596, -823.86,421.395, -840.0,0.0, -823.86,-421.395, -776.059,-826.596, -698.434,-1200.032, -593.97,-1527.351, -466.679,-1795.974, -321.454,-1995.58, -163.876,-2118.496, -0.0,-2160.0, 163.876,-2118.496, 321.454,-1995.58, 466.679,-1795.974, 593.97,-1527.351, 698.434,-1200.032, 776.059,-826.596, 823.86,-421.395, 745.397,-390.181, 702.148,-765.367, 631.917,-1111.14, 537.401,-1414.214, 422.233,-1662.939, 290.839,-1847.759, 148.269,-1961.571, -0.0,-2000.0, -148.269,-1961.571, -290.839,-1847.759, -422.233,-1662.939, -537.401,-1414.214, -631.917,-1111.14, -702.148,-765.367, -745.397,-390.181, -760.0,0.0, -745.397,390.181, -702.148,765.367, -631.917,1111.14, -537.401,1414.214, -422.233,1662.939, -290.839,1847.759, -148.269,1961.571, 0.0,2000.0, 148.269,1961.571, 290.839,1847.759, 422.233,1662.939, 537.401,1414.214, 631.917,1111.14, 702.148,765.367, 745.397,390.181, 760.0,0.0)
+material = SubResource("ShaderMaterial_Grass")
+polygon = PackedVector2Array(-860,-2210, 860,-2210, 860,2210, -860,2210, -760,2050, 760,2050, 760,-2050, -760,-2050)
 
 [node name="SandRing" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.8, 0.7, 0.5, 1)
-polygon = PackedVector2Array(760.0,0.0, 745.397,390.181, 702.148,765.367, 631.917,1111.14, 537.401,1414.214, 422.233,1662.939, 290.839,1847.759, 148.269,1961.571, 0.0,2000.0, -148.269,1961.571, -290.839,1847.759, -422.233,1662.939, -537.401,1414.214, -631.917,1111.14, -702.148,765.367, -745.397,390.181, -760.0,0.0, -745.397,-390.181, -702.148,-765.367, -631.917,-1111.14, -537.401,-1414.214, -422.233,-1662.939, -290.839,-1847.759, -148.269,-1961.571, -0.0,-2000.0, 148.269,-1961.571, 290.839,-1847.759, 422.233,-1662.939, 537.401,-1414.214, 631.917,-1111.14, 702.148,-765.367, 745.397,-390.181, 627.703,-331.654, 591.283,-650.562, 532.141,-944.469, 452.548,-1202.082, 355.565,-1413.498, 244.917,-1570.595, 124.858,-1667.335, -0.0,-1700.0, -124.858,-1667.335, -244.917,-1570.595, -355.565,-1413.498, -452.548,-1202.082, -532.141,-944.469, -591.283,-650.562, -627.703,-331.654, -640.0,0.0, -627.703,331.654, -591.283,650.562, -532.141,944.469, -452.548,1202.082, -355.565,1413.498, -244.917,1570.595, -124.858,1667.335, 0.0,1700.0, 124.858,1667.335, 244.917,1570.595, 355.565,1413.498, 452.548,1202.082, 532.141,944.469, 591.283,650.562, 627.703,331.654, 640.0,0.0)
+material = SubResource("ShaderMaterial_Sand")
+polygon = PackedVector2Array(-760,-2050, 760,-2050, 760,2050, -760,2050, -620,1700, 620,1700, 620,-1700, -620,-1700)
 
 [node name="PavedTrack" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.15, 0.15, 0.15, 1)
-polygon = PackedVector2Array(640.0,0.0, 627.703,331.654, 591.283,650.562, 532.141,944.469, 452.548,1202.082, 355.565,1413.498, 244.917,1570.595, 124.858,1667.335, 0.0,1700.0, -124.858,1667.335, -244.917,1570.595, -355.565,1413.498, -452.548,1202.082, -532.141,944.469, -591.283,650.562, -627.703,331.654, -640.0,0.0, -627.703,-331.654, -591.283,-650.562, -532.141,-944.469, -452.548,-1202.082, -355.565,-1413.498, -244.917,-1570.595, -124.858,-1667.335, -0.0,-1700.0, 124.858,-1667.335, 244.917,-1570.595, 355.565,-1413.498, 452.548,-1202.082, 532.141,-944.469, 591.283,-650.562, 627.703,-331.654, 411.93,-234.108, 388.029,-459.22, 349.217,-666.684, 296.985,-848.528, 233.339,-997.764, 160.727,-1108.655, 81.938,-1176.942, -0.0,-1200.0, -81.938,-1176.942, -160.727,-1108.655, -233.339,-997.764, -296.985,-848.528, -349.217,-666.684, -388.029,-459.22, -411.93,-234.108, -420.0,0.0, -411.93,234.108, -388.029,459.22, -349.217,666.684, -296.985,848.528, -233.339,997.764, -160.727,1108.655, -81.938,1176.942, 0.0,1200.0, 81.938,1176.942, 160.727,1108.655, 233.339,997.764, 296.985,848.528, 349.217,666.684, 388.029,459.22, 411.93,234.108, 420.0,0.0)
+material = SubResource("ShaderMaterial_Asphalt")
+polygon = PackedVector2Array(-620,-1700, 620,-1700, 620,1700, -620,1700, -420,1200, 420,1200, 420,-1200, -420,-1200)
 
 [node name="DegradedSegment1" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.8, 0.7, 0.5, 1)
-polygon = PackedVector2Array(632.121,-265.939, 632.121,265.939, 414.829,187.721, 414.829,-187.721)
+material = SubResource("ShaderMaterial_Sand")
+polygon = PackedVector2Array(-250,-1700, 250,-1700, 250,-1400, -250,-1400)
 
 [node name="DegradedSegment2" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.38, 0.6, 0.66, 1)
-polygon = PackedVector2Array(402.765,1321.148, 229.355,1587.087, 150.515,1120.297, 264.315,932.575)
+material = SubResource("ShaderMaterial_Water")
+polygon = PackedVector2Array(350,-1200, 550,-1200, 550,-900, 350,-900)
 
 [node name="DegradedSegment3" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.8, 0.7, 0.5, 1)
-polygon = PackedVector2Array(-229.355,1587.087, -402.765,1321.148, -264.315,932.575, -150.515,1120.297)
+material = SubResource("ShaderMaterial_Sand")
+polygon = PackedVector2Array(500,-200, 620,-200, 620,200, 500,200)
 
 [node name="DegradedSegment4" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.38, 0.6, 0.66, 1)
-polygon = PackedVector2Array(-632.121,265.939, -632.121,-265.939, -414.829,-187.721, -414.829,187.721)
+material = SubResource("ShaderMaterial_Water")
+polygon = PackedVector2Array(50,1400, 250,1400, 250,1700, 50,1700)
 
 [node name="DegradedSegment5" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.8, 0.7, 0.5, 1)
-polygon = PackedVector2Array(-402.765,-1321.148, -229.355,-1587.087, -150.515,-1120.297, -264.315,-932.575)
+material = SubResource("ShaderMaterial_Sand")
+polygon = PackedVector2Array(-400,900, -200,900, -200,1200, -400,1200)
 
 [node name="DegradedSegment6" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.38, 0.6, 0.66, 1)
-polygon = PackedVector2Array(229.355,-1587.087, 402.765,-1321.148, 264.315,-932.575, 150.515,-1120.297)
+material = SubResource("ShaderMaterial_Water")
+polygon = PackedVector2Array(-620,-200, -500,-200, -500,200, -620,200)
 
 [node name="InfieldSand" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.8, 0.7, 0.5, 1)
-polygon = PackedVector2Array(420.0,0.0, 411.93,234.108, 388.029,459.22, 349.217,666.684, 296.985,848.528, 233.339,997.764, 160.727,1108.655, 81.938,1176.942, 0.0,1200.0, -81.938,1176.942, -160.727,1108.655, -233.339,997.764, -296.985,848.528, -349.217,666.684, -388.029,459.22, -411.93,234.108, -420.0,0.0, -411.93,-234.108, -388.029,-459.22, -349.217,-666.684, -296.985,-848.528, -233.339,-997.764, -160.727,-1108.655, -81.938,-1176.942, -0.0,-1200.0, 81.938,-1176.942, 160.727,-1108.655, 233.339,-997.764, 296.985,-848.528, 349.217,-666.684, 388.029,-459.22, 411.93,-234.108, 255.004,-159.974, 240.209,-313.8, 216.182,-455.568, 183.848,-579.828, 144.448,-681.805, 99.498,-757.581, 50.723,-804.244, -0.0,-820.0, -50.723,-804.244, -99.498,-757.581, -144.448,-681.805, -183.848,-579.828, -216.182,-455.568, -240.209,-313.8, -255.004,-159.974, -260.0,0.0, -255.004,159.974, -240.209,313.8, -216.182,455.568, -183.848,579.828, -144.448,681.805, -99.498,757.581, -50.723,804.244, 0.0,820.0, 50.723,804.244, 99.498,757.581, 144.448,681.805, 183.848,579.828, 216.182,455.568, 240.209,313.8, 255.004,159.974, 260.0,0.0)
+material = SubResource("ShaderMaterial_Sand")
+polygon = PackedVector2Array(-420,-1200, 420,-1200, 420,1200, -420,1200, -260,780, 260,780, 260,-780, -260,-780)
 
 [node name="InfieldGrass" type="Polygon2D" parent="Terrain/TerrainVisuals"]
 color = Color(0.24, 0.5, 0.22, 1)
-polygon = PackedVector2Array(260.0,0.0, 255.004,159.974, 240.209,313.8, 216.182,455.568, 183.848,579.828, 144.448,681.805, 99.498,757.581, 50.723,804.244, 0.0,820.0, -50.723,804.244, -99.498,757.581, -144.448,681.805, -183.848,579.828, -216.182,455.568, -240.209,313.8, -255.004,159.974, -260.0,0.0, -255.004,-159.974, -240.209,-313.8, -216.182,-455.568, -183.848,-579.828, -144.448,-681.805, -99.498,-757.581, -50.723,-804.244, -0.0,-820.0, 50.723,-804.244, 99.498,-757.581, 144.448,-681.805, 183.848,-579.828, 216.182,-455.568, 240.209,-313.8, 255.004,-159.974)
+material = SubResource("ShaderMaterial_Grass")
+polygon = PackedVector2Array(-260,-780, 260,-780, 260,780, -260,780)
 
 [node name="TerrainAreas" type="Node2D" parent="Terrain"]
 
@@ -122,7 +209,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/GrassArea"]
-polygon = PackedVector2Array(840.0,0.0, 823.86,421.395, 776.059,826.596, 698.434,1200.032, 593.97,1527.351, 466.679,1795.974, 321.454,1995.58, 163.876,2118.496, 0.0,2160.0, -163.876,2118.496, -321.454,1995.58, -466.679,1795.974, -593.97,1527.351, -698.434,1200.032, -776.059,826.596, -823.86,421.395, -840.0,0.0, -823.86,-421.395, -776.059,-826.596, -698.434,-1200.032, -593.97,-1527.351, -466.679,-1795.974, -321.454,-1995.58, -163.876,-2118.496, -0.0,-2160.0, 163.876,-2118.496, 321.454,-1995.58, 466.679,-1795.974, 593.97,-1527.351, 698.434,-1200.032, 776.059,-826.596, 823.86,-421.395, 745.397,-390.181, 702.148,-765.367, 631.917,-1111.14, 537.401,-1414.214, 422.233,-1662.939, 290.839,-1847.759, 148.269,-1961.571, -0.0,-2000.0, -148.269,-1961.571, -290.839,-1847.759, -422.233,-1662.939, -537.401,-1414.214, -631.917,-1111.14, -702.148,-765.367, -745.397,-390.181, -760.0,0.0, -745.397,390.181, -702.148,765.367, -631.917,1111.14, -537.401,1414.214, -422.233,1662.939, -290.839,1847.759, -148.269,1961.571, 0.0,2000.0, 148.269,1961.571, 290.839,1847.759, 422.233,1662.939, 537.401,1414.214, 631.917,1111.14, 702.148,765.367, 745.397,390.181, 760.0,0.0)
+polygon = PackedVector2Array(-860,-2210, 860,-2210, 860,2210, -860,2210, -760,2050, 760,2050, 760,-2050, -760,-2050)
 
 [node name="SandRingArea" type="Area2D" parent="Terrain/TerrainAreas" groups=["terrain_sand"]]
 monitoring = true
@@ -130,7 +217,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/SandRingArea"]
-polygon = PackedVector2Array(760.0,0.0, 745.397,390.181, 702.148,765.367, 631.917,1111.14, 537.401,1414.214, 422.233,1662.939, 290.839,1847.759, 148.269,1961.571, 0.0,2000.0, -148.269,1961.571, -290.839,1847.759, -422.233,1662.939, -537.401,1414.214, -631.917,1111.14, -702.148,765.367, -745.397,390.181, -760.0,0.0, -745.397,-390.181, -702.148,-765.367, -631.917,-1111.14, -537.401,-1414.214, -422.233,-1662.939, -290.839,-1847.759, -148.269,-1961.571, -0.0,-2000.0, 148.269,-1961.571, 290.839,-1847.759, 422.233,-1662.939, 537.401,-1414.214, 631.917,-1111.14, 702.148,-765.367, 745.397,-390.181, 627.703,-331.654, 591.283,-650.562, 532.141,-944.469, 452.548,-1202.082, 355.565,-1413.498, 244.917,-1570.595, 124.858,-1667.335, -0.0,-1700.0, -124.858,-1667.335, -244.917,-1570.595, -355.565,-1413.498, -452.548,-1202.082, -532.141,-944.469, -591.283,-650.562, -627.703,-331.654, -640.0,0.0, -627.703,331.654, -591.283,650.562, -532.141,944.469, -452.548,1202.082, -355.565,1413.498, -244.917,1570.595, -124.858,1667.335, 0.0,1700.0, 124.858,1667.335, 244.917,1570.595, 355.565,1413.498, 452.548,1202.082, 532.141,944.469, 591.283,650.562, 627.703,331.654, 640.0,0.0)
+polygon = PackedVector2Array(-760,-2050, 760,-2050, 760,2050, -760,2050, -620,1700, 620,1700, 620,-1700, -620,-1700)
 
 [node name="TrackArea" type="Area2D" parent="Terrain/TerrainAreas" groups=["terrain_track"]]
 monitoring = true
@@ -138,7 +225,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/TrackArea"]
-polygon = PackedVector2Array(640.0,0.0, 627.703,331.654, 591.283,650.562, 532.141,944.469, 452.548,1202.082, 355.565,1413.498, 244.917,1570.595, 124.858,1667.335, 0.0,1700.0, -124.858,1667.335, -244.917,1570.595, -355.565,1413.498, -452.548,1202.082, -532.141,944.469, -591.283,650.562, -627.703,331.654, -640.0,0.0, -627.703,-331.654, -591.283,-650.562, -532.141,-944.469, -452.548,-1202.082, -355.565,-1413.498, -244.917,-1570.595, -124.858,-1667.335, -0.0,-1700.0, 124.858,-1667.335, 244.917,-1570.595, 355.565,-1413.498, 452.548,-1202.082, 532.141,-944.469, 591.283,-650.562, 627.703,-331.654, 411.93,-234.108, 388.029,-459.22, 349.217,-666.684, 296.985,-848.528, 233.339,-997.764, 160.727,-1108.655, 81.938,-1176.942, -0.0,-1200.0, -81.938,-1176.942, -160.727,-1108.655, -233.339,-997.764, -296.985,-848.528, -349.217,-666.684, -388.029,-459.22, -411.93,-234.108, -420.0,0.0, -411.93,234.108, -388.029,459.22, -349.217,666.684, -296.985,848.528, -233.339,997.764, -160.727,1108.655, -81.938,1176.942, 0.0,1200.0, 81.938,1176.942, 160.727,1108.655, 233.339,997.764, 296.985,848.528, 349.217,666.684, 388.029,459.22, 411.93,234.108, 420.0,0.0)
+polygon = PackedVector2Array(-620,-1700, 620,-1700, 620,1700, -620,1700, -420,1200, 420,1200, 420,-1200, -420,-1200)
 
 [node name="InfieldSandArea" type="Area2D" parent="Terrain/TerrainAreas" groups=["terrain_sand"]]
 monitoring = true
@@ -146,7 +233,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/InfieldSandArea"]
-polygon = PackedVector2Array(420.0,0.0, 411.93,234.108, 388.029,459.22, 349.217,666.684, 296.985,848.528, 233.339,997.764, 160.727,1108.655, 81.938,1176.942, 0.0,1200.0, -81.938,1176.942, -160.727,1108.655, -233.339,997.764, -296.985,848.528, -349.217,666.684, -388.029,459.22, -411.93,234.108, -420.0,0.0, -411.93,-234.108, -388.029,-459.22, -349.217,-666.684, -296.985,-848.528, -233.339,-997.764, -160.727,-1108.655, -81.938,-1176.942, -0.0,-1200.0, 81.938,-1176.942, 160.727,-1108.655, 233.339,-997.764, 296.985,-848.528, 349.217,-666.684, 388.029,-459.22, 411.93,-234.108, 255.004,-159.974, 240.209,-313.8, 216.182,-455.568, 183.848,-579.828, 144.448,-681.805, 99.498,-757.581, 50.723,-804.244, -0.0,-820.0, -50.723,-804.244, -99.498,-757.581, -144.448,-681.805, -183.848,-579.828, -216.182,-455.568, -240.209,-313.8, -255.004,-159.974, -260.0,0.0, -255.004,159.974, -240.209,313.8, -216.182,455.568, -183.848,579.828, -144.448,681.805, -99.498,757.581, -50.723,804.244, 0.0,820.0, 50.723,804.244, 99.498,757.581, 144.448,681.805, 183.848,579.828, 216.182,455.568, 240.209,313.8, 255.004,159.974, 260.0,0.0)
+polygon = PackedVector2Array(-420,-1200, 420,-1200, 420,1200, -420,1200, -260,780, 260,780, 260,-780, -260,-780)
 
 [node name="InfieldGrassArea" type="Area2D" parent="Terrain/TerrainAreas" groups=["terrain_grass"]]
 monitoring = true
@@ -154,7 +241,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/InfieldGrassArea"]
-polygon = PackedVector2Array(260.0,0.0, 255.004,159.974, 240.209,313.8, 216.182,455.568, 183.848,579.828, 144.448,681.805, 99.498,757.581, 50.723,804.244, 0.0,820.0, -50.723,804.244, -99.498,757.581, -144.448,681.805, -183.848,579.828, -216.182,455.568, -240.209,313.8, -255.004,159.974, -260.0,0.0, -255.004,-159.974, -240.209,-313.8, -216.182,-455.568, -183.848,-579.828, -144.448,-681.805, -99.498,-757.581, -50.723,-804.244, -0.0,-820.0, 50.723,-804.244, 99.498,-757.581, 144.448,-681.805, 183.848,-579.828, 216.182,-455.568, 240.209,-313.8, 255.004,-159.974)
+polygon = PackedVector2Array(-260,-780, 260,-780, 260,780, -260,780)
 
 [node name="WaterAreas" type="Node2D" parent="Terrain/TerrainAreas"]
 
@@ -164,7 +251,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/WaterAreas/WaterArea1"]
-polygon = PackedVector2Array(402.765,1321.148, 229.355,1587.087, 150.515,1120.297, 264.315,932.575)
+polygon = PackedVector2Array(350,-1200, 550,-1200, 550,-900, 350,-900)
 
 [node name="WaterArea2" type="Area2D" parent="Terrain/TerrainAreas/WaterAreas" groups=["terrain_water"]]
 monitoring = true
@@ -172,7 +259,7 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/WaterAreas/WaterArea2"]
-polygon = PackedVector2Array(-632.121,265.939, -632.121,-265.939, -414.829,-187.721, -414.829,187.721)
+polygon = PackedVector2Array(50,1400, 250,1400, 250,1700, 50,1700)
 
 [node name="WaterArea3" type="Area2D" parent="Terrain/TerrainAreas/WaterAreas" groups=["terrain_water"]]
 monitoring = true
@@ -180,20 +267,65 @@ collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Terrain/TerrainAreas/WaterAreas/WaterArea3"]
-polygon = PackedVector2Array(229.355,-1587.087, 402.765,-1321.148, 264.315,-932.575, 150.515,-1120.297)
+polygon = PackedVector2Array(-620,-200, -500,-200, -500,200, -620,200)
 
-[node name="PerimeterWall" type="StaticBody2D" parent="." groups=["indestructible"]]
+[node name="PerimeterWall" type="Node2D" parent="."]
+
+[node name="WallTop" type="StaticBody2D" parent="PerimeterWall" groups=["indestructible"]]
 collision_layer = 1
 collision_mask = 0
+collision_layer = 1
+collision_mask = 0
+position = Vector2(0, -2210)
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="PerimeterWall"]
-polygon = PackedVector2Array(880.0,0.0, 863.091,429.199, 813.014,841.904, 731.693,1222.255, 622.254,1555.635, 488.902,1829.233, 336.761,2032.535, 171.679,2157.728, 0.0,2200.0, -171.679,2157.728, -336.761,2032.535, -488.902,1829.233, -622.254,1555.635, -731.693,1222.255, -813.014,841.904, -863.091,429.199, -880.0,0.0, -863.091,-429.199, -813.014,-841.904, -731.693,-1222.255, -622.254,-1555.635, -488.902,-1829.233, -336.761,-2032.535, -171.679,-2157.728, -0.0,-2200.0, 171.679,-2157.728, 336.761,-2032.535, 488.902,-1829.233, 622.254,-1555.635, 731.693,-1222.255, 813.014,-841.904, 863.091,-429.199, 823.86,-421.395, 776.059,-826.596, 698.434,-1200.032, 593.97,-1527.351, 466.679,-1795.974, 321.454,-1995.58, 163.876,-2118.496, -0.0,-2160.0, -163.876,-2118.496, -321.454,-1995.58, -466.679,-1795.974, -593.97,-1527.351, -698.434,-1200.032, -776.059,-826.596, -823.86,-421.395, -840.0,0.0, -823.86,421.395, -776.059,826.596, -698.434,1200.032, -593.97,1527.351, -466.679,1795.974, -321.454,1995.58, -163.876,2118.496, 0.0,2160.0, 163.876,2118.496, 321.454,1995.58, 466.679,1795.974, 593.97,1527.351, 698.434,1200.032, 776.059,826.596, 823.86,421.395, 840.0,0.0)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWall/WallTop"]
+shape = SubResource("RectangleShape2D_wall_horizontal")
 
-[node name="WallVisual" type="Line2D" parent="PerimeterWall"]
-default_color = Color(0.05, 0.05, 0.05, 1)
-width = 40.0
-points = PackedVector2Array(880.0,0.0, 863.091,429.199, 813.014,841.904, 731.693,1222.255, 622.254,1555.635, 488.902,1829.233, 336.761,2032.535, 171.679,2157.728, 0.0,2200.0, -171.679,2157.728, -336.761,2032.535, -488.902,1829.233, -622.254,1555.635, -731.693,1222.255, -813.014,841.904, -863.091,429.199, -880.0,0.0, -863.091,-429.199, -813.014,-841.904, -731.693,-1222.255, -622.254,-1555.635, -488.902,-1829.233, -336.761,-2032.535, -171.679,-2157.728, -0.0,-2200.0, 171.679,-2157.728, 336.761,-2032.535, 488.902,-1829.233, 622.254,-1555.635, 731.693,-1222.255, 813.014,-841.904, 863.091,-429.199, 880.0,0.0)
-closed = true
+[node name="Polygon2D" type="Polygon2D" parent="PerimeterWall/WallTop"]
+color = Color(0.05, 0.05, 0.05, 1)
+polygon = PackedVector2Array(-900, -40, 900, -40, 900, 40, -900, 40)
+
+[node name="WallBottom" type="StaticBody2D" parent="PerimeterWall" groups=["indestructible"]]
+collision_layer = 1
+collision_mask = 0
+collision_layer = 1
+collision_mask = 0
+position = Vector2(0, 2210)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWall/WallBottom"]
+shape = SubResource("RectangleShape2D_wall_horizontal")
+
+[node name="Polygon2D" type="Polygon2D" parent="PerimeterWall/WallBottom"]
+color = Color(0.05, 0.05, 0.05, 1)
+polygon = PackedVector2Array(-900, -40, 900, -40, 900, 40, -900, 40)
+
+[node name="WallLeft" type="StaticBody2D" parent="PerimeterWall" groups=["indestructible"]]
+collision_layer = 1
+collision_mask = 0
+collision_layer = 1
+collision_mask = 0
+position = Vector2(-860, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWall/WallLeft"]
+shape = SubResource("RectangleShape2D_wall_vertical")
+
+[node name="Polygon2D" type="Polygon2D" parent="PerimeterWall/WallLeft"]
+color = Color(0.05, 0.05, 0.05, 1)
+polygon = PackedVector2Array(-40, -2210, 40, -2210, 40, 2210, -40, 2210)
+
+[node name="WallRight" type="StaticBody2D" parent="PerimeterWall" groups=["indestructible"]]
+collision_layer = 1
+collision_mask = 0
+collision_layer = 1
+collision_mask = 0
+position = Vector2(860, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWall/WallRight"]
+shape = SubResource("RectangleShape2D_wall_vertical")
+
+[node name="Polygon2D" type="Polygon2D" parent="PerimeterWall/WallRight"]
+color = Color(0.05, 0.05, 0.05, 1)
+polygon = PackedVector2Array(-40, -2210, 40, -2210, 40, 2210, -40, 2210)
 
 [node name="Props" type="Node2D" parent="."]
 
@@ -207,7 +339,10 @@ shape = SubResource("RectangleShape2D_indestructible_1")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp1"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-120, -80, 120, -80, 120, 80, -120, 80)
+
 
 [node name="IndestructibleProp2" type="StaticBody2D" parent="Props" groups=["indestructible"]]
 collision_layer = 1
@@ -219,55 +354,70 @@ shape = SubResource("RectangleShape2D_indestructible_2")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp2"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-100, -70, 100, -70, 100, 70, -100, 70)
+
 
 [node name="IndestructibleProp3" type="StaticBody2D" parent="Props" groups=["indestructible"]]
 collision_layer = 1
 collision_mask = 0
-position = Vector2(560, 1100)
+position = Vector2(520, 1100)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/IndestructibleProp3"]
 shape = SubResource("RectangleShape2D_indestructible_3")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp3"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-80, -60, 80, -60, 80, 60, -80, 60)
+
 
 [node name="IndestructibleProp4" type="StaticBody2D" parent="Props" groups=["indestructible"]]
 collision_layer = 1
 collision_mask = 0
-position = Vector2(-560, 1100)
+position = Vector2(-520, 1100)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/IndestructibleProp4"]
 shape = SubResource("RectangleShape2D_indestructible_4")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp4"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-70, -50, 70, -50, 70, 50, -70, 50)
+
 
 [node name="IndestructibleProp5" type="StaticBody2D" parent="Props" groups=["indestructible"]]
 collision_layer = 1
 collision_mask = 0
-position = Vector2(360, 0)
+position = Vector2(420, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/IndestructibleProp5"]
 shape = SubResource("RectangleShape2D_indestructible_5")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp5"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
 
 [node name="IndestructibleProp6" type="StaticBody2D" parent="Props" groups=["indestructible"]]
 collision_layer = 1
 collision_mask = 0
-position = Vector2(-320, -280)
+position = Vector2(-420, -120)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/IndestructibleProp6"]
 shape = SubResource("RectangleShape2D_indestructible_6")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp6"]
 color = Color(0.05, 0.05, 0.05, 1)
+border_width = 10.0
+border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-50, -40, 50, -40, 50, 40, -50, 40)
+
 
 [node name="DestructibleProp1" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
@@ -280,7 +430,10 @@ shape = SubResource("RectangleShape2D_destructible_1")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp1"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-15, -22.5, 15, -22.5, 15, 22.5, -15, 22.5)
+
 
 [node name="DestructibleProp2" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
@@ -293,12 +446,15 @@ shape = SubResource("RectangleShape2D_destructible_2")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp2"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-30, -25, 30, -25, 30, 25, -30, 25)
+
 
 [node name="DestructibleProp3" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(-260, 720)
+position = Vector2(-220, 740)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp3"]
@@ -306,7 +462,10 @@ shape = SubResource("RectangleShape2D_destructible_3")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp3"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-40, -30, 40, -30, 40, 30, -40, 30)
+
 
 [node name="DestructibleProp4" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
@@ -319,12 +478,15 @@ shape = SubResource("RectangleShape2D_destructible_4")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp4"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-50, -35, 50, -35, 50, 35, -50, 35)
+
 
 [node name="DestructibleProp5" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(-160, -520)
+position = Vector2(-200, -520)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp5"]
@@ -332,12 +494,15 @@ shape = SubResource("RectangleShape2D_destructible_5")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp5"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-60, -45, 60, -45, 60, 45, -60, 45)
+
 
 [node name="DestructibleProp6" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(180, -880)
+position = Vector2(180, -900)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp6"]
@@ -345,12 +510,15 @@ shape = SubResource("RectangleShape2D_destructible_6")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp6"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-70, -55, 70, -55, 70, 55, -70, 55)
+
 
 [node name="DestructibleProp7" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(-220, -940)
+position = Vector2(-180, -960)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp7"]
@@ -358,12 +526,15 @@ shape = SubResource("RectangleShape2D_destructible_7")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp7"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-80, -60, 80, -60, 80, 60, -80, 60)
+
 
 [node name="DestructibleProp8" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(620, 0)
+position = Vector2(600, 0)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp8"]
@@ -371,12 +542,15 @@ shape = SubResource("RectangleShape2D_destructible_8")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp8"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-90, -65, 90, -65, 90, 65, -90, 65)
+
 
 [node name="DestructibleProp9" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
 collision_mask = 6
-position = Vector2(-620, 120)
+position = Vector2(-600, 0)
 script = ExtResource("1_destructible_prop")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp9"]
@@ -384,7 +558,10 @@ shape = SubResource("RectangleShape2D_destructible_9")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp9"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-100, -70, 100, -70, 100, 70, -100, 70)
+
 
 [node name="DestructibleProp10" type="Area2D" parent="Props" groups=["destructible"]]
 collision_layer = 0
@@ -397,8 +574,201 @@ shape = SubResource("RectangleShape2D_destructible_10")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp10"]
 color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-110, -80, 110, -80, 110, 80, -110, 80)
 
+
+[node name="DestructibleProp11" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(-560, -760)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp11"]
+shape = SubResource("RectangleShape2D_destructible_11")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp11"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
+
+
+[node name="DestructibleProp12" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(100, 1080)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp12"]
+shape = SubResource("RectangleShape2D_destructible_12")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp12"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-30, -15, 30, -15, 30, 15, -30, 15)
+
+
+[node name="DestructibleProp13" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(580, 360)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp13"]
+shape = SubResource("RectangleShape2D_destructible_13")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp13"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-45, -20, 45, -20, 45, 20, -45, 20)
+
+
+[node name="DestructibleProp14" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(360, -100)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp14"]
+shape = SubResource("RectangleShape2D_destructible_14")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp14"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-60, -30, 60, -30, 60, 30, -60, 30)
+
+
+[node name="DestructibleProp15" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(620, 1540)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp15"]
+shape = SubResource("RectangleShape2D_destructible_15")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp15"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-75, -40, 75, -40, 75, 40, -75, 40)
+
+
+[node name="DestructibleProp16" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(160, -920)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp16"]
+shape = SubResource("RectangleShape2D_destructible_16")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp16"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-30, -20, 30, -20, 30, 20, -30, 20)
+
+
+[node name="DestructibleProp17" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(-320, -360)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp17"]
+shape = SubResource("RectangleShape2D_destructible_17")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp17"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-40, -25, 40, -25, 40, 25, -40, 25)
+
+
+[node name="DestructibleProp18" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(-260, 360)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp18"]
+shape = SubResource("RectangleShape2D_destructible_18")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp18"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-50, -30, 50, -30, 50, 30, -50, 30)
+
+
+[node name="DestructibleProp19" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(160, 760)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp19"]
+shape = SubResource("RectangleShape2D_destructible_19")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp19"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-45, -20, 45, -20, 45, 20, -45, 20)
+
+
+[node name="DestructibleProp20" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(500, -980)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp20"]
+shape = SubResource("RectangleShape2D_destructible_20")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp20"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-35, -25, 35, -25, 35, 25, -35, 25)
+
+
+[node name="DestructibleProp21" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(-500, 540)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp21"]
+shape = SubResource("RectangleShape2D_destructible_21")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp21"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-20, -35, 20, -35, 20, 35, -20, 35)
+
+
+[node name="DestructibleProp22" type="Area2D" parent="Props" groups=["destructible"]]
+collision_layer = 0
+collision_mask = 6
+position = Vector2(-480, 1400)
+script = ExtResource("1_destructible_prop")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Props/DestructibleProp22"]
+shape = SubResource("RectangleShape2D_destructible_22")
+
+[node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp22"]
+color = Color(0.58, 0.41, 0.32, 1)
+border_width = 10.0
+border_color = Color(0.24, 0.12, 0.04, 1)
+polygon = PackedVector2Array(-45, -30, 45, -30, 45, 30, -45, 30)
 [node name="SpawnPoints" type="Node2D" parent="."]
 
 [node name="StartPointBottom" type="Marker2D" parent="SpawnPoints"]

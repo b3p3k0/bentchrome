@@ -396,13 +396,8 @@ func fire_primary_weapon():
 	if current_time < _next_fire_time:
 		return
 
-	# Create and configure bullet
-	var bullet = bullet_scene.instantiate()
-	bullet.global_position = global_position
-	bullet.direction = last_facing_direction.normalized()
-
-	# Add bullet to scene tree at root level
-	get_tree().current_scene.add_child(bullet)
+	# Create and configure bullet via GameManager
+	var bullet = GameManager.spawn_bullet(bullet_scene, global_position, last_facing_direction, self)
 
 	# Show muzzle flash and auto-hide after brief duration
 	# Timer signal connection ensures flash automatically disappears

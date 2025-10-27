@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 SelectionState="*res://scripts/managers/selection_state.gd"
+GameManager="*res://scripts/managers/game_manager.gd"
 
 [display]
 

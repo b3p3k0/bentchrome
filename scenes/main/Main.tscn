@@ -1,21 +1,45 @@
-[gd_scene load_steps=4 format=3 uid="uid://clwjfve5rnpsy"]
+[gd_scene load_steps=7 format=3 uid="uid://clwjfve5rnpsy"]
 
 [ext_resource type="PackedScene" uid="uid://b8qm3xgv2pu5w" path="res://scenes/vehicles/PlayerCar.tscn" id="1_m7d9k"]
 [ext_resource type="PackedScene" uid="uid://bfqm2xgv3pu6w" path="res://scenes/environment/TestArena.tscn" id="2_arena"]
 [ext_resource type="Script" path="res://scripts/ui/speed_debug.gd" id="3_debug"]
+[ext_resource type="Script" path="res://scripts/ui/viewport_resizer.gd" id="4_viewport"]
+[ext_resource type="PackedScene" uid="uid://chk3xgm5rnp7y" path="res://scenes/ui/HUD.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/main/main_scene.gd" id="6_main"]
 
 [node name="Main" type="Node2D"]
+script = ExtResource("6_main")
 
-[node name="TestArena" parent="." instance=ExtResource("2_arena")]
+[node name="GameViewport" type="SubViewportContainer" parent="."]
+anchors_preset = 15
+anchor_right = 0.8
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("4_viewport")
 
-[node name="PlayerCar" parent="." instance=ExtResource("1_m7d9k")]
+[node name="SubViewport" type="SubViewport" parent="GameViewport"]
+handle_input_locally = false
+size = Vector2i(1024, 720)
+render_target_update_mode = 4
+disable_3d = true
+use_xr = false
+
+[node name="GameRoot" type="Node2D" parent="GameViewport/SubViewport"]
+
+[node name="TestArena" parent="GameViewport/SubViewport/GameRoot" instance=ExtResource("2_arena")]
+
+[node name="PlayerCar" parent="GameViewport/SubViewport/GameRoot" instance=ExtResource("1_m7d9k")]
 position = Vector2(640, 360)
 
-[node name="Camera2D" type="Camera2D" parent="PlayerCar"]
+[node name="Camera2D" type="Camera2D" parent="GameViewport/SubViewport/GameRoot/PlayerCar"]
 enabled = true
 zoom = Vector2(1, 1)
 position_smoothing_enabled = true
 position_smoothing_speed = 5.0
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
 
 [node name="DebugUI" type="CanvasLayer" parent="."]
 

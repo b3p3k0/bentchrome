@@ -1,0 +1,81 @@
+[gd_scene load_steps=2 format=3 uid="uid://chk3xgm5rnp7y"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+layer = 1
+script = ExtResource("1_hud")
+
+[node name="HUDRoot" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="HUDColumn" type="ColorRect" parent="HUDRoot"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 0.8
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.95)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUDRoot/HUDColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+
+[node name="PlayerName" type="Label" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+text = "Player"
+horizontal_alignment = 1
+
+[node name="PlayerHealthBar" type="TextureProgressBar" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 24)
+max_value = 100.0
+value = 100.0
+nine_patch_stretch = true
+stretch_margin_left = 4
+stretch_margin_top = 4
+stretch_margin_right = 4
+stretch_margin_bottom = 4
+
+[node name="RadarContainer" type="AspectRatioContainer" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+ratio = 1.0
+
+[node name="RadarPlaceholder" type="ColorRect" parent="HUDRoot/HUDColumn/VBoxContainer/RadarContainer"]
+layout_mode = 2
+color = Color(0.2, 0.2, 0.2, 1)
+
+[node name="RadarLabel" type="Label" parent="HUDRoot/HUDColumn/VBoxContainer/RadarContainer/RadarPlaceholder"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+text = "RADAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OpponentsContainer" type="VBoxContainer" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+
+[node name="OpponentsSpacer" type="Control" parent="HUDRoot/HUDColumn/VBoxContainer/OpponentsContainer"]
+layout_mode = 2
+size_flags_vertical = 3
