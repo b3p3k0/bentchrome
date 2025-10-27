@@ -1,129 +1,134 @@
 {
-  // Writers: update values as needed
   "characters": [
     {
       "id": "bumper",
       "car_name": "Bumper",
-      "driver_name": "Tank Morrison",
-      "flavor": "Tank earned his nickname the hard way - by turning every fender-bender into a demolition derby. His reinforced bumper has seen more action than a prizefighter's fists. When the dust settles, Tank's still rolling.",
+      "driver_name": "Chester J. Banks",
+      "flavor": "Country-club rebel in a hot-pink land yacht. The Cadillac floats, then thuds when it lands. It is slow off the line yet cruises steady once moving. Steering is lazy but predictable. He weaponizes swagger and wide fenders.",
+      "special_weapon": "Blunt Blaze: a front cone of fire that widens with distance. Applies steady burn while the torch is held, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial.",
       "stats": {
-        "acceleration": 2,
-        "top_speed": 3,
-        "handling": 2,
-        "armor": 5,
-        "special_power": 4
+        "acceleration": 3,
+        "top_speed": 6,
+        "handling": 5,
+        "armor": 7,
+        "special_power": 7
       },
       "portrait": "res://assets/img/bios/bumper.png"
     },
     {
       "id": "cricket",
-      "car_name": "Cricket",
-      "driver_name": "Jinx Reilly",
-      "flavor": "Small, fast, and twice as mean as anything twice her size. Jinx bounces between cover like her namesake insect, striking when you least expect it. Don't let the compact frame fool you - this Cricket has a hell of a bite.",
-      "stats": {
-        "acceleration": 5,
-        "top_speed": 4,
-        "handling": 5,
-        "armor": 1,
-        "special_power": 3
+     "car_name": "Cricket",
+    "driver_name": "Kyrsta",
+    "flavor": "A dirt-track prodigy with bubble-gum confidence. The bright green midget car rockets out of corners. It skitters at the edge of control on pavement. Fragile panels keep weight down but punish mistakes. She lives for straight-line charges and risky lines.",
+    "special_weapon": "Leap: locks the nearest target in range, then full-throttle body-check. Ignores destructible cover and grants 2 seconds of brief invulnerability after impact. Massive hit and speed drain if it connects.",
+    "stats": {
+      "acceleration": 8,
+      "top_speed": 8,
+      "handling": 4,
+      "armor": 4,
+      "special_power": 8
       },
       "portrait": "res://assets/img/bios/cricket.png"
     },
     {
       "id": "ghost",
       "car_name": "Ghost",
-      "driver_name": "Shade Walker",
-      "flavor": "Appears out of nowhere, strikes without warning, vanishes before you can retaliate. Walker's mastery of hit-and-run tactics has earned him a reputation that borders on supernatural. Some say he's not quite human anymore.",
-      "stats": {
-        "acceleration": 4,
-        "top_speed": 5,
-        "handling": 4,
-        "armor": 2,
-        "special_power": 5
+    "driver_name": "Chad Duché",
+    "flavor": "A pristine 1960s white sports car built for applause. It launches hard, carves clean arcs, and screams at the top end. Thin skin makes every mistake expensive. The driver smiles for cameras while hunting the win. Fame is fuel, and it burns fast.",
+    "special_weapon": "Phantom Phire: a spectral missile that locks the nearest target anywhere on the map. Passes through cover and expires after 90 seconds if it fails to hit. Beatable only by outrunning and breaking line.",
+    "stats": {
+      "acceleration": 8,
+      "top_speed": 9,
+      "handling": 7,
+      "armor": 3,
+      "special_power": 6
       },
       "portrait": "res://assets/img/bios/ghost.png"
     },
     {
       "id": "hammertoe",
-      "car_name": "Hammertoe",
-      "driver_name": "Brick Kowalski",
-      "flavor": "Subtlety died the day Brick got behind the wheel. His approach to vehicular combat is refreshingly direct: ram first, ask questions later. The heavily armored Hammertoe has never met an obstacle it couldn't flatten.",
-      "stats": {
-        "acceleration": 1,
-        "top_speed": 2,
-        "handling": 1,
-        "armor": 5,
-        "special_power": 4
+     "car_name": "Hammertoe",
+    "driver_name": "Chuck and Vern",
+    "flavor": "Two party-boy dropouts in a lifted monster. It wallows like a boat and hates hairpins. The frame is stout and happy to trade paint. Straight roads turn it mean; tight tracks punish it. Collisions are not accidents. They are a plan.",
+    "special_weapon": "Toe Jam: triggers on collision when a charge is held. Replaces normal crash damage with a heavy, punishing hit. Best when ambushing around blind corners.",
+    "stats": {
+      "acceleration": 5,
+      "top_speed": 5,
+      "handling": 3,
+      "armor": 7,
+      "special_power": 7
       },
       "portrait": "res://assets/img/bios/hammertoe.png"
     },
     {
-      "id": "kandykane",
       "car_name": "Kandy Kane",
-      "driver_name": "Sugar Rush",
-      "flavor": "Sweet on the outside, explosive on the inside. Sugar's deceptively cheerful demeanor masks a pyromaniac's love for carnage. Her candy-striped ride delivers treats that go boom rather than satisfy your sweet tooth.",
-      "stats": {
-        "acceleration": 3,
-        "top_speed": 4,
-        "handling": 3,
-        "armor": 2,
-        "special_power": 5
+    "driver_name": "Kandy Kane",
+    "flavor": "A sadistic clown queen wrapped in leather and laughter. Her battered ice cream truck lures crowds, then scatters them. She delights in chaos and close-quarters carnage. The rig is heavy and stubborn but inexorable once rolling. Expect brute control and sustained pressure over finesse.",
+    "special_weapon": "Molotov Cocktail: a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Works best when pinning foes in tight alleys.",
+    "stats": {
+      "acceleration": 5,
+      "top_speed": 6,
+      "handling": 3,
+      "armor": 8,
+      "special_power": 8
       },
       "portrait": "res://assets/img/bios/kandykane.png"
     },
     {
       "id": "mrghastly",
-      "car_name": "Mr. Ghastly",
-      "driver_name": "Doc Mortis",
-      "flavor": "Death rides shotgun with the good doctor. Mortis treats every engagement like a clinical study in mortality, cataloguing each impact with scientific precision. His bedside manner is as cold as his victims.",
-      "stats": {
-        "acceleration": 2,
-        "top_speed": 3,
-        "handling": 4,
-        "armor": 3,
-        "special_power": 5
-      },
-      "portrait": "res://assets/img/bios/mrghastly.png"
+    "car_name": "Mr. Ghastly",
+    "driver_name": "???",
+    "flavor": "A roaring old-school Harley ridden by death in leather. The bike is viciously quick and dances through gaps. Armor is a rumor; every hit matters. The rider’s gaze never blinks. Miss him once and he is gone.",
+    "special_weapon": "Scythe of the Damned: a straight-line, slightly slow, recharging projectile. Immense damage if it connects, no homing. Demands precise timing and lane control.",
+    "stats": {
+      "acceleration": 8,
+      "top_speed": 8,
+      "handling": 7,
+      "armor": 2,
+      "special_power": 9
+    },
+    "portrait": "res://assets/img/bios/mrghastly.png"
     },
     {
       "id": "razorback",
-      "car_name": "Razorback",
-      "driver_name": "Spike Hernandez",
-      "flavor": "Sharp edges and sharper reflexes define Spike's driving style. The Razorback's serrated armor isn't just for show - it's a promise. Get too close and you'll find out why they call him the human cheese grater.",
-      "stats": {
-        "acceleration": 4,
-        "top_speed": 4,
-        "handling": 3,
-        "armor": 3,
-        "special_power": 3
+      "driver_name": "Big Sarge",
+    "flavor": "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes.",
+    "special_weapon": "Red Glare: a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches.",
+    "stats": {
+      "acceleration": 3,
+      "top_speed": 6,
+      "handling": 4,
+      "armor": 8,
+      "special_power": 7
       },
       "portrait": "res://assets/img/bios/razorback.png"
     },
     {
       "id": "smoky",
-      "car_name": "Smoky",
-      "driver_name": "Ash Cinder",
-      "flavor": "Where Ash goes, smoke follows - usually from the wreckage of her enemies. Her exhaust pipes belch more than fumes; they breathe fire like an angry dragon. The Smoky doesn't just burn rubber, it burns everything.",
-      "stats": {
-        "acceleration": 3,
-        "top_speed": 5,
-        "handling": 2,
-        "armor": 2,
-        "special_power": 4
+     "car_name": "Smoky",
+    "driver_name": "Officer Richard Vepsh",
+    "flavor": "A hard-nosed cop in a pursuit-tuned SUV. It jumps off the line and shrugs off fender benders. Mid pack at the top end and clumsy in tight chicanes. Built for ramming and zone control. Sirens on means mercy off.",
+    "special_weapon": "Taser: auto-locks within close range and channels continuous shock. Deals light damage per second and cripples the victim’s handling while in range. Sustains up to 20 seconds if the target cannot break away.",
+    "stats": {
+      "acceleration": 7,
+      "top_speed": 6,
+      "handling": 4,
+      "armor": 7,
+      "special_power": 7
       },
       "portrait": "res://assets/img/bios/smoky.png"
     },
     {
-      "id": "splatcat",
-      "car_name": "Splat Cat",
-      "driver_name": "Felix Mayhem",
-      "flavor": "Nine lives ain't enough for the kind of stunts Felix pulls. This alley cat treats physics like a suggestion and gravity like a personal insult. The Splat Cat always lands on its wheels, usually on top of someone else.",
-      "stats": {
-        "acceleration": 5,
-        "top_speed": 3,
-        "handling": 5,
-        "armor": 1,
-        "special_power": 2
+     "car_name": "Splat Cat",
+    "driver_name": "Juan Dough",
+    "flavor": "A fast-talking courier with nine lives and unpaid parking tickets. The compact ride is quick, nimble, and streetwise. Armor sits in the middle; evasive driving is the real defense. He thrives in traffic and dirty lines. Delivery guaranteed, signature optional.",
+    "special_weapon": "Splat Effect: on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups.",
+    "stats": {
+      "acceleration": 6,
+      "top_speed": 7,
+      "handling": 7,
+      "armor": 5,
+      "special_power": 8
       },
       "portrait": "res://assets/img/bios/splatcat.png"
     }
