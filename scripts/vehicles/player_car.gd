@@ -5,9 +5,11 @@ extends CharacterBody2D
 ## Last key pressed wins; no diagonal movement; instant rotation snapping to cardinal directions
 
 ## Debug flag for vehicle tuning instrumentation
-const DEBUG_VEHICLE_TUNING: bool = false
+const DEBUG_VEHICLE_TUNING: bool = true
 ## Debug flag for collision damage calculations
 const DEBUG_COLLISION_DAMAGE: bool = true
+## Debug flag for 8-way movement system
+const DEBUG_8WAY_MOVEMENT: bool = true
 
 const VehicleHealth = preload("res://scripts/vehicles/vehicle_health.gd")
 
@@ -20,10 +22,19 @@ static var _stat_ranges
 @export var deceleration: float = 600.0
 @export var brake_force: float = 1200.0  ## Strong deceleration when pressing opposite to current movement
 @export var bullet_scene: PackedScene
-@export var fire_rate: float = 5.0
+@export var fire_rate: float = 20.0
 @export var bounce_damp: float = 0.55
 @export var bounce_push: float = 80.0
 @export var min_bounce_velocity: float = 5.0
+
+## Movement system configuration
+@export var movement_mode: String = "8_way"  ## "4_way" or "8_way" movement mode
+@export var diagonal_speed_scale: float = 0.707  ## Speed multiplier for diagonal movement (√2/2 ≈ 0.707)
+@export var key_combination_timeout: float = 0.05  ## Time window for diagonal key combinations (50ms)
+
+## Collision immunity system to prevent damage spam
+@export var collision_immunity_duration: float = 0.15
+var _collision_immunity_timer: float = 0.0
 
 ## Constants for stat scaling and terrain modifiers
 const STAT_SCALE = {
@@ -38,6 +49,20 @@ const STAT_SCALE = {
 	"special_power": Vector2(0.8, 1.2)
 }
 
+## Enhanced drift factor constants for dramatic sliding physics
+const DRIFT_FACTORS = {
+	"low_speed": Vector2(0.05, 0.15),    # Min/max drift at low speeds (tight control)
+	"high_speed": Vector2(0.15, 0.85),   # Min/max drift at high speeds (dramatic sliding)
+	"high_speed_boost": Vector2(0.25, 1.2), # Extra drift multiplier above 70% speed
+	"slip_angle_sensitivity": 2.5,       # How aggressively slip angle affects drift
+	"terrain_multipliers": {
+		"track": 0.7,        # Reduced drift on track
+		"sand": 1.5,         # More drift on sand/grass
+		"snow": 2.0,         # Much more drift on snow
+		"ice": 2.5           # Extreme drift on ice/water
+	}
+}
+
 const TERRAIN_MODIFIERS = {
 	"terrain_track": {"accel": 1.0, "speed": 1.0, "handling": 1.0, "brake": 1.0},
 	"terrain_sand": {"accel": 0.2, "speed": 0.5, "handling": 0.12, "brake": 0.35},
@@ -46,6 +71,9 @@ const TERRAIN_MODIFIERS = {
 	"terrain_snow": {"accel": 0.25, "speed": 0.5, "handling": 0.2, "brake": 0.4},
 	"terrain_water": {"accel": 0.25, "speed": 1.4, "handling": 0.05, "brake": 0.15}
 }
+
+# Missile spawn tuning
+const MISSILE_FORWARD_OFFSET: float = 36.0
 
 ## Weapon damage profile constants (4× scaled from design)
 const DAMAGE_PROFILE = {
@@ -59,10 +87,28 @@ const DAMAGE_PROFILE = {
 }
 
 var _next_fire_time := 0.0
-var current_direction := Vector2.ZERO  ## Active cardinal input direction
+var current_direction := Vector2.ZERO  ## Active input direction (cardinal or diagonal)
 var last_facing_direction := Vector2.UP  ## Persists for firing/visuals when no input
 var pressed_directions: Array[Vector2] = []  ## Stack of currently held directions
 var selected_profile: Dictionary = {}  ## Selected character profile from roster
+
+## Enhanced direction tracking for 8-way movement
+var _pressed_keys: Dictionary = {}  ## Track which direction keys are currently held
+var _key_press_times: Dictionary = {}  ## Track when each key was pressed for combination detection
+var _raw_input_vector := Vector2.ZERO  ## Raw combined input before processing
+var _last_mode_toggle_time: float = 0.0  ## Debounce timer for mode switching
+
+## Weapon selection system variables
+var available_weapons: Array[String] = []  ## Available secondary weapons (excluding machine gun)
+var selected_weapon_index: int = 0  ## Current weapon index
+var selected_weapon_type: String = ""  ## Current selected weapon name
+
+# Missile inventory & cooldown
+var missile_count: int = 3
+var missile_cooldown: float = 3.0
+var _last_missile_time: float = -999.0
+var _muzzle_last_primary: bool = false
+var _muzzle_last_secondary: bool = false
 
 ## Health system variables
 var vehicle_health
@@ -75,14 +121,55 @@ var _handling_lock_duration: float = 0.1  ## Duration to lock direction changes
 var _lateral_drag_multiplier: float = 1.0  ## Handling-based drag on turns
 var _snap_smoothing_factor: float = 0.5  ## Visual rotation smoothing factor
 
+## Mass-based inertia variables
+var _mass_scaled: bool = false  ## Guard against double-application of mass scaling
+var _base_stats: Dictionary = {}  ## Cache base stats before mass scaling for debug
+
 ## Terrain tracking variables
 var _current_terrain_modifiers: Dictionary = {"accel": 1.0, "speed": 1.0, "handling": 1.0, "brake": 1.0}
 var _target_terrain_modifiers: Dictionary = {"accel": 1.0, "speed": 1.0, "handling": 1.0, "brake": 1.0}
 var _start_terrain_modifiers: Dictionary = {"accel": 1.0, "speed": 1.0, "handling": 1.0, "brake": 1.0}
-var _terrain_transition_time: float = 0.2  ## Time to interpolate terrain changes
+var _terrain_transition_time: float = 0.2  ## Dynamic time to interpolate terrain changes
 var _terrain_transition_timer: float = 0.0
 var _terrain_transition_elapsed: float = 0.0
 var _effective_max_speed: float = 0.0  ## Cached speed cap after terrain modifiers
+var _current_terrain_type: String = "terrain_track"  ## Track current terrain for smart transitions
+var _previous_terrain_type: String = "terrain_track"  ## Track previous terrain for transition logic
+var _transition_curve_type: String = "smooth"  ## Current transition curve type for asymmetric easing
+
+const CORE_INPUT_BINDINGS := {
+	"move_up": [
+		{"type": "key", "code": Key.KEY_W},
+		{"type": "key", "code": Key.KEY_UP},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_UP},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_Y, "value": -1.0}
+	],
+	"move_down": [
+		{"type": "key", "code": Key.KEY_S},
+		{"type": "key", "code": Key.KEY_DOWN},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_DOWN},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_Y, "value": 1.0}
+	],
+	"move_left": [
+		{"type": "key", "code": Key.KEY_A},
+		{"type": "key", "code": Key.KEY_LEFT},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_LEFT},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0}
+	],
+	"move_right": [
+		{"type": "key", "code": Key.KEY_D},
+		{"type": "key", "code": Key.KEY_RIGHT},
+		{"type": "joy_button", "button": JOY_BUTTON_DPAD_RIGHT},
+		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0}
+	],
+	"fire_primary": [
+		{"type": "key", "code": Key.KEY_SPACE},
+		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
+	],
+	"fire_special": [
+		{"type": "mouse_button", "button": MOUSE_BUTTON_RIGHT}
+	]
+}
 
 @onready var muzzle := $Muzzle
 @onready var muzzle_flash := $Visuals/MuzzleFlash
@@ -101,6 +188,12 @@ func _ready():
 	add_child(vehicle_health)
 	vehicle_health.died.connect(_on_vehicle_died)
 
+	# Initialize weapon selection system
+	_initialize_weapon_selection()
+
+	# Ensure critical input actions are present even if project settings were corrupted
+	_ensure_core_input_bindings()
+
 	if SelectionState.has_selection():
 		selected_profile = SelectionState.get_selection()
 		var car_name = selected_profile.get("car_name", "Unknown")
@@ -108,7 +201,279 @@ func _ready():
 		print("Selected car: ", car_name, " (driver: ", driver_name, ")")
 		_apply_character_stats()
 	else:
-		print("No character selected, using default stats")
+		print("No character selected, using fallback (Bumper)")
+		_load_fallback_character()
+		_apply_character_stats()
+
+	if DEBUG_VEHICLE_TUNING:
+		_verify_input_mappings()
+	
+	# Hook muzzle flash visibility changes so external effects (UI triggering muzzle) can drive missiles
+	if muzzle_flash and muzzle_flash.has_signal("visibility_changed"):
+		muzzle_flash.visibility_changed.connect(_on_muzzle_visibility_changed)
+
+
+func _on_muzzle_visibility_changed():
+	# Ignore muzzle flashes that were caused by primary fire
+	if _muzzle_last_primary:
+		return
+
+	# When muzzle flash becomes visible, attempt to fire a missile if the selected weapon is a missile type
+	print("[PlayerCar] muzzle visibility changed. visible=", muzzle_flash.visible, " selected=", selected_weapon_type)
+	if muzzle_flash.visible and selected_weapon_type in ["FIRE_MISSILE", "HOMING_MISSILE"]:
+		if can_fire_missile():
+			print("[PlayerCar] muzzle visibility triggered missile attempt")
+			fire_missile()
+		else:
+			print("[PlayerCar] muzzle visibility: missile not ready or out of ammo")
+## Load fallback character when SelectionState has no selection
+func _load_fallback_character():
+	var roster_path = "res://assets/data/roster.json"
+	if not FileAccess.file_exists(roster_path):
+		push_error("PlayerCar: Cannot load fallback - roster file not found")
+		return
+
+	var file = FileAccess.open(roster_path, FileAccess.READ)
+	if file == null:
+		push_error("PlayerCar: Cannot load fallback - failed to open roster file")
+		return
+
+	var json_text = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_text) != OK:
+		push_error("PlayerCar: Cannot load fallback - invalid JSON in roster file")
+		return
+
+	var roster_data = json.data
+	if not roster_data is Dictionary:
+		push_error("PlayerCar: Cannot load fallback - invalid roster format")
+		return
+
+	var characters = roster_data.get("characters", [])
+	if characters.size() > 0:
+		selected_profile = characters[0]  # Use first character (Bumper)
+		print("Loaded fallback character: ", selected_profile.get("car_name", "Unknown"))
+	else:
+		push_error("PlayerCar: Cannot load fallback - no characters in roster")
+
+## Initialize weapon selection system with available secondary weapons
+func _initialize_weapon_selection():
+	# Load available weapons from DAMAGE_PROFILE (excluding MACHINE_GUN)
+	available_weapons = ["HOMING_MISSILE", "FIRE_MISSILE", "POWER_MISSILE", "BOUNCE_BOMB_DIRECT", "LAND_MINE"]
+	selected_weapon_index = 0
+	if available_weapons.size() > 0:
+		selected_weapon_type = available_weapons[selected_weapon_index]
+		print("Weapon system initialized. Selected: ", selected_weapon_type)
+	else:
+		selected_weapon_type = ""
+
+## Select next weapon in the list (scroll up)
+func select_next_weapon():
+	if available_weapons.size() == 0:
+		return
+
+	selected_weapon_index = (selected_weapon_index + 1) % available_weapons.size()
+	selected_weapon_type = available_weapons[selected_weapon_index]
+	print("Selected weapon: ", selected_weapon_type)
+
+## Select previous weapon in the list (scroll down)
+func select_prev_weapon():
+	if available_weapons.size() == 0:
+		return
+
+	selected_weapon_index = (selected_weapon_index - 1) % available_weapons.size()
+	if selected_weapon_index < 0:
+		selected_weapon_index = available_weapons.size() - 1
+	selected_weapon_type = available_weapons[selected_weapon_index]
+	print("Selected weapon: ", selected_weapon_type)
+
+## Verify input mappings are properly loaded (debug helper)
+func _verify_input_mappings():
+	print("=== INPUT MAPPING VERIFICATION ===")
+	for action_name in CORE_INPUT_BINDINGS.keys():
+		var events = InputMap.action_get_events(action_name)
+		print(action_name, "has", events.size(), "events")
+		for event in events:
+			if event is InputEventKey:
+				print("  - Key (physical): ", event.physical_keycode)
+			elif event is InputEventJoypadButton:
+				print("  - Joypad button: ", event.button_index)
+			elif event is InputEventJoypadMotion:
+				print("  - Joypad axis: ", event.axis, " value: ", event.axis_value)
+			elif event is InputEventMouseButton:
+				print("  - Mouse button: ", event.button_index)
+	print("=== END VERIFICATION ===")
+
+func _ensure_core_input_bindings():
+	for action_name in CORE_INPUT_BINDINGS.keys():
+		if not InputMap.has_action(action_name):
+			InputMap.add_action(action_name, 0.5)
+
+		for definition in CORE_INPUT_BINDINGS[action_name]:
+			if not _action_has_binding(action_name, definition):
+				var event = _create_input_event(definition)
+				if event:
+					InputMap.action_add_event(action_name, event)
+
+func _action_has_binding(action_name: String, definition: Dictionary) -> bool:
+	if not InputMap.has_action(action_name):
+		return false
+
+	for event in InputMap.action_get_events(action_name):
+		match definition.get("type", ""):
+			"key":
+				if event is InputEventKey and event.physical_keycode == definition.get("code", -1):
+					return true
+			"joy_button":
+				if event is InputEventJoypadButton and event.button_index == definition.get("button", -1):
+					return true
+			"joy_axis":
+				if event is InputEventJoypadMotion \
+						and event.axis == definition.get("axis", -1) \
+						and is_equal_approx(event.axis_value, definition.get("value", 0.0)):
+					return true
+			"mouse_button":
+				if event is InputEventMouseButton and event.button_index == definition.get("button", -1):
+					return true
+	return false
+
+func _create_input_event(definition: Dictionary) -> InputEvent:
+	match definition.get("type", ""):
+		"key":
+			var key_event := InputEventKey.new()
+			key_event.physical_keycode = definition.get("code", 0)
+			return key_event
+		"joy_button":
+			var joy_event := InputEventJoypadButton.new()
+			joy_event.button_index = definition.get("button", 0)
+			return joy_event
+		"joy_axis":
+			var axis_event := InputEventJoypadMotion.new()
+			axis_event.axis = definition.get("axis", 0)
+			axis_event.axis_value = definition.get("value", 0.0)
+			return axis_event
+		"mouse_button":
+			var mouse_event := InputEventMouseButton.new()
+			mouse_event.button_index = definition.get("button", 0)
+			return mouse_event
+	return null
+
+## Fire the currently selected secondary weapon (placeholder implementation)
+func fire_selected_weapon():
+	if selected_weapon_type == "":
+		print("No weapon selected")
+		return
+
+	# Route to specific weapon implementations
+	# Treat both FIRE_MISSILE and HOMING_MISSILE as missile-type secondaries
+	if selected_weapon_type in ["FIRE_MISSILE", "HOMING_MISSILE"]:
+		if can_fire_missile():
+			fire_missile()
+		else:
+			print("Missile not ready or out of ammo")
+		return
+
+	# Fallback placeholder for other secondary weapons
+	var damage = DAMAGE_PROFILE.get(selected_weapon_type, 0)
+	print("Firing ", selected_weapon_type, " (damage: ", damage, ") - PLACEHOLDER")
+
+	# Visual effect for non-missile secondaries
+	_show_weapon_effect()
+
+## Show placeholder visual effect for secondary weapon firing
+func _show_weapon_effect():
+	# Intentionally no-op for missile firing; muzzle visuals removed to avoid
+	# interfering with input routing. If you want a visual later, add an
+	# effect node and trigger it explicitly here.
+	return
+
+## Missile helpers
+func can_fire_missile() -> bool:
+	var now = Time.get_ticks_msec() / 1000.0
+	return missile_count > 0 and (now - _last_missile_time) >= missile_cooldown
+
+func fire_missile():
+	# Guard
+	if not can_fire_missile():
+		return
+
+	# Debug: log firing attempts for runtime tracing
+	print("[PlayerCar] fire_missile() called. missiles_before=", missile_count)
+
+	missile_count -= 1
+	_last_missile_time = Time.get_ticks_msec() / 1000.0
+
+	# Load missile scene
+	var missile_scene = preload("res://scenes/weapons/Missile.tscn")
+
+	# Determine forward direction based on current movement/facing
+	var forward_dir = current_direction if current_direction != Vector2.ZERO else last_facing_direction
+	forward_dir = forward_dir.normalized()
+
+	# Position at muzzle if present, otherwise in front of car by offset
+	var muzzle_pos = global_position
+	if has_node("Muzzle"):
+		muzzle_pos = $Muzzle.global_position
+	else:
+		muzzle_pos = global_position + forward_dir * MISSILE_FORWARD_OFFSET
+
+	# Use GameManager helper if available (pass PackedScene so GM instantiates and tracks)
+	if Engine.has_singleton("GameManager"):
+		var gm = GameManager
+		if gm.has_method("spawn_missile"):
+			# Pass rotation and initial velocity so missile starts moving in travel direction
+			var init_vel = forward_dir * 1400.0
+			var rot = init_vel.angle()
+			print("[PlayerCar] spawning missile at", muzzle_pos, "rot=", rot, "init_vel=", init_vel)
+			gm.spawn_missile(missile_scene, muzzle_pos, self, rot, init_vel)
+			return
+		elif gm.has_method("get_game_root"):
+			# instantiate locally and parent to game_root
+			var inst = missile_scene.instantiate()
+			inst.owner_node = self
+			inst.global_position = muzzle_pos
+			inst.rotation = forward_dir.angle()
+			inst.velocity = forward_dir * inst.speed
+			# Ensure missile spawns in front of the vehicle collision
+			_nudge_missile_clear(inst)
+			gm.get_game_root().add_child(inst)
+			return
+
+	# Fallback to adding to root scene (instantiate locally)
+	var inst = missile_scene.instantiate()
+	inst.owner_node = self
+	inst.global_position = muzzle_pos
+	inst.rotation = forward_dir.angle()
+	inst.velocity = forward_dir * inst.speed
+	# Ensure missile spawns in front of the vehicle collision
+	_nudge_missile_clear(inst)
+	get_tree().get_root().get_child(0).add_child(inst)
+
+	# No muzzle flash for missiles; visual effects removed per design
+
+## Nudge spawned missile forward out of owner's collision if necessary
+func _nudge_missile_clear(missile_node: Node2D) -> void:
+	if not missile_node:
+		return
+	if not is_instance_valid(self):
+		return
+	# Cast a short segment forward and move missile until it's no longer overlapping owner's shape
+	var forward = Vector2.UP.rotated(rotation)
+	var check_pos = missile_node.global_position
+	var max_attempts = 4
+	var attempt = 0
+	while attempt < max_attempts:
+		# Use simple distance check against owner global position to heuristically nudge out
+		var dist = check_pos.distance_to(self.global_position)
+		# If missile is too close (< half vehicle width), nudge it forward
+		if dist < MISSILE_FORWARD_OFFSET * 0.75:
+			check_pos += forward * 8
+			missile_node.global_position = check_pos
+		else:
+			break
+		attempt += 1
 
 ## Debug logging helper with consistent prefix
 func _debug_log(msg: String):
@@ -134,20 +499,20 @@ func _apply_stat_curve(stat_value: float, curve_type: String) -> float:
 
 	match curve_type:
 		"acceleration":
-			# Gentle slope for low stats, stronger payoff for high stats
-			return pow(normalized, 0.55)
+			# More responsive acceleration curve - still dramatic but not brutal
+			return pow(normalized, 0.4)
 		"deceleration":
-			# Similar to acceleration but slightly different curve
-			return pow(normalized, 0.75)
+			# Align with acceleration harshness
+			return pow(normalized, 0.3)
 		"brake":
-			# Linear for brake force to maintain predictable feel
-			return normalized
+			# Much more curved for extreme differences
+			return pow(normalized, 0.35)
 		"handling":
-			# Strong curve for handling - low handling should be very punishing
-			return pow(normalized, 0.45)
+			# Catastrophically punishing for poor handling
+			return pow(normalized, 0.2)
 		"speed":
-			# Moderate curve for top speed
-			return pow(normalized, 0.6)
+			# Massive speed gaps
+			return pow(normalized, 0.35)
 		_:
 			# Default linear interpolation for armor/special
 			return normalized
@@ -246,10 +611,23 @@ func _apply_character_stats():
 			"special_power": lerp(STAT_SCALE.special_power.x, STAT_SCALE.special_power.y, special_curve)
 		}
 
+	# Cache base stats before mass scaling for debug
+	_base_stats = {
+		"max_speed": max_speed,
+		"acceleration": acceleration,
+		"deceleration": deceleration,
+		"brake_force": brake_force,
+		"handling_lock": _handling_lock_duration
+	}
+
 	# Configure health system with armor stat and cache for collision calculations
 	_cached_armor_stat = armor_stat
 	if vehicle_health:
 		vehicle_health.configure_from_stats(stats)
+
+	# Apply mass-based inertia scaling (only once)
+	if not _mass_scaled and vehicle_health:
+		_apply_mass_scaling()
 
 	# Apply character colors
 	_apply_character_colors()
@@ -260,6 +638,91 @@ func _apply_character_stats():
 	_debug_log("Applied stats - Max Speed: " + str(max_speed) + ", Acceleration: " + str(acceleration) + ", Handling Lock: " + str(_handling_lock_duration))
 	_debug_log("Derived stats - Armor: " + str(_derived_stats.armor) + ", Special Power: " + str(_derived_stats.special_power))
 	_debug_log("Stat curves - Accel: " + str(accel_curve) + ", Speed: " + str(speed_curve) + ", Handling: " + str(handling_curve))
+
+	# Roster stat dump for tuning (temporary debug)
+	if DEBUG_VEHICLE_TUNING:
+		_debug_roster_stats()
+
+## Apply mass-based inertia scaling to stats
+func _apply_mass_scaling():
+	if _mass_scaled:
+		return
+
+	var mass_scalar = vehicle_health.get_mass_scalar()
+
+	# Scale dynamics - heavy vehicles approaching glacial speeds
+	acceleration *= 1.0 / mass_scalar
+	deceleration *= 1.0 / lerp(1.0, mass_scalar, 0.95)
+	brake_force *= 1.0 / lerp(1.0, mass_scalar, 0.95)
+
+	# Minimum values for safety but allowing more dramatic differences
+	acceleration = max(acceleration, 80.0)
+	deceleration = max(deceleration, 50.0)
+	brake_force = max(brake_force, 150.0)
+
+	# Handling resistance - heavy vehicles glacially slow turning
+	_handling_lock_duration *= lerp(1.0, mass_scalar, 0.9)
+
+	_mass_scaled = true
+
+	_debug_log("Mass scaling applied - Mass scalar: " + str(mass_scalar) + ", Final accel: " + str(acceleration) + ", Final brake: " + str(brake_force))
+
+## Debug function to dump all roster character stats (temporary for tuning)
+func _debug_roster_stats():
+	var roster_path = "res://assets/data/roster.json"
+	if not FileAccess.file_exists(roster_path):
+		return
+
+	var file = FileAccess.open(roster_path, FileAccess.READ)
+	if file == null:
+		return
+
+	var json_text = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_text) != OK:
+		return
+
+	var roster_data = json.data
+	if not roster_data is Dictionary:
+		return
+
+	var characters = roster_data.get("characters", [])
+	print("\n=== ROSTER STAT ANALYSIS ===")
+
+	for character in characters:
+		var stats = character.get("stats", {})
+		var car_name = character.get("car_name", "Unknown")
+		var accel_stat = stats.get("acceleration", 5)
+		var speed_stat = stats.get("top_speed", 5)
+		var armor_stat = stats.get("armor", 5)
+
+		# Calculate what this character's stats would be
+		var accel_curve = _apply_stat_curve(accel_stat, "acceleration")
+		var speed_curve = _apply_stat_curve(speed_stat, "speed")
+
+		var stat_ranges = _get_stat_ranges()
+		var computed_accel: float
+		var computed_speed: float
+
+		if stat_ranges:
+			computed_accel = lerp(stat_ranges.accel_min, stat_ranges.accel_max, accel_curve)
+			computed_speed = lerp(stat_ranges.max_speed_min, stat_ranges.max_speed_max, speed_curve)
+		else:
+			computed_accel = lerp(STAT_SCALE.acceleration.x, STAT_SCALE.acceleration.y, accel_curve)
+			computed_speed = lerp(STAT_SCALE.max_speed.x, STAT_SCALE.max_speed.y, speed_curve)
+
+		# Apply mass scaling
+		var mass_scalar = lerp(0.8, 1.4, (armor_stat - 1) / 9.0)
+		var final_accel = max(computed_accel / mass_scalar, 120.0)
+
+		print("%s (accel:%d, speed:%d, armor:%d) -> Speed: %.0f, Accel: %.0f (base: %.0f), Mass: %.2f" % [
+			car_name, accel_stat, speed_stat, armor_stat,
+			computed_speed, final_accel, computed_accel, mass_scalar
+		])
+
+	print("=== END ROSTER ANALYSIS ===\n")
 
 func get_effective_max_speed() -> float:
 	return _effective_max_speed
@@ -294,19 +757,21 @@ func _apply_default_colors():
 func _physics_process(delta):
 	_update_terrain_modifiers(delta)
 	_update_direction_lock_timer(delta)
+	_update_collision_immunity_timer(delta)
 	handle_input(delta)
 	move_and_slide()
 	_handle_slide_collisions()
 
-	# Snap visual rotation to cardinal directions when actively moving with enhanced smoothing
+	# Snap visual rotation to match movement direction (supports both 4-way and 8-way)
 	if current_direction != Vector2.ZERO:
-		var target_rotation = current_direction.angle() + PI / 2  # +PI/2 because front points up at 0 rotation
+		var target_rotation = _calculate_visual_rotation(current_direction)
 		if _snap_smoothing_factor < 1.0:
 			visuals.rotation = lerp_angle(visuals.rotation, target_rotation, _snap_smoothing_factor * delta * 10.0)
 		else:
 			visuals.rotation = target_rotation
 
-func handle_input(delta):
+## Original 4-way input handler - preserves existing behavior
+func _handle_4way_input(delta):
 	# Handle direction priority - check for just-pressed actions first (with direction lock)
 	if _direction_lock_timer <= 0.0:
 		if Input.is_action_just_pressed("move_up"):
@@ -328,16 +793,237 @@ func handle_input(delta):
 	if Input.is_action_just_released("move_right"):
 		remove_direction(Vector2.RIGHT)
 
+## Enhanced 8-way input handler - supports diagonal movement
+func _handle_8way_input(delta):
+	var current_time = Time.get_ticks_msec() / 1000.0
+
+	# Track key presses with timing for combination detection
+	if Input.is_action_just_pressed("move_up"):
+		_pressed_keys["up"] = true
+		_key_press_times["up"] = current_time
+	if Input.is_action_just_pressed("move_down"):
+		_pressed_keys["down"] = true
+		_key_press_times["down"] = current_time
+	if Input.is_action_just_pressed("move_left"):
+		_pressed_keys["left"] = true
+		_key_press_times["left"] = current_time
+	if Input.is_action_just_pressed("move_right"):
+		_pressed_keys["right"] = true
+		_key_press_times["right"] = current_time
+
+	# Track key releases
+	if Input.is_action_just_released("move_up"):
+		_pressed_keys["up"] = false
+	if Input.is_action_just_released("move_down"):
+		_pressed_keys["down"] = false
+	if Input.is_action_just_released("move_left"):
+		_pressed_keys["left"] = false
+	if Input.is_action_just_released("move_right"):
+		_pressed_keys["right"] = false
+
+	# Calculate raw input vector from currently held keys
+	_raw_input_vector = Vector2.ZERO
+	if _pressed_keys.get("up", false):
+		_raw_input_vector.y -= 1.0
+	if _pressed_keys.get("down", false):
+		_raw_input_vector.y += 1.0
+	if _pressed_keys.get("left", false):
+		_raw_input_vector.x -= 1.0
+	if _pressed_keys.get("right", false):
+		_raw_input_vector.x += 1.0
+
+	# Process the input vector into movement direction
+	_process_8way_direction(current_time)
+
+## Process 8-way input vector with diagonal detection and normalization
+func _process_8way_direction(current_time: float):
+	# If no input, clear direction
+	if _raw_input_vector == Vector2.ZERO:
+		current_direction = Vector2.ZERO
+		return
+
+	# Check if this is a diagonal input (both x and y components)
+	var is_diagonal = abs(_raw_input_vector.x) > 0.5 and abs(_raw_input_vector.y) > 0.5
+
+	if is_diagonal:
+		# Validate this is a proper key combination (pressed within timeout window)
+		var valid_combination = _validate_key_combination(current_time)
+
+		if valid_combination:
+			# Apply diagonal movement - keep direction normalized for proper physics
+			var new_direction = _raw_input_vector.normalized()
+
+			# Apply centripetal force for direction changes at speed
+			if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
+				_apply_direction_change_physics(current_direction, new_direction)
+
+			current_direction = new_direction
+			last_facing_direction = new_direction  # Already normalized
+
+			if DEBUG_8WAY_MOVEMENT:
+				print("[8-way] Diagonal movement: ", new_direction, " (raw input: ", _raw_input_vector, ")")
+		else:
+			# Fall back to most recent single direction
+			_fallback_to_single_direction(current_time)
+	else:
+		# Cardinal direction - use normalized input
+		var new_direction = _raw_input_vector.normalized()
+
+		# Apply centripetal force for direction changes at speed
+		if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
+			_apply_direction_change_physics(current_direction, new_direction)
+
+		current_direction = new_direction
+		last_facing_direction = new_direction
+
+		if DEBUG_8WAY_MOVEMENT:
+			print("[8-way] Cardinal movement: ", new_direction, " (raw input: ", _raw_input_vector, ")")
+
+## Validate that diagonal input represents a proper key combination
+func _validate_key_combination(current_time: float) -> bool:
+	# Find the two most recently pressed keys
+	var recent_keys = []
+	for key_name in _key_press_times.keys():
+		if _pressed_keys.get(key_name, false):
+			var press_time = _key_press_times.get(key_name, 0.0)
+			recent_keys.append({"name": key_name, "time": press_time})
+
+	# Need exactly 2 keys for diagonal
+	if recent_keys.size() != 2:
+		return false
+
+	# Sort by press time
+	recent_keys.sort_custom(func(a, b): return a.time > b.time)
+
+	# Check if keys were pressed within combination timeout
+	var time_diff = recent_keys[0].time - recent_keys[1].time
+	var within_timeout = time_diff <= key_combination_timeout
+
+	if DEBUG_8WAY_MOVEMENT and not within_timeout:
+		print("[8-way] Key combination timeout: ", time_diff, "s > ", key_combination_timeout, "s")
+
+	return within_timeout
+
+## Fall back to single direction when diagonal combination is invalid
+func _fallback_to_single_direction(current_time: float):
+	# Find most recently pressed key
+	var most_recent_key = ""
+	var most_recent_time = 0.0
+
+	for key_name in _key_press_times.keys():
+		if _pressed_keys.get(key_name, false):
+			var press_time = _key_press_times.get(key_name, 0.0)
+			if press_time > most_recent_time:
+				most_recent_time = press_time
+				most_recent_key = key_name
+
+	# Convert key name to direction vector
+	match most_recent_key:
+		"up":
+			current_direction = Vector2.UP
+		"down":
+			current_direction = Vector2.DOWN
+		"left":
+			current_direction = Vector2.LEFT
+		"right":
+			current_direction = Vector2.RIGHT
+		_:
+			current_direction = Vector2.ZERO
+
+	last_facing_direction = current_direction
+
+	if DEBUG_8WAY_MOVEMENT:
+		print("[8-way] Fallback to single direction: ", most_recent_key, " -> ", current_direction)
+
+## Calculate visual rotation for movement direction
+func _calculate_visual_rotation(direction: Vector2) -> float:
+	if direction == Vector2.ZERO:
+		return visuals.rotation
+
+	# Base rotation calculation (+PI/2 because front points up at 0 rotation)
+	var target_rotation = direction.angle() + PI / 2
+
+	# Optional: Snap to specific increments for cleaner visuals
+	if movement_mode == "4_way":
+		# Snap to cardinal directions (90° increments)
+		target_rotation = round(target_rotation / (PI / 2)) * (PI / 2)
+	elif movement_mode == "8_way":
+		# Snap to 8-way directions (45° increments) for cleaner diagonal visuals
+		target_rotation = round(target_rotation / (PI / 4)) * (PI / 4)
+
+	if DEBUG_8WAY_MOVEMENT and movement_mode == "8_way":
+		var degrees = rad_to_deg(target_rotation)
+		print("[8-way] Visual rotation: ", degrees, "° for direction ", direction)
+
+	return target_rotation
+
+## Check if a direction vector represents diagonal movement
+func _is_diagonal_movement(direction: Vector2) -> bool:
+	# Diagonal movement has both x and y components above a threshold
+	return abs(direction.x) > 0.1 and abs(direction.y) > 0.1
+
+## Debug function to toggle between movement modes
+func toggle_movement_mode():
+	if movement_mode == "4_way":
+		movement_mode = "8_way"
+		print("[Debug] Switched to 8-way movement mode")
+	else:
+		movement_mode = "4_way"
+		print("[Debug] Switched to 4-way movement mode")
+
+	# Clear input state when switching modes to prevent artifacts
+	_pressed_keys.clear()
+	_key_press_times.clear()
+	_raw_input_vector = Vector2.ZERO
+	current_direction = Vector2.ZERO
+
+func handle_input(delta):
+	# Route to appropriate movement handler based on mode
+	if movement_mode == "8_way":
+		_handle_8way_input(delta)
+	else:
+		_handle_4way_input(delta)
+
 	# Apply movement based on current direction with terrain modifiers
 	if current_direction == Vector2.ZERO:
-		# No input - apply coasting deceleration with terrain/handling modifiers
-		var effective_deceleration = deceleration * _current_terrain_modifiers.accel * _lateral_drag_multiplier
-		velocity = velocity.move_toward(Vector2.ZERO, effective_deceleration * delta)
+		# No input - apply speed + terrain aware coasting
+		var mass_scalar = vehicle_health.get_mass_scalar() if vehicle_health else 1.0
+		var current_speed = velocity.length()
+		var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
+
+		# Base coasting varies by mass
+		var base_coast_factor = lerp(0.995, 0.985, mass_scalar)
+
+		# Terrain-specific coasting rates: ice/water coast longer, sand/grass brake naturally
+		var terrain_coast_modifier = 1.0
+		if _current_terrain_modifiers.handling < 0.3:  # Ice/water terrain
+			terrain_coast_modifier = 1.002  # Coast slightly longer
+		elif _current_terrain_modifiers.handling > 0.7:  # Good grip terrain
+			terrain_coast_modifier = 0.995  # Natural braking
+
+		# Speed affects coasting - high speeds maintain better, low speeds drop off faster
+		var speed_coast_modifier = lerp(0.98, 1.0, speed_ratio)
+
+		var final_coast_factor = base_coast_factor * terrain_coast_modifier * speed_coast_modifier
+		velocity *= final_coast_factor
 	else:
 		# Calculate desired velocity from current direction with terrain speed modifiers
 		var effective_max_speed = max_speed * _current_terrain_modifiers.speed
+
+		# Apply diagonal speed scaling if in 8-way mode and moving diagonally
+		if movement_mode == "8_way" and _is_diagonal_movement(current_direction):
+			var original_speed = effective_max_speed
+			effective_max_speed *= diagonal_speed_scale
+			if DEBUG_8WAY_MOVEMENT:
+				print("[8-way] Applied diagonal speed scale: %.3f to max speed (%.1f -> %.1f)" % [diagonal_speed_scale, original_speed, effective_max_speed])
+
 		_effective_max_speed = effective_max_speed
 		var desired = current_direction * effective_max_speed
+
+		# Debug output for movement vector validation
+		if DEBUG_8WAY_MOVEMENT:
+			var is_diagonal = _is_diagonal_movement(current_direction)
+			print("[8-way] Movement vector: dir=", current_direction, " desired_speed=%.1f diagonal=%s" % [desired.length(), is_diagonal])
 
 		# Determine if we're moving in the opposite direction (with guard for zero velocity)
 		var opposite_direction = false
@@ -352,11 +1038,29 @@ func handle_input(delta):
 		else:
 			accel_rate = acceleration * effective_accel_modifier * _current_terrain_modifiers.speed
 
+			# Apply low-speed acceleration boost for responsive feel (1.5-2.0x boost under 30% top speed)
+			var current_speed = velocity.length()
+			var speed_ratio = current_speed / _effective_max_speed
+			if speed_ratio < 0.3:  # Under 30% of top speed
+				var boost_factor = lerp(2.0, 1.0, speed_ratio / 0.3)  # 2.0x at 0 speed, 1.0x at 30% speed
+				accel_rate *= boost_factor
+
 		# Apply lateral drag when turning (if velocity and direction aren't aligned)
 		if velocity.length() > 1.0:
 			var alignment = abs(current_direction.dot(velocity.normalized()))
 			if alignment < 0.9:  # Not perfectly aligned (turning)
 				accel_rate *= _lateral_drag_multiplier
+
+				# Enhanced turn alignment penalty based on handling and mass
+				if not selected_profile.is_empty():
+					var stats = selected_profile.get("stats", {})
+					var handling_stat = stats.get("handling", 5)
+					var handling_curve = _apply_stat_curve(handling_stat, "handling")
+					var mass_scalar = vehicle_health.get_mass_scalar() if vehicle_health else 1.0
+
+					var turn_factor = lerp(0.15, 1.0, handling_curve) / mass_scalar
+					var turn_penalty = lerp(0.25, 1.0, turn_factor)
+					accel_rate *= turn_penalty
 
 		# Apply throttle curve for non-linear acceleration (only when not braking)
 		var step_distance = accel_rate * delta
@@ -367,23 +1071,85 @@ func handle_input(delta):
 			if desired_speed > 0.0:
 				var speed_gap = 1.0 - (current_speed / desired_speed)
 				speed_gap = clamp(speed_gap, 0.0, 1.0)
-				# Apply easing curve - fast cars reach ~60% quickly, slow cars ramp gradually
+				# Apply easing curve with dynamic throttle floor based on acceleration curve
 				var eased_gap = _ease_out(speed_gap)
-				step_distance *= (0.4 + (eased_gap * 0.6))  # Scale between 40% and 100% of normal step
+				# Get acceleration curve for dynamic throttle floor
+				var accel_curve = 0.5  # Default fallback
+				if not selected_profile.is_empty():
+					var stats = selected_profile.get("stats", {})
+					var accel_stat = stats.get("acceleration", 5)
+					accel_curve = _apply_stat_curve(accel_stat, "acceleration")
+				var throttle_floor = lerp(0.05, 0.75, accel_curve)
+				var throttle_range = 1.0 - throttle_floor
+				step_distance *= (throttle_floor + (eased_gap * throttle_range))  # Dynamic range based on accel curve
 
-		# Update velocity toward desired direction
-		velocity = velocity.move_toward(desired, step_distance)
+		# Apply force-based acceleration instead of direct velocity change
+		var force = current_direction * step_distance
+		velocity += force
+
+		# Realistic vehicle physics: Velocity decomposition with lateral friction
+		var mass_scalar = vehicle_health.get_mass_scalar() if vehicle_health else 1.0
+		var current_speed = velocity.length()
+
+		if current_speed > 1.0:
+			# Decompose velocity into forward and lateral components based on current facing direction
+			var forward_direction = current_direction if current_direction != Vector2.ZERO else last_facing_direction
+			var right_direction = Vector2(forward_direction.y, -forward_direction.x)  # Perpendicular to forward
+
+			# Calculate forward and lateral velocity components
+			var forward_velocity = forward_direction * velocity.dot(forward_direction)
+			var lateral_velocity = right_direction * velocity.dot(right_direction)
+			var lateral_speed = lateral_velocity.length()
+
+			# Calculate drift factor for natural sliding physics
+			var drift_factor = _calculate_drift_factor(current_speed, mass_scalar)
+
+			# Apply drift factor - preserves controlled lateral momentum for natural sliding
+			var preserved_lateral = lateral_velocity * drift_factor
+
+			# Debug visualization for drift states
+			if DEBUG_VEHICLE_TUNING and lateral_speed > 5.0:  # Only show when there's meaningful lateral movement
+				var drift_percentage = drift_factor * 100.0
+				var slide_amount = lateral_speed / current_speed
+				_debug_log("Physics: Speed=%.1f, Lateral=%.1f, Drift=%.0f%%, Slide=%.2f" % [current_speed, lateral_speed, drift_percentage, slide_amount])
+
+			# Reconstruct velocity with preserved lateral momentum (creates natural sliding)
+			velocity = forward_velocity + preserved_lateral
+
+		# Apply realistic momentum decay (was general momentum factor)
+		var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
+		var base_coast_factor = lerp(0.992, 0.987, mass_scalar)  # Mass affects coasting
+		var terrain_coast_factor = _current_terrain_modifiers.handling  # Terrain affects coasting
+		var speed_coast_modifier = lerp(0.98, 1.0, speed_ratio)  # High speeds coast better
+		var final_momentum_factor = base_coast_factor * terrain_coast_factor * speed_coast_modifier
+		velocity *= final_momentum_factor
 
 		# Clamp velocity magnitude to prevent overspeed
 		if velocity.length() > effective_max_speed:
 			velocity = velocity.normalized() * effective_max_speed
 
-	# Primary weapon firing with rate limiting
+	# Primary weapon firing with rate limiting (Mouse1)
 	if Input.is_action_pressed("fire_primary"):
 		fire_primary_weapon()
 
+	# Secondary weapon firing (Mouse2)
+	# Secondary weapon firing (Mouse2)
 	if Input.is_action_just_pressed("fire_special"):
-		print("Special weapon fired")
+		fire_selected_weapon()
+
+	# Weapon selection (Mouse scroll)
+	if Input.is_action_just_pressed("weapon_next"):
+		select_next_weapon()
+
+	if Input.is_action_just_pressed("weapon_prev"):
+		select_prev_weapon()
+
+	# Debug: Runtime movement mode switching (F key for testing)
+	if DEBUG_8WAY_MOVEMENT and Input.is_physical_key_pressed(KEY_F):
+		var current_time = Time.get_ticks_msec() / 1000.0
+		if current_time - _last_mode_toggle_time > 0.5:  # 500ms debounce
+			toggle_movement_mode()
+			_last_mode_toggle_time = current_time
 
 func fire_primary_weapon():
 	# Check for null bullet scene
@@ -400,8 +1166,11 @@ func fire_primary_weapon():
 	var bullet = GameManager.spawn_bullet(bullet_scene, global_position, last_facing_direction, self)
 
 	# Show muzzle flash and auto-hide after brief duration
-	# Timer signal connection ensures flash automatically disappears
+	# Mark this muzzle flash as primary-caused so missile hook ignores it
+	_muzzle_last_primary = true
 	muzzle_flash.visible = true
+	# Clear primary marker shortly after flash
+	get_tree().create_timer(0.12).timeout.connect(func(): _muzzle_last_primary = false)
 	get_tree().create_timer(0.1).timeout.connect(func(): muzzle_flash.visible = false)
 
 	# Update next fire time based on fire rate
@@ -411,6 +1180,11 @@ func add_direction(dir: Vector2):
 	# Add direction to stack if not already present
 	if dir not in pressed_directions:
 		pressed_directions.append(dir)
+
+	# Apply centripetal force effects for direction changes at speed
+	if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != dir:
+		_apply_direction_change_physics(current_direction, dir)
+
 	# Set as current direction and update facing
 	current_direction = dir
 	last_facing_direction = dir
@@ -450,7 +1224,7 @@ func _handle_slide_collisions():
 
 		# Apply bounce if target wasn't destroyed
 		if not target_destroyed:
-			_apply_bounce(normal)
+			_apply_bounce(normal, collider, other_velocity)
 
 func _on_collision_sensor_area_entered(area):
 	# Check for terrain changes first
@@ -472,9 +1246,9 @@ func _on_collision_sensor_area_entered(area):
 
 		# Apply bounce if target wasn't destroyed
 		if not target_destroyed:
-			_apply_bounce(normal)
+			_apply_bounce(normal, area, other_velocity)
 
-func _apply_bounce(normal: Vector2):
+func _apply_bounce(normal: Vector2, target = null, other_velocity: Vector2 = Vector2.ZERO):
 	if velocity.length() < min_bounce_velocity:
 		return
 
@@ -483,11 +1257,37 @@ func _apply_bounce(normal: Vector2):
 	else:
 		normal = normal.normalized()
 
-	velocity = velocity.bounce(normal) * bounce_damp
-	velocity += normal * bounce_push
+	# Get mass information for physics-based bounce
+	var self_mass = get_mass_scalar()
+	var other_mass = 1.0
+	if target != null and target.has_method("get_mass_scalar"):
+		other_mass = target.get_mass_scalar()
+
+	# Calculate relative velocity and impact speed for bounce scaling
+	var relative_velocity = velocity - other_velocity
+	var impact_speed = abs(relative_velocity.dot(normal))
+
+	# Mass-based bounce calculation - lighter objects bounce more
+	var mass_ratio = other_mass / (self_mass + other_mass)
+	var bounce_intensity = lerp(0.4, 1.2, mass_ratio)  # Range from 40% to 120% bounce
+
+	# Speed-scaled bounce force - stronger impacts create stronger separation
+	var speed_factor = clamp(impact_speed / 200.0, 0.3, 2.0)
+	var effective_bounce_push = bounce_push * speed_factor * bounce_intensity
+
+	# Apply the bounce with enhanced physics
+	velocity = velocity.bounce(normal) * bounce_damp * bounce_intensity
+	velocity += normal * effective_bounce_push
 
 ## Apply physics-based collision damage with aggressor/victim calculation
+## TODO: Consider tuning collision multipliers based on playtest feedback for balance
 func _apply_collision_damage(target, normal: Vector2, other_velocity: Vector2) -> bool:
+	# Check collision immunity first
+	if _collision_immunity_timer > 0.0:
+		if DEBUG_COLLISION_DAMAGE:
+			print("[PlayerCar] Still immune (%.2fs remaining), ignoring collision" % _collision_immunity_timer)
+		return false
+
 	# Calculate relative impact speed along collision normal
 	var relative_velocity = velocity - other_velocity
 	var impact_speed = abs(relative_velocity.dot(normal))
@@ -495,10 +1295,10 @@ func _apply_collision_damage(target, normal: Vector2, other_velocity: Vector2) -
 	if DEBUG_COLLISION_DAMAGE:
 		print("[CollisionDamage] Impact with %s - Speed: %.1f" % [target.name, impact_speed])
 
-	# Ignore trivial bumps
-	if impact_speed <= 50.0:
+	# Ignore trivial bumps - moderate threshold to reduce minor collision damage
+	if impact_speed <= 95.0:
 		if DEBUG_COLLISION_DAMAGE:
-			print("[CollisionDamage] Impact too low (%.1f <= 50), ignoring" % impact_speed)
+			print("[CollisionDamage] Impact too low (%.1f <= 95), ignoring" % impact_speed)
 		return false
 
 	# Determine if we're the aggressor (forward vector within ~30° of -normal)
@@ -512,23 +1312,23 @@ func _apply_collision_damage(target, normal: Vector2, other_velocity: Vector2) -
 	if DEBUG_COLLISION_DAMAGE:
 		print("[CollisionDamage] Aggressor check: dot=%.3f, is_aggressor=%s, mass_scalar=%.2f" % [aggressor_dot, is_aggressor, self_mass_scalar])
 
-	# Calculate base damage values
-	var base_damage_factor = (impact_speed - 50.0)
+	# Calculate base damage values - moderate damage factors for balanced gameplay
+	var base_damage_factor = max(impact_speed - 95.0, 0.0)
 	var target_damage: float
 	var self_damage: float
 
 	if is_aggressor:
-		# Head-on collision - full damage
-		target_damage = base_damage_factor * 0.6 * self_mass_scalar
-		self_damage = base_damage_factor * 0.25 * self_mass_scalar
+		# Head-on collision - moderate damage multipliers
+		target_damage = base_damage_factor * 0.22 * self_mass_scalar
+		self_damage = base_damage_factor * 0.12 * self_mass_scalar
 	else:
 		# Glancing/rear-end collision - reduced damage
-		target_damage = base_damage_factor * 0.6 * self_mass_scalar * 0.3
-		self_damage = base_damage_factor * 0.25 * self_mass_scalar * 0.5
+		target_damage = base_damage_factor * 0.22 * self_mass_scalar * 0.3
+		self_damage = base_damage_factor * 0.12 * self_mass_scalar * 0.5
 
 	# Enhanced self-damage for indestructible targets (walls, etc.)
 	if target.is_in_group("indestructible"):
-		self_damage = base_damage_factor * 0.4 * self_mass_scalar
+		self_damage = base_damage_factor * 0.25 * self_mass_scalar
 		if DEBUG_COLLISION_DAMAGE:
 			print("[CollisionDamage] Indestructible target - enhanced self-damage: %.1f" % self_damage)
 
@@ -537,8 +1337,8 @@ func _apply_collision_damage(target, normal: Vector2, other_velocity: Vector2) -
 	# Apply damage to target
 	if target_damage > 0:
 		if target.is_in_group("vehicles") and target.has_method("apply_damage"):
-			# Cap vehicle damage at 70% of max HP
-			var max_target_damage = target.get_max_hp() * 0.7
+			# Cap vehicle damage at 20% of max HP per collision for more noticeable effect
+			var max_target_damage = target.get_max_hp() * 0.20
 			target_damage = min(target_damage, max_target_damage)
 			if DEBUG_COLLISION_DAMAGE:
 				print("[CollisionDamage] Vehicle target damage: %.1f (capped at %.1f)" % [target_damage, max_target_damage])
@@ -558,7 +1358,211 @@ func _apply_collision_damage(target, normal: Vector2, other_velocity: Vector2) -
 			print("[CollisionDamage] Self-damage: %.1f" % self_damage)
 		apply_damage(self_damage, target)
 
+	# Set collision immunity to prevent damage spam
+	_collision_immunity_timer = collision_immunity_duration
+	if DEBUG_COLLISION_DAMAGE:
+		print("[PlayerCar] Collision immunity set for %.2fs" % collision_immunity_duration)
+
 	return target_destroyed
+
+## Calculate smart transition time based on terrain pair and current speed
+func _calculate_transition_time(from_terrain: String, to_terrain: String) -> float:
+	var current_speed = velocity.length()
+	var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
+
+	# Base transition times for different terrain pairs
+	var base_time = 0.2  # Default fallback
+
+	# Context-aware transition timing
+	if from_terrain == "terrain_track":
+		if to_terrain in ["terrain_sand", "terrain_grass"]:
+			base_time = 1.0  # Road → Sand/Grass: gradual deceleration feel
+		elif to_terrain in ["terrain_ice", "terrain_water"]:
+			base_time = 0.4  # Road → Ice/Water: sudden loss of control
+		elif to_terrain == "terrain_snow":
+			base_time = 0.6  # Road → Snow: medium transition
+	elif from_terrain in ["terrain_sand", "terrain_grass"]:
+		if to_terrain == "terrain_track":
+			base_time = 0.5  # Sand/Grass → Road: quicker grip recovery
+		elif to_terrain in ["terrain_ice", "terrain_water"]:
+			base_time = 0.4  # Sand/Grass → Ice/Water: moderate change
+	elif from_terrain in ["terrain_ice", "terrain_water"]:
+		if to_terrain == "terrain_track":
+			base_time = 1.2  # Ice/Water → Road: gradual grip recovery
+		elif to_terrain in ["terrain_sand", "terrain_grass"]:
+			base_time = 0.8  # Ice/Water → Sand/Grass: moderate recovery
+	elif from_terrain == "terrain_snow":
+		if to_terrain == "terrain_track":
+			base_time = 0.8  # Snow → Road: moderate recovery
+		elif to_terrain in ["terrain_ice", "terrain_water"]:
+			base_time = 0.5  # Snow → Ice/Water: moderate change
+		elif to_terrain in ["terrain_sand", "terrain_grass"]:
+			base_time = 0.6  # Snow → Sand/Grass: similar surfaces
+
+	# Speed-dependent modifier: high speed transitions are more dramatic
+	var speed_modifier = 1.0 + (speed_ratio * 0.5)  # Up to 50% longer at full speed
+
+	return base_time * speed_modifier
+
+## Get asymmetric curve type based on terrain transition
+func _get_transition_curve_type(from_terrain: String, to_terrain: String) -> String:
+	# Losing grip transitions - sharp initial drop, gradual completion
+	if from_terrain == "terrain_track" and to_terrain in ["terrain_sand", "terrain_grass", "terrain_ice", "terrain_water"]:
+		return "losing_grip"
+	# Gaining grip transitions - gradual start, sharp final recovery
+	elif to_terrain == "terrain_track" and from_terrain in ["terrain_sand", "terrain_grass", "terrain_ice", "terrain_water"]:
+		return "gaining_grip"
+	# Ice transitions - immediate effect with long tail
+	elif to_terrain in ["terrain_ice", "terrain_water"] or from_terrain in ["terrain_ice", "terrain_water"]:
+		return "ice_transition"
+	# Default smooth transition
+	else:
+		return "smooth"
+
+## Apply asymmetric easing curve based on transition type
+func _apply_transition_curve(progress: float, curve_type: String) -> float:
+	progress = clamp(progress, 0.0, 1.0)
+	match curve_type:
+		"losing_grip":
+			# Sharp initial drop (immediate effect), gradual completion
+			return 1.0 - pow(1.0 - progress, 0.3)
+		"gaining_grip":
+			# Gradual start, sharp final recovery
+			return pow(progress, 0.3)
+		"ice_transition":
+			# Immediate effect with long tail
+			return 1.0 - pow(1.0 - progress, 2.0)
+		"smooth":
+			# Default ease-out curve
+			return _ease_out(progress, 0.65)
+		_:
+			return progress
+
+## Calculate drift factor with enhanced slip angle physics for dramatic sliding
+func _calculate_drift_factor(current_speed: float, mass_scalar: float) -> float:
+	# Base drift calculation with slip angle physics
+	var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
+
+	# Calculate slip angle between vehicle heading and velocity direction
+	var slip_angle = 0.0
+	if current_speed > 5.0 and current_direction != Vector2.ZERO:
+		var velocity_direction = velocity.normalized()
+		var vehicle_heading = current_direction.normalized()
+		# Calculate angle difference (slip angle) - key to realistic drift physics
+		slip_angle = abs(velocity_direction.angle_to(vehicle_heading))
+		slip_angle = min(slip_angle, PI/2)  # Cap at 90 degrees
+
+	# Enhanced speed-dependent base drift with high-speed boost
+	var base_drift: float
+	if speed_ratio < 0.7:
+		# Below 70% speed: use normal speed-dependent drift
+		base_drift = lerp(DRIFT_FACTORS.low_speed.x, DRIFT_FACTORS.high_speed.y, speed_ratio)
+	else:
+		# Above 70% speed: dramatic boost for "laying rubber down" feel
+		var high_speed_factor = (speed_ratio - 0.7) / 0.3  # 0-1 for the top 30% speed range
+		var boosted_drift = lerp(DRIFT_FACTORS.high_speed.y, DRIFT_FACTORS.high_speed_boost.y, high_speed_factor)
+		base_drift = boosted_drift
+
+	# Slip angle amplifies drift dramatically (based on FOSS racing research)
+	var slip_angle_multiplier = 1.0 + (slip_angle * DRIFT_FACTORS.slip_angle_sensitivity)
+
+	# Enhanced terrain-specific drift multipliers (more aggressive)
+	var terrain_multiplier = 1.0
+	if _current_terrain_modifiers.handling < 0.4:  # Ice/water terrain
+		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.ice  # Extreme drift
+	elif _current_terrain_modifiers.handling < 0.6:  # Snow terrain
+		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.snow  # Much more drift
+	elif _current_terrain_modifiers.handling < 0.8:  # Sand/grass terrain
+		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.sand  # More drift
+	else:  # Track terrain
+		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.track  # Reduced but still driftable
+
+	# Vehicle handling affects drift: poor handling = much more sliding
+	var handling_drift_modifier = 1.0
+	if not selected_profile.is_empty():
+		var stats = selected_profile.get("stats", {})
+		var handling_stat = stats.get("handling", 5)
+		var handling_curve = _apply_stat_curve(handling_stat, "handling")
+		handling_drift_modifier = lerp(1.8, 0.6, handling_curve)  # More dramatic handling differences
+
+	# Mass affects drift: heavier vehicles have more momentum, slide dramatically more
+	var mass_drift_modifier = lerp(0.7, 1.6, (mass_scalar - 0.8) / 0.6)
+
+	# Combine all factors for dramatic sliding physics
+	var final_drift = base_drift * slip_angle_multiplier * terrain_multiplier * handling_drift_modifier * mass_drift_modifier
+	final_drift = clamp(final_drift, 0.03, 0.95)  # Allow dramatic sliding while maintaining some control
+
+	# Enhanced debug output for slip angle and drift factor breakdown
+	if DEBUG_VEHICLE_TUNING and current_speed > 30.0:
+		var slip_degrees = rad_to_deg(slip_angle)
+		_debug_log("Enhanced drift: Speed=%.0f%%, Slip=%.1f°, Base=%.2f, SlipMult=%.2f×, Final=%.2f" % [speed_ratio * 100, slip_degrees, base_drift, slip_angle_multiplier, final_drift])
+		if slip_angle_multiplier > 1.5:
+			_debug_log("HIGH SLIP ANGLE: Dramatic sliding active!")
+
+	return final_drift
+
+## Apply enhanced progressive sliding physics during direction changes for dramatic drifting
+func _apply_direction_change_physics(old_direction: Vector2, new_direction: Vector2):
+	var current_speed = velocity.length()
+	var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
+
+	# Calculate direction change severity (0 = no change, 1 = opposite direction)
+	var direction_change_severity = (1.0 - old_direction.dot(new_direction)) / 2.0
+
+	# Apply enhanced progressive sliding for meaningful direction changes (lower threshold)
+	if direction_change_severity > 0.02 and current_speed > 20.0:  # More sensitive, lower speed threshold
+		var mass_scalar = vehicle_health.get_mass_scalar() if vehicle_health else 1.0
+
+		# Calculate vehicle capabilities for this turn
+		var handling_capability = 1.0
+		if not selected_profile.is_empty():
+			var stats = selected_profile.get("stats", {})
+			var handling_stat = stats.get("handling", 5)
+			var handling_curve = _apply_stat_curve(handling_stat, "handling")
+			handling_capability = lerp(0.3, 1.0, handling_curve)  # Wider capability range
+
+		# Terrain affects turn grip more dramatically
+		var terrain_turn_grip = _current_terrain_modifiers.handling
+
+		# Enhanced progressive slide calculation
+		var turn_demand = direction_change_severity * speed_ratio * mass_scalar
+		var turn_capability = handling_capability * terrain_turn_grip
+
+		# More aggressive slide factor calculation
+		var slide_factor = turn_demand / max(turn_capability, 0.05)
+		slide_factor = clamp(slide_factor, 0.2, 4.0)  # Higher minimum, much higher maximum
+
+		# High-speed dramatic drift boost (above 60% speed)
+		if speed_ratio > 0.6:
+			var high_speed_boost = 1.0 + ((speed_ratio - 0.6) * 2.5)  # Up to 2.5x boost at full speed
+			slide_factor *= high_speed_boost
+
+		# Create more dramatic lateral momentum
+		var lateral_direction = Vector2(old_direction.y, -old_direction.x)
+		var base_slide_strength = direction_change_severity * speed_ratio * slide_factor
+
+		# Enhanced slide strength with terrain-specific multipliers
+		var terrain_slide_multiplier = 1.0
+		if _current_terrain_modifiers.handling < 0.4:  # Ice/water
+			terrain_slide_multiplier = 0.35  # Extreme sliding
+		elif _current_terrain_modifiers.handling < 0.6:  # Snow
+			terrain_slide_multiplier = 0.25  # Dramatic sliding
+		elif _current_terrain_modifiers.handling < 0.8:  # Sand/grass
+			terrain_slide_multiplier = 0.18  # Enhanced sliding
+		else:  # Track
+			terrain_slide_multiplier = 0.12  # Baseline sliding
+
+		var slide_strength = base_slide_strength * terrain_slide_multiplier
+		var slide_velocity = lateral_direction * slide_strength * current_speed
+
+		# Add dramatic sliding momentum
+		velocity += slide_velocity
+
+		# Enhanced debug output for dramatic sliding
+		if DEBUG_VEHICLE_TUNING and slide_factor > 1.0:
+			_debug_log("DRAMATIC SLIDE: severity=%.2f, factor=%.2f, strength=%.2f, speed=%.0f%%" % [direction_change_severity, slide_factor, slide_strength, speed_ratio * 100])
+			if speed_ratio > 0.6:
+				_debug_log("HIGH SPEED DRIFT: Laying rubber down!")
 
 ## New helper functions for enhanced systems
 
@@ -566,13 +1570,18 @@ func _update_direction_lock_timer(delta: float):
 	if _direction_lock_timer > 0.0:
 		_direction_lock_timer -= delta
 
+## Update collision immunity timer
+func _update_collision_immunity_timer(delta: float):
+	if _collision_immunity_timer > 0.0:
+		_collision_immunity_timer -= delta
+
 func _update_terrain_modifiers(delta: float):
-	# Smoothly interpolate toward target terrain modifiers
+	# Smoothly interpolate toward target terrain modifiers with asymmetric curves
 	if _terrain_transition_timer > 0.0:
 		_terrain_transition_timer -= delta
 		_terrain_transition_elapsed += delta
 		var progress = clamp(_terrain_transition_elapsed / _terrain_transition_time, 0.0, 1.0)
-		var eased_progress = _ease_out(progress, 0.65)
+		var eased_progress = _apply_transition_curve(progress, _transition_curve_type)
 
 		# Interpolate each modifier including brake using stored start values
 		_current_terrain_modifiers.accel = lerp(_start_terrain_modifiers.accel, _target_terrain_modifiers.accel, eased_progress)
@@ -591,12 +1600,12 @@ func _detect_terrain_change(area: Area2D):
 	for terrain_name in TERRAIN_MODIFIERS.keys():
 		if area.is_in_group(terrain_name):
 			var new_modifiers = TERRAIN_MODIFIERS[terrain_name]
-			_set_target_surface(new_modifiers, "Terrain change detected: " + terrain_name)
+			_set_target_surface(new_modifiers, "Terrain change detected: " + terrain_name, terrain_name)
 			return
 
 	# No terrain detected - default to track (if not already)
 	var track_modifiers = TERRAIN_MODIFIERS.terrain_track
-	_set_target_surface(track_modifiers, "Terrain change detected: terrain_track (default)")
+	_set_target_surface(track_modifiers, "Terrain change detected: terrain_track (default)", "terrain_track")
 
 ## Handle terrain area exit events
 func _on_collision_sensor_area_exited(area):
@@ -613,7 +1622,7 @@ func _on_collision_sensor_area_exited(area):
 			if overlapping_area.is_in_group(terrain_name):
 				# Found another terrain type, transition to it
 				var new_modifiers = TERRAIN_MODIFIERS[terrain_name]
-				_set_target_surface(new_modifiers, "Terrain exit - switched to: " + terrain_name)
+				_set_target_surface(new_modifiers, "Terrain exit - switched to: " + terrain_name, terrain_name)
 
 				found_terrain = true
 				break
@@ -624,18 +1633,27 @@ func _on_collision_sensor_area_exited(area):
 	# If no terrain found, default back to track
 	if not found_terrain:
 		var track_modifiers = TERRAIN_MODIFIERS.terrain_track
-		_set_target_surface(track_modifiers, "Terrain exit - reverted to track")
+		_set_target_surface(track_modifiers, "Terrain exit - reverted to track", "terrain_track")
 
-## Set target surface with enhanced transition smoothing
-func _set_target_surface(modifiers: Dictionary, debug_message: String = ""):
+## Set target surface with smart transition timing and asymmetric curves
+func _set_target_surface(modifiers: Dictionary, debug_message: String = "", new_terrain_type: String = ""):
 	# Check if modifiers actually changed
 	if (_target_terrain_modifiers.accel != modifiers.accel or
 		_target_terrain_modifiers.speed != modifiers.speed or
 		_target_terrain_modifiers.handling != modifiers.handling or
 		_target_terrain_modifiers.brake != modifiers.brake):
 
+		# Update terrain type tracking
+		_previous_terrain_type = _current_terrain_type
+		if new_terrain_type != "":
+			_current_terrain_type = new_terrain_type
+
 		_start_terrain_modifiers = _current_terrain_modifiers.duplicate(true)
 		_target_terrain_modifiers = modifiers.duplicate(true)
+
+		# Calculate smart transition time and curve type based on terrain pair and speed
+		_terrain_transition_time = _calculate_transition_time(_previous_terrain_type, _current_terrain_type)
+		_transition_curve_type = _get_transition_curve_type(_previous_terrain_type, _current_terrain_type)
 		_terrain_transition_timer = _terrain_transition_time
 		_terrain_transition_elapsed = 0.0
 
