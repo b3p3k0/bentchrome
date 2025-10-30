@@ -28,9 +28,7 @@ static var _stat_ranges
 @export var min_bounce_velocity: float = 5.0
 
 ## Movement system configuration
-@export var movement_mode: String = "8_way"  ## "4_way" or "8_way" movement mode
-@export var diagonal_speed_scale: float = 0.707  ## Speed multiplier for diagonal movement (√2/2 ≈ 0.707)
-@export var key_combination_timeout: float = 0.05  ## Time window for diagonal key combinations (50ms)
+@export var diagonal_speed_scale: float = 1.0  ## Speed multiplier for diagonal movement (1.0 = equal speed)
 
 ## Collision immunity system to prevent damage spam
 @export var collision_immunity_duration: float = 0.15
@@ -89,14 +87,8 @@ const DAMAGE_PROFILE = {
 var _next_fire_time := 0.0
 var current_direction := Vector2.ZERO  ## Active input direction (cardinal or diagonal)
 var last_facing_direction := Vector2.UP  ## Persists for firing/visuals when no input
-var pressed_directions: Array[Vector2] = []  ## Stack of currently held directions
 var selected_profile: Dictionary = {}  ## Selected character profile from roster
 
-## Enhanced direction tracking for 8-way movement
-var _pressed_keys: Dictionary = {}  ## Track which direction keys are currently held
-var _key_press_times: Dictionary = {}  ## Track when each key was pressed for combination detection
-var _raw_input_vector := Vector2.ZERO  ## Raw combined input before processing
-var _last_mode_toggle_time: float = 0.0  ## Debounce timer for mode switching
 
 ## Weapon selection system variables
 var available_weapons: Array[String] = []  ## Available secondary weapons (excluding machine gun)
@@ -770,171 +762,6 @@ func _physics_process(delta):
 		else:
 			visuals.rotation = target_rotation
 
-## Original 4-way input handler - preserves existing behavior
-func _handle_4way_input(delta):
-	# Handle direction priority - check for just-pressed actions first (with direction lock)
-	if _direction_lock_timer <= 0.0:
-		if Input.is_action_just_pressed("move_up"):
-			add_direction(Vector2.UP)
-		elif Input.is_action_just_pressed("move_down"):
-			add_direction(Vector2.DOWN)
-		elif Input.is_action_just_pressed("move_left"):
-			add_direction(Vector2.LEFT)
-		elif Input.is_action_just_pressed("move_right"):
-			add_direction(Vector2.RIGHT)
-
-	# Handle direction releases
-	if Input.is_action_just_released("move_up"):
-		remove_direction(Vector2.UP)
-	if Input.is_action_just_released("move_down"):
-		remove_direction(Vector2.DOWN)
-	if Input.is_action_just_released("move_left"):
-		remove_direction(Vector2.LEFT)
-	if Input.is_action_just_released("move_right"):
-		remove_direction(Vector2.RIGHT)
-
-## Enhanced 8-way input handler - supports diagonal movement
-func _handle_8way_input(delta):
-	var current_time = Time.get_ticks_msec() / 1000.0
-
-	# Track key presses with timing for combination detection
-	if Input.is_action_just_pressed("move_up"):
-		_pressed_keys["up"] = true
-		_key_press_times["up"] = current_time
-	if Input.is_action_just_pressed("move_down"):
-		_pressed_keys["down"] = true
-		_key_press_times["down"] = current_time
-	if Input.is_action_just_pressed("move_left"):
-		_pressed_keys["left"] = true
-		_key_press_times["left"] = current_time
-	if Input.is_action_just_pressed("move_right"):
-		_pressed_keys["right"] = true
-		_key_press_times["right"] = current_time
-
-	# Track key releases
-	if Input.is_action_just_released("move_up"):
-		_pressed_keys["up"] = false
-	if Input.is_action_just_released("move_down"):
-		_pressed_keys["down"] = false
-	if Input.is_action_just_released("move_left"):
-		_pressed_keys["left"] = false
-	if Input.is_action_just_released("move_right"):
-		_pressed_keys["right"] = false
-
-	# Calculate raw input vector from currently held keys
-	_raw_input_vector = Vector2.ZERO
-	if _pressed_keys.get("up", false):
-		_raw_input_vector.y -= 1.0
-	if _pressed_keys.get("down", false):
-		_raw_input_vector.y += 1.0
-	if _pressed_keys.get("left", false):
-		_raw_input_vector.x -= 1.0
-	if _pressed_keys.get("right", false):
-		_raw_input_vector.x += 1.0
-
-	# Process the input vector into movement direction
-	_process_8way_direction(current_time)
-
-## Process 8-way input vector with diagonal detection and normalization
-func _process_8way_direction(current_time: float):
-	# If no input, clear direction
-	if _raw_input_vector == Vector2.ZERO:
-		current_direction = Vector2.ZERO
-		return
-
-	# Check if this is a diagonal input (both x and y components)
-	var is_diagonal = abs(_raw_input_vector.x) > 0.5 and abs(_raw_input_vector.y) > 0.5
-
-	if is_diagonal:
-		# Validate this is a proper key combination (pressed within timeout window)
-		var valid_combination = _validate_key_combination(current_time)
-
-		if valid_combination:
-			# Apply diagonal movement - keep direction normalized for proper physics
-			var new_direction = _raw_input_vector.normalized()
-
-			# Apply centripetal force for direction changes at speed
-			if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
-				_apply_direction_change_physics(current_direction, new_direction)
-
-			current_direction = new_direction
-			last_facing_direction = new_direction  # Already normalized
-
-			if DEBUG_8WAY_MOVEMENT:
-				print("[8-way] Diagonal movement: ", new_direction, " (raw input: ", _raw_input_vector, ")")
-		else:
-			# Fall back to most recent single direction
-			_fallback_to_single_direction(current_time)
-	else:
-		# Cardinal direction - use normalized input
-		var new_direction = _raw_input_vector.normalized()
-
-		# Apply centripetal force for direction changes at speed
-		if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
-			_apply_direction_change_physics(current_direction, new_direction)
-
-		current_direction = new_direction
-		last_facing_direction = new_direction
-
-		if DEBUG_8WAY_MOVEMENT:
-			print("[8-way] Cardinal movement: ", new_direction, " (raw input: ", _raw_input_vector, ")")
-
-## Validate that diagonal input represents a proper key combination
-func _validate_key_combination(current_time: float) -> bool:
-	# Find the two most recently pressed keys
-	var recent_keys = []
-	for key_name in _key_press_times.keys():
-		if _pressed_keys.get(key_name, false):
-			var press_time = _key_press_times.get(key_name, 0.0)
-			recent_keys.append({"name": key_name, "time": press_time})
-
-	# Need exactly 2 keys for diagonal
-	if recent_keys.size() != 2:
-		return false
-
-	# Sort by press time
-	recent_keys.sort_custom(func(a, b): return a.time > b.time)
-
-	# Check if keys were pressed within combination timeout
-	var time_diff = recent_keys[0].time - recent_keys[1].time
-	var within_timeout = time_diff <= key_combination_timeout
-
-	if DEBUG_8WAY_MOVEMENT and not within_timeout:
-		print("[8-way] Key combination timeout: ", time_diff, "s > ", key_combination_timeout, "s")
-
-	return within_timeout
-
-## Fall back to single direction when diagonal combination is invalid
-func _fallback_to_single_direction(current_time: float):
-	# Find most recently pressed key
-	var most_recent_key = ""
-	var most_recent_time = 0.0
-
-	for key_name in _key_press_times.keys():
-		if _pressed_keys.get(key_name, false):
-			var press_time = _key_press_times.get(key_name, 0.0)
-			if press_time > most_recent_time:
-				most_recent_time = press_time
-				most_recent_key = key_name
-
-	# Convert key name to direction vector
-	match most_recent_key:
-		"up":
-			current_direction = Vector2.UP
-		"down":
-			current_direction = Vector2.DOWN
-		"left":
-			current_direction = Vector2.LEFT
-		"right":
-			current_direction = Vector2.RIGHT
-		_:
-			current_direction = Vector2.ZERO
-
-	last_facing_direction = current_direction
-
-	if DEBUG_8WAY_MOVEMENT:
-		print("[8-way] Fallback to single direction: ", most_recent_key, " -> ", current_direction)
-
 ## Calculate visual rotation for movement direction
 func _calculate_visual_rotation(direction: Vector2) -> float:
 	if direction == Vector2.ZERO:
@@ -943,15 +770,10 @@ func _calculate_visual_rotation(direction: Vector2) -> float:
 	# Base rotation calculation (+PI/2 because front points up at 0 rotation)
 	var target_rotation = direction.angle() + PI / 2
 
-	# Optional: Snap to specific increments for cleaner visuals
-	if movement_mode == "4_way":
-		# Snap to cardinal directions (90° increments)
-		target_rotation = round(target_rotation / (PI / 2)) * (PI / 2)
-	elif movement_mode == "8_way":
-		# Snap to 8-way directions (45° increments) for cleaner diagonal visuals
-		target_rotation = round(target_rotation / (PI / 4)) * (PI / 4)
+	# Snap to 8-way directions (45° increments) for cleaner visuals
+	target_rotation = round(target_rotation / (PI / 4)) * (PI / 4)
 
-	if DEBUG_8WAY_MOVEMENT and movement_mode == "8_way":
+	if DEBUG_8WAY_MOVEMENT:
 		var degrees = rad_to_deg(target_rotation)
 		print("[8-way] Visual rotation: ", degrees, "° for direction ", direction)
 
@@ -962,27 +784,27 @@ func _is_diagonal_movement(direction: Vector2) -> bool:
 	# Diagonal movement has both x and y components above a threshold
 	return abs(direction.x) > 0.1 and abs(direction.y) > 0.1
 
-## Debug function to toggle between movement modes
-func toggle_movement_mode():
-	if movement_mode == "4_way":
-		movement_mode = "8_way"
-		print("[Debug] Switched to 8-way movement mode")
-	else:
-		movement_mode = "4_way"
-		print("[Debug] Switched to 4-way movement mode")
-
-	# Clear input state when switching modes to prevent artifacts
-	_pressed_keys.clear()
-	_key_press_times.clear()
-	_raw_input_vector = Vector2.ZERO
-	current_direction = Vector2.ZERO
 
 func handle_input(delta):
-	# Route to appropriate movement handler based on mode
-	if movement_mode == "8_way":
-		_handle_8way_input(delta)
+	# Simple 8-way movement using Godot's built-in input vector
+	var input_vector = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+
+	# Update direction and facing
+	if input_vector.length() > 0.1:
+		var new_direction = input_vector.normalized()
+
+		# Apply centripetal force for direction changes at speed
+		if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
+			_apply_direction_change_physics(current_direction, new_direction)
+
+		current_direction = new_direction
+		last_facing_direction = new_direction
+
+		if DEBUG_8WAY_MOVEMENT:
+			var is_diagonal = _is_diagonal_movement(new_direction)
+			print("[8-way] Movement: ", new_direction, " (input: ", input_vector, ", diagonal: ", is_diagonal, ")")
 	else:
-		_handle_4way_input(delta)
+		current_direction = Vector2.ZERO
 
 	# Apply movement based on current direction with terrain modifiers
 	if current_direction == Vector2.ZERO:
@@ -1010,8 +832,8 @@ func handle_input(delta):
 		# Calculate desired velocity from current direction with terrain speed modifiers
 		var effective_max_speed = max_speed * _current_terrain_modifiers.speed
 
-		# Apply diagonal speed scaling if in 8-way mode and moving diagonally
-		if movement_mode == "8_way" and _is_diagonal_movement(current_direction):
+		# Apply diagonal speed scaling when moving diagonally
+		if _is_diagonal_movement(current_direction):
 			var original_speed = effective_max_speed
 			effective_max_speed *= diagonal_speed_scale
 			if DEBUG_8WAY_MOVEMENT:
@@ -1144,12 +966,6 @@ func handle_input(delta):
 	if Input.is_action_just_pressed("weapon_prev"):
 		select_prev_weapon()
 
-	# Debug: Runtime movement mode switching (F key for testing)
-	if DEBUG_8WAY_MOVEMENT and Input.is_physical_key_pressed(KEY_F):
-		var current_time = Time.get_ticks_msec() / 1000.0
-		if current_time - _last_mode_toggle_time > 0.5:  # 500ms debounce
-			toggle_movement_mode()
-			_last_mode_toggle_time = current_time
 
 func fire_primary_weapon():
 	# Check for null bullet scene
@@ -1176,29 +992,6 @@ func fire_primary_weapon():
 	# Update next fire time based on fire rate
 	_next_fire_time = current_time + (1.0 / fire_rate)
 
-func add_direction(dir: Vector2):
-	# Add direction to stack if not already present
-	if dir not in pressed_directions:
-		pressed_directions.append(dir)
-
-	# Apply centripetal force effects for direction changes at speed
-	if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != dir:
-		_apply_direction_change_physics(current_direction, dir)
-
-	# Set as current direction and update facing
-	current_direction = dir
-	last_facing_direction = dir
-	# Start direction lock timer to prevent rapid changes
-	_direction_lock_timer = _handling_lock_duration
-
-func remove_direction(dir: Vector2):
-	# Remove direction from stack
-	pressed_directions.erase(dir)
-	# Fall back to most recent remaining direction or zero
-	if pressed_directions.size() > 0:
-		current_direction = pressed_directions[-1]
-	else:
-		current_direction = Vector2.ZERO
 
 func _handle_slide_collisions():
 	if get_slide_collision_count() == 0:
