@@ -30,6 +30,12 @@ static var _stat_ranges
 ## Movement system configuration
 @export var diagonal_speed_scale: float = 1.0  ## Speed multiplier for diagonal movement (1.0 = equal speed)
 
+## Realistic vehicle physics configuration
+@export var straightaway_lateral_friction: float = 0.95  ## High friction when driving straight (0.95 = minimal drift)
+@export var turning_lateral_friction: float = 0.7  ## Lower friction when turning (allows controlled drift)
+@export var drift_speed_threshold: float = 100.0  ## Speed above which drift physics engage
+@export var turning_angle_threshold: float = 0.1  ## Minimum turning input to trigger drift physics
+
 ## Collision immunity system to prevent damage spam
 @export var collision_immunity_duration: float = 0.15
 var _collision_immunity_timer: float = 0.0
@@ -88,6 +94,11 @@ var _next_fire_time := 0.0
 var current_direction := Vector2.ZERO  ## Active input direction (cardinal or diagonal)
 var last_facing_direction := Vector2.UP  ## Persists for firing/visuals when no input
 var selected_profile: Dictionary = {}  ## Selected character profile from roster
+
+## Realistic vehicle physics state
+var _previous_direction := Vector2.ZERO  ## Previous frame direction for turn detection
+var _is_turning := false  ## Whether the vehicle is currently turning
+var _turn_intensity := 0.0  ## How sharp the current turn is (0.0 = straight, 1.0 = sharp turn)
 
 
 ## Weapon selection system variables
@@ -784,14 +795,74 @@ func _is_diagonal_movement(direction: Vector2) -> bool:
 	# Diagonal movement has both x and y components above a threshold
 	return abs(direction.x) > 0.1 and abs(direction.y) > 0.1
 
+## Update turning state based on direction changes
+func _update_turning_state(new_direction: Vector2, delta: float):
+	# Calculate angle change from previous frame
+	var angle_change = 0.0
+	if _previous_direction != Vector2.ZERO:
+		angle_change = abs(_previous_direction.angle_to(new_direction))
+
+	# Determine if we're turning based on angle change and current speed
+	var current_speed = velocity.length()
+	var is_changing_direction = angle_change > turning_angle_threshold
+	var above_drift_threshold = current_speed > drift_speed_threshold
+
+	_is_turning = is_changing_direction and above_drift_threshold
+	_turn_intensity = clamp(angle_change / PI, 0.0, 1.0)  # Normalize to 0-1
+
+	# Store current direction for next frame
+	_previous_direction = new_direction
+
+	if DEBUG_8WAY_MOVEMENT and _is_turning:
+		print("[Physics] Turning detected - angle_change: %.3f, intensity: %.3f, speed: %.1f" % [angle_change, _turn_intensity, current_speed])
+
+## Calculate effective lateral friction based on driving context
+func _calculate_effective_lateral_friction() -> float:
+	# Start with base friction values
+	var base_friction = straightaway_lateral_friction if not _is_turning else turning_lateral_friction
+
+	# Apply car stats modulation (handling affects lateral grip)
+	var handling_modifier = 1.0
+	if not selected_profile.is_empty():
+		var stats = selected_profile.get("stats", {})
+		var handling_stat = stats.get("handling", 5)
+		var handling_curve = _apply_stat_curve(handling_stat, "handling")
+		handling_modifier = lerp(0.7, 1.0, handling_curve)  # Poor handling = less grip
+
+	# Apply terrain modifiers (ice = less friction, tarmac = more friction)
+	var terrain_modifier = _current_terrain_modifiers.handling
+
+	# Combine all factors
+	var effective_friction = base_friction * handling_modifier * terrain_modifier
+
+	# Speed-based reduction at very high speeds (realistic loss of control)
+	var current_speed = velocity.length()
+	if current_speed > drift_speed_threshold:
+		var speed_factor = (current_speed - drift_speed_threshold) / drift_speed_threshold
+		var speed_reduction = lerp(1.0, 0.8, clamp(speed_factor, 0.0, 1.0))
+		effective_friction *= speed_reduction
+
+	# Turn intensity affects friction (sharper turns = less grip)
+	if _is_turning:
+		var turn_reduction = lerp(1.0, 0.6, _turn_intensity)
+		effective_friction *= turn_reduction
+
+	# Clamp to reasonable range
+	effective_friction = clamp(effective_friction, 0.1, 0.98)
+
+	return effective_friction
+
 
 func handle_input(delta):
 	# Simple 8-way movement using Godot's built-in input vector
 	var input_vector = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 
-	# Update direction and facing
+	# Update direction and turning state
 	if input_vector.length() > 0.1:
 		var new_direction = input_vector.normalized()
+
+		# Detect turning by comparing with previous direction
+		_update_turning_state(new_direction, delta)
 
 		# Apply centripetal force for direction changes at speed
 		if velocity.length() > 50.0 and current_direction != Vector2.ZERO and current_direction != new_direction:
@@ -802,9 +873,11 @@ func handle_input(delta):
 
 		if DEBUG_8WAY_MOVEMENT:
 			var is_diagonal = _is_diagonal_movement(new_direction)
-			print("[8-way] Movement: ", new_direction, " (input: ", input_vector, ", diagonal: ", is_diagonal, ")")
+			print("[8-way] Movement: ", new_direction, " (input: ", input_vector, ", diagonal: ", is_diagonal, ", turning: ", _is_turning, ")")
 	else:
 		current_direction = Vector2.ZERO
+		_is_turning = false
+		_turn_intensity = 0.0
 
 	# Apply movement based on current direction with terrain modifiers
 	if current_direction == Vector2.ZERO:
@@ -909,7 +982,7 @@ func handle_input(delta):
 		var force = current_direction * step_distance
 		velocity += force
 
-		# Realistic vehicle physics: Velocity decomposition with lateral friction
+		# Realistic vehicle physics: KillOrthogonalVelocity with context-aware lateral friction
 		var mass_scalar = vehicle_health.get_mass_scalar() if vehicle_health else 1.0
 		var current_speed = velocity.length()
 
@@ -923,19 +996,17 @@ func handle_input(delta):
 			var lateral_velocity = right_direction * velocity.dot(right_direction)
 			var lateral_speed = lateral_velocity.length()
 
-			# Calculate drift factor for natural sliding physics
-			var drift_factor = _calculate_drift_factor(current_speed, mass_scalar)
+			# Apply context-aware lateral friction based on driving state
+			var effective_lateral_friction = _calculate_effective_lateral_friction()
 
-			# Apply drift factor - preserves controlled lateral momentum for natural sliding
-			var preserved_lateral = lateral_velocity * drift_factor
+			# Kill orthogonal velocity (lateral friction) - higher = less drift
+			var preserved_lateral = lateral_velocity * (1.0 - effective_lateral_friction)
 
-			# Debug visualization for drift states
-			if DEBUG_VEHICLE_TUNING and lateral_speed > 5.0:  # Only show when there's meaningful lateral movement
-				var drift_percentage = drift_factor * 100.0
-				var slide_amount = lateral_speed / current_speed
-				_debug_log("Physics: Speed=%.1f, Lateral=%.1f, Drift=%.0f%%, Slide=%.2f" % [current_speed, lateral_speed, drift_percentage, slide_amount])
+			# Debug visualization for lateral friction
+			if DEBUG_8WAY_MOVEMENT and lateral_speed > 5.0:
+				print("[Physics] Lateral friction: %.2f, Speed: %.1f, Lateral: %.1f, Turning: %s" % [effective_lateral_friction, current_speed, lateral_speed, _is_turning])
 
-			# Reconstruct velocity with preserved lateral momentum (creates natural sliding)
+			# Reconstruct velocity with controlled lateral momentum
 			velocity = forward_velocity + preserved_lateral
 
 		# Apply realistic momentum decay (was general momentum factor)
@@ -1231,68 +1302,6 @@ func _apply_transition_curve(progress: float, curve_type: String) -> float:
 		_:
 			return progress
 
-## Calculate drift factor with enhanced slip angle physics for dramatic sliding
-func _calculate_drift_factor(current_speed: float, mass_scalar: float) -> float:
-	# Base drift calculation with slip angle physics
-	var speed_ratio = current_speed / _effective_max_speed if _effective_max_speed > 0 else 0.0
-
-	# Calculate slip angle between vehicle heading and velocity direction
-	var slip_angle = 0.0
-	if current_speed > 5.0 and current_direction != Vector2.ZERO:
-		var velocity_direction = velocity.normalized()
-		var vehicle_heading = current_direction.normalized()
-		# Calculate angle difference (slip angle) - key to realistic drift physics
-		slip_angle = abs(velocity_direction.angle_to(vehicle_heading))
-		slip_angle = min(slip_angle, PI/2)  # Cap at 90 degrees
-
-	# Enhanced speed-dependent base drift with high-speed boost
-	var base_drift: float
-	if speed_ratio < 0.7:
-		# Below 70% speed: use normal speed-dependent drift
-		base_drift = lerp(DRIFT_FACTORS.low_speed.x, DRIFT_FACTORS.high_speed.y, speed_ratio)
-	else:
-		# Above 70% speed: dramatic boost for "laying rubber down" feel
-		var high_speed_factor = (speed_ratio - 0.7) / 0.3  # 0-1 for the top 30% speed range
-		var boosted_drift = lerp(DRIFT_FACTORS.high_speed.y, DRIFT_FACTORS.high_speed_boost.y, high_speed_factor)
-		base_drift = boosted_drift
-
-	# Slip angle amplifies drift dramatically (based on FOSS racing research)
-	var slip_angle_multiplier = 1.0 + (slip_angle * DRIFT_FACTORS.slip_angle_sensitivity)
-
-	# Enhanced terrain-specific drift multipliers (more aggressive)
-	var terrain_multiplier = 1.0
-	if _current_terrain_modifiers.handling < 0.4:  # Ice/water terrain
-		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.ice  # Extreme drift
-	elif _current_terrain_modifiers.handling < 0.6:  # Snow terrain
-		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.snow  # Much more drift
-	elif _current_terrain_modifiers.handling < 0.8:  # Sand/grass terrain
-		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.sand  # More drift
-	else:  # Track terrain
-		terrain_multiplier = DRIFT_FACTORS.terrain_multipliers.track  # Reduced but still driftable
-
-	# Vehicle handling affects drift: poor handling = much more sliding
-	var handling_drift_modifier = 1.0
-	if not selected_profile.is_empty():
-		var stats = selected_profile.get("stats", {})
-		var handling_stat = stats.get("handling", 5)
-		var handling_curve = _apply_stat_curve(handling_stat, "handling")
-		handling_drift_modifier = lerp(1.8, 0.6, handling_curve)  # More dramatic handling differences
-
-	# Mass affects drift: heavier vehicles have more momentum, slide dramatically more
-	var mass_drift_modifier = lerp(0.7, 1.6, (mass_scalar - 0.8) / 0.6)
-
-	# Combine all factors for dramatic sliding physics
-	var final_drift = base_drift * slip_angle_multiplier * terrain_multiplier * handling_drift_modifier * mass_drift_modifier
-	final_drift = clamp(final_drift, 0.03, 0.95)  # Allow dramatic sliding while maintaining some control
-
-	# Enhanced debug output for slip angle and drift factor breakdown
-	if DEBUG_VEHICLE_TUNING and current_speed > 30.0:
-		var slip_degrees = rad_to_deg(slip_angle)
-		_debug_log("Enhanced drift: Speed=%.0f%%, Slip=%.1f°, Base=%.2f, SlipMult=%.2f×, Final=%.2f" % [speed_ratio * 100, slip_degrees, base_drift, slip_angle_multiplier, final_drift])
-		if slip_angle_multiplier > 1.5:
-			_debug_log("HIGH SLIP ANGLE: Dramatic sliding active!")
-
-	return final_drift
 
 ## Apply enhanced progressive sliding physics during direction changes for dramatic drifting
 func _apply_direction_change_physics(old_direction: Vector2, new_direction: Vector2):
