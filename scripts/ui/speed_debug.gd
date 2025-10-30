@@ -22,4 +22,28 @@ func _process(_delta):
 		elif player_car.has_method("get_max_speed"):
 			cap = player_car.get("max_speed")
 
-		text = "Speed: %.0f / %.0f" % [speed, cap]
+		# Enhanced debug info (wrapped in DEBUG_VEHICLE_TUNING check)
+		var debug_tuning = player_car.get("DEBUG_VEHICLE_TUNING") if player_car.has_method("get") else false
+		if debug_tuning:
+			var mass_scalar = 1.0
+			var accel = 0.0
+			var brake = 0.0
+			var base_accel = 0.0
+
+			if player_car.has_method("get_mass_scalar"):
+				mass_scalar = player_car.get_mass_scalar()
+			elif player_car.get("vehicle_health") and player_car.vehicle_health.has_method("get_mass_scalar"):
+				mass_scalar = player_car.vehicle_health.get_mass_scalar()
+
+			if player_car.has_method("get"):
+				accel = player_car.get("acceleration")
+				brake = player_car.get("brake_force")
+				var base_stats = player_car.get("_base_stats")
+				if base_stats and base_stats.has("acceleration"):
+					base_accel = base_stats.acceleration
+
+			text = "Speed: %.0f / %.0f\nAccel: %.0f (base: %.0f)\nBrake: %.0f | Mass: %.2f" % [
+				speed, cap, accel, base_accel, brake, mass_scalar
+			]
+		else:
+			text = "Speed: %.0f / %.0f" % [speed, cap]

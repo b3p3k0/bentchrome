@@ -9,7 +9,7 @@ const DEBUG_VEHICLE_TUNING: bool = true
 ## Debug flag for collision damage calculations
 const DEBUG_COLLISION_DAMAGE: bool = true
 ## Debug flag for 8-way movement system
-const DEBUG_8WAY_MOVEMENT: bool = true
+const DEBUG_8WAY_MOVEMENT: bool = false
 
 const VehicleHealth = preload("res://scripts/vehicles/vehicle_health.gd")
 
@@ -89,6 +89,17 @@ const DAMAGE_PROFILE = {
 	"BOUNCE_BOMB_BOUNCED": 160,
 	"LAND_MINE": 80
 }
+
+## Debug logging helper for missile system
+func _missile_debug_log(message: String):
+	var timestamp = Time.get_ticks_msec() / 1000.0
+	var log_entry = "[%.3f] %s\n" % [timestamp, message]
+	var file = FileAccess.open("/tmp/missile_debug.log", FileAccess.WRITE_READ)
+	if file:
+		file.seek_end()  # Append to end of file
+		file.store_string(log_entry)
+		file.close()
+	print("[%.3f] %s" % [timestamp, message])  # Fixed: removed strip() call
 
 var _next_fire_time := 0.0
 var current_direction := Vector2.ZERO  ## Active input direction (cardinal or diagonal)
@@ -170,7 +181,8 @@ const CORE_INPUT_BINDINGS := {
 		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
 	],
 	"fire_special": [
-		{"type": "mouse_button", "button": MOUSE_BUTTON_RIGHT}
+		{"type": "mouse_button", "button": MOUSE_BUTTON_RIGHT},
+		{"type": "key", "code": Key.KEY_K}
 	]
 }
 
@@ -194,8 +206,19 @@ func _ready():
 	# Initialize weapon selection system
 	_initialize_weapon_selection()
 
+	# Clear any existing debug log and start fresh
+	var file = FileAccess.open("/tmp/missile_debug.log", FileAccess.WRITE)
+	if file:
+		file.store_string("")  # Clear the file
+		file.close()
+
+	_missile_debug_log("PLAYER_CAR: Ready - weapon_type='%s', missile_count=%d" % [selected_weapon_type, missile_count])
+
 	# Ensure critical input actions are present even if project settings were corrupted
 	_ensure_core_input_bindings()
+
+	# Quick health check for regression detection
+	_quick_regression_check()
 
 	if SelectionState.has_selection():
 		selected_profile = SelectionState.get_selection()
@@ -223,7 +246,7 @@ func _on_muzzle_visibility_changed():
 
 	# When muzzle flash becomes visible, attempt to fire a missile if the selected weapon is a missile type
 	print("[PlayerCar] muzzle visibility changed. visible=", muzzle_flash.visible, " selected=", selected_weapon_type)
-	if muzzle_flash.visible and selected_weapon_type in ["FIRE_MISSILE", "HOMING_MISSILE"]:
+	if muzzle_flash.visible and selected_weapon_type in ["POWER_MISSILE", "FIRE_MISSILE", "HOMING_MISSILE"]:
 		if can_fire_missile():
 			print("[PlayerCar] muzzle visibility triggered missile attempt")
 			fire_missile()
@@ -363,19 +386,55 @@ func _create_input_event(definition: Dictionary) -> InputEvent:
 			return mouse_event
 	return null
 
+## Quick regression check to catch common failure patterns early
+func _quick_regression_check():
+	if not OS.is_debug_build():
+		return
+
+	var issues = []
+
+	# Check 1: Verify WASD input actions are working
+	var wasd_actions = ["move_up", "move_down", "move_left", "move_right"]
+	for action in wasd_actions:
+		if not InputMap.has_action(action) or InputMap.action_get_events(action).size() == 0:
+			issues.append("REGRESSION: Missing or empty input action: " + action)
+
+	# Check 2: Verify we have a valid character selection (not falling back to red car)
+	if not SelectionState.has_selection():
+		var roster_path = "res://assets/data/roster.json"
+		if not FileAccess.file_exists(roster_path):
+			issues.append("REGRESSION: Missing roster file - will cause red car fallback")
+
+	# Check 3: Verify missile system is accessible
+	var missile_scene_path = "res://scenes/weapons/Missile.tscn"
+	if not ResourceLoader.exists(missile_scene_path):
+		issues.append("REGRESSION: Missing missile scene")
+
+	if issues.size() > 0:
+		print("🚨 QUICK REGRESSION CHECK FAILED 🚨")
+		for issue in issues:
+			print("  ❌ ", issue)
+		print("🚨 This may cause 'red car + no WASD' behavior 🚨")
+	else:
+		print("✅ Quick regression check passed")
+
 ## Fire the currently selected secondary weapon (placeholder implementation)
 func fire_selected_weapon():
+	_missile_debug_log("FIRE_SELECTED: Called - weapon_type='%s', missile_count=%d" % [selected_weapon_type, missile_count])
+
 	if selected_weapon_type == "":
-		print("No weapon selected")
+		_missile_debug_log("FIRE_SELECTED: No weapon selected")
 		return
 
 	# Route to specific weapon implementations
-	# Treat both FIRE_MISSILE and HOMING_MISSILE as missile-type secondaries
-	if selected_weapon_type in ["FIRE_MISSILE", "HOMING_MISSILE"]:
+	# Handle all three missile types: POWER, FIRE, and HOMING
+	if selected_weapon_type in ["POWER_MISSILE", "FIRE_MISSILE", "HOMING_MISSILE"]:
+		_missile_debug_log("FIRE_SELECTED: Missile weapon detected - checking can_fire_missile()")
 		if can_fire_missile():
+			_missile_debug_log("FIRE_SELECTED: Can fire missile - calling fire_missile()")
 			fire_missile()
 		else:
-			print("Missile not ready or out of ammo")
+			_missile_debug_log("FIRE_SELECTED: Cannot fire missile - count=%d, cooldown=%.2f" % [missile_count, (Time.get_ticks_msec() / 1000.0) - _last_missile_time])
 		return
 
 	# Fallback placeholder for other secondary weapons
@@ -397,13 +456,26 @@ func can_fire_missile() -> bool:
 	var now = Time.get_ticks_msec() / 1000.0
 	return missile_count > 0 and (now - _last_missile_time) >= missile_cooldown
 
+func _weapon_type_to_missile_type(weapon_name: String):
+	# Convert weapon string names to safe missile type constants
+	# These constants match the ones defined in missile.gd (TYPE_POWER=0, TYPE_FIRE=1, TYPE_HOMING=2)
+	match weapon_name:
+		"POWER_MISSILE":
+			return 0  # TYPE_POWER
+		"FIRE_MISSILE":
+			return 1  # TYPE_FIRE
+		"HOMING_MISSILE":
+			return 2  # TYPE_HOMING
+		_:
+			return 1  # TYPE_FIRE default fallback
+
 func fire_missile():
 	# Guard
 	if not can_fire_missile():
+		_missile_debug_log("FIRE_MISSILE: Cannot fire - count=%d, cooldown=%.2f" % [missile_count, (Time.get_ticks_msec() / 1000.0) - _last_missile_time])
 		return
 
-	# Debug: log firing attempts for runtime tracing
-	print("[PlayerCar] fire_missile() called. missiles_before=", missile_count)
+	_missile_debug_log("FIRE_MISSILE: Starting fire sequence - count=%d->%d, weapon=%s" % [missile_count, missile_count - 1, selected_weapon_type])
 
 	missile_count -= 1
 	_last_missile_time = Time.get_ticks_msec() / 1000.0
@@ -411,50 +483,85 @@ func fire_missile():
 	# Load missile scene
 	var missile_scene = preload("res://scenes/weapons/Missile.tscn")
 
-	# Determine forward direction based on current movement/facing
-	var forward_dir = current_direction if current_direction != Vector2.ZERO else last_facing_direction
-	forward_dir = forward_dir.normalized()
-
-	# Position at muzzle if present, otherwise in front of car by offset
-	var muzzle_pos = global_position
+	# Calculate proper muzzle position (front of car)
+	var muzzle_position = global_position
 	if has_node("Muzzle"):
-		muzzle_pos = $Muzzle.global_position
+		muzzle_position = $Muzzle.global_position
 	else:
-		muzzle_pos = global_position + forward_dir * MISSILE_FORWARD_OFFSET
+		# Fallback: calculate front of car based on direction
+		var forward_dir = current_direction if current_direction != Vector2.ZERO else last_facing_direction
+		muzzle_position = global_position + forward_dir.normalized() * 35.0  # 35 pixels forward
 
-	# Use GameManager helper if available (pass PackedScene so GM instantiates and tracks)
+	# Determine direction (like bullets do)
+	var direction = current_direction if current_direction != Vector2.ZERO else last_facing_direction
+	direction = direction.normalized()
+
+	# Try to access GameManager directly (it's configured as autoload)
+	var gm = null
 	if Engine.has_singleton("GameManager"):
-		var gm = GameManager
-		if gm.has_method("spawn_missile"):
-			# Pass rotation and initial velocity so missile starts moving in travel direction
-			var init_vel = forward_dir * 1400.0
-			var rot = init_vel.angle()
-			print("[PlayerCar] spawning missile at", muzzle_pos, "rot=", rot, "init_vel=", init_vel)
-			gm.spawn_missile(missile_scene, muzzle_pos, self, rot, init_vel)
-			return
-		elif gm.has_method("get_game_root"):
-			# instantiate locally and parent to game_root
-			var inst = missile_scene.instantiate()
-			inst.owner_node = self
-			inst.global_position = muzzle_pos
-			inst.rotation = forward_dir.angle()
-			inst.velocity = forward_dir * inst.speed
-			# Ensure missile spawns in front of the vehicle collision
-			_nudge_missile_clear(inst)
-			gm.get_game_root().add_child(inst)
-			return
+		gm = GameManager
+	else:
+		gm = get_node_or_null("/root/GameManager")
 
-	# Fallback to adding to root scene (instantiate locally)
-	var inst = missile_scene.instantiate()
-	inst.owner_node = self
-	inst.global_position = muzzle_pos
-	inst.rotation = forward_dir.angle()
-	inst.velocity = forward_dir * inst.speed
-	# Ensure missile spawns in front of the vehicle collision
-	_nudge_missile_clear(inst)
-	get_tree().get_root().get_child(0).add_child(inst)
+	if gm and gm.has_method("spawn_missile_simple"):
+		var missile_type = _weapon_type_to_missile_type(selected_weapon_type)
+		var missile = gm.spawn_missile_simple(missile_scene, muzzle_position, direction, self, missile_type)
+		return
 
-	# No muzzle flash for missiles; visual effects removed per design
+	# Fallback: simple instantiation like bullets
+	var missile = missile_scene.instantiate()
+	missile.owner_node = self
+	missile.global_position = muzzle_position  # Use muzzle position, not car center
+	missile.rotation = direction.angle()
+	missile.velocity = direction * 200.0  # Use 200 speed for testing
+	missile.missile_type = _weapon_type_to_missile_type(selected_weapon_type)
+
+	# Find the correct game root by traversing up from player
+	var game_root = _find_game_root()
+	if game_root:
+		game_root.add_child(missile)
+	else:
+		push_error("Could not find game root for missile spawning")
+		missile.queue_free()
+
+## Find the proper game root by traversing up from player
+func _find_game_root() -> Node2D:
+	# Method 1: Try to find GameRoot by traversing up from player
+	var current = self.get_parent()
+	while current:
+		if current.name == "GameRoot":
+			return current
+		current = current.get_parent()
+
+	# Method 2: Try current scene
+	var current_scene = get_tree().current_scene
+	if current_scene:
+		# Look for SubViewport structure
+		var viewport = _find_subviewport(current_scene)
+		if viewport:
+			for child in viewport.get_children():
+				if child.name == "GameRoot" and child is Node2D:
+					return child
+
+	# Method 3: Search in Main scene structure
+	var main_scene = get_tree().get_root().get_node_or_null("Main")
+	if main_scene:
+		var game_root = main_scene.get_node_or_null("GameViewport/SubViewport/GameRoot")
+		if game_root and game_root is Node2D:
+			return game_root
+
+	# Fallback to player's parent
+	return self.get_parent()
+
+## Find SubViewport in scene tree
+func _find_subviewport(node: Node) -> SubViewport:
+	if node is SubViewport:
+		return node
+	for child in node.get_children():
+		var result = _find_subviewport(child)
+		if result:
+			return result
+	return null
 
 ## Nudge spawned missile forward out of owner's collision if necessary
 func _nudge_missile_clear(missile_node: Node2D) -> void:
@@ -1026,8 +1133,8 @@ func handle_input(delta):
 		fire_primary_weapon()
 
 	# Secondary weapon firing (Mouse2)
-	# Secondary weapon firing (Mouse2)
 	if Input.is_action_just_pressed("fire_special"):
+		_missile_debug_log("INPUT: fire_special detected - calling fire_selected_weapon()")
 		fire_selected_weapon()
 
 	# Weapon selection (Mouse scroll)

@@ -2,7 +2,7 @@ extends Node
 class_name VehicleHealth
 
 ## Centralized vehicle health system with armor-based HP scaling
-## Maps 1-10 armor rating to 300-600 HP linearly
+## Maps 1-10 armor rating to 600-1200 HP linearly
 ## Provides mass scaling for collision damage calculations
 
 ## Debug flag for health system logging
@@ -12,8 +12,8 @@ const DEBUG_HEALTH: bool = false
 @export var base_armor_rating: int = 5
 
 ## Health values computed from armor rating
-@export var max_hp: float = 450.0
-@export var current_hp: float = 450.0
+@export var max_hp: float = 900.0
+@export var current_hp: float = 900.0
 
 ## Signals for health events
 signal took_damage(amount: float, source)
@@ -36,8 +36,8 @@ func configure_from_stats(stats_dict: Dictionary):
 
 ## Recompute HP values from armor rating using linear mapping
 func _recompute_hp_from_armor():
-	# Map armor rating 1-10 to HP 300-600 linearly
-	max_hp = round(lerp(300.0, 600.0, (base_armor_rating - 1) / 9.0))
+	# Map armor rating 1-10 to HP 600-1200 linearly
+	max_hp = round(lerp(600.0, 1200.0, (base_armor_rating - 1) / 9.0))
 	current_hp = max_hp
 	_is_dead = false
 	_debug_log("HP recomputed - Armor: %d -> HP: %.0f" % [base_armor_rating, max_hp])

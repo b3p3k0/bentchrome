@@ -60,10 +60,58 @@ When working on features, log interactions in `prompts/` using the format:
 
 This helps track implementation decisions and reuse effective prompt patterns.
 
+## CRITICAL: Regression Prevention Rules
+
+### 🚫 BANNED PATTERNS (High Risk)
+These patterns have caused multiple regressions and MUST be avoided:
+
+1. **NO class_name declarations** - Use constants/enums within scripts only
+   - ❌ `class_name BaseMissile`
+   - ✅ `const TYPE_POWER = 0`
+
+2. **NO inline comments in project.godot [input] section** - Comments must be on separate lines
+   - ❌ `#Commentaction_name={`
+   - ✅ `# Comment` + `action_name={`
+
+3. **NO cross-script enum references** - Use integer constants instead
+   - ❌ `BaseMissile.MissileType.POWER`
+   - ✅ `0  # TYPE_POWER`
+
+4. **NO complex script dependencies** - Each script should be self-contained
+
+### ✅ SAFE PATTERNS (Recommended)
+1. **Use constants within scripts**: `const TYPE_POWER = 0`
+2. **Use configuration dictionaries**: `const CONFIGS = {TYPE_POWER: {...}}`
+3. **Validate input actions in _ready()**: Always check `InputMap.has_action()`
+4. **Test compilation after changes**: Run headless test immediately
+
+### 🔍 MANDATORY CHECKS
+Before any script changes:
+1. Run `godot --headless --path . --quit` to verify compilation
+2. Check input actions are not corrupted in project.godot
+3. Ensure no "default red car" fallback behavior
+4. Test WASD movement in-game
+
+### 📋 REGRESSION SYMPTOMS
+If you see these, STOP and fix immediately:
+- "Default red car" with no character selection applied (triggers `_apply_default_colors()`)
+- WASD keys not responding in-game
+- Script compilation errors mentioning "not declared in scope"
+- Input actions showing as missing in debug output
+- Parse errors during scene transitions
+
+### 🛠️ Prevention Tools
+- Health check system: `scripts/debug/health_check.gd`
+- Code validator: `scripts/debug/code_validator.gd`
+- Quick regression check in PlayerCar._ready()
+- Auto-repair input bindings via `_ensure_core_input_bindings()`
+
 ## Development Workflow
 
-1. Reference `docs/requirements.md` for feature scope alignment
-2. Ensure all changes maintain 16-bit dystopian aesthetic consistency
-3. Test vehicle handling feels distinct per car while maintaining readability from top-down view
-4. Prioritize environmental destruction and verticality in level design
-5. Validate AI behaviors create unpredictable but fair combat encounters
+1. **FIRST**: Check for regression symptoms before starting work
+2. Reference `docs/requirements.md` for feature scope alignment
+3. Ensure all changes maintain 16-bit dystopian aesthetic consistency
+4. Test vehicle handling feels distinct per car while maintaining readability from top-down view
+5. Prioritize environmental destruction and verticality in level design
+6. Validate AI behaviors create unpredictable but fair combat encounters
+7. **LAST**: Run compilation test and verify no regressions introduced

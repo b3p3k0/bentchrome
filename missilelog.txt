@@ -1,0 +1,55 @@
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:405)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:407)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:409)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:411)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;31mERROR:[0;91m Failed to load script "res://scripts/vehicles/player_car.gd" with error "Parse error".
+[0;90m   at: load (modules/gdscript/gdscript.cpp:3041)[0m
+[0;90m   GDScript backtrace (most recent call first):
+       [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+       [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:405)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:407)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:409)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Parse Error: Identifier "BaseMissile" not declared in the current scope.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/player_car.gd:411)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;35mSCRIPT ERROR:[0;95m Compile Error: Failed to compile depended scripts.
+[0;90m          at: GDScript::reload (res://scripts/vehicles/enemy_car.gd:0)[0m
+[0;90m          GDScript backtrace (most recent call first):
+              [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+              [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m
+[1;31mERROR:[0;91m Failed to load script "res://scripts/vehicles/enemy_car.gd" with error "Compilation failed".
+[0;90m   at: load (modules/gdscript/gdscript.cpp:3041)[0m
+[0;90m   GDScript backtrace (most recent call first):
+       [0] _start_gameplay_transition (res://scripts/ui/match_interstitial.gd:156)
+       [1] _unhandled_input (res://scripts/ui/match_interstitial.gd:148)[0m

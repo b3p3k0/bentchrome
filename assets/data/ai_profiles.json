@@ -1,0 +1,438 @@
+{
+  "_meta": {
+    "description": "Template file for mapping roster ids to AI opponents. Fill in per-car behavior before enabling spawns.",
+    "version": "0.1-draft",
+    "notes": [
+      "Claude: keep values normalized (0-1) where possible so designers can retune easily.",
+      "Add new entries whenever a car becomes AI-playable; missing fields should fall back to defaults in AIProfileLoader."
+    ]
+  },
+  "defaults": {
+    "archetype": "aggressor",
+    "reaction_time_sec": 0.35,
+    "reaction_jitter_sec": 0.12,
+    "aim_error_deg": {
+      "min": 3.5,
+      "max": 9.0
+    },
+    "burst_window_sec": {
+      "fire": 1.4,
+      "cooldown": 0.8
+    },
+    "retreat_threshold": 0.3,
+    "pickup_scan_radius": 640.0,
+    "targeting": {
+      "player_bias": 0.6,
+      "closest_enemy_weight": 0.8,
+      "wounded_target_bonus": 0.3,
+      "max_engagement_distance": 800.0,
+      "retarget_interval_sec": 2.0,
+      "revenge_bonus": 0.4,
+      "health_threshold_bonus": 0.2
+    }
+  },
+  "profiles": [
+    {
+      "id": "bumper",
+      "archetype": "defender",
+      "state_weights": {
+        "hunt": 0.4,
+        "flank": 0.3,
+        "retreat": 0.3
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 2.0,
+          "burst_cooldown_sec": 0.8,
+          "preferred_range_min": 150.0,
+          "preferred_range_max": 400.0
+        },
+        "primary": {
+          "aggression_threshold": 0.5,
+          "cooldown_bias": 0.8
+        },
+        "special": {
+          "min_range": 120.0,
+          "max_range": 350.0,
+          "hold_for_killshot": true
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road"
+        ],
+        "avoid_terrain": [
+          "terrain_ice",
+          "terrain_water"
+        ],
+        "dodge_chance": 0.2
+      },
+      "triggers": {
+        "retreat_hp": 0.2,
+        "pickup_seek_hp": 0.6
+      },
+      "targeting": {
+        "player_bias": 0.4,
+        "closest_enemy_weight": 0.9,
+        "retarget_interval_sec": 3.0
+      }
+    },
+    {
+      "id": "cricket",
+      "archetype": "aggressor",
+      "state_weights": {
+        "hunt": 0.7,
+        "flank": 0.2,
+        "retreat": 0.1
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.2,
+          "burst_cooldown_sec": 0.4,
+          "preferred_range_min": 80.0,
+          "preferred_range_max": 300.0
+        },
+        "primary": {
+          "aggression_threshold": 0.3,
+          "cooldown_bias": 0.5
+        },
+        "special": {
+          "min_range": 100.0,
+          "max_range": 400.0,
+          "hold_for_killshot": false
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road",
+          "terrain_grass"
+        ],
+        "avoid_terrain": [
+          "terrain_water"
+        ],
+        "dodge_chance": 0.6
+      },
+      "triggers": {
+        "retreat_hp": 0.15,
+        "pickup_seek_hp": 0.4
+      },
+      "targeting": {
+        "player_bias": 0.7,
+        "wounded_target_bonus": 0.5,
+        "retarget_interval_sec": 1.5
+      }
+    },
+    {
+      "id": "ghost",
+      "archetype": "aggressor",
+      "state_weights": {
+        "hunt": 0.6,
+        "flank": 0.3,
+        "retreat": 0.1
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.4,
+          "burst_cooldown_sec": 0.5,
+          "preferred_range_min": 200.0,
+          "preferred_range_max": 600.0
+        },
+        "primary": {
+          "aggression_threshold": 0.35,
+          "cooldown_bias": 0.6
+        },
+        "special": {
+          "min_range": 300.0,
+          "max_range": 800.0,
+          "hold_for_killshot": true
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road"
+        ],
+        "avoid_terrain": [
+          "terrain_sand",
+          "terrain_water"
+        ],
+        "dodge_chance": 0.5
+      },
+      "triggers": {
+        "retreat_hp": 0.1,
+        "pickup_seek_hp": 0.3
+      },
+      "targeting": {
+        "player_bias": 0.8,
+        "max_engagement_distance": 900.0,
+        "retarget_interval_sec": 1.8
+      }
+    },
+    {
+      "id": "hammertoe",
+      "archetype": "ambusher",
+      "state_weights": {
+        "hunt": 0.3,
+        "flank": 0.5,
+        "retreat": 0.2
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.8,
+          "burst_cooldown_sec": 0.7,
+          "preferred_range_min": 100.0,
+          "preferred_range_max": 350.0
+        },
+        "primary": {
+          "aggression_threshold": 0.4,
+          "cooldown_bias": 0.7
+        },
+        "special": {
+          "min_range": 50.0,
+          "max_range": 200.0,
+          "hold_for_killshot": false
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road",
+          "terrain_sand"
+        ],
+        "avoid_terrain": [
+          "terrain_ice"
+        ],
+        "dodge_chance": 0.3
+      },
+      "triggers": {
+        "retreat_hp": 0.2,
+        "pickup_seek_hp": 0.5
+      },
+      "targeting": {
+        "player_bias": 0.5,
+        "closest_enemy_weight": 0.6,
+        "retarget_interval_sec": 2.5
+      }
+    },
+    {
+      "id": "kandykane",
+      "archetype": "mini_boss",
+      "state_weights": {
+        "hunt": 0.5,
+        "flank": 0.3,
+        "retreat": 0.2
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 2.2,
+          "burst_cooldown_sec": 0.9,
+          "preferred_range_min": 120.0,
+          "preferred_range_max": 400.0
+        },
+        "primary": {
+          "aggression_threshold": 0.6,
+          "cooldown_bias": 0.9
+        },
+        "special": {
+          "min_range": 80.0,
+          "max_range": 300.0,
+          "hold_for_killshot": true
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road"
+        ],
+        "avoid_terrain": [
+          "terrain_ice",
+          "terrain_water"
+        ],
+        "dodge_chance": 0.25
+      },
+      "triggers": {
+        "retreat_hp": 0.15,
+        "pickup_seek_hp": 0.7
+      },
+      "targeting": {
+        "player_bias": 0.6,
+        "wounded_target_bonus": 0.4,
+        "max_engagement_distance": 850.0,
+        "retarget_interval_sec": 1.8
+      }
+    },
+    {
+      "id": "mrghastly",
+      "archetype": "aggressor",
+      "state_weights": {
+        "hunt": 0.8,
+        "flank": 0.1,
+        "retreat": 0.1
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.0,
+          "burst_cooldown_sec": 0.3,
+          "preferred_range_min": 150.0,
+          "preferred_range_max": 500.0
+        },
+        "primary": {
+          "aggression_threshold": 0.2,
+          "cooldown_bias": 0.4
+        },
+        "special": {
+          "min_range": 200.0,
+          "max_range": 700.0,
+          "hold_for_killshot": true
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road",
+          "terrain_grass"
+        ],
+        "avoid_terrain": [
+          "terrain_water",
+          "terrain_sand"
+        ],
+        "dodge_chance": 0.7
+      },
+      "triggers": {
+        "retreat_hp": 0.05,
+        "pickup_seek_hp": 0.2
+      },
+      "targeting": {
+        "player_bias": 0.9,
+        "revenge_bonus": 0.6,
+        "wounded_target_bonus": 0.7,
+        "retarget_interval_sec": 1.0
+      }
+    },
+    {
+      "id": "razorback",
+      "archetype": "defender",
+      "state_weights": {
+        "hunt": 0.4,
+        "flank": 0.2,
+        "retreat": 0.4
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 2.5,
+          "burst_cooldown_sec": 1.0,
+          "preferred_range_min": 180.0,
+          "preferred_range_max": 450.0
+        },
+        "primary": {
+          "aggression_threshold": 0.55,
+          "cooldown_bias": 0.85
+        },
+        "special": {
+          "min_range": 250.0,
+          "max_range": 600.0,
+          "hold_for_killshot": true
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road",
+          "terrain_sand"
+        ],
+        "avoid_terrain": [
+          "terrain_ice"
+        ],
+        "dodge_chance": 0.2
+      },
+      "triggers": {
+        "retreat_hp": 0.25,
+        "pickup_seek_hp": 0.6
+      }
+    },
+    {
+      "id": "smoky",
+      "archetype": "defender",
+      "state_weights": {
+        "hunt": 0.6,
+        "flank": 0.2,
+        "retreat": 0.2
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.8,
+          "burst_cooldown_sec": 0.7,
+          "preferred_range_min": 100.0,
+          "preferred_range_max": 380.0
+        },
+        "primary": {
+          "aggression_threshold": 0.4,
+          "cooldown_bias": 0.7
+        },
+        "special": {
+          "min_range": 60.0,
+          "max_range": 250.0,
+          "hold_for_killshot": false
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road"
+        ],
+        "avoid_terrain": [
+          "terrain_ice",
+          "terrain_sand"
+        ],
+        "dodge_chance": 0.3
+      },
+      "triggers": {
+        "retreat_hp": 0.2,
+        "pickup_seek_hp": 0.5
+      }
+    },
+    {
+      "id": "splatcat",
+      "archetype": "ambusher",
+      "state_weights": {
+        "hunt": 0.4,
+        "flank": 0.4,
+        "retreat": 0.2
+      },
+      "weapon_usage": {
+        "machine_gun": {
+          "burst_fire_sec": 1.5,
+          "burst_cooldown_sec": 0.6,
+          "preferred_range_min": 120.0,
+          "preferred_range_max": 400.0
+        },
+        "primary": {
+          "aggression_threshold": 0.35,
+          "cooldown_bias": 0.6
+        },
+        "special": {
+          "min_range": 150.0,
+          "max_range": 450.0,
+          "hold_for_killshot": false
+        }
+      },
+      "mobility": {
+        "preferred_terrain": [
+          "terrain_track",
+          "terrain_road",
+          "terrain_grass"
+        ],
+        "avoid_terrain": [
+          "terrain_water"
+        ],
+        "dodge_chance": 0.5
+      },
+      "triggers": {
+        "retreat_hp": 0.2,
+        "pickup_seek_hp": 0.4
+      }
+    }
+  ]
+}

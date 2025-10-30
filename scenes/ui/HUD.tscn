@@ -9,8 +9,7 @@ script = ExtResource("1_hud")
 [node name="HUDRoot" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+
 
 [node name="HUDColumn" type="ColorRect" parent="HUDRoot"]
 layout_mode = 1
@@ -35,16 +34,20 @@ layout_mode = 2
 text = "Player"
 horizontal_alignment = 1
 
-[node name="PlayerHealthBar" type="TextureProgressBar" parent="HUDRoot/HUDColumn/VBoxContainer"]
+[node name="MissileLabel" type="Label" parent="HUDRoot/HUDColumn/VBoxContainer"]
+layout_mode = 2
+text = "Missiles: -"
+horizontal_alignment = 1
+
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PlayerHealthBar" type="ProgressBar" parent="HUDRoot/HUDColumn/VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 24)
 max_value = 100.0
 value = 100.0
-nine_patch_stretch = true
-stretch_margin_left = 4
-stretch_margin_top = 4
-stretch_margin_right = 4
-stretch_margin_bottom = 4
+show_percentage = false
 
 [node name="RadarContainer" type="AspectRatioContainer" parent="HUDRoot/HUDColumn/VBoxContainer"]
 layout_mode = 2

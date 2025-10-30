@@ -3,6 +3,23 @@
 **Date:** 2025-10-26
 **Issue:** PlayerSelect refused to initialize due to missing `select_prev_car` InputMap action
 
+---
+
+## Follow-up: 2025-11-18 Regression
+
+Late follow-up work reintroduced the same comment corruption inside `[input]`, disabling the `move_*` actions again once the match scene loaded. The latest fix (Nov 18 2025) restores the clean comment format in `project.godot` and keeps the PlayerSelect carousel bindings isolated to its scene. Key details:
+
+- `project.godot` once again holds literal action blocks with comments on their own lines so Godot serialises them correctly.
+- `scripts/ui/player_select.gd` still injects A/D/W at runtime via `_add_temporary_selection_bindings()` and removes them when the scene exits, keeping WASD free for gameplay.
+- Added controller-safe fallback (`JOY_BUTTON_X`) to the `select_more_info` definition so the constant remains a compile-time literal.
+- `scripts/vehicles/player_car.gd` now performs a runtime sanity check to recreate missing core bindings (WASD/arrow keys + fire buttons) if the project settings ever lose them.
+
+Recommended verification (manual):
+1. Start the project, enter the PlayerSelect screen, and confirm arrow keys + A/D/W navigation still work (W toggles bio).
+2. Confirm WASD drives the car immediately after the match loads.
+
+---
+
 ## Original Error Log
 
 ```

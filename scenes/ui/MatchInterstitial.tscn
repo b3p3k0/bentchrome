@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3 uid="uid://cxt5k6eeo5x7s"]
+
+[ext_resource type="Script" path="res://scripts/ui/match_interstitial.gd" id="1_match"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_Dialog"]
+bg_color = Color(0.05, 0.05, 0.1, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.6, 0.7, 1)
+
+[node name="MatchInterstitial" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_match")
+
+[node name="Splash" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="DialogPanel" type="Panel" parent="."]
+layout_mode = 1
+anchor_left = 0.2
+anchor_top = 0.08
+anchor_right = 0.8
+anchor_bottom = 0.42
+theme_override_styles/panel = SubResource("StyleBoxFlat_Dialog")
+
+[node name="MarginContainer" type="MarginContainer" parent="DialogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DialogPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+size_flags_vertical = 3
+
+[node name="PlayerName" type="Label" parent="DialogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Player"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="VsBreak" type="Label" parent="DialogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "      -- vs --"
+horizontal_alignment = 1
+
+[node name="Opponents" type="Label" parent="DialogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "(loading opponents...)"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Prompt" type="Label" parent="DialogPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Press any key to start"
+horizontal_alignment = 1

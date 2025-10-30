@@ -41,10 +41,11 @@ const ACTION_DEFINITIONS := {
 		{"type": "joy_axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0}
 	],
 	"fire_primary": [
-		{"type": "key", "code": Key.KEY_SPACE}
+		{"type": "key", "code": Key.KEY_SPACE},
+		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
 	],
 	"fire_special": [
-		{"type": "mouse_button", "button": MOUSE_BUTTON_LEFT}
+		{"type": "mouse_button", "button": MOUSE_BUTTON_RIGHT}
 	],
 	"select_prev_car": [
 		{"type": "key", "code": Key.KEY_LEFT}
@@ -262,8 +263,10 @@ func confirm_selection():
 
 	print("Selected: ", selected_entry.get("car_name", "Unknown"), " (", selected_entry.get("driver_name", "Unknown"), ")")
 
-	# Transition to main game scene
-	get_tree().change_scene_to_file("res://scenes/main/Main.tscn")
+	if SelectionState:
+		SelectionState.clear_match_opponents()
+
+	get_tree().change_scene_to_file("res://scenes/ui/MatchInterstitial.tscn")
 
 func _add_temporary_selection_bindings():
 	_add_selection_binding("select_prev_car", Key.KEY_A)

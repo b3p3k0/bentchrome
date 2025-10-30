@@ -1,7 +1,8 @@
-[gd_scene load_steps=35 format=3 uid="uid://bfqm2xgv3pu6w"]
+[gd_scene load_steps=36 format=3 uid="uid://bfqm2xgv3pu6w"]
 
 [ext_resource type="Script" path="res://scripts/environment/destructible_prop.gd" id="1_destructible_prop"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="2_speckle"]
+[ext_resource type="Script" path="res://scripts/environment/test_arena_controller.gd" id="3_arena_controller"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_horizontal"]
 size = Vector2(1800, 80)
@@ -97,35 +98,36 @@ size = Vector2(90, 60)
 shader = ExtResource("2_speckle")
 shader_parameter/base_color = Color(0.15, 0.15, 0.15, 1)
 shader_parameter/speckle_color = Color(0.1, 0.1, 0.1, 1)
-shader_parameter/density = 0.25
-shader_parameter/intensity = 0.35
-shader_parameter/scale = 24.0
+shader_parameter/density = 0.55
+shader_parameter/intensity = 0.45
+shader_parameter/scale = 4.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_Grass"]
 shader = ExtResource("2_speckle")
 shader_parameter/base_color = Color(0.24, 0.5, 0.22, 1)
 shader_parameter/speckle_color = Color(0.18, 0.38, 0.16, 1)
-shader_parameter/density = 0.45
-shader_parameter/intensity = 0.3
-shader_parameter/scale = 18.0
+shader_parameter/density = 0.5
+shader_parameter/intensity = 0.45
+shader_parameter/scale = 6.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_Sand"]
 shader = ExtResource("2_speckle")
 shader_parameter/base_color = Color(0.8, 0.7, 0.5, 1)
 shader_parameter/speckle_color = Color(0.72, 0.6, 0.42, 1)
-shader_parameter/density = 0.4
-shader_parameter/intensity = 0.25
-shader_parameter/scale = 20.0
+shader_parameter/density = 0.5
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 7.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_Water"]
 shader = ExtResource("2_speckle")
 shader_parameter/base_color = Color(0.38, 0.6, 0.66, 1)
 shader_parameter/speckle_color = Color(0.28, 0.48, 0.54, 1)
-shader_parameter/density = 0.55
-shader_parameter/intensity = 0.3
-shader_parameter/scale = 28.0
+shader_parameter/density = 0.65
+shader_parameter/intensity = 0.4
+shader_parameter/scale = 5.0
 
 [node name="TestArena" type="Node2D"]
+script = ExtResource("3_arena_controller")
 
 [node name="Floor" type="ColorRect" parent="."]
 anchors_preset = 8
@@ -339,8 +341,6 @@ shape = SubResource("RectangleShape2D_indestructible_1")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp1"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-120, -80, 120, -80, 120, 80, -120, 80)
 
 
@@ -354,8 +354,6 @@ shape = SubResource("RectangleShape2D_indestructible_2")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp2"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-100, -70, 100, -70, 100, 70, -100, 70)
 
 
@@ -369,8 +367,6 @@ shape = SubResource("RectangleShape2D_indestructible_3")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp3"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-80, -60, 80, -60, 80, 60, -80, 60)
 
 
@@ -384,8 +380,6 @@ shape = SubResource("RectangleShape2D_indestructible_4")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp4"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-70, -50, 70, -50, 70, 50, -70, 50)
 
 
@@ -399,8 +393,6 @@ shape = SubResource("RectangleShape2D_indestructible_5")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp5"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
 
 
@@ -414,8 +406,6 @@ shape = SubResource("RectangleShape2D_indestructible_6")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/IndestructibleProp6"]
 color = Color(0.05, 0.05, 0.05, 1)
-border_width = 10.0
-border_color = Color(0, 0, 0, 1)
 polygon = PackedVector2Array(-50, -40, 50, -40, 50, 40, -50, 40)
 
 
@@ -430,8 +420,6 @@ shape = SubResource("RectangleShape2D_destructible_1")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp1"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-15, -22.5, 15, -22.5, 15, 22.5, -15, 22.5)
 
 
@@ -446,8 +434,6 @@ shape = SubResource("RectangleShape2D_destructible_2")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp2"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-30, -25, 30, -25, 30, 25, -30, 25)
 
 
@@ -462,8 +448,6 @@ shape = SubResource("RectangleShape2D_destructible_3")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp3"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-40, -30, 40, -30, 40, 30, -40, 30)
 
 
@@ -478,8 +462,6 @@ shape = SubResource("RectangleShape2D_destructible_4")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp4"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-50, -35, 50, -35, 50, 35, -50, 35)
 
 
@@ -494,8 +476,6 @@ shape = SubResource("RectangleShape2D_destructible_5")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp5"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-60, -45, 60, -45, 60, 45, -60, 45)
 
 
@@ -510,8 +490,6 @@ shape = SubResource("RectangleShape2D_destructible_6")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp6"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-70, -55, 70, -55, 70, 55, -70, 55)
 
 
@@ -526,8 +504,6 @@ shape = SubResource("RectangleShape2D_destructible_7")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp7"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-80, -60, 80, -60, 80, 60, -80, 60)
 
 
@@ -542,8 +518,6 @@ shape = SubResource("RectangleShape2D_destructible_8")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp8"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-90, -65, 90, -65, 90, 65, -90, 65)
 
 
@@ -558,8 +532,6 @@ shape = SubResource("RectangleShape2D_destructible_9")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp9"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-100, -70, 100, -70, 100, 70, -100, 70)
 
 
@@ -574,8 +546,6 @@ shape = SubResource("RectangleShape2D_destructible_10")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp10"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-110, -80, 110, -80, 110, 80, -110, 80)
 
 
@@ -590,8 +560,6 @@ shape = SubResource("RectangleShape2D_destructible_11")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp11"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
 
 
@@ -606,8 +574,6 @@ shape = SubResource("RectangleShape2D_destructible_12")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp12"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-30, -15, 30, -15, 30, 15, -30, 15)
 
 
@@ -622,8 +588,6 @@ shape = SubResource("RectangleShape2D_destructible_13")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp13"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-45, -20, 45, -20, 45, 20, -45, 20)
 
 
@@ -638,8 +602,6 @@ shape = SubResource("RectangleShape2D_destructible_14")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp14"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-60, -30, 60, -30, 60, 30, -60, 30)
 
 
@@ -654,8 +616,6 @@ shape = SubResource("RectangleShape2D_destructible_15")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp15"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-75, -40, 75, -40, 75, 40, -75, 40)
 
 
@@ -670,8 +630,6 @@ shape = SubResource("RectangleShape2D_destructible_16")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp16"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-30, -20, 30, -20, 30, 20, -30, 20)
 
 
@@ -686,8 +644,6 @@ shape = SubResource("RectangleShape2D_destructible_17")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp17"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-40, -25, 40, -25, 40, 25, -40, 25)
 
 
@@ -702,8 +658,6 @@ shape = SubResource("RectangleShape2D_destructible_18")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp18"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-50, -30, 50, -30, 50, 30, -50, 30)
 
 
@@ -718,8 +672,6 @@ shape = SubResource("RectangleShape2D_destructible_19")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp19"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-45, -20, 45, -20, 45, 20, -45, 20)
 
 
@@ -734,8 +686,6 @@ shape = SubResource("RectangleShape2D_destructible_20")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp20"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-35, -25, 35, -25, 35, 25, -35, 25)
 
 
@@ -750,8 +700,6 @@ shape = SubResource("RectangleShape2D_destructible_21")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp21"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-20, -35, 20, -35, 20, 35, -20, 35)
 
 
@@ -766,8 +714,6 @@ shape = SubResource("RectangleShape2D_destructible_22")
 
 [node name="Polygon2D" type="Polygon2D" parent="Props/DestructibleProp22"]
 color = Color(0.58, 0.41, 0.32, 1)
-border_width = 10.0
-border_color = Color(0.24, 0.12, 0.04, 1)
 polygon = PackedVector2Array(-45, -30, 45, -30, 45, 30, -45, 30)
 [node name="SpawnPoints" type="Node2D" parent="."]
 
@@ -776,6 +722,15 @@ position = Vector2(0, 1650)
 
 [node name="StartPointTop" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(0, -1650)
+
+[node name="AIStartPoint1" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(-360, -1080)
+
+[node name="AIStartPoint2" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(360, 0)
+
+[node name="AIStartPoint3" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(360, 960)
 
 [node name="AudioPlaceholders" type="Node2D" parent="."]
 

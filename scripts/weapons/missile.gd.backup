@@ -1,0 +1,203 @@
+extends Area2D
+
+@export var speed: float = 1400.0
+@export var max_lifetime: float = 8.0
+@export var fizzle_time: float = 2.0  # seconds before missile auto-removes if no hit
+@export var homing_radius: float = 700.0
+@export var homing_strength: float = 6.0
+@export var damage: int = 20
+@export var max_turn_rate: float = PI / 3.0  # radians per second - limits how fast missile can turn
+@export var DEBUG: bool = false
+
+var velocity: Vector2 = Vector2.ZERO
+var life_timer: float = 0.0
+var owner_node = null
+var target = null
+var _last_target_pos: Vector2
+var _last_target_check_time: float = 0.0
+var _shake_angle_threshold: float = 1.0
+var _shaken_off: bool = false
+var _lost_target: bool = false
+var _handled_hit: bool = false
+
+# Color set to #eaae0f
+var color: Color = Color8(234, 170, 15)
+
+func _ready():
+    set_physics_process(true)
+    life_timer = 0.0
+    # Compute a launch speed relative to the fastest vehicle in-scene.
+    var highest_vehicle_speed: float = 0.0
+    for n in get_tree().get_nodes_in_group("player"):
+        if is_instance_valid(n):
+            if n.has_method("get_effective_max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.get_effective_max_speed())
+            elif n.has_method("get_max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.get("max_speed"))
+            elif n.has("max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.max_speed)
+    for n in get_tree().get_nodes_in_group("enemies"):
+        if is_instance_valid(n):
+            if n.has_method("get_effective_max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.get_effective_max_speed())
+            elif n.has_method("get_max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.get("max_speed"))
+            elif n.has("max_speed"):
+                highest_vehicle_speed = max(highest_vehicle_speed, n.max_speed)
+
+    if highest_vehicle_speed > 0.0:
+        speed = highest_vehicle_speed * 1.1
+
+    # Ensure velocity is initialized; may be set by spawner. Keep magnitude constant.
+    if velocity == Vector2.ZERO:
+        # Missile forward is UP at rotation 0 to match vehicle front
+        velocity = Vector2.UP.rotated(rotation) * speed
+    area_entered.connect(_on_area_entered)
+    body_entered.connect(_on_body_entered)
+    if DEBUG:
+        print("[Missile] ready pos=", global_position, " rot=", rotation, " vel=", velocity)
+
+func _physics_process(delta):
+    life_timer += delta
+    # If missile hasn't hit anything in fizzle_time seconds, remove it.
+    if life_timer > fizzle_time:
+        queue_free()
+        return
+
+    # Acquisition only if we don't already have a target.
+    if not target or not is_instance_valid(target):
+        _acquire_target()
+
+    # If we have a target, try to rotate the velocity slightly toward it.
+    if target and is_instance_valid(target):
+        _check_shake_off(delta)
+        if _shaken_off or _lost_target:
+            # If shaken off or lost, missile is done
+            queue_free()
+            return
+        _home_towards_target(delta)
+
+    global_position += velocity * delta
+    rotation = velocity.angle()
+    queue_redraw()
+
+func _acquire_target():
+    if _lost_target:
+        return
+
+    # Prefer existing groups used in project: player and enemies
+    var groups = ["player", "enemies"]
+    var best = null
+    var best_d = 1e9
+    for g in groups:
+        for c in get_tree().get_nodes_in_group(g):
+            if c == owner_node:
+                continue
+            if not is_instance_valid(c):
+                continue
+            if not c.is_inside_tree():
+                continue
+            # ensure node is a 2D node with a global_position
+            if not (c is Node2D):
+                continue
+            var d = global_position.distance_to(c.global_position)
+            if d < homing_radius and d < best_d:
+                best_d = d
+                best = c
+    if best:
+        target = best
+        _last_target_pos = target.global_position
+        _last_target_check_time = Time.get_ticks_msec() / 1000.0
+
+        # reset shake-off timer for new target
+        _shaken_off = false
+        _lost_target = false
+    else:
+        # No target available at spawn: missile will still fly straight and
+        # fizzle after fizzle_time (handled in _physics_process).
+        pass
+
+func _check_shake_off(delta):
+    if not target or not is_instance_valid(target):
+        return
+    var now = Time.get_ticks_msec() / 1000.0
+    var dt = now - _last_target_check_time
+    if dt <= 0.0:
+        return
+    var cur = target.global_position
+    var prev = _last_target_pos
+    var rel_prev = (prev - global_position)
+    var rel_cur = (cur - global_position)
+    if rel_prev.length() < 0.1 or rel_cur.length() < 0.1:
+        _last_target_pos = cur
+        _last_target_check_time = now
+        return
+    var dir_prev = rel_prev.normalized()
+    var dir_cur = rel_cur.normalized()
+    var angle = abs(dir_prev.angle_to(dir_cur))
+    if angle > _shake_angle_threshold and dt < 0.25:
+        _shaken_off = true
+        _lost_target = true
+    _last_target_pos = cur
+    _last_target_check_time = now
+
+func _home_towards_target(delta):
+    if not target or not is_instance_valid(target):
+        target = null
+        return
+    # Keep constant speed magnitude; rotate direction only by up to max_turn_rate*delta
+    var desired_dir = (target.global_position - global_position).normalized()
+    var current_dir = velocity.normalized()
+    var angle_to_target = current_dir.angle_to(desired_dir)
+    var max_delta = max_turn_rate * delta
+    var clamped = clamp(angle_to_target, -max_delta, max_delta)
+    var new_dir = current_dir.rotated(clamped)
+    velocity = new_dir * speed
+
+func _on_area_entered(area):
+    _handle_hit(area)
+
+func _on_body_entered(body):
+    _handle_hit(body)
+
+func _handle_hit(obj):
+    # Ensure hit handling runs only once and ignore hits on the owner
+    if _handled_hit:
+        return
+    if obj == owner_node:
+        return
+    _handled_hit = true
+    if DEBUG:
+        print("[Missile] hit detected: ", obj, " name=", obj.name if obj else "<null>")
+    _apply_hit(obj)
+    queue_free()
+
+func _apply_hit(body):
+    if not is_instance_valid(body):
+        return
+    if body.has_method("apply_damage"):
+        body.apply_damage(damage, owner_node)
+    elif body.has_meta("health"):
+        var h = body.get_meta("health")
+        body.set_meta("health", h - damage)
+    else:
+        # Defensive property access for 'health' on nodes
+        var h_prop = null
+        if body.has_method("get"):
+            h_prop = body.get("health")
+        if h_prop != null:
+            # attempt to set via generic property setter
+            if body.has_method("set"):
+                body.set("health", max(0, h_prop - damage))
+            else:
+                # try direct member access as last resort
+                if typeof(body) == TYPE_OBJECT and "health" in body:
+                    body.health = max(0, h_prop - damage)
+    # No explosion scene available yet; just remove the missile on impact.
+    # Previous code attempted to call GameManager.spawn_explosion(null, ...)
+    # which would error because no explosion scene is provided. Keep hit
+    # handling minimal: spawn logic for visual effects can be added later.
+
+func _draw():
+    var s = 10.0
+    draw_rect(Rect2(Vector2(-s/2, -s/2), Vector2(s, s)), color)

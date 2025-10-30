@@ -1,0 +1,78 @@
+[gd_scene load_steps=4 format=3 uid="uid://cg4f4o3k2lm8t"]
+
+[ext_resource type="Script" path="res://scripts/vehicles/enemy_car.gd" id="1_2k3l4"]
+[ext_resource type="PackedScene" uid="uid://bqyfc8v3xkm5b" path="res://scenes/weapons/Bullet.tscn" id="2_3m4n5"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1m9k5"]
+size = Vector2(40, 60)
+
+[node name="EnemyCar" type="CharacterBody2D" groups=["enemies", "vehicles"]]
+collision_layer = 4
+collision_mask = 11
+script = ExtResource("1_2k3l4")
+bullet_scene = ExtResource("2_3m4n5")
+fire_rate = 16.0
+
+[node name="Visuals" type="Node2D" parent="."]
+
+[node name="BodyColor" type="ColorRect" parent="Visuals"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -30.0
+offset_right = 20.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.8, 0.4, 0.2, 1)
+
+[node name="AccentColor" type="ColorRect" parent="Visuals"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -15.0
+offset_top = -35.0
+offset_right = 15.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.6, 0.2, 0.1, 1)
+
+[node name="MuzzleFlash" type="ColorRect" parent="Visuals"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -39.0
+offset_right = 4.0
+offset_bottom = -31.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0.8, 0, 1)
+visible = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1m9k5")
+
+[node name="Muzzle" type="Marker2D" parent="."]
+position = Vector2(0, -35)
+
+[node name="MachineGunAudio" type="AudioStreamPlayer2D" parent="."]
+volume_db = -80.0
+autoplay = false
+
+[node name="CollisionSensor" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 8
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionSensor"]
+shape = SubResource("RectangleShape2D_1m9k5")
