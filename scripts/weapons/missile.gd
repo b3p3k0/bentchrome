@@ -169,7 +169,9 @@ func _handle_hit(obj):
 		return
 
 	_handled_hit = true
+	print("MISSILE HIT: ", obj.name, " (type: ", obj.get_class(), ", groups: ", obj.get_groups(), ")")
 	_apply_damage(obj)
+	print("MISSILE REMOVED: queue_free() called")
 	queue_free()
 
 func _apply_damage(target_obj):

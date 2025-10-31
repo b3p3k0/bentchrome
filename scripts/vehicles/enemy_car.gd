@@ -96,6 +96,7 @@ var _base_stats: Dictionary = {}  ## Cache base stats before mass scaling for de
 @onready var muzzle_flash := $Visuals/MuzzleFlash
 @onready var visuals := $Visuals
 @onready var collision_sensor := $CollisionSensor
+@onready var vehicle_proximity_detector := $VehicleProximityDetector
 @onready var body_color := $Visuals/BodyColor
 @onready var accent_color := $Visuals/AccentColor
 
@@ -108,6 +109,10 @@ func _ready():
 	# Initialize collision handling
 	collision_sensor.area_entered.connect(_on_collision_sensor_area_entered)
 	collision_sensor.area_exited.connect(_on_collision_sensor_area_exited)
+
+	# Initialize vehicle proximity detection for fallback separation
+	vehicle_proximity_detector.body_entered.connect(_on_vehicle_proximity_entered)
+	vehicle_proximity_detector.body_exited.connect(_on_vehicle_proximity_exited)
 
 	# Initialize vehicle health component
 	vehicle_health = VehicleHealth.new()
@@ -555,6 +560,10 @@ func _physics_process(delta):
 
 	# Apply movement and physics (reuses player car logic)
 	_apply_ai_movement(delta)
+
+	# Apply emergency separation as fallback system
+	_apply_emergency_separation(delta)
+
 	move_and_slide()
 	_handle_slide_collisions()
 
@@ -812,7 +821,10 @@ func _behavior_hunt(delta):
 		return
 
 	var direction_to_target = (ai_target.global_position - global_position).normalized()
-	current_direction = _get_cardinal_direction(direction_to_target)
+
+	# Apply vehicle avoidance to prevent clustering
+	var avoidance_direction = _apply_vehicle_avoidance(direction_to_target)
+	current_direction = _get_cardinal_direction(avoidance_direction)
 	last_facing_direction = current_direction
 
 	# Fire if in range and has reaction time passed
@@ -838,7 +850,9 @@ func _behavior_flank(delta):
 		if randf() < 0.5:
 			flank_direction = -flank_direction
 
-	current_direction = _get_cardinal_direction(flank_direction)
+	# Apply vehicle avoidance to prevent clustering during flanking
+	var avoidance_direction = _apply_vehicle_avoidance(flank_direction)
+	current_direction = _get_cardinal_direction(avoidance_direction)
 	last_facing_direction = (ai_target.global_position - global_position).normalized()
 
 	_try_fire_at_target()
@@ -897,9 +911,10 @@ func _behavior_opportunistic(delta):
 		ai_last_target_position = ai_target.global_position
 		_debug_log("Opportunistic retarget to wounded: " + ai_target.name + " (HP: " + str(lowest_hp_ratio) + ")")
 
-	# Aggressive direct approach
+	# Aggressive direct approach with vehicle avoidance
 	var direction_to_target = (ai_target.global_position - global_position).normalized()
-	current_direction = _get_cardinal_direction(direction_to_target)
+	var avoidance_direction = _apply_vehicle_avoidance(direction_to_target)
+	current_direction = _get_cardinal_direction(avoidance_direction)
 	last_facing_direction = current_direction
 
 	# Fire more aggressively at wounded targets
@@ -940,6 +955,54 @@ func _force_reengage(distance_to_target: float) -> void:
 		next_state = "hunt"
 	ai_decision_timer = 0.0
 	_set_state(next_state)
+
+## Check for nearby vehicles and apply avoidance to movement direction
+func _apply_vehicle_avoidance(desired_direction: Vector2) -> Vector2:
+	var separation_distance = 120.0  # Minimum distance to maintain from other vehicles
+	var avoidance_strength = 0.8  # How much to modify direction for avoidance (0.0 = none, 1.0 = full)
+
+	# Get all nearby vehicles
+	var nearby_vehicles = []
+	var all_vehicles = get_tree().get_nodes_in_group("vehicles")
+
+	for vehicle in all_vehicles:
+		if vehicle == self or not is_instance_valid(vehicle):
+			continue
+
+		var distance = global_position.distance_to(vehicle.global_position)
+		if distance < separation_distance:
+			nearby_vehicles.append(vehicle)
+
+	# If no nearby vehicles, return original direction
+	if nearby_vehicles.is_empty():
+		return desired_direction
+
+	# Calculate avoidance vector
+	var avoidance_vector = Vector2.ZERO
+	for vehicle in nearby_vehicles:
+		var to_vehicle = vehicle.global_position - global_position
+		var distance = to_vehicle.length()
+
+		if distance > 0:
+			# Create repulsion force inversely proportional to distance
+			var repulsion_strength = (separation_distance - distance) / separation_distance
+			repulsion_strength = pow(repulsion_strength, 2)  # Quadratic falloff for stronger close-range effect
+
+			var repulsion_direction = -to_vehicle.normalized()
+			avoidance_vector += repulsion_direction * repulsion_strength
+
+	# Normalize and blend with desired direction
+	if avoidance_vector.length() > 0:
+		avoidance_vector = avoidance_vector.normalized()
+		var blended_direction = desired_direction.lerp(avoidance_vector, avoidance_strength)
+
+		# Debug output for avoidance
+		if DEBUG_AI_VEHICLE:
+			_debug_log("Vehicle avoidance: %d nearby vehicles, avoidance strength %.2f" % [nearby_vehicles.size(), avoidance_strength])
+
+		return blended_direction.normalized()
+
+	return desired_direction
 
 ## Convert arbitrary direction to cardinal direction
 func _get_cardinal_direction(direction: Vector2) -> Vector2:
@@ -1271,10 +1334,48 @@ func _handle_slide_collisions():
 		elif collider is CharacterBody2D:
 			other_velocity = collider.velocity
 
-		var target_destroyed = _apply_collision_damage(collider, normal, other_velocity)
+		# Enhanced vehicle-to-vehicle collision handling
+		if collider.is_in_group("vehicles"):
+			_handle_vehicle_collision(collider, normal, other_velocity)
+		else:
+			# Apply physics-based collision damage for non-vehicles
+			var target_destroyed = _apply_collision_damage(collider, normal, other_velocity)
 
-		if not target_destroyed:
-			_apply_bounce(normal, collider, other_velocity)
+			if not target_destroyed:
+				_apply_bounce(normal, collider, other_velocity)
+
+## Enhanced vehicle-to-vehicle collision handling
+func _handle_vehicle_collision(other_vehicle: Node, normal: Vector2, other_velocity: Vector2):
+	# Enhanced separation force for vehicles to prevent overlap
+	var separation_force = 150.0  # Stronger than normal bounce_push for vehicles
+	var relative_velocity = velocity - other_velocity
+	var impact_speed = abs(relative_velocity.dot(normal))
+
+	# Get mass information for physics-based response
+	var self_mass = get_mass_scalar()
+	var other_mass = 1.0
+	if other_vehicle.has_method("get_mass_scalar"):
+		other_mass = other_vehicle.get_mass_scalar()
+
+	# Calculate separation based on mass ratio
+	var mass_ratio = other_mass / (self_mass + other_mass)
+	var separation_intensity = lerp(0.6, 1.4, mass_ratio)  # More aggressive than normal bounce
+
+	# Apply vehicle collision damage (reduced compared to wall collisions)
+	if impact_speed > 50.0:  # Lower threshold for vehicle-to-vehicle damage
+		var target_destroyed = _apply_collision_damage(other_vehicle, normal, other_velocity)
+
+	# Apply enhanced separation physics
+	var speed_factor = clamp(impact_speed / 150.0, 0.5, 2.5)  # More responsive to speed
+	var effective_separation = separation_force * speed_factor * separation_intensity
+
+	# Apply separation with enhanced bounce physics
+	velocity = velocity.bounce(normal) * 0.7 * separation_intensity  # Slightly more damping for vehicles
+	velocity += normal * effective_separation
+
+	# Prevent vehicles from getting stuck by ensuring minimum separation velocity
+	if velocity.length() < 30.0:
+		velocity += normal * 40.0  # Minimum separation push
 
 func _apply_bounce(normal: Vector2, target = null, other_velocity: Vector2 = Vector2.ZERO):
 	if velocity.length() < min_bounce_velocity:
@@ -1399,10 +1500,55 @@ func get_display_name() -> String:
 func get_vehicle_health() -> VehicleHealth:
 	return vehicle_health
 
+## Fallback vehicle separation system
+var _nearby_vehicles: Array = []
+
+func _on_vehicle_proximity_entered(vehicle: Node2D):
+	if vehicle.is_in_group("vehicles") and vehicle != self:
+		_nearby_vehicles.append(vehicle)
+		_debug_log("Vehicle entered proximity: " + vehicle.name)
+
+func _on_vehicle_proximity_exited(vehicle: Node2D):
+	if vehicle in _nearby_vehicles:
+		_nearby_vehicles.erase(vehicle)
+		_debug_log("Vehicle exited proximity: " + vehicle.name)
+
+## Apply emergency separation forces for overlapping vehicles
+func _apply_emergency_separation(delta: float):
+	if _nearby_vehicles.is_empty():
+		return
+
+	var separation_force = Vector2.ZERO
+	var separation_applied = false
+
+	for vehicle in _nearby_vehicles:
+		if not is_instance_valid(vehicle):
+			continue
+
+		var distance = global_position.distance_to(vehicle.global_position)
+		var minimum_distance = 80.0  # Emergency separation distance
+
+		if distance < minimum_distance and distance > 0:
+			# Calculate separation direction
+			var separation_direction = (global_position - vehicle.global_position).normalized()
+			var separation_strength = (minimum_distance - distance) / minimum_distance
+
+			# Apply quadratic falloff for stronger effect when very close
+			separation_strength = pow(separation_strength, 2) * 100.0
+
+			separation_force += separation_direction * separation_strength
+			separation_applied = true
+
+	# Apply the separation force
+	if separation_applied:
+		velocity += separation_force * delta
+		_debug_log("Emergency separation applied: force magnitude %.1f" % separation_force.length())
+
 ## Debug logging helper
 func _debug_log(msg: String):
 	if DEBUG_AI_VEHICLE:
 		print("[EnemyCar:" + roster_id + "] ", msg)
+
 func _set_state(new_state: String) -> void:
 	if ai_state == new_state:
 		return

@@ -8,7 +8,7 @@ size = Vector2(40, 60)
 
 [node name="PlayerCar" type="CharacterBody2D" groups=["player", "vehicles"]]
 collision_layer = 2
-collision_mask = 9
+collision_mask = 13
 script = ExtResource("1_7k2m8")
 bullet_scene = ExtResource("2_h9k3v")
 fire_rate = 20.0
@@ -77,3 +77,13 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionSensor"]
 shape = SubResource("RectangleShape2D_1m9k5")
+
+[node name="VehicleProximityDetector" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 6
+monitoring = true
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VehicleProximityDetector"]
+shape = SubResource("RectangleShape2D_1m9k5")
+scale = Vector2(3, 3)

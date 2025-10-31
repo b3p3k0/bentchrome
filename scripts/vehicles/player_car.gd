@@ -190,6 +190,7 @@ const CORE_INPUT_BINDINGS := {
 @onready var muzzle_flash := $Visuals/MuzzleFlash
 @onready var visuals := $Visuals
 @onready var collision_sensor := $CollisionSensor
+@onready var vehicle_proximity_detector := $VehicleProximityDetector
 @onready var body_color := $Visuals/BodyColor
 @onready var accent_color := $Visuals/AccentColor
 
@@ -197,6 +198,10 @@ func _ready():
 	print("PlayerCar initialized")
 	collision_sensor.area_entered.connect(_on_collision_sensor_area_entered)
 	collision_sensor.area_exited.connect(_on_collision_sensor_area_exited)
+
+	# Initialize vehicle proximity detection for fallback separation
+	vehicle_proximity_detector.body_entered.connect(_on_vehicle_proximity_entered)
+	vehicle_proximity_detector.body_exited.connect(_on_vehicle_proximity_exited)
 
 	# Initialize vehicle health component
 	vehicle_health = VehicleHealth.new()
@@ -869,6 +874,10 @@ func _physics_process(delta):
 	_update_direction_lock_timer(delta)
 	_update_collision_immunity_timer(delta)
 	handle_input(delta)
+
+	# Apply emergency separation as fallback system
+	_apply_emergency_separation(delta)
+
 	move_and_slide()
 	_handle_slide_collisions()
 
@@ -1190,12 +1199,49 @@ func _handle_slide_collisions():
 		elif collider is CharacterBody2D:
 			other_velocity = collider.velocity
 
-		# Apply physics-based collision damage
-		var target_destroyed = _apply_collision_damage(collider, normal, other_velocity)
+		# Enhanced vehicle-to-vehicle collision handling
+		if collider.is_in_group("vehicles"):
+			_handle_vehicle_collision(collider, normal, other_velocity)
+		else:
+			# Apply physics-based collision damage for non-vehicles
+			var target_destroyed = _apply_collision_damage(collider, normal, other_velocity)
 
-		# Apply bounce if target wasn't destroyed
-		if not target_destroyed:
-			_apply_bounce(normal, collider, other_velocity)
+			# Apply bounce if target wasn't destroyed
+			if not target_destroyed:
+				_apply_bounce(normal, collider, other_velocity)
+
+## Enhanced vehicle-to-vehicle collision handling
+func _handle_vehicle_collision(other_vehicle: Node, normal: Vector2, other_velocity: Vector2):
+	# Enhanced separation force for vehicles to prevent overlap
+	var separation_force = 150.0  # Stronger than normal bounce_push for vehicles
+	var relative_velocity = velocity - other_velocity
+	var impact_speed = abs(relative_velocity.dot(normal))
+
+	# Get mass information for physics-based response
+	var self_mass = get_mass_scalar()
+	var other_mass = 1.0
+	if other_vehicle.has_method("get_mass_scalar"):
+		other_mass = other_vehicle.get_mass_scalar()
+
+	# Calculate separation based on mass ratio
+	var mass_ratio = other_mass / (self_mass + other_mass)
+	var separation_intensity = lerp(0.6, 1.4, mass_ratio)  # More aggressive than normal bounce
+
+	# Apply vehicle collision damage (reduced compared to wall collisions)
+	if impact_speed > 50.0:  # Lower threshold for vehicle-to-vehicle damage
+		var target_destroyed = _apply_collision_damage(other_vehicle, normal, other_velocity)
+
+	# Apply enhanced separation physics
+	var speed_factor = clamp(impact_speed / 150.0, 0.5, 2.5)  # More responsive to speed
+	var effective_separation = separation_force * speed_factor * separation_intensity
+
+	# Apply separation with enhanced bounce physics
+	velocity = velocity.bounce(normal) * 0.7 * separation_intensity  # Slightly more damping for vehicles
+	velocity += normal * effective_separation
+
+	# Prevent vehicles from getting stuck by ensuring minimum separation velocity
+	if velocity.length() < 30.0:
+		velocity += normal * 40.0  # Minimum separation push
 
 func _on_collision_sensor_area_entered(area):
 	# Check for terrain changes first
@@ -1621,3 +1667,50 @@ func get_mass_scalar() -> float:
 func _on_vehicle_died():
 	print("PlayerCar died! HP: %.0f/%.0f" % [get_current_hp(), get_max_hp()])
 	# TODO: Add death effects, respawn logic, etc.
+
+## Fallback vehicle separation system
+var _nearby_vehicles: Array = []
+
+func _on_vehicle_proximity_entered(vehicle: Node2D):
+	if vehicle.is_in_group("vehicles") and vehicle != self:
+		_nearby_vehicles.append(vehicle)
+		if DEBUG_COLLISION_DAMAGE:
+			print("[PlayerCar] Vehicle entered proximity: " + vehicle.name)
+
+func _on_vehicle_proximity_exited(vehicle: Node2D):
+	if vehicle in _nearby_vehicles:
+		_nearby_vehicles.erase(vehicle)
+		if DEBUG_COLLISION_DAMAGE:
+			print("[PlayerCar] Vehicle exited proximity: " + vehicle.name)
+
+## Apply emergency separation forces for overlapping vehicles
+func _apply_emergency_separation(delta: float):
+	if _nearby_vehicles.is_empty():
+		return
+
+	var separation_force = Vector2.ZERO
+	var separation_applied = false
+
+	for vehicle in _nearby_vehicles:
+		if not is_instance_valid(vehicle):
+			continue
+
+		var distance = global_position.distance_to(vehicle.global_position)
+		var minimum_distance = 80.0  # Emergency separation distance
+
+		if distance < minimum_distance and distance > 0:
+			# Calculate separation direction
+			var separation_direction = (global_position - vehicle.global_position).normalized()
+			var separation_strength = (minimum_distance - distance) / minimum_distance
+
+			# Apply quadratic falloff for stronger effect when very close
+			separation_strength = pow(separation_strength, 2) * 100.0
+
+			separation_force += separation_direction * separation_strength
+			separation_applied = true
+
+	# Apply the separation force
+	if separation_applied:
+		velocity += separation_force * delta
+		if DEBUG_COLLISION_DAMAGE:
+			print("[PlayerCar] Emergency separation applied: force magnitude %.1f" % separation_force.length())
