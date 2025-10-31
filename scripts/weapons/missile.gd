@@ -10,7 +10,7 @@ const TYPE_HOMING = 2
 
 # Core properties
 @export var missile_type: int = TYPE_FIRE
-@export var speed: float = 200.0  # Temporarily reduced for visibility testing (was 1400.0)
+@export var speed: float = 1400.0
 @export var lifetime: float = 3.0  # Short lifetime simulates "fuel depletion"
 @export var acquisition_radius: float = 600.0
 

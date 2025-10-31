@@ -111,7 +111,7 @@ func spawn_missile_simple(scene: PackedScene, spawn_position: Vector2, direction
 
 	var missile = scene.instantiate()
 	missile.global_position = spawn_position
-	missile.velocity = direction * 200.0  # Use 200 speed for testing
+	missile.velocity = direction * 1400.0
 	missile.rotation = direction.angle()
 	missile.missile_type = missile_type
 	missile.owner_node = source

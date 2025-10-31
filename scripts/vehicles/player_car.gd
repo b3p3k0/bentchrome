@@ -513,7 +513,7 @@ func fire_missile():
 	missile.owner_node = self
 	missile.global_position = muzzle_position  # Use muzzle position, not car center
 	missile.rotation = direction.angle()
-	missile.velocity = direction * 200.0  # Use 200 speed for testing
+	missile.velocity = direction * 1400.0
 	missile.missile_type = _weapon_type_to_missile_type(selected_weapon_type)
 
 	# Find the correct game root by traversing up from player
