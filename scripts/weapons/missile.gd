@@ -87,9 +87,6 @@ func _ready():
 	var type_names = ["POWER", "FIRE", "HOMING"]
 	var type_name = type_names[missile_type] if missile_type < type_names.size() else "UNKNOWN"
 
-	# Simple debug output without complex logging
-	print("MISSILE SPAWNED at: ", global_position, " velocity: ", velocity, " color: ", color)
-	print("MISSILE CONFIG: Type=", type_name, " Damage=", damage, " Speed=", speed, " Lifetime=", lifetime)
 
 func _configure_missile_type():
 	var config = MISSILE_CONFIG[missile_type]
@@ -115,15 +112,10 @@ func _initialize_guidance():
 	guidance_system.missile = self
 
 func _physics_process(delta):
-	# Simple debug output for first few frames
-	if life_timer < 0.3:
-		print("MISSILE FRAME: pos=", global_position, " life=", "%.3f" % life_timer, " vel=", velocity)
-
 	life_timer += delta
 
 	# Remove missile after lifetime expires (fuel depletion)
 	if life_timer > lifetime:
-		print("MISSILE EXPIRED: lifetime=", "%.1f" % life_timer, " > ", lifetime)
 		queue_free()
 		return
 
@@ -165,7 +157,6 @@ func _acquire_target():
 
 	if best_target:
 		target = best_target
-		print("[Missile] Acquired target: ", target.name if target else "Unknown")
 
 func _on_area_entered(area):
 	_handle_hit(area)
@@ -178,8 +169,6 @@ func _handle_hit(obj):
 		return
 
 	_handled_hit = true
-	print("[Missile] Hit: ", obj.name if obj else "Unknown", " for ", damage, " damage")
-
 	_apply_damage(obj)
 	queue_free()
 
