@@ -10,6 +10,8 @@ const DEBUG_VEHICLE_TUNING: bool = true
 const DEBUG_COLLISION_DAMAGE: bool = true
 ## Debug flag for 8-way movement system
 const DEBUG_8WAY_MOVEMENT: bool = false
+## Debug flag for drift/slip angle visualization
+const DEBUG_DRIFT_PHYSICS: bool = false
 
 const VehicleHealth = preload("res://scripts/vehicles/vehicle_health.gd")
 
@@ -134,6 +136,8 @@ var _direction_lock_timer: float = 0.0  ## Timer preventing rapid direction chan
 var _handling_lock_duration: float = 0.1  ## Duration to lock direction changes
 var _lateral_drag_multiplier: float = 1.0  ## Handling-based drag on turns
 var _snap_smoothing_factor: float = 0.5  ## Visual rotation smoothing factor
+var _current_slip_angle: float = 0.0  ## Latest slip angle between facing and velocity
+var _last_drift_coefficient: float = 0.0  ## Cached drift coefficient for debugging
 
 ## Mass-based inertia variables
 var _mass_scaled: bool = false  ## Guard against double-application of mass scaling
@@ -932,41 +936,66 @@ func _update_turning_state(new_direction: Vector2, delta: float):
 	if DEBUG_8WAY_MOVEMENT and _is_turning:
 		print("[Physics] Turning detected - angle_change: %.3f, intensity: %.3f, speed: %.1f" % [angle_change, _turn_intensity, current_speed])
 
-## Calculate effective lateral friction based on driving context
-func _calculate_effective_lateral_friction() -> float:
-	# Start with base friction values
-	var base_friction = straightaway_lateral_friction if not _is_turning else turning_lateral_friction
+## Map terrain type to drift multiplier bucket
+func _get_terrain_drift_multiplier() -> float:
+        match _current_terrain_type:
+                "terrain_track":
+                        return DRIFT_FACTORS.terrain_multipliers.get("track", 1.0)
+                "terrain_sand", "terrain_grass":
+                        return DRIFT_FACTORS.terrain_multipliers.get("sand", 1.0)
+                "terrain_snow":
+                        return DRIFT_FACTORS.terrain_multipliers.get("snow", 1.0)
+                "terrain_ice", "terrain_water":
+                        return DRIFT_FACTORS.terrain_multipliers.get("ice", 1.0)
+                _:
+                        return 1.0
 
-	# Apply car stats modulation (handling affects lateral grip)
-	var handling_modifier = 1.0
-	if not selected_profile.is_empty():
-		var stats = selected_profile.get("stats", {})
-		var handling_stat = stats.get("handling", 5)
-		var handling_curve = _apply_stat_curve(handling_stat, "handling")
-		handling_modifier = lerp(0.7, 1.0, handling_curve)  # Poor handling = less grip
+## Calculate drift coefficient based on slip angle, speed, handling, and terrain
+func _calculate_drift_coefficient(forward_direction: Vector2) -> float:
+        var speed = velocity.length()
+        if speed < 0.1:
+                _current_slip_angle = 0.0
+                return DRIFT_FACTORS.low_speed.x * _get_terrain_drift_multiplier()
 
-	# Apply terrain modifiers (ice = less friction, tarmac = more friction)
-	var terrain_modifier = _current_terrain_modifiers.handling
+        var facing_dir = forward_direction.normalized()
+        var velocity_dir = velocity.normalized()
 
-	# Combine all factors
-	var effective_friction = base_friction * handling_modifier * terrain_modifier
+        if facing_dir == Vector2.ZERO:
+                facing_dir = velocity_dir
+        _current_slip_angle = abs(velocity_dir.angle_to(facing_dir))
 
-	# Speed-based reduction at very high speeds (realistic loss of control)
-	var current_speed = velocity.length()
-	if current_speed > drift_speed_threshold:
-		var speed_factor = (current_speed - drift_speed_threshold) / drift_speed_threshold
-		var speed_reduction = lerp(1.0, 0.8, clamp(speed_factor, 0.0, 1.0))
-		effective_friction *= speed_reduction
+        var normalized_slip = clamp(_current_slip_angle / PI, 0.0, 1.0)
+        normalized_slip = pow(normalized_slip, DRIFT_FACTORS.slip_angle_sensitivity)
 
-	# Turn intensity affects friction (sharper turns = less grip)
-	if _is_turning:
-		var turn_reduction = lerp(1.0, 0.6, _turn_intensity)
-		effective_friction *= turn_reduction
+        var speed_ratio = clamp(speed / max_speed, 0.0, 1.0)
+        var base_min = lerp(DRIFT_FACTORS.low_speed.x, DRIFT_FACTORS.high_speed.x, speed_ratio)
+        var base_max = lerp(DRIFT_FACTORS.low_speed.y, DRIFT_FACTORS.high_speed.y, speed_ratio)
 
-	# Clamp to reasonable range
-	effective_friction = clamp(effective_friction, 0.1, 0.98)
+        # Extra slide capability when above 70% speed
+        if speed_ratio > 0.7:
+                var boost_ratio = clamp((speed_ratio - 0.7) / 0.3, 0.0, 1.0)
+                base_min = lerp(base_min, DRIFT_FACTORS.high_speed_boost.x, boost_ratio)
+                base_max = lerp(base_max, DRIFT_FACTORS.high_speed_boost.y, boost_ratio)
 
-	return effective_friction
+        var drift_coefficient = lerp(base_min, base_max, normalized_slip)
+
+        # Terrain and handling modulation
+        drift_coefficient *= _get_terrain_drift_multiplier()
+        drift_coefficient *= lerp(1.1, 0.85, clamp(_current_terrain_modifiers.handling, 0.0, 1.0))
+
+        # Low-speed tracks should grip quickly
+        if speed < drift_speed_threshold:
+                var low_speed_ratio = clamp(speed / max(drift_speed_threshold, 0.001), 0.0, 1.0)
+                drift_coefficient = lerp(DRIFT_FACTORS.low_speed.x, drift_coefficient, low_speed_ratio)
+
+        # Prevent endless spins by enforcing a minimum grip (max drift)
+        drift_coefficient = clamp(drift_coefficient, 0.05, 0.9)
+        _last_drift_coefficient = drift_coefficient
+
+        if DEBUG_DRIFT_PHYSICS and speed > 5.0:
+                print("[Drift] speed=%.1f slip=%.2f drift=%.2f terrain=%s" % [speed, rad_to_deg(_current_slip_angle), drift_coefficient, _current_terrain_type])
+
+        return drift_coefficient
 
 
 func handle_input(delta):
@@ -1112,15 +1141,16 @@ func handle_input(delta):
 			var lateral_velocity = right_direction * velocity.dot(right_direction)
 			var lateral_speed = lateral_velocity.length()
 
-			# Apply context-aware lateral friction based on driving state
-			var effective_lateral_friction = _calculate_effective_lateral_friction()
+                        # Apply slip-aware drift coefficient based on terrain and speed
+                        var drift_coefficient = _calculate_drift_coefficient(forward_direction)
 
-			# Kill orthogonal velocity (lateral friction) - higher = less drift
-			var preserved_lateral = lateral_velocity * (1.0 - effective_lateral_friction)
+                        # Preserve some lateral motion to allow controllable sliding
+                        var preserved_lateral = lateral_velocity * drift_coefficient
 
-			# Debug visualization for lateral friction
-			if DEBUG_8WAY_MOVEMENT and lateral_speed > 5.0:
-				print("[Physics] Lateral friction: %.2f, Speed: %.1f, Lateral: %.1f, Turning: %s" % [effective_lateral_friction, current_speed, lateral_speed, _is_turning])
+                        # Debug visualization for lateral friction
+                        if (DEBUG_8WAY_MOVEMENT or DEBUG_DRIFT_PHYSICS) and lateral_speed > 5.0:
+                                var slip_angle_degrees = rad_to_deg(_current_slip_angle)
+                                print("[Physics] Drift coeff: %.2f, Slip: %.1f°, Speed: %.1f, Lateral: %.1f, Terrain: %s" % [drift_coefficient, slip_angle_degrees, current_speed, lateral_speed, _current_terrain_type])
 
 			# Reconstruct velocity with controlled lateral momentum
 			velocity = forward_velocity + preserved_lateral
