@@ -1,10 +1,12 @@
 extends Control
 
 @onready var text_label := $TextPanel/TextLabel
+@onready var background: TextureRect = $Background
 var is_returning := false
 
 func _ready():
 	print("Story screen initialized")
+	_ensure_background_texture()
 	load_story_data()
 	calculate_text_capacity()
 
@@ -46,6 +48,32 @@ func calculate_text_capacity():
 	var estimated_chars = chars_per_line * estimated_lines
 
 	print("Story text panel holds approx ", estimated_chars, " characters.")
+
+func _ensure_background_texture():
+	if background.texture:
+		return
+
+	var path := "res://assets/img/story/martygraz.png"
+	var texture := _load_texture(path)
+	if texture:
+		background.texture = texture
+	else:
+		push_warning("StoryScreen: Failed to load background texture at " + path)
+
+func _load_texture(path: String) -> Texture2D:
+	var loaded = ResourceLoader.load(path, "Texture2D")
+	if loaded and loaded is Texture2D:
+		return loaded
+
+	var image := Image.new()
+	var err := image.load(path)
+	if err != OK:
+		var absolute_path := ProjectSettings.globalize_path(path)
+		err = image.load(absolute_path)
+	if err != OK:
+		return null
+
+	return ImageTexture.create_from_image(image)
 
 func _unhandled_input(event):
 	if is_returning:

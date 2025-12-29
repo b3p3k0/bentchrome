@@ -216,7 +216,7 @@ func update_display():
 			texture = portrait_cache[portrait_path]
 		else:
 			# Load texture directly
-			texture = load(portrait_path)
+			texture = _load_portrait_texture(portrait_path)
 			# Cache only successful loads
 			if texture:
 				portrait_cache[portrait_path] = texture
@@ -239,6 +239,21 @@ func update_display():
 	handling_value.text = str(stats.get("handling", 1))
 	armor_value.text = str(stats.get("armor", 1))
 	special_value.text = str(stats.get("special_power", 1))
+
+func _load_portrait_texture(path: String) -> Texture2D:
+	var loaded = ResourceLoader.load(path, "Texture2D")
+	if loaded and loaded is Texture2D:
+		return loaded
+
+	var image := Image.new()
+	var err := image.load(path)
+	if err != OK:
+		var absolute_path := ProjectSettings.globalize_path(path)
+		err = image.load(absolute_path)
+	if err != OK:
+		return null
+
+	return ImageTexture.create_from_image(image)
 
 func update_dialog_content():
 	if roster.size() == 0 or current_index >= roster.size():

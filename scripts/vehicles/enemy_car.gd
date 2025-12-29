@@ -1177,6 +1177,11 @@ func fire_primary_weapon():
 
 	_next_fire_time = current_time + (1.0 / fire_rate)
 
+## Add missiles to inventory (called by pickups)
+func add_missiles(amount: int) -> void:
+	print("EnemyCar[%s]: Added %d missiles" % [roster_id, amount])
+	# Enemy missiles not implemented yet, placeholder for future
+
 ## Public health system interface (copied from player car)
 func apply_damage(amount: float, source = null) -> void:
 	if vehicle_health:

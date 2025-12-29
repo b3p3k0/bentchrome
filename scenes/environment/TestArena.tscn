@@ -1,8 +1,9 @@
-[gd_scene load_steps=36 format=3 uid="uid://bfqm2xgv3pu6w"]
+[gd_scene load_steps=37 format=3 uid="uid://bfqm2xgv3pu6w"]
 
 [ext_resource type="Script" path="res://scripts/environment/destructible_prop.gd" id="1_destructible_prop"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="2_speckle"]
 [ext_resource type="Script" path="res://scripts/environment/test_arena_controller.gd" id="3_arena_controller"]
+[ext_resource type="Script" path="res://scripts/environment/level_controller.gd" id="4_level_controller"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_horizontal"]
 size = Vector2(1800, 80)
@@ -731,6 +732,27 @@ position = Vector2(360, 0)
 
 [node name="AIStartPoint3" type="Marker2D" parent="SpawnPoints"]
 position = Vector2(360, 960)
+
+[node name="LevelController" type="Node" parent="."]
+script = ExtResource("4_level_controller")
+
+[node name="PickupSpawners" type="Node2D" parent="."]
+
+[node name="HealthSpawner1" type="Marker2D" parent="PickupSpawners" groups=["pickup_spawner"]]
+position = Vector2(-700, -1200)
+metadata/pickup_type = "health_minor"
+
+[node name="HealthSpawner2" type="Marker2D" parent="PickupSpawners" groups=["pickup_spawner"]]
+position = Vector2(700, 1200)
+metadata/pickup_type = "health_minor"
+
+[node name="AmmoSpawner1" type="Marker2D" parent="PickupSpawners" groups=["pickup_spawner"]]
+position = Vector2(-500, 400)
+metadata/pickup_type = "ammo_missile"
+
+[node name="AmmoSpawner2" type="Marker2D" parent="PickupSpawners" groups=["pickup_spawner"]]
+position = Vector2(500, -400)
+metadata/pickup_type = "ammo_missile"
 
 [node name="AudioPlaceholders" type="Node2D" parent="."]
 

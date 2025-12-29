@@ -64,6 +64,11 @@ func _strip_comments(text: String) -> String:
 			cleaned_lines.append(line)
 	return "\n".join(cleaned_lines)
 
+func _resource_or_file_exists(path: String) -> bool:
+	if ResourceLoader.exists(path):
+		return true
+	return FileAccess.file_exists(path)
+
 func _validate_roster_entry(entry: Dictionary, index: int) -> bool:
 	var entry_id = entry.get("id", "entry_" + str(index))
 
@@ -83,9 +88,11 @@ func _validate_roster_entry(entry: Dictionary, index: int) -> bool:
 	if not portrait_path.begins_with("res://assets/img/bios/"):
 		push_error("Invalid portrait path for " + entry_id + ": " + portrait_path)
 		return false
-	if not ResourceLoader.exists(portrait_path):
+	if not _resource_or_file_exists(portrait_path):
 		push_error("Portrait file not found for " + entry_id + ": " + portrait_path)
 		return false
+	if not ResourceLoader.exists(portrait_path):
+		push_warning("Portrait file exists but is not imported yet: " + portrait_path)
 
 	# Validate stats has all required numeric fields
 	var stats = entry.stats

@@ -38,7 +38,7 @@ func run_health_check() -> bool:
 		print("🚨 HEALTH CHECK FAILED - REGRESSION DETECTED 🚨")
 		for issue in _validation_results:
 			print("  ❌ ", issue)
-		print("🚨 " + "="*50 + " 🚨")
+		print("🚨 " + "=".repeat(50) + " 🚨")
 		health_check_failed.emit(_validation_results)
 
 	return all_passed
@@ -212,7 +212,7 @@ func _check_project_godot_patterns() -> Array:
 	for i in range(lines.size()):
 		var line = lines[i]
 		# Look for patterns like "#SomeCommentaction_name={"
-		if line.contains("#") and line.contains("={") and not line.strip_edges().starts_with("#"):
+		if line.contains("#") and line.contains("={") and not line.strip_edges().begins_with("#"):
 			violations.append("BANNED PATTERN: Inline comment corruption in project.godot line " + str(i + 1))
 
 	return violations
