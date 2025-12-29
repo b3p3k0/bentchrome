@@ -137,7 +137,7 @@ var _handling_lock_duration: float = 0.1  ## Duration to lock direction changes
 var _lateral_drag_multiplier: float = 1.0  ## Handling-based drag on turns
 var _snap_smoothing_factor: float = 0.5  ## Visual rotation smoothing factor
 var _current_slip_angle: float = 0.0  ## Latest slip angle between facing and velocity
-var _last_drift_coefficient: float = 0.0  ## Cached lateral bleed coefficient for debugging
+var _last_drift_coefficient: float = 0.0  ## Cached drift coefficient for debugging
 
 ## Mass-based inertia variables
 var _mass_scaled: bool = false  ## Guard against double-application of mass scaling
@@ -950,7 +950,7 @@ func _get_terrain_drift_multiplier() -> float:
                 _:
                         return 1.0
 
-## Calculate lateral bleed coefficient (how much lateral speed to remove) based on slip angle, speed, handling, and terrain
+## Calculate drift coefficient based on slip angle, speed, handling, and terrain
 func _calculate_drift_coefficient(forward_direction: Vector2) -> float:
         var speed = velocity.length()
         if speed < 0.1:
@@ -977,28 +977,25 @@ func _calculate_drift_coefficient(forward_direction: Vector2) -> float:
                 base_min = lerp(base_min, DRIFT_FACTORS.high_speed_boost.x, boost_ratio)
                 base_max = lerp(base_max, DRIFT_FACTORS.high_speed_boost.y, boost_ratio)
 
-        var drift_amount = lerp(base_min, base_max, normalized_slip)
+        var drift_coefficient = lerp(base_min, base_max, normalized_slip)
 
         # Terrain and handling modulation
-        drift_amount *= _get_terrain_drift_multiplier()
-        drift_amount *= lerp(1.1, 0.85, clamp(_current_terrain_modifiers.handling, 0.0, 1.0))
+        drift_coefficient *= _get_terrain_drift_multiplier()
+        drift_coefficient *= lerp(1.1, 0.85, clamp(_current_terrain_modifiers.handling, 0.0, 1.0))
 
         # Low-speed tracks should grip quickly
         if speed < drift_speed_threshold:
                 var low_speed_ratio = clamp(speed / max(drift_speed_threshold, 0.001), 0.0, 1.0)
-                drift_amount = lerp(DRIFT_FACTORS.low_speed.x, drift_amount, low_speed_ratio)
+                drift_coefficient = lerp(DRIFT_FACTORS.low_speed.x, drift_coefficient, low_speed_ratio)
 
         # Prevent endless spins by enforcing a minimum grip (max drift)
-        drift_amount = clamp(drift_amount, 0.05, 0.9)
-
-        # Convert drift amount (preserved lateral) into bleed factor for lateral damping
-        var lateral_bleed = clamp(1.0 - drift_amount, 0.1, 0.95)
-        _last_drift_coefficient = lateral_bleed
+        drift_coefficient = clamp(drift_coefficient, 0.05, 0.9)
+        _last_drift_coefficient = drift_coefficient
 
         if DEBUG_DRIFT_PHYSICS and speed > 5.0:
-                print("[Drift] speed=%.1f slip=%.2f bleed=%.2f terrain=%s" % [speed, rad_to_deg(_current_slip_angle), lateral_bleed, _current_terrain_type])
+                print("[Drift] speed=%.1f slip=%.2f drift=%.2f terrain=%s" % [speed, rad_to_deg(_current_slip_angle), drift_coefficient, _current_terrain_type])
 
-        return lateral_bleed
+        return drift_coefficient
 
 
 func handle_input(delta):
@@ -1145,16 +1142,15 @@ func handle_input(delta):
 			var lateral_speed = lateral_velocity.length()
 
                         # Apply slip-aware drift coefficient based on terrain and speed
-                        var lateral_bleed = _calculate_drift_coefficient(forward_direction)
+                        var drift_coefficient = _calculate_drift_coefficient(forward_direction)
 
                         # Preserve some lateral motion to allow controllable sliding
-                        # (drift coefficient represents how much lateral energy to bleed off)
-                        var preserved_lateral = lateral_velocity * (1.0 - lateral_bleed)
+                        var preserved_lateral = lateral_velocity * drift_coefficient
 
                         # Debug visualization for lateral friction
                         if (DEBUG_8WAY_MOVEMENT or DEBUG_DRIFT_PHYSICS) and lateral_speed > 5.0:
                                 var slip_angle_degrees = rad_to_deg(_current_slip_angle)
-                                print("[Physics] Drift bleed: %.2f, Slip: %.1f°, Speed: %.1f, Lateral: %.1f, Terrain: %s" % [lateral_bleed, slip_angle_degrees, current_speed, lateral_speed, _current_terrain_type])
+                                print("[Physics] Drift coeff: %.2f, Slip: %.1f°, Speed: %.1f, Lateral: %.1f, Terrain: %s" % [drift_coefficient, slip_angle_degrees, current_speed, lateral_speed, _current_terrain_type])
 
 			# Reconstruct velocity with controlled lateral momentum
 			velocity = forward_velocity + preserved_lateral
