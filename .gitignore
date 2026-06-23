@@ -1,7 +1,3 @@
-CLAUDE.md
-.github
-tools/
-.gitignore
 docs/internal
 .import/
 .godot/
