@@ -6,16 +6,20 @@ extends CharacterBody2D
 ## Visual node rotates to the heading.
 
 var heading: float = 0.0  # radians; the direction the nose points
+var current_terrain: StringName = &"road"
 
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
 @onready var _visual: Node2D = $Visual
+@onready var _terrain_sensor: TerrainSensor = $TerrainSensor
 
 func _ready() -> void:
 	heading = rotation
 	rotation = 0.0
 
 func _physics_process(delta: float) -> void:
+	if _terrain_sensor:
+		current_terrain = _terrain_sensor.current_terrain
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
 	if _controller:
 		_controller.apply(self, intent, delta)

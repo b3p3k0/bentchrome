@@ -1,13 +1,59 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_block"]
 size = Vector2(120, 120)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_zone"]
+size = Vector2(600, 500)
+
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
+
+[node name="DirtZone" type="Area2D" parent="."]
+position = Vector2(-800, -500)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"dirt"
+
+[node name="Vis" type="Polygon2D" parent="DirtZone"]
+color = Color(0.5, 0.36, 0.2, 0.5)
+polygon = PackedVector2Array(-300, -250, 300, -250, 300, 250, -300, 250)
+
+[node name="Col" type="CollisionShape2D" parent="DirtZone"]
+shape = SubResource("RectangleShape2D_zone")
+
+[node name="IceZone" type="Area2D" parent="."]
+position = Vector2(800, 500)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"ice"
+
+[node name="Vis" type="Polygon2D" parent="IceZone"]
+color = Color(0.6, 0.8, 0.95, 0.5)
+polygon = PackedVector2Array(-300, -250, 300, -250, 300, 250, -300, 250)
+
+[node name="Col" type="CollisionShape2D" parent="IceZone"]
+shape = SubResource("RectangleShape2D_zone")
+
+[node name="WaterZone" type="Area2D" parent="."]
+position = Vector2(-100, 950)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+
+[node name="Vis" type="Polygon2D" parent="WaterZone"]
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-300, -250, 300, -250, 300, 250, -300, 250)
+
+[node name="Col" type="CollisionShape2D" parent="WaterZone"]
+shape = SubResource("RectangleShape2D_zone")
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 
@@ -47,5 +93,5 @@ shape = SubResource("RectangleShape2D_block")
 offset_left = 16.0
 offset_top = 12.0
 offset_right = 320.0
-offset_bottom = 80.0
+offset_bottom = 96.0
 text = "speed"

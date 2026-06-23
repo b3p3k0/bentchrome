@@ -1,11 +1,15 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://vehicles/vehicle.gd" id="1_veh"]
 [ext_resource type="Script" path="res://vehicles/driving_controller.gd" id="2_ctl"]
 [ext_resource type="Script" path="res://vehicles/drivers/player_driver.gd" id="3_drv"]
+[ext_resource type="Script" path="res://vehicles/terrain_sensor.gd" id="4_tsn"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
 radius = 18.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_sensor"]
+radius = 6.0
 
 [node name="Vehicle" type="CharacterBody2D"]
 script = ExtResource("1_veh")
@@ -28,6 +32,14 @@ polygon = PackedVector2Array(24, -10, 40, 0, 24, 10)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_veh")
+
+[node name="TerrainSensor" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 128
+script = ExtResource("4_tsn")
+
+[node name="TSCollision" type="CollisionShape2D" parent="TerrainSensor"]
+shape = SubResource("CircleShape2D_sensor")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = true

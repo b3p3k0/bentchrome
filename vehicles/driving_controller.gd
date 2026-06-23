@@ -1,8 +1,8 @@
 class_name DrivingController
 extends Node
 ## Arcade "steer-to-drive" physics. Reads {throttle, steer} intent and updates
-## the host vehicle's velocity + heading. Tuning is exposed as inspector knobs;
-## per-vehicle data (StatCurves) will feed these later.
+## the host vehicle's velocity + heading, scaled by the current terrain. Tuning
+## is exposed as inspector knobs; per-vehicle data (StatCurves) will feed these.
 
 @export_group("Speed")
 @export var max_speed := 520.0
@@ -19,9 +19,22 @@ extends Node
 @export_group("Grip")
 @export var lateral_grip := 7.5
 
+## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
+const TERRAIN := {
+	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},
+	&"dirt": {"accel": 0.8, "top": 0.85, "grip": 0.6},
+	&"ice": {"accel": 0.9, "top": 1.0, "grip": 0.16},
+	&"water": {"accel": 0.4, "top": 0.45, "grip": 0.7},
+}
+
 func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var throttle: float = clampf(intent.get("throttle", 0.0), -1.0, 1.0)
 	var steer: float = clampf(intent.get("steer", 0.0), -1.0, 1.0)
+
+	var mod: Dictionary = TERRAIN.get(vehicle.current_terrain, TERRAIN[&"road"])
+	var accel: float = acceleration * mod["accel"]
+	var top: float = max_speed * mod["top"]
+	var grip: float = lateral_grip * mod["grip"]
 
 	var forward := Vector2.RIGHT.rotated(vehicle.heading)
 	var fwd_speed: float = vehicle.velocity.dot(forward)
@@ -35,12 +48,12 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 
 	# Throttle / brake / reverse along the nose.
 	if throttle > 0.0:
-		vehicle.velocity += forward * acceleration * throttle * delta
+		vehicle.velocity += forward * accel * throttle * delta
 	elif throttle < 0.0:
 		if fwd_speed > 10.0:
 			vehicle.velocity -= forward * brake_deceleration * delta
 		else:
-			vehicle.velocity += forward * acceleration * throttle * delta
+			vehicle.velocity += forward * accel * throttle * delta
 	else:
 		var eased := move_toward(fwd_speed, 0.0, coast_deceleration * delta)
 		vehicle.velocity += forward * (eased - fwd_speed)
@@ -48,11 +61,11 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	# Lateral grip: bleed sideways velocity for predictable drift.
 	var right := forward.orthogonal()
 	var lat_speed: float = vehicle.velocity.dot(right)
-	var lat_retain := clampf(1.0 - lateral_grip * delta, 0.0, 1.0)
+	var lat_retain := clampf(1.0 - grip * delta, 0.0, 1.0)
 	vehicle.velocity -= right * lat_speed * (1.0 - lat_retain)
 
 	# Clamp forward speed (separate caps for forward and reverse).
 	fwd_speed = vehicle.velocity.dot(forward)
-	var cap := max_speed if fwd_speed >= 0.0 else reverse_max_speed
+	var cap := top if fwd_speed >= 0.0 else reverse_max_speed
 	if absf(fwd_speed) > cap:
 		vehicle.velocity -= forward * (fwd_speed - signf(fwd_speed) * cap)
