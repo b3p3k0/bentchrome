@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="1_base"]
+[ext_resource type="Script" path="res://vehicles/drivers/enemy_driver.gd" id="2_edrv"]
+
+[node name="Vehicle" instance=ExtResource("1_base")]
+faction = &"enemies"
+body_color = Color(0.3, 0.5, 0.9, 1)
+
+[node name="Driver" parent="." index="1"]
+script = ExtResource("2_edrv")
+
+[node name="Camera2D" parent="." index="8"]
+enabled = false

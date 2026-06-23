@@ -14,10 +14,10 @@ func _physics_process(delta: float) -> void:
 	if _cooldown > 0.0:
 		_cooldown -= delta
 
-func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
+func try_fire(origin: Vector2, direction: Vector2, shooter: Node, faction: StringName) -> void:
 	if _cooldown > 0.0 or projectile_scene == null:
 		return
 	_cooldown = 1.0 / fire_rate
 	var p := projectile_scene.instantiate() as Projectile
 	get_tree().current_scene.add_child(p)
-	p.setup(origin, direction, projectile_speed, damage, shooter)
+	p.setup(origin, direction, projectile_speed, damage, shooter, faction)

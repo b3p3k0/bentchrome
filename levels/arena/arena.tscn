@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
 [ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
 [ext_resource type="PackedScene" path="res://environment/target_dummy.tscn" id="5_dummy"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_block"]
 size = Vector2(120, 120)
@@ -75,6 +76,12 @@ shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 
+[node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(820, -250)
+
+[node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(-250, -650)
+
 [node name="Dummy1" parent="." instance=ExtResource("5_dummy")]
 position = Vector2(450, 0)
 
@@ -120,5 +127,5 @@ shape = SubResource("RectangleShape2D_block")
 offset_left = 16.0
 offset_top = 12.0
 offset_right = 320.0
-offset_bottom = 120.0
+offset_bottom = 140.0
 text = "speed"

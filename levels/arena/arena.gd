@@ -1,6 +1,6 @@
 extends Node2D
-## Phase 1 test arena: a grid floor for motion reference, a drivable vehicle,
-## terrain patches (dirt/ice/water), a launch ramp, static blocks, and a readout.
+## Phase 1/2 test arena: grid floor, a drivable vehicle, terrain patches, a
+## launch ramp, static blocks, target dummies, enemy cars, and a readout.
 
 const GRID := 128
 const EXTENT := 2400
@@ -12,13 +12,14 @@ func _ready() -> void:
 	for autoload_name in ["GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
-	print("[boot] arena ready — drive with WASD (W gas, S brake/reverse, A/D steer)")
+	print("[boot] arena ready — WASD to drive, Space/LMB to fire")
 	queue_redraw()
 
 func _process(_delta: float) -> void:
-	if _player and _readout:
-		_readout.text = "speed %4.0f px/s\nheading %5.1f deg\nsurface %s\nheight %3.0f" % [
-			_player.get_speed(), rad_to_deg(_player.heading), _player.current_terrain, _player.height
+	if _player and is_instance_valid(_player) and _readout:
+		_readout.text = "speed %4.0f px/s\nheading %5.1f deg\nsurface %s\nheight %3.0f\nhp %3.0f" % [
+			_player.get_speed(), rad_to_deg(_player.heading), _player.current_terrain,
+			_player.height, _player.get_hp()
 		]
 
 func _draw() -> void:

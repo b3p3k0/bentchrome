@@ -1,10 +1,14 @@
 class_name Vehicle
 extends CharacterBody2D
 ## The one vehicle. A Driver supplies intent; a DrivingController turns it into
-## motion. Player and AI both instance this scene — only the Driver differs.
-## The body stays axis-aligned (so a child Camera2D never spins); only the
-## Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
+## motion. Player and AI both instance this scene — only the Driver and faction
+## differ. The body stays axis-aligned (so a child Camera2D never spins); only
+## the Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
 ## launch the car. The machine gun fires from the muzzle along the heading.
+
+@export_group("Identity")
+@export var faction: StringName = &"player"
+@export var body_color := Color(0.85, 0.2, 0.3)
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -27,6 +31,10 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _health: Health = $Health
 
 func _ready() -> void:
+	add_to_group(faction)
+	($Visual/Body as Polygon2D).color = body_color
+	if _health:
+		_health.died.connect(_on_died)
 	heading = rotation
 	rotation = 0.0
 
@@ -40,7 +48,7 @@ func _physics_process(delta: float) -> void:
 	_visual.rotation = heading
 	_update_depth(delta)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
-		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self)
+		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self, faction)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:
@@ -66,5 +74,15 @@ func launch_from_ramp() -> void:
 	vz = ramp_launch
 	_set_airborne(true)
 
+func _on_died() -> void:
+	if is_in_group(&"player"):
+		set_physics_process(false)
+		print("[player] destroyed")
+	else:
+		queue_free()
+
 func get_speed() -> float:
 	return velocity.length()
+
+func get_hp() -> float:
+	return _health.hp if _health else 0.0
