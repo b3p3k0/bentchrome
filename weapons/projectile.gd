@@ -1,8 +1,12 @@
 class_name Projectile
 extends Area2D
 ## Straight or homing projectile. Damages the first Health-bearing body except
-## its own shooter (free-for-all). When turn_rate > 0 and a target is set, it
-## steers toward the target — mild vs aggressive homing is just the turn rate.
+## its own shooter (free-for-all). A homing projectile vectors toward its target
+## only while the target stays within a forward cone — these are "simple"
+## missiles: the first time they whiff a pass (target slips abeam/behind) they
+## commit to a straight line and fly until they hit something. No U-turns.
+
+const HOMING_CONE := deg_to_rad(90.0)
 
 var velocity := Vector2.ZERO
 var damage := 2.0
@@ -10,6 +14,7 @@ var lifetime := 1.2
 var turn_rate := 0.0   # radians/sec; 0 = straight
 var target: Node2D = null
 var shooter: Node = null
+var _homing := false
 var _age := 0.0
 
 func _ready() -> void:
@@ -24,13 +29,21 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 	turn_rate = p_turn_rate
 	shooter = p_shooter
 	target = p_target
+	_homing = p_turn_rate > 0.0 and p_target != null
 
 func _physics_process(delta: float) -> void:
-	if turn_rate > 0.0 and target != null and is_instance_valid(target):
-		var aim := (target.global_position - global_position).angle()
-		var new_angle := rotate_toward(velocity.angle(), aim, turn_rate * delta)
-		velocity = Vector2.RIGHT.rotated(new_angle) * velocity.length()
-		rotation = new_angle
+	if _homing:
+		if is_instance_valid(target):
+			var aim := (target.global_position - global_position).angle()
+			var off := absf(wrapf(aim - velocity.angle(), -PI, PI))
+			if off <= HOMING_CONE:
+				var new_angle := rotate_toward(velocity.angle(), aim, turn_rate * delta)
+				velocity = Vector2.RIGHT.rotated(new_angle) * velocity.length()
+				rotation = new_angle
+			else:
+				_homing = false   # whiffed the pass — commit to a straight line
+		else:
+			_homing = false       # target gone — fly straight
 	global_position += velocity * delta
 	_age += delta
 	if _age >= lifetime:
