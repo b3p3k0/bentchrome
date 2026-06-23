@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
@@ -15,6 +15,12 @@ size = Vector2(600, 500)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ramp"]
 size = Vector2(200, 160)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
+size = Vector2(3040, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
+size = Vector2(40, 2940)
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -142,6 +148,44 @@ polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
 
 [node name="Col" type="CollisionShape2D" parent="Block3"]
 shape = SubResource("RectangleShape2D_block")
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+
+[node name="TopVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, -1300)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-1520, -20, 1520, -20, 1520, 20, -1520, 20)
+
+[node name="TopCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -1300)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="BottomVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, 1600)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-1520, -20, 1520, -20, 1520, 20, -1520, 20)
+
+[node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 1600)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="LeftVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-1500, 150)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1470, 20, -1470, 20, 1470, -20, 1470)
+
+[node name="LeftCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-1500, 150)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="RightVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(1500, 150)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1470, 20, -1470, 20, 1470, -20, 1470)
+
+[node name="RightCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(1500, 150)
+shape = SubResource("RectangleShape2D_wall_v")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
