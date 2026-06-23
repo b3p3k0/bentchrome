@@ -1,0 +1,30 @@
+name: smoke
+
+on: [push, pull_request]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System deps
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1
+
+      - name: Install Godot 4.7 (headless)
+        run: |
+          set -euo pipefail
+          VER=4.7-stable
+          ZIP="Godot_v${VER}_linux.x86_64.zip"
+          curl -fsSL -o "$ZIP" "https://github.com/godotengine/godot/releases/download/${VER}/${ZIP}"
+          unzip -q "$ZIP"
+          mkdir -p "$HOME/bin"
+          mv "Godot_v${VER}_linux.x86_64" "$HOME/bin/godot"
+          chmod +x "$HOME/bin/godot"
+
+      - name: Smoke check
+        run: |
+          set -euo pipefail
+          export GODOT_BIN="$HOME/bin/godot"
+          "$GODOT_BIN" --version
+          ./tools/smoke.sh
