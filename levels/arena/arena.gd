@@ -1,6 +1,6 @@
 extends Node2D
 ## Phase 1 test arena: a grid floor for motion reference, a drivable vehicle,
-## terrain patches (dirt/ice/water), a few static blocks, and a readout.
+## terrain patches (dirt/ice/water), a launch ramp, static blocks, and a readout.
 
 const GRID := 128
 const EXTENT := 2400
@@ -17,8 +17,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if _player and _readout:
-		_readout.text = "speed %4.0f px/s\nheading %5.1f deg\nsurface %s" % [
-			_player.get_speed(), rad_to_deg(_player.heading), _player.current_terrain
+		_readout.text = "speed %4.0f px/s\nheading %5.1f deg\nsurface %s\nheight %3.0f" % [
+			_player.get_speed(), rad_to_deg(_player.heading), _player.current_terrain, _player.height
 		]
 
 func _draw() -> void:

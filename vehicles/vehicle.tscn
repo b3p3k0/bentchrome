@@ -20,6 +20,10 @@ script = ExtResource("2_ctl")
 [node name="Driver" type="Node" parent="."]
 script = ExtResource("3_drv")
 
+[node name="Shadow" type="Polygon2D" parent="."]
+color = Color(0, 0, 0, 0.35)
+polygon = PackedVector2Array(-22, 0, -16, -10, 16, -10, 22, 0, 16, 10, -16, 10)
+
 [node name="Visual" type="Node2D" parent="."]
 
 [node name="Body" type="Polygon2D" parent="Visual"]
