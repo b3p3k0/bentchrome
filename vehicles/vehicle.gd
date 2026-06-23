@@ -4,8 +4,9 @@ extends CharacterBody2D
 ## motion. Player and AI both instance this scene — only the Driver and faction
 ## differ. The body stays axis-aligned (so a child Camera2D never spins); only
 ## the Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
-## launch the car. The machine gun fires from the muzzle along the heading.
-## Combat is free-for-all: faction is identity only, not damage immunity.
+## launch the car. The machine gun fires from the muzzle along the heading; the
+## secondary mount fires the selected secondary weapon. Combat is free-for-all:
+## faction is identity only, not damage immunity.
 
 @export_group("Identity")
 @export var faction: StringName = &"player"
@@ -28,6 +29,7 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
 @onready var _body_shape: CollisionShape2D = $CollisionShape2D
 @onready var _mg_mount: WeaponMount = $MachineGunMount
+@onready var _secondary_mount: WeaponMount = $SecondaryMount
 @onready var _muzzle: Marker2D = $Visual/Muzzle
 @onready var _health: Health = $Health
 
@@ -49,8 +51,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_visual.rotation = heading
 	_update_depth(delta)
+	var aim := Vector2.RIGHT.rotated(heading)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
-		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self)
+		_mg_mount.try_fire(_muzzle.global_position, aim, self)
+	if _secondary_mount and _muzzle and intent.get("fire_special", false):
+		_secondary_mount.try_fire(_muzzle.global_position, aim, self)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:

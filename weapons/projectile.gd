@@ -1,27 +1,36 @@
 class_name Projectile
 extends Area2D
-## A straight-line projectile. Damages the first Health-bearing body it hits —
-## anyone except its own shooter. This is a free-for-all: there are no teams,
-## so the only immunity is to your own fire. Despawns on hit, wall, or lifetime.
-
-@export var lifetime := 1.2
+## Straight or homing projectile. Damages the first Health-bearing body except
+## its own shooter (free-for-all). When turn_rate > 0 and a target is set, it
+## steers toward the target — mild vs aggressive homing is just the turn rate.
 
 var velocity := Vector2.ZERO
 var damage := 2.0
+var lifetime := 1.2
+var turn_rate := 0.0   # radians/sec; 0 = straight
+var target: Node2D = null
 var shooter: Node = null
 var _age := 0.0
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
-func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_shooter: Node) -> void:
+func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_lifetime: float, p_shooter: Node, p_turn_rate := 0.0, p_target: Node2D = null) -> void:
 	global_position = p_pos
-	rotation = p_dir.angle()
 	velocity = p_dir * p_speed
+	rotation = p_dir.angle()
 	damage = p_damage
+	lifetime = p_lifetime
+	turn_rate = p_turn_rate
 	shooter = p_shooter
+	target = p_target
 
 func _physics_process(delta: float) -> void:
+	if turn_rate > 0.0 and target != null and is_instance_valid(target):
+		var aim := (target.global_position - global_position).angle()
+		var new_angle := rotate_toward(velocity.angle(), aim, turn_rate * delta)
+		velocity = Vector2.RIGHT.rotated(new_angle) * velocity.length()
+		rotation = new_angle
 	global_position += velocity * delta
 	_age += delta
 	if _age >= lifetime:
