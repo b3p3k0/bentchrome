@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
 [ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
+[ext_resource type="PackedScene" path="res://environment/target_dummy.tscn" id="5_dummy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_block"]
 size = Vector2(120, 120)
@@ -74,8 +75,17 @@ shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 
+[node name="Dummy1" parent="." instance=ExtResource("5_dummy")]
+position = Vector2(450, 0)
+
+[node name="Dummy2" parent="." instance=ExtResource("5_dummy")]
+position = Vector2(760, -120)
+
+[node name="Dummy3" parent="." instance=ExtResource("5_dummy")]
+position = Vector2(560, 300)
+
 [node name="Block1" type="StaticBody2D" parent="."]
-position = Vector2(420, -240)
+position = Vector2(-420, -240)
 
 [node name="Vis" type="Polygon2D" parent="Block1"]
 color = Color(0.3, 0.3, 0.36, 1)

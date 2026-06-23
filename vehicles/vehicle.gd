@@ -3,8 +3,8 @@ extends CharacterBody2D
 ## The one vehicle. A Driver supplies intent; a DrivingController turns it into
 ## motion. Player and AI both instance this scene — only the Driver differs.
 ## The body stays axis-aligned (so a child Camera2D never spins); only the
-## Visual rotates. Fake depth: a height/vz pair lifts the Visual and shrinks the
-## Shadow; ramps launch the car, which clears obstacles while airborne.
+## Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
+## launch the car. The machine gun fires from the muzzle along the heading.
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -22,6 +22,9 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _shadow: Node2D = $Shadow
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
 @onready var _body_shape: CollisionShape2D = $CollisionShape2D
+@onready var _mg_mount: WeaponMount = $MachineGunMount
+@onready var _muzzle: Marker2D = $Visual/Muzzle
+@onready var _health: Health = $Health
 
 func _ready() -> void:
 	heading = rotation
@@ -36,6 +39,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_visual.rotation = heading
 	_update_depth(delta)
+	if _mg_mount and _muzzle and intent.get("fire_mg", false):
+		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:
