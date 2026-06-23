@@ -12,7 +12,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - Vehicles rendered as **directional sprites** — a real per-angle view (16 frames), not one sprite rotated.
 - Weapons: a **machine gun** (infinite, car-relative, low chip damage — many hits to kill) plus a **selectable secondary** slot. Secondaries — generic ammo-limited weapons (missiles/rockets) and each vehicle's unique signature **"special"** — are organized, bound, and fired the same way: select one, fire it. A "special" is simply a secondary unique to one vehicle. Secondaries vary by guidance (straight / mild / aggressive homing), ammo, and recharge.
 - **Free-for-all:** every vehicle (player and all AI) can damage every other — no teams. The only immunity is a shooter to its own fire; AI may engage any combatant.
-- AI archetypes: **aggressor** (charges the nearest, fights to near-death), **ambusher** (approaches at a flank, hit-and-run), **opportunist** (stalks the weakest car, pounces, flees early), plus tougher **mini-boss/boss** variants. They differ mainly by target selection and engagement tuning — not a passive "defender."
+- AI archetypes: **aggressor** (charges the nearest, fights to near-death), **ambusher** (flanks, hit-and-run), **opportunist** (stalks the weakest car, pounces, flees early) — expressed as a **blendable weight mix** `Vector3(aggressor, ambusher, opportunist)`, so pure types and any hybrid (e.g. brawler-jackal) share one system; traits (range, flee, flank, target scoring) interpolate. Plus tougher **mini-boss/boss** variants. Not a passive "defender."
 - Environmental destruction, verticality (ramps/pits), scavenging.
 - Six progressive levels, tutorial arena through final boss.
 

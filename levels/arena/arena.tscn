@@ -81,21 +81,28 @@ position = Vector2(430, -280)
 body_color = Color(0.95, 0.55, 0.1, 1)
 
 [node name="Driver" parent="Enemy1" index="1"]
-archetype = 0
+mix = Vector3(1, 0, 0)
 
 [node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(720, -380)
 body_color = Color(0.6, 0.3, 0.85, 1)
 
 [node name="Driver" parent="Enemy2" index="1"]
-archetype = 1
+mix = Vector3(0, 1, 0)
 
 [node name="Enemy3" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-150, -560)
 body_color = Color(0.3, 0.75, 0.45, 1)
 
 [node name="Driver" parent="Enemy3" index="1"]
-archetype = 2
+mix = Vector3(0, 0, 1)
+
+[node name="Enemy4" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(250, -660)
+body_color = Color(0.9, 0.85, 0.2, 1)
+
+[node name="Driver" parent="Enemy4" index="1"]
+mix = Vector3(1, 0, 1)
 
 [node name="Dummy1" parent="." instance=ExtResource("5_dummy")]
 position = Vector2(450, 0)
