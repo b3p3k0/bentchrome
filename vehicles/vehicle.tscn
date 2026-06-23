@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://vehicles/vehicle.gd" id="1_veh"]
+[ext_resource type="Script" path="res://vehicles/driving_controller.gd" id="2_ctl"]
+[ext_resource type="Script" path="res://vehicles/drivers/player_driver.gd" id="3_drv"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
+radius = 18.0
+
+[node name="Vehicle" type="CharacterBody2D"]
+script = ExtResource("1_veh")
+
+[node name="DrivingController" type="Node" parent="."]
+script = ExtResource("2_ctl")
+
+[node name="Driver" type="Node" parent="."]
+script = ExtResource("3_drv")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+color = Color(0.85, 0.2, 0.3, 1)
+polygon = PackedVector2Array(-24, -14, 24, -14, 24, 14, -24, 14)
+
+[node name="Nose" type="Polygon2D" parent="Visual"]
+color = Color(1, 0.85, 0.2, 1)
+polygon = PackedVector2Array(24, -10, 40, 0, 24, 10)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_veh")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
