@@ -1,12 +1,19 @@
 class_name EnemyDriver
 extends Driver
-## Basic free-for-all pursuit: chase the nearest OTHER vehicle (player or another
-## enemy), hold a rough engagement range, and fire the MG while facing it. This
-## is the movement baseline — distinct archetypes (flank, retreat, ambush, boss)
-## layer weights and behaviors on top in the rest of Phase 3.
+## Simple free-for-all pursue/evade AI: chase the nearest other vehicle and fire
+## while closing; peel off when too close or low on HP, then re-engage once
+## distance opens. The hysteresis between NEAR and FAR keeps them jousting in and
+## out instead of parking at one range. Distinct archetypes (weights, flanking,
+## special usage) layer on top of this baseline later in Phase 3.
 
-const ENGAGE_RANGE := 240.0   # px the enemy tries to keep from its target
+enum State { PURSUE, EVADE }
+
+const NEAR := 180.0        # too close → peel off
+const FAR := 460.0         # opened up → re-engage
 const FIRE_RANGE := 1000.0
+const LOW_HP := 0.3
+
+var _state: State = State.PURSUE
 
 func get_intent(vehicle, _delta: float) -> Dictionary:
 	var target := _nearest_other(vehicle)
@@ -15,16 +22,28 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
-	var diff := wrapf(to_target.angle() - vehicle.heading, -PI, PI)
+	var bearing := to_target.angle()
 
-	# Drive toward the target when roughly facing it; ease off (or back up) when
-	# inside the engagement range so it circles instead of ramming.
-	var throttle := 0.0
-	if absf(diff) < 1.2:
-		throttle = clampf((dist - ENGAGE_RANGE) / 300.0, -0.3, 1.0)
+	# Hysteresis: commit to a state until distance crosses the far/near band.
+	if vehicle.get_hp_fraction() < LOW_HP:
+		_state = State.EVADE
+	elif dist > FAR:
+		_state = State.PURSUE
+	elif dist < NEAR:
+		_state = State.EVADE
 
+	if _state == State.EVADE:
+		var away := wrapf(bearing + PI - vehicle.heading, -PI, PI)
+		return {
+			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
+			"steer": clampf(away * 2.0, -1.0, 1.0),
+			"fire_mg": false,
+			"fire_special": false,
+		}
+
+	var diff := wrapf(bearing - vehicle.heading, -PI, PI)
 	return {
-		"throttle": throttle,
+		"throttle": 1.0 if absf(diff) < 1.2 else 0.2,
 		"steer": clampf(diff * 2.0, -1.0, 1.0),
 		"fire_mg": absf(diff) < 0.25 and dist < FIRE_RANGE,
 		"fire_special": false,

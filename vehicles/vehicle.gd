@@ -93,3 +93,6 @@ func get_speed() -> float:
 
 func get_hp() -> float:
 	return _health.hp if _health else 0.0
+
+func get_hp_fraction() -> float:
+	return _health.hp / _health.max_hp if _health and _health.max_hp > 0.0 else 1.0
