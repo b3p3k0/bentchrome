@@ -5,6 +5,7 @@ extends CharacterBody2D
 ## differ. The body stays axis-aligned (so a child Camera2D never spins); only
 ## the Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
 ## launch the car. The machine gun fires from the muzzle along the heading.
+## Combat is free-for-all: faction is identity only, not damage immunity.
 
 @export_group("Identity")
 @export var faction: StringName = &"player"
@@ -31,7 +32,8 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _health: Health = $Health
 
 func _ready() -> void:
-	add_to_group(faction)
+	add_to_group(faction)        # "player" or "enemies" — identity
+	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
 	($Visual/Body as Polygon2D).color = body_color
 	if _health:
 		_health.died.connect(_on_died)
@@ -48,7 +50,7 @@ func _physics_process(delta: float) -> void:
 	_visual.rotation = heading
 	_update_depth(delta)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
-		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self, faction)
+		_mg_mount.try_fire(_muzzle.global_position, Vector2.RIGHT.rotated(heading), self)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:

@@ -1,9 +1,6 @@
 extends StaticBody2D
 ## A stationary target with Health, for combat testing. Shows its HP and frees
-## itself on death. Faction "enemies" so the player damages it and enemy fire
-## passes through.
-
-@export var faction: StringName = &"enemies"
+## itself on death. Free-for-all, so anyone's fire damages it.
 
 @onready var _health: Health = $Health
 @onready var _label: Label = $Label

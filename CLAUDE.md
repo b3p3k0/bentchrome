@@ -10,7 +10,8 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - Top-down view with fake depth (drop-shadows + height for ramps/pits/jumps); 16-bit grimy dystopian style.
 - Arcade driving with inertia, drift, and surface-based handling; each vehicle feels distinct (motorcycle vs land-yacht).
 - Vehicles rendered as **directional sprites** — a real per-angle view (16 frames), not one sprite rotated.
-- Three weapon tiers: **machine gun** (infinite, straight-line, fires where the car faces — aiming is driving), **primary** (ammo-limited), **special** (auto-recharging, per-vehicle signature with straight / mild-homing / aggressive-homing guidance).
+- Three weapon tiers: **machine gun** (infinite, straight-line, fires where the car faces — aiming is driving; low chip damage, many hits to kill), **primary** (ammo-limited), **special** (auto-recharging, per-vehicle signature with straight / mild-homing / aggressive-homing guidance).
+- **Free-for-all:** every vehicle (player and all AI) can damage every other — no teams. The only immunity is a shooter to its own fire, and AI targets the nearest combatant regardless of identity.
 - Environmental destruction, verticality (ramps/pits), scavenging.
 - Six progressive levels, tutorial arena through final boss.
 
