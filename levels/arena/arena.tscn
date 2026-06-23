@@ -78,9 +78,24 @@ shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(430, -280)
+body_color = Color(0.95, 0.55, 0.1, 1)
+
+[node name="Driver" parent="Enemy1" index="1"]
+archetype = 0
 
 [node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
-position = Vector2(620, -300)
+position = Vector2(720, -380)
+body_color = Color(0.6, 0.3, 0.85, 1)
+
+[node name="Driver" parent="Enemy2" index="1"]
+archetype = 1
+
+[node name="Enemy3" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(-150, -560)
+body_color = Color(0.3, 0.75, 0.45, 1)
+
+[node name="Driver" parent="Enemy3" index="1"]
+archetype = 2
 
 [node name="Dummy1" parent="." instance=ExtResource("5_dummy")]
 position = Vector2(450, 0)
