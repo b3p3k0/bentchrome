@@ -1,117 +1,72 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file guides Claude Code (claude.ai/code) when working in this repository.
 
 ## Project Overview
 
-**Bent Chrome** is a top-down vehicular combat game being developed in Godot 4. This is a greenfield project in early planning stages with design documents but no code implementation yet.
+**Bent Chrome** is a top-down vehicular combat game built in Godot 4.7. As of June 2026 it is a clean-slate rebuild: an earlier prototype was retired to `legacy/` (reference only, excluded from the engine by `legacy/.gdignore`). The design, art, and data carried over — the code did not.
 
-### Key Design Elements
-- Top-down 16-bit retro arcade style with grimy dystopian flair
-- Eight-directional driving with inertia, drift, and surface-based handling modifiers
-- Three weapon types per vehicle: machine guns (infinite), primary weapons (ammo-limited), and special weapons (auto-recharging)
-- Environmental destruction, verticality through ramps/pits, and scavenging-based gameplay
-- Six progressive levels from tutorial arena to final boss fight
+### Key design elements
+- Top-down view with fake depth (drop-shadows + height for ramps/pits/jumps); 16-bit grimy dystopian style.
+- Arcade driving with inertia, drift, and surface-based handling; each vehicle feels distinct (motorcycle vs land-yacht).
+- Vehicles rendered as **directional sprites** — a real per-angle view (16 frames), not one sprite rotated.
+- Three weapon tiers: **machine gun** (infinite, straight-line, fires where the car faces — aiming is driving), **primary** (ammo-limited), **special** (auto-recharging, per-vehicle signature with straight / mild-homing / aggressive-homing guidance).
+- Environmental destruction, verticality (ramps/pits), scavenging.
+- Six progressive levels, tutorial arena through final boss.
 
-## Development Environment Setup
+## Development environment
 
-Run `./RUNME.sh` to check for required dependencies:
-- **Godot 4.2+** Standard build (binary must be on PATH)
-- **Python 3.10+** for scripting and automation
-- **git** and **rg** (ripgrep) for tooling
-- SDL2 development libraries may be needed for native modules later
+- **Godot 4.7** standard build. A binary is installed at `~/.local/bin/godot` but may not be on `PATH`. Tooling resolves the engine via `GODOT_BIN`, then `PATH`, then `~/.local/bin/godot`.
+- **Python 3.10+**, **git**, **rg** (ripgrep). `./RUNME.sh` checks for these (note: its Godot search does not yet cover `~/.local/bin`; set `GODOT_BIN` if needed).
 
-## Architecture Guidelines
+## Repository layout
 
-### Core Systems to Implement
-1. **Movement System**: Inertia-based eight-directional driving with surface modifiers (road, dirt, shallow/deep water)
-2. **Combat System**: Three-tier weapon architecture with different ammo/recharge mechanics
-3. **Health System**: Major restore points (3 shared per level) and minor random pickups
-4. **Environment System**: Destructible props, hazards, and vertical elements
-5. **AI System**: Multiple archetypes (aggressor, ambusher, defender, mini-boss, boss)
+- `game/` — autoload services: `GameState`, `SceneFlow`, `Spawner`, `InputRouter`, `AudioDirector`.
+- `vehicles/` — the single `Vehicle` scene/script + `DrivingController`, directional sprite, depth, and `drivers/` (player + AI).
+- `weapons/` — `WeaponMount`, pooled `Projectile`, and `guidance/` strategies.
+- `ai/` — `AIDriver` behaviors, archetypes, targeting.
+- `levels/`, `environment/`, `ui/` — scenes grouped by area.
+- `resources/` — typed `Resource` class scripts (schemas: `VehicleStats`, `WeaponDef`, …).
+- `data/` — content instances (`.tres`) + `source_json/` authoring source.
+- `assets/`, `shaders/`, `tests/`, `tools/`.
+- `legacy/` — the retired prototype. Reference only; never import from it or wire new code to it.
 
-### Technical Targets
-- **Engine**: Godot 4 with GDScript (optional C# modules)
-- **Physics**: Tilemap-based terrain with lightweight rigid-body vehicles
-- **Rendering**: 2D sprites with pseudo-lighting overlays
-- **Performance**: 60 FPS locked on mid-range GPUs
-- **Packaging**: AppImage for Linux distribution
+## Architecture
 
-## Key Design Documents
+- **One vehicle, two drivers.** A single `Vehicle` (CharacterBody2D) owns all physics, health, and weapons. A `Driver` supplies intent; `PlayerDriver` reads input, `AIDriver` runs a behavior FSM. Physics lives exactly once — player and AI never duplicate it. (The retired build's two ~1,700-line vehicle monoliths are the mistake this prevents.)
+- **Data-driven content.** Vehicles, weapons, and AI profiles are typed `Resource` files; adding a car or weapon is a `.tres`, not code.
+- **Physics:** CharacterBody2D arcade driving with velocity decomposition + lateral-friction grip; per-vehicle feel comes from data, not forks. Tuning history in `VEHICLE_PHYSICS_PROGRESSION.md`.
+- **Rendering:** 2D sprites, GL Compatibility, nearest-neighbor filter; fake depth via a separate shadow sprite + height offset + per-level Y-sort.
+- **Performance:** 60 FPS locked on mid-range GPUs.
+- **Packaging:** AppImage for Linux.
 
-- **`master_design.txt`**: Complete game design specification (reference only, do not modify)
-- **`docs/requirements.md`**: Condensed technical requirements and system checklist
-- **`prompts/README.md`**: Guidelines for documenting Claude Code interactions
+## Code standards
 
-## Level Progression Structure
+- **File size:** ≤1200 lines excellent; 1700 is a hard stop — pause and modularize. Shared logic lives once; never duplicate player/AI or weapon logic.
+- **Idiomatic Godot 4:** typed `Resource` classes, `class_name`, and composition are expected. (The retired build banned `class_name` to cope with a tangled codebase; that ban is dropped — a clean dependency graph plus the CI parse gate is the real protection.)
+- **Validate InputMap actions on boot** — carried-forward safety against missing-action regressions.
+- **After any script change, run the smoke gate:** `tools/smoke.sh` (headless import + boot; fails on parse errors, failed loads, or missing autoloads). CI runs the same on push/PR via `.github/workflows/smoke.yml`.
 
-1. **Arena (Small)** - Tutorial with 1 enemy
-2. **Freeway (Medium)** - 3 enemies, multi-tiered interchanges
-3. **Suburbs (Medium)** - 5 enemies, flat destructible terrain
-4. **Junkyard (Small+)** - Mini-boss with debris hazards
-5. **Downtown (Large)** - 7 enemies, landmark-rich city
-6. **Central Park (Boss)** - Final boss arena continuing Downtown topology
+## Level progression
 
-## Prompt Documentation
+1. **Arena (Small)** — tutorial, 1 enemy.
+2. **Freeway (Medium)** — 3 enemies, multi-tiered interchanges.
+3. **Suburbs (Medium)** — 5 enemies, flat destructible terrain.
+4. **Junkyard (Small+)** — mini-boss, debris hazards.
+5. **Downtown (Large)** — 7 enemies, landmark-rich city.
+6. **Central Park (Boss)** — final boss, continues Downtown topology.
 
-When working on features, log interactions in `prompts/` using the format:
-- Filename: `YYYY-MM-DD-feature-name.md`
-- Include: original prompt, Claude's plan, follow-up notes/edits
+## Design references
 
-This helps track implementation decisions and reuse effective prompt patterns.
+- `docs/requirements.md` — condensed technical requirements and system checklist.
+- `assets/data/roster.json` — the 9 vehicles: stats (1–10 scale), lore, special weapons. Authoring source for `VehicleStats`.
+- `assets/data/ai_profiles.json` — per-vehicle AI tuning. Authoring source for AI archetypes/profiles.
+- `VEHICLE_PHYSICS_PROGRESSION.md` — physics tuning history from the prototype; the starting point for driving feel.
+- `README.md` — player-facing lore and controls.
 
-## CRITICAL: Regression Prevention Rules
+## Development workflow
 
-### 🚫 BANNED PATTERNS (High Risk)
-These patterns have caused multiple regressions and MUST be avoided:
-
-1. **NO class_name declarations** - Use constants/enums within scripts only
-   - ❌ `class_name BaseMissile`
-   - ✅ `const TYPE_POWER = 0`
-
-2. **NO inline comments in project.godot [input] section** - Comments must be on separate lines
-   - ❌ `#Commentaction_name={`
-   - ✅ `# Comment` + `action_name={`
-
-3. **NO cross-script enum references** - Use integer constants instead
-   - ❌ `BaseMissile.MissileType.POWER`
-   - ✅ `0  # TYPE_POWER`
-
-4. **NO complex script dependencies** - Each script should be self-contained
-
-### ✅ SAFE PATTERNS (Recommended)
-1. **Use constants within scripts**: `const TYPE_POWER = 0`
-2. **Use configuration dictionaries**: `const CONFIGS = {TYPE_POWER: {...}}`
-3. **Validate input actions in _ready()**: Always check `InputMap.has_action()`
-4. **Test compilation after changes**: Run headless test immediately
-
-### 🔍 MANDATORY CHECKS
-Before any script changes:
-1. Run `godot --headless --path . --quit` to verify compilation
-2. Check input actions are not corrupted in project.godot
-3. Ensure no "default red car" fallback behavior
-4. Test WASD movement in-game
-
-### 📋 REGRESSION SYMPTOMS
-If you see these, STOP and fix immediately:
-- "Default red car" with no character selection applied (triggers `_apply_default_colors()`)
-- WASD keys not responding in-game
-- Script compilation errors mentioning "not declared in scope"
-- Input actions showing as missing in debug output
-- Parse errors during scene transitions
-
-### 🛠️ Prevention Tools
-- Health check system: `scripts/debug/health_check.gd`
-- Code validator: `scripts/debug/code_validator.gd`
-- Quick regression check in PlayerCar._ready()
-- Auto-repair input bindings via `_ensure_core_input_bindings()`
-
-## Development Workflow
-
-1. **FIRST**: Check for regression symptoms before starting work
-2. Reference `docs/requirements.md` for feature scope alignment
-3. Ensure all changes maintain 16-bit dystopian aesthetic consistency
-4. Test vehicle handling feels distinct per car while maintaining readability from top-down view
-5. Prioritize environmental destruction and verticality in level design
-6. Validate AI behaviors create unpredictable but fair combat encounters
-7. **LAST**: Run compilation test and verify no regressions introduced
+1. Work narrow and deep: one drivable system at a time, vertical-slice first (driving feel before breadth).
+2. Keep changes scoped; match the existing style of the file you edit.
+3. Hold the 16-bit dystopian aesthetic and per-vehicle distinctiveness while keeping top-down combat readable.
+4. Run `tools/smoke.sh` after script changes; keep files under the size ceiling.

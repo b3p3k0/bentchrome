@@ -4,13 +4,15 @@
 
 Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-night cable but never got. It’s a top-down vehicular bloodsport where the air tastes like burnt copper, the neon never shuts off, and every fix-it ticket gets paid in shrapnel. You pilot scrapyard nightmares through corporate-owned arenas, cashing in on spectacle so the rest of the city keeps pretending the lights still work.
 
+> **Status (June 2026):** Bent Chrome is being rebuilt from the chassis up on Godot 4.7. The controls and flow below are the target spec — the current build boots a placeholder shell while each system gets re-welded one at a time. The old prototype is parked in `legacy/`.
+
 ## Installation
 
 1. **Grab the code**: `git clone https://github.com/b3p3k0/bentchrome.git && cd bentchrome`.
-2. **Gear check**: Godot 4.2+ on your path, a GPU that survived the last EMP, and whatever OS still boots (Linux, macOS, Windows - TempleOS port coming soon.).
-3. **Import assets (first run or after a fresh clone)**: `godot4 --import --path .` to generate `.import` metadata so textures load correctly.
+2. **Gear check**: Godot 4.7 on your path, a GPU that survived the last EMP, and whatever OS still boots (Linux, macOS, Windows - TempleOS port coming soon.).
+3. **Import assets (first run or after a fresh clone)**: `godot --import --path .` to generate import metadata so textures load correctly.
 4. **Optional housekeeping**: `git submodule update --init` in case we stash vendor junk later.
-5. **Launch**: `godot4 --path .` or open the project from the Godot launcher if you like clicking buttons.
+5. **Launch**: `godot --path .` or open the project from the Godot launcher if you like clicking buttons.
 6. **Builds**: When binaries arrive they’ll live under `builds/`. Until then, run straight from the editor and pretend crashes are deliberate explosions.
 
 ## Getting Started & Controls
@@ -26,7 +28,7 @@ When you first boot up Bent Chrome, you'll land in the Player Selection screen w
 - Confirm: `Enter`, `Space`, or `Cross/South face button` to select your driver and enter the arena
 - Close Bio: `W` or `Square/West face button` again to close the character bio popup
 
-Each character has five core combat statistics rated 1-5:
+Each character has five core combat statistics rated 1-10:
 - **Acceleration**: How quickly your vehicle reaches top speed
 - **Top Speed**: Maximum velocity in straight-line runs
 - **Handling**: Responsiveness and control precision
