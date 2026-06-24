@@ -108,6 +108,16 @@ func _on_reset() -> void:
 	_refresh()
 	_status.text = "reset %s to curves" % _player.stats.id
 
+func _on_test_effect(kind: String) -> void:
+	if _player == null or not is_instance_valid(_player):
+		return
+	var spec := StatusEffectSpec.new()
+	spec.kind = StringName(kind)
+	spec.duration = 4.0
+	spec.magnitude = 20.0 if kind == "burn" else (0.4 if kind == "slow" else 1.0)
+	_player.apply_effect(spec)
+	_status.text = "applied %s to player (4s)" % kind
+
 func _build_ui() -> void:
 	_panel = PanelContainer.new()
 	_panel.position = Vector2(12, 12)
@@ -163,6 +173,14 @@ func _build_ui() -> void:
 	reset_btn.pressed.connect(_on_reset)
 	btns.add_child(reset_btn)
 	vbox.add_child(btns)
+
+	var fx := HBoxContainer.new()
+	for kind in ["burn", "slow", "invuln"]:
+		var b := Button.new()
+		b.text = "test " + kind
+		b.pressed.connect(_on_test_effect.bind(kind))
+		fx.add_child(b)
+	vbox.add_child(fx)
 
 	_status = Label.new()
 	vbox.add_child(_status)

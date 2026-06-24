@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://vehicles/vehicle.gd" id="1_veh"]
 [ext_resource type="Script" path="res://vehicles/driving_controller.gd" id="2_ctl"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://vehicles/health.gd" id="6_hp"]
 [ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="7_proj"]
 [ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="8_msl"]
+[ext_resource type="Script" path="res://vehicles/status_receiver.gd" id="9_status"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
 radius = 18.0
@@ -74,3 +75,6 @@ projectile_lifetime = 3.0
 turn_rate_deg = 220.0
 acquisition_radius = 900.0
 projectile_scene = ExtResource("8_msl")
+
+[node name="Status" type="Node" parent="."]
+script = ExtResource("9_status")

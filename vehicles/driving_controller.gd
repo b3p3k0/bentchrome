@@ -35,6 +35,9 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var accel: float = acceleration * mod["accel"]
 	var top: float = max_speed * mod["top"]
 	var grip: float = lateral_grip * mod["grip"]
+	var scale: float = vehicle.get_speed_scale() if vehicle.has_method(&"get_speed_scale") else 1.0
+	accel *= scale
+	top *= scale
 
 	var forward := Vector2.RIGHT.rotated(vehicle.heading)
 	var fwd_speed: float = vehicle.velocity.dot(forward)
@@ -43,7 +46,7 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	# Steering authority grows with speed (you must roll to turn).
 	var authority := clampf(speed / turn_authority_speed, min_turn_authority, 1.0)
 	var dir_sign := signf(fwd_speed) if absf(fwd_speed) > 5.0 else 1.0
-	vehicle.heading += deg_to_rad(turn_rate_deg) * steer * authority * dir_sign * delta
+	vehicle.heading += deg_to_rad(turn_rate_deg) * scale * steer * authority * dir_sign * delta
 	forward = Vector2.RIGHT.rotated(vehicle.heading)
 
 	# Throttle / brake / reverse along the nose.

@@ -39,6 +39,7 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _secondary_mount: WeaponMount = $SecondaryMount
 @onready var _muzzle: Marker2D = $Visual/Muzzle
 @onready var _health: Health = $Health
+@onready var _status: StatusReceiver = $Status
 
 func _ready() -> void:
 	if stats == null and faction == &"player":
@@ -134,3 +135,10 @@ func get_hp() -> float:
 
 func get_hp_fraction() -> float:
 	return _health.hp / _health.max_hp if _health and _health.max_hp > 0.0 else 1.0
+
+func get_speed_scale() -> float:
+	return _status.speed_scale() if _status else 1.0
+
+func apply_effect(spec: StatusEffectSpec) -> void:
+	if _status:
+		_status.apply(spec)
