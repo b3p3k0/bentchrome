@@ -21,3 +21,8 @@ extends Resource
 @export var accent_color := Color(1, 1, 1)
 
 @export var special: WeaponDef  # signature secondary weapon
+
+# Per-car raw handling-knob overrides (knob name -> value) applied after
+# StatCurves, so hand-tuning wins while StatCurves stays the default. Written by
+# the dev dashboard's Export.
+@export var handling_overrides: Dictionary = {}

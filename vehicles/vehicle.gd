@@ -3,10 +3,10 @@ extends CharacterBody2D
 ## The one vehicle. A Driver supplies intent; a DrivingController turns it into
 ## motion. Player and AI both instance this scene — only the Driver, faction, and
 ## stats differ. If a VehicleStats resource is assigned, StatCurves configures the
-## controller + health from its 1-10 design stats (data-driven feel); otherwise
-## the controller's hand-tuned defaults apply. The body stays axis-aligned (so a
-## child Camera2D never spins); only the Visual rotates. Combat is free-for-all:
-## faction is identity only, not damage immunity.
+## controller + health from its 1-10 design stats, then per-car handling_overrides
+## (from the dev dashboard) win. The body stays axis-aligned (so a child Camera2D
+## never spins); only the Visual rotates. Combat is free-for-all: faction is
+## identity only, not damage immunity.
 ##
 ## Collision layers: 1 = ground (vehicles, blocks, dummies), 2 = walls/barriers.
 ## While airborne the car drops the ground bit (clears blocks) but keeps the wall
@@ -50,17 +50,35 @@ func _ready() -> void:
 			path = "res://data/vehicles/%s.tres" % id
 		stats = load(path)
 	if stats:
-		StatCurves.apply(stats, _controller, _health)
-		body_color = stats.primary_color
-		if stats.special and _secondary_mount:
-			_secondary_mount.set_weapon(stats.special)
+		_apply_stats()
+	else:
+		($Visual/Body as Polygon2D).color = body_color
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
-	($Visual/Body as Polygon2D).color = body_color
 	if _health:
 		_health.died.connect(_on_died)
 	heading = rotation
 	rotation = 0.0
+
+## Applies the current stats to the controller/health/visuals. Re-callable live
+## (the dev dashboard's car switcher uses set_stats()).
+func _apply_stats() -> void:
+	StatCurves.apply(stats, _controller, _health)
+	for k in stats.handling_overrides:
+		_controller.set(k, stats.handling_overrides[k])
+	body_color = stats.primary_color
+	($Visual/Body as Polygon2D).color = body_color
+	if stats.special and _secondary_mount:
+		_secondary_mount.set_weapon(stats.special)
+
+func set_stats(new_stats: VehicleStats) -> void:
+	if new_stats == null:
+		return
+	stats = new_stats
+	_apply_stats()
+
+func get_controller() -> DrivingController:
+	return _controller
 
 func _physics_process(delta: float) -> void:
 	if _terrain_sensor:

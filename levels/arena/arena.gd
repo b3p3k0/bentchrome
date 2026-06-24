@@ -9,11 +9,13 @@ const EXTENT := 2400
 @onready var _readout: Label = $HUD/Readout
 
 func _ready() -> void:
-	for autoload_name in ["GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
+	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
 	print("[boot] arena ready — WASD to drive, Space/LMB to fire")
 	queue_redraw()
+	if Dev.enabled:
+		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
 
 func _process(_delta: float) -> void:
 	if _player and is_instance_valid(_player) and _readout:

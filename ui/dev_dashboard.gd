@@ -1,0 +1,168 @@
+extends CanvasLayer
+## Dev-only tuning dashboard (toggle with F1). Live-edits the player car's raw
+## handling knobs and exports them as per-car overrides into the car's .tres.
+## Added to the arena only when Dev.enabled. UI is built in code (dynamic slider
+## list), so the scene is just this script on a CanvasLayer.
+
+const TUNABLE := [
+	"max_speed", "acceleration", "turn_rate_deg", "lateral_grip",
+	"brake_deceleration", "reverse_max_speed", "coast_deceleration",
+	"turn_authority_speed", "min_turn_authority",
+]
+const RANGES := {
+	"max_speed": [100.0, 900.0, 5.0],
+	"acceleration": [200.0, 2000.0, 10.0],
+	"turn_rate_deg": [60.0, 360.0, 2.0],
+	"lateral_grip": [1.0, 15.0, 0.1],
+	"brake_deceleration": [400.0, 3000.0, 10.0],
+	"reverse_max_speed": [40.0, 400.0, 5.0],
+	"coast_deceleration": [100.0, 900.0, 5.0],
+	"turn_authority_speed": [40.0, 400.0, 5.0],
+	"min_turn_authority": [0.0, 1.0, 0.01],
+}
+
+var _player: Node = null
+var _cars: Array = []
+var _panel: PanelContainer
+var _car_picker: OptionButton
+var _status: Label
+var _sliders := {}
+var _value_labels := {}
+
+func _ready() -> void:
+	layer = 50
+	_build_ui()
+	_load_cars()
+	_panel.visible = false
+	call_deferred("_bind_player")
+
+func _load_cars() -> void:
+	var f := FileAccess.open("res://assets/data/roster.json", FileAccess.READ)
+	if f == null:
+		return
+	var data: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	for c in data.get("characters", []):
+		var vs: Variant = load("res://data/vehicles/%s.tres" % c.get("id", ""))
+		if vs:
+			_cars.append(vs)
+			_car_picker.add_item(vs.car_name)
+
+func _bind_player() -> void:
+	_player = get_tree().get_first_node_in_group(&"player")
+	_refresh()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+		_panel.visible = not _panel.visible
+		if _panel.visible:
+			if _player == null or not is_instance_valid(_player):
+				_bind_player()
+			else:
+				_refresh()
+
+func _refresh() -> void:
+	if _player == null or not is_instance_valid(_player):
+		return
+	var c = _player.get_controller()
+	if c == null:
+		return
+	for knob in TUNABLE:
+		var v: float = c.get(knob)
+		_sliders[knob].set_value_no_signal(v)
+		_value_labels[knob].text = "%.2f" % v
+	var sid: StringName = _player.stats.id if _player.stats else &""
+	for i in _cars.size():
+		if _cars[i].id == sid:
+			_car_picker.select(i)
+
+func _on_knob_changed(value: float, knob: String) -> void:
+	if _player and is_instance_valid(_player):
+		_player.get_controller().set(knob, value)
+	_value_labels[knob].text = "%.2f" % value
+
+func _on_car_picked(index: int) -> void:
+	if _player and is_instance_valid(_player) and index < _cars.size():
+		_player.set_stats(_cars[index])
+		_refresh()
+
+func _on_export() -> void:
+	if _player == null or _player.stats == null:
+		return
+	var c = _player.get_controller()
+	var overrides := {}
+	for knob in TUNABLE:
+		overrides[knob] = c.get(knob)
+	_player.stats.handling_overrides = overrides
+	var path := "res://data/vehicles/%s.tres" % _player.stats.id
+	var err := ResourceSaver.save(_player.stats, path)
+	_status.text = "exported %s (err %d)" % [_player.stats.id, err]
+
+func _on_reset() -> void:
+	if _player == null or _player.stats == null:
+		return
+	_player.stats.handling_overrides = {}
+	_player.set_stats(_player.stats)
+	_refresh()
+	_status.text = "reset %s to curves" % _player.stats.id
+
+func _build_ui() -> void:
+	_panel = PanelContainer.new()
+	_panel.position = Vector2(12, 12)
+	_panel.custom_minimum_size = Vector2(390, 0)
+	add_child(_panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 12)
+	_panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "DEV — car tuning (F1 to toggle)"
+	vbox.add_child(title)
+
+	_car_picker = OptionButton.new()
+	_car_picker.item_selected.connect(_on_car_picked)
+	vbox.add_child(_car_picker)
+
+	for knob in TUNABLE:
+		var row := HBoxContainer.new()
+		var lbl := Label.new()
+		lbl.text = knob
+		lbl.custom_minimum_size = Vector2(160, 0)
+		row.add_child(lbl)
+		var slider := HSlider.new()
+		var r: Array = RANGES[knob]
+		slider.min_value = r[0]
+		slider.max_value = r[1]
+		slider.step = r[2]
+		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slider.custom_minimum_size = Vector2(120, 0)
+		slider.value_changed.connect(_on_knob_changed.bind(knob))
+		row.add_child(slider)
+		var val := Label.new()
+		val.custom_minimum_size = Vector2(56, 0)
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(val)
+		_sliders[knob] = slider
+		_value_labels[knob] = val
+		vbox.add_child(row)
+
+	var btns := HBoxContainer.new()
+	var export_btn := Button.new()
+	export_btn.text = "Export overrides"
+	export_btn.pressed.connect(_on_export)
+	btns.add_child(export_btn)
+	var reset_btn := Button.new()
+	reset_btn.text = "Reset to curves"
+	reset_btn.pressed.connect(_on_reset)
+	btns.add_child(reset_btn)
+	vbox.add_child(btns)
+
+	_status = Label.new()
+	vbox.add_child(_status)
