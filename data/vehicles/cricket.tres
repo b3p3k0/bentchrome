@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+
+[resource]
+script = ExtResource("1_vs")
+id = &"cricket"
+car_name = "Cricket"
+driver_name = "Mae Hemm"
+acceleration = 8
+top_speed = 8
+handling = 4
+armor = 4
+special_power = 8
+primary_color = Color(0.19, 1.0, 0.34, 1)

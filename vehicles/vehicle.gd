@@ -1,14 +1,15 @@
 class_name Vehicle
 extends CharacterBody2D
 ## The one vehicle. A Driver supplies intent; a DrivingController turns it into
-## motion. Player and AI both instance this scene — only the Driver and faction
-## differ. The body stays axis-aligned (so a child Camera2D never spins); only
-## the Visual rotates. Fake depth lifts the Visual and shrinks the Shadow; ramps
-## launch the car. The machine gun fires from the muzzle along the heading; the
-## secondary mount fires the selected secondary weapon. Combat is free-for-all:
+## motion. Player and AI both instance this scene — only the Driver, faction, and
+## stats differ. If a VehicleStats resource is assigned, StatCurves configures the
+## controller + health from its 1-10 design stats (data-driven feel); otherwise
+## the controller's hand-tuned defaults apply. The body stays axis-aligned (so a
+## child Camera2D never spins); only the Visual rotates. Combat is free-for-all:
 ## faction is identity only, not damage immunity.
 
 @export_group("Identity")
+@export var stats: VehicleStats
 @export var faction: StringName = &"player"
 @export var body_color := Color(0.85, 0.2, 0.3)
 
@@ -34,6 +35,9 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _health: Health = $Health
 
 func _ready() -> void:
+	if stats:
+		StatCurves.apply(stats, _controller, _health)
+		body_color = stats.primary_color
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
 	($Visual/Body as Polygon2D).color = body_color

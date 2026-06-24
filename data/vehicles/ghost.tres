@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+
+[resource]
+script = ExtResource("1_vs")
+id = &"ghost"
+car_name = "Ghost"
+driver_name = "Chad Duché"
+acceleration = 8
+top_speed = 9
+handling = 7
+armor = 3
+special_power = 6
+primary_color = Color(0.9, 0.92, 0.96, 1)

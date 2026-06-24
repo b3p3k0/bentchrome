@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+
+[resource]
+script = ExtResource("1_vs")
+id = &"kandykane"
+car_name = "Kandy Kane"
+driver_name = "Kandy Kane"
+acceleration = 5
+top_speed = 6
+handling = 3
+armor = 8
+special_power = 8
+primary_color = Color(0.95, 0.45, 0.75, 1)
