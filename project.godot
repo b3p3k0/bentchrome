@@ -14,6 +14,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Dev="*res://game/dev.gd"
 GameState="*res://game/game_state.gd"
 SceneFlow="*res://game/scene_flow.gd"
 Spawner="*res://game/spawner.gd"
