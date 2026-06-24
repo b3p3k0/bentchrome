@@ -1,15 +1,19 @@
-[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_gokgg"]
 
 [resource]
-script = ExtResource("1_vs")
+script = ExtResource("1_gokgg")
 id = &"cricket"
 car_name = "Cricket"
 driver_name = "Mae Hemm"
+flavor = "A dirt-track prodigy with bubble-gum confidence. The bright green midget car rockets out of corners. It skitters at the edge of control on pavement. Fragile panels keep weight down but punish mistakes. She lives for straight-line charges and risky lines."
+special_name = "Leap"
+special_desc = "locks the nearest target in range, then full-throttle body-check. Ignores destructible cover and grants 2 seconds of brief invulnerability after impact. Massive hit and speed drain if it connects."
 acceleration = 8
 top_speed = 8
 handling = 4
 armor = 4
 special_power = 8
-primary_color = Color(0.19, 1.0, 0.34, 1)
+primary_color = Color(0.19215687, 1, 0.34117648, 1)
+accent_color = Color(0.039215688, 0.5411765, 0.17254902, 1)

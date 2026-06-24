@@ -1,15 +1,18 @@
-[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_acei3"]
 
 [resource]
-script = ExtResource("1_vs")
+script = ExtResource("1_acei3")
 id = &"kandykane"
 car_name = "Kandy Kane"
 driver_name = "Kandy Kane"
-acceleration = 5
+flavor = "A sadistic clown queen wrapped in leather and laughter. Her battered ice cream truck lures crowds, then scatters them. She delights in chaos and close-quarters carnage. The rig is heavy and stubborn but inexorable once rolling. Expect brute control and sustained pressure over finesse."
+special_name = "Molotov Cocktail"
+special_desc = "a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Works best when pinning foes in tight alleys."
 top_speed = 6
 handling = 3
 armor = 8
 special_power = 8
-primary_color = Color(0.95, 0.45, 0.75, 1)
+primary_color = Color(1, 0.61960787, 0.78431374, 1)
+accent_color = Color(1, 0.3529412, 0.6156863, 1)

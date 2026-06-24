@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_r6htc"]
+
+[resource]
+script = ExtResource("1_r6htc")
+id = &"smoky"
+car_name = "Smoky"
+driver_name = "Officer Richard Vepsh"
+flavor = "A hard-nosed cop in a pursuit-tuned SUV. It jumps off the line and shrugs off fender benders. Mid pack at the top end and clumsy in tight chicanes. Built for ramming and zone control. Sirens on means mercy off."
+special_name = "Taser"
+special_desc = "auto-locks within close range and channels continuous shock. Deals light damage per second and cripples the victim’s handling while in range. Sustains up to 20 seconds if the target cannot break away."
+acceleration = 7
+top_speed = 6
+handling = 4
+armor = 7
+special_power = 7
+primary_color = Color(0.07058824, 0.22745098, 0.41960785, 1)
+accent_color = Color(0.039215688, 0.1254902, 0.23529412, 1)

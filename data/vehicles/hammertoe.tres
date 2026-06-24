@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_te4k7"]
+
+[resource]
+script = ExtResource("1_te4k7")
+id = &"hammertoe"
+car_name = "Hammertoe"
+driver_name = "Chuck and Vern"
+flavor = "Two party-boy dropouts in a lifted monster. It wallows like a boat and hates hairpins. The frame is stout and happy to trade paint. Straight roads turn it mean; tight tracks punish it. Collisions are not accidents. They are a plan."
+special_name = "Toe Jam"
+special_desc = "triggers on collision when a charge is held. Replaces normal crash damage with a heavy, punishing hit. Best when ambushing around blind corners."
+handling = 3
+armor = 7
+special_power = 7
+primary_color = Color(0.5411765, 0.25882354, 1, 1)
+accent_color = Color(0.32156864, 0.07058824, 0.6431373, 1)

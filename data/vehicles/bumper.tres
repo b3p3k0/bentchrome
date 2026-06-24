@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_1y5ys"]
+
+[resource]
+script = ExtResource("1_1y5ys")
+id = &"bumper"
+car_name = "Bumper"
+driver_name = "Chester J. Banks"
+flavor = "Country-club rebel in a hot-pink land yacht. The Cadillac floats, then thuds when it lands. It is slow off the line yet cruises steady once moving. Steering is lazy but predictable. He weaponizes swagger and wide fenders."
+special_name = "Blunt Blaze"
+special_desc = "a front cone of fire that widens with distance. Applies steady burn while the torch is held, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial."
+acceleration = 3
+top_speed = 6
+armor = 7
+special_power = 7
+primary_color = Color(1, 0.23921569, 0.65882355, 1)
+accent_color = Color(1, 0.83137256, 0.9411765, 1)

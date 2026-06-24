@@ -1,15 +1,19 @@
-[gd_resource type="Resource" script_class="VehicleStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_vs"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_mp7g2"]
 
 [resource]
-script = ExtResource("1_vs")
+script = ExtResource("1_mp7g2")
 id = &"ghost"
 car_name = "Ghost"
 driver_name = "Chad Duché"
+flavor = "A pristine 1960s white sports car built for applause. It launches hard, carves clean arcs, and screams at the top end. Thin skin makes every mistake expensive. The driver smiles for cameras while hunting the win. Fame is fuel, and it burns fast."
+special_name = "Phantom Phire"
+special_desc = "a spectral missile that locks the nearest target anywhere on the map. Passes through cover and expires after 90 seconds if it fails to hit. Beatable only by outrunning and breaking line."
 acceleration = 8
 top_speed = 9
 handling = 7
 armor = 3
 special_power = 6
-primary_color = Color(0.9, 0.92, 0.96, 1)
+primary_color = Color(0.99215686, 0.99215686, 0.99215686, 1)
+accent_color = Color(0.84313726, 0.8901961, 1, 1)

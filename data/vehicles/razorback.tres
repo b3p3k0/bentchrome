@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_k4hf5"]
+
+[resource]
+script = ExtResource("1_k4hf5")
+id = &"razorback"
+car_name = "Razorback"
+driver_name = "Big Sarge"
+flavor = "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes."
+special_name = "Red Glare"
+special_desc = "a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches."
+acceleration = 3
+top_speed = 6
+handling = 4
+armor = 8
+special_power = 7
+primary_color = Color(0.12156863, 0.43529412, 0.22745098, 1)
+accent_color = Color(0.050980393, 0.2509804, 0.1254902, 1)
