@@ -41,6 +41,14 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _health: Health = $Health
 
 func _ready() -> void:
+	if stats == null and faction == &"player":
+		# Player car comes from the picker (GameState); fall back to Ghost so a
+		# direct/dev arena launch still works.
+		var id: StringName = GameState.selected_vehicle_id
+		var path := "res://data/vehicles/ghost.tres"
+		if id != &"":
+			path = "res://data/vehicles/%s.tres" % id
+		stats = load(path)
 	if stats:
 		StatCurves.apply(stats, _controller, _health)
 		body_color = stats.primary_color

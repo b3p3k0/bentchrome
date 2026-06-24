@@ -8,7 +8,7 @@ config_version=5
 
 config/name="Bent Chrome"
 config/description="Top-down vehicular combat — clean-slate rebuild"
-run/main_scene="res://levels/arena/arena.tscn"
+run/main_scene="res://ui/title.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

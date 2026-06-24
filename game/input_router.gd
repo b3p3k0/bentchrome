@@ -3,8 +3,8 @@ extends Node
 ## Defining bindings in code (not in project.godot) sidesteps the
 ## [input]-section corruption that plagued the old build.
 ##
-## Steer-to-drive mapping: move_up = throttle, move_down = brake/reverse,
-## move_left/right = steer.
+## Steer-to-drive: move_up = throttle, move_down = brake/reverse, move_left/right
+## = steer. UI: select_prev/next/confirm for menus and the car picker.
 
 const ACTION_MOVE_UP := &"move_up"
 const ACTION_MOVE_DOWN := &"move_down"
@@ -12,6 +12,9 @@ const ACTION_MOVE_LEFT := &"move_left"
 const ACTION_MOVE_RIGHT := &"move_right"
 const ACTION_FIRE_MG := &"fire_mg"
 const ACTION_FIRE_SPECIAL := &"fire_special"
+const ACTION_SELECT_PREV := &"select_prev"
+const ACTION_SELECT_NEXT := &"select_next"
+const ACTION_SELECT_CONFIRM := &"select_confirm"
 
 func _ready() -> void:
 	_ensure_action(ACTION_MOVE_UP, [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
@@ -20,6 +23,9 @@ func _ready() -> void:
 	_ensure_action(ACTION_MOVE_RIGHT, [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
 	_ensure_action(ACTION_FIRE_MG, [_mouse(MOUSE_BUTTON_LEFT), _key(KEY_SPACE)])
 	_ensure_action(ACTION_FIRE_SPECIAL, [_mouse(MOUSE_BUTTON_RIGHT), _key(KEY_K)])
+	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
+	_ensure_action(ACTION_SELECT_NEXT, [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
+	_ensure_action(ACTION_SELECT_CONFIRM, [_key(KEY_ENTER), _key(KEY_SPACE), _joy_button(JOY_BUTTON_A)])
 
 func _ensure_action(action: StringName, events: Array) -> void:
 	if not InputMap.has_action(action):
@@ -44,4 +50,9 @@ func _axis(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
 	var e := InputEventJoypadMotion.new()
 	e.axis = axis
 	e.axis_value = value
+	return e
+
+func _joy_button(button: JoyButton) -> InputEventJoypadButton:
+	var e := InputEventJoypadButton.new()
+	e.button_index = button
 	return e

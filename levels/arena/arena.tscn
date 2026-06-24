@@ -84,7 +84,6 @@ polygon = PackedVector2Array(-100, -80, 100, -80, 100, 80, -100, 80)
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
-stats = ExtResource("7_ghost")
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(430, -280)
