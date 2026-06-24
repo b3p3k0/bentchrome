@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ambga"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_lx0hr"]
+[ext_resource type="Resource" path="res://data/weapons/splat_effect.tres" id="2_a4rq5"]
 
 [resource]
-script = ExtResource("1_ambga")
+script = ExtResource("1_lx0hr")
 id = &"splatcat"
 car_name = "Splat Cat"
 driver_name = "Juan Dough"
@@ -16,3 +17,4 @@ handling = 7
 special_power = 8
 primary_color = Color(0.7882353, 0.32941177, 0.101960786, 1)
 accent_color = Color(1, 0.5411765, 0.25490198, 1)
+special = ExtResource("2_a4rq5")

@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_te4k7"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_nbqo3"]
+[ext_resource type="Resource" path="res://data/weapons/toe_jam.tres" id="2_dd6xq"]
 
 [resource]
-script = ExtResource("1_te4k7")
+script = ExtResource("1_nbqo3")
 id = &"hammertoe"
 car_name = "Hammertoe"
 driver_name = "Chuck and Vern"
@@ -15,3 +16,4 @@ armor = 7
 special_power = 7
 primary_color = Color(0.5411765, 0.25882354, 1, 1)
 accent_color = Color(0.32156864, 0.07058824, 0.6431373, 1)
+special = ExtResource("2_dd6xq")

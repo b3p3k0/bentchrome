@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_k4hf5"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_6p30n"]
+[ext_resource type="Resource" path="res://data/weapons/red_glare.tres" id="2_c5hvu"]
 
 [resource]
-script = ExtResource("1_k4hf5")
+script = ExtResource("1_6p30n")
 id = &"razorback"
 car_name = "Razorback"
 driver_name = "Big Sarge"
@@ -17,3 +18,4 @@ armor = 8
 special_power = 7
 primary_color = Color(0.12156863, 0.43529412, 0.22745098, 1)
 accent_color = Color(0.050980393, 0.2509804, 0.1254902, 1)
+special = ExtResource("2_c5hvu")

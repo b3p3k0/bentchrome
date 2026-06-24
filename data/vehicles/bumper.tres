@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_1y5ys"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ptqcd"]
+[ext_resource type="Resource" path="res://data/weapons/blunt_blaze.tres" id="2_52mi2"]
 
 [resource]
-script = ExtResource("1_1y5ys")
+script = ExtResource("1_ptqcd")
 id = &"bumper"
 car_name = "Bumper"
 driver_name = "Chester J. Banks"
@@ -16,3 +17,4 @@ armor = 7
 special_power = 7
 primary_color = Color(1, 0.23921569, 0.65882355, 1)
 accent_color = Color(1, 0.83137256, 0.9411765, 1)
+special = ExtResource("2_52mi2")

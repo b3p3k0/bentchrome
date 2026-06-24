@@ -19,3 +19,5 @@ extends Resource
 
 @export var primary_color := Color(0.85, 0.2, 0.3)
 @export var accent_color := Color(1, 1, 1)
+
+@export var special: WeaponDef  # signature secondary weapon

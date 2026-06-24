@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_acei3"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_851dr"]
+[ext_resource type="Resource" path="res://data/weapons/molotov.tres" id="2_7e3lq"]
 
 [resource]
-script = ExtResource("1_acei3")
+script = ExtResource("1_851dr")
 id = &"kandykane"
 car_name = "Kandy Kane"
 driver_name = "Kandy Kane"
@@ -16,3 +17,4 @@ armor = 8
 special_power = 8
 primary_color = Color(1, 0.61960787, 0.78431374, 1)
 accent_color = Color(1, 0.3529412, 0.6156863, 1)
+special = ExtResource("2_7e3lq")

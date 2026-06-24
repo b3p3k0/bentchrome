@@ -44,6 +44,8 @@ func _ready() -> void:
 	if stats:
 		StatCurves.apply(stats, _controller, _health)
 		body_color = stats.primary_color
+		if stats.special and _secondary_mount:
+			_secondary_mount.set_weapon(stats.special)
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
 	($Visual/Body as Polygon2D).color = body_color

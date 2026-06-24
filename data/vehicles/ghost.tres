@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_mp7g2"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_gnrvp"]
+[ext_resource type="Resource" path="res://data/weapons/phantom_phire.tres" id="2_cp2mh"]
 
 [resource]
-script = ExtResource("1_mp7g2")
+script = ExtResource("1_gnrvp")
 id = &"ghost"
 car_name = "Ghost"
 driver_name = "Chad Duché"
@@ -17,3 +18,4 @@ armor = 3
 special_power = 6
 primary_color = Color(0.99215686, 0.99215686, 0.99215686, 1)
 accent_color = Color(0.84313726, 0.8901961, 1, 1)
+special = ExtResource("2_cp2mh")

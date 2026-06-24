@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_u34ng"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ikpa5"]
+[ext_resource type="Resource" path="res://data/weapons/scythe.tres" id="2_iu8v1"]
 
 [resource]
-script = ExtResource("1_u34ng")
+script = ExtResource("1_ikpa5")
 id = &"mrghastly"
 car_name = "Mr. Ghastly"
 driver_name = "???"
@@ -17,3 +18,4 @@ armor = 2
 special_power = 9
 primary_color = Color(1, 0.2, 0.26666668, 1)
 accent_color = Color(0.6509804, 0, 0.06666667, 1)
+special = ExtResource("2_iu8v1")

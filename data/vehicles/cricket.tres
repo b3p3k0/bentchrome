@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_gokgg"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ttjym"]
+[ext_resource type="Resource" path="res://data/weapons/leap.tres" id="2_685h4"]
 
 [resource]
-script = ExtResource("1_gokgg")
+script = ExtResource("1_ttjym")
 id = &"cricket"
 car_name = "Cricket"
 driver_name = "Mae Hemm"
@@ -17,3 +18,4 @@ armor = 4
 special_power = 8
 primary_color = Color(0.19215687, 1, 0.34117648, 1)
 accent_color = Color(0.039215688, 0.5411765, 0.17254902, 1)
+special = ExtResource("2_685h4")

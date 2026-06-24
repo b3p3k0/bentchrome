@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Splat Effect"
+stub = true
+note = "On hit, halve target speed (capped 50%) for 3s. Needs slow debuff."

@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_r6htc"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_1uc7n"]
+[ext_resource type="Resource" path="res://data/weapons/taser.tres" id="2_h1gw4"]
 
 [resource]
-script = ExtResource("1_r6htc")
+script = ExtResource("1_1uc7n")
 id = &"smoky"
 car_name = "Smoky"
 driver_name = "Officer Richard Vepsh"
@@ -17,3 +18,4 @@ armor = 7
 special_power = 7
 primary_color = Color(0.07058824, 0.22745098, 0.41960785, 1)
 accent_color = Color(0.039215688, 0.1254902, 0.23529412, 1)
+special = ExtResource("2_h1gw4")
