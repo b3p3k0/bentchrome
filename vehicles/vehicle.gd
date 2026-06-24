@@ -7,6 +7,13 @@ extends CharacterBody2D
 ## the controller's hand-tuned defaults apply. The body stays axis-aligned (so a
 ## child Camera2D never spins); only the Visual rotates. Combat is free-for-all:
 ## faction is identity only, not damage immunity.
+##
+## Collision layers: 1 = ground (vehicles, blocks, dummies), 2 = walls/barriers.
+## While airborne the car drops the ground bit (clears blocks) but keeps the wall
+## bit, so ramp jumps can't leave the arena.
+
+const LAYER_GROUND := 1
+const LAYER_WALL := 2
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -28,7 +35,6 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _visual: Node2D = $Visual
 @onready var _shadow: Node2D = $Shadow
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
-@onready var _body_shape: CollisionShape2D = $CollisionShape2D
 @onready var _mg_mount: WeaponMount = $MachineGunMount
 @onready var _secondary_mount: WeaponMount = $SecondaryMount
 @onready var _muzzle: Marker2D = $Visual/Muzzle
@@ -76,8 +82,8 @@ func _update_depth(delta: float) -> void:
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
 
 func _set_airborne(on: bool) -> void:
-	if _body_shape:
-		_body_shape.set_deferred("disabled", on)
+	# Airborne: keep the wall bit (stay in the arena), drop ground (clear blocks).
+	set_deferred("collision_mask", LAYER_WALL if on else (LAYER_GROUND | LAYER_WALL))
 
 func launch_from_ramp() -> void:
 	if height > 0.0 or velocity.length() < min_launch_speed:
