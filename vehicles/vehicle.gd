@@ -25,10 +25,16 @@ const LAYER_WALL := 2
 @export var ramp_launch := 760.0
 @export var min_launch_speed := 120.0
 
+@export_group("Ram")
+@export var ram_damage_scale := 0.06
+@export var ram_min_speed := 220.0
+@export var ram_cooldown := 0.3
+
 var heading: float = 0.0  # radians; the direction the nose points
 var current_terrain: StringName = &"road"
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
+var _ram_cd := 0.0        # cooldown between ram hits
 
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
@@ -88,6 +94,7 @@ func _physics_process(delta: float) -> void:
 	if _controller:
 		_controller.apply(self, intent, delta)
 	move_and_slide()
+	_update_ram(delta)
 	_visual.rotation = heading
 	_update_depth(delta)
 	var aim := Vector2.RIGHT.rotated(heading)
@@ -142,3 +149,21 @@ func get_speed_scale() -> float:
 func apply_effect(spec: StatusEffectSpec) -> void:
 	if _status:
 		_status.apply(spec)
+
+func take_ram_damage(amount: float) -> void:
+	if _health:
+		_health.take_damage(amount)
+
+## Speed-based collision damage to other vehicles after move_and_slide.
+func _update_ram(delta: float) -> void:
+	if _ram_cd > 0.0:
+		_ram_cd -= delta
+		return
+	for i in get_slide_collision_count():
+		var other = get_slide_collision(i).get_collider()
+		if other is Vehicle and other != self:
+			var rel: float = (velocity - other.velocity).length()
+			if rel > ram_min_speed:
+				other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale)
+				_ram_cd = ram_cooldown
+				break
