@@ -52,7 +52,7 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	_cooldown = 1.0 / fire_rate
 	var tgt: Node2D = null
 	if turn_rate_deg > 0.0 and acquisition_radius > 0.0:
-		tgt = _acquire(origin, shooter)
+		tgt = Targeting.nearest_other(origin, shooter, acquisition_radius)
 	for i in pellets:
 		var dir := direction
 		if pellets > 1:
@@ -64,15 +64,3 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 		get_tree().current_scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects
-
-func _acquire(origin: Vector2, shooter: Node) -> Node2D:
-	var best: Node2D = null
-	var best_dist := acquisition_radius
-	for v in get_tree().get_nodes_in_group(&"vehicles"):
-		if v == shooter:
-			continue
-		var d: float = origin.distance_to(v.global_position)
-		if d < best_dist:
-			best_dist = d
-			best = v
-	return best
