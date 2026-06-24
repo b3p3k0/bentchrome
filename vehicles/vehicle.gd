@@ -36,7 +36,7 @@ var vz: float = 0.0       # vertical velocity (px/s)
 @onready var _shadow: Node2D = $Shadow
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
 @onready var _mg_mount: WeaponMount = $MachineGunMount
-@onready var _secondary_mount: WeaponMount = $SecondaryMount
+@onready var _special: SpecialController = $SpecialController
 @onready var _muzzle: Marker2D = $Visual/Muzzle
 @onready var _health: Health = $Health
 @onready var _status: StatusReceiver = $Status
@@ -69,8 +69,8 @@ func _apply_stats() -> void:
 		_controller.set(k, stats.handling_overrides[k])
 	body_color = stats.primary_color
 	($Visual/Body as Polygon2D).color = body_color
-	if stats.special and _secondary_mount:
-		_secondary_mount.set_weapon(stats.special)
+	if stats.special and _special:
+		_special.set_weapon(stats.special)
 
 func set_stats(new_stats: VehicleStats) -> void:
 	if new_stats == null:
@@ -93,8 +93,8 @@ func _physics_process(delta: float) -> void:
 	var aim := Vector2.RIGHT.rotated(heading)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
 		_mg_mount.try_fire(_muzzle.global_position, aim, self)
-	if _secondary_mount and _muzzle and intent.get("fire_special", false):
-		_secondary_mount.try_fire(_muzzle.global_position, aim, self)
+	if _special and _muzzle:
+		_special.activate(intent.get("fire_special", false), _muzzle.global_position, aim, self)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:

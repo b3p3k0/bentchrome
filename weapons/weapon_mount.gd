@@ -4,6 +4,7 @@ extends Node
 ## acquisition_radius make it home; spread_deg + pellets make a salvo. Configured
 ## either by the inspector fields (the machine gun) or by a WeaponDef assigned
 ## from a car's VehicleStats (secondaries/specials). A stub weapon fires nothing.
+## on_hit_effects (from the WeaponDef) ride along on each projectile.
 
 @export var weapon: WeaponDef           # if set, overrides the fields below
 @export var fire_rate := 12.0
@@ -18,6 +19,7 @@ extends Node
 
 var _cooldown := 0.0
 var _stub := false
+var on_hit_effects: Array = []
 
 func _ready() -> void:
 	if weapon:
@@ -38,6 +40,7 @@ func set_weapon(w: WeaponDef) -> void:
 	if w.projectile_scene:
 		projectile_scene = w.projectile_scene
 	_stub = w.stub
+	on_hit_effects = w.on_hit_effects
 
 func _physics_process(delta: float) -> void:
 	if _cooldown > 0.0:
@@ -60,6 +63,7 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 		var p := projectile_scene.instantiate() as Projectile
 		get_tree().current_scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
+		p.on_hit_effects = on_hit_effects
 
 func _acquire(origin: Vector2, shooter: Node) -> Node2D:
 	var best: Node2D = null

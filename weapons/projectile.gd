@@ -1,10 +1,10 @@
 class_name Projectile
 extends Area2D
 ## Straight or homing projectile. Damages the first Health-bearing body except
-## its own shooter (free-for-all). A homing projectile vectors toward its target
-## only while the target stays within a forward cone — these are "simple"
-## missiles: the first time they whiff a pass (target slips abeam/behind) they
-## commit to a straight line and fly until they hit something. No U-turns.
+## its own shooter (free-for-all), then applies any on_hit_effects to that
+## body's StatusReceiver. A homing projectile vectors toward its target only
+## while the target stays within a forward cone — "simple" missiles: the first
+## time they whiff a pass they commit to a straight line. No U-turns.
 
 const HOMING_CONE := deg_to_rad(90.0)
 
@@ -14,6 +14,7 @@ var lifetime := 1.2
 var turn_rate := 0.0   # radians/sec; 0 = straight
 var target: Node2D = null
 var shooter: Node = null
+var on_hit_effects: Array = []
 var _homing := false
 var _age := 0.0
 
@@ -55,10 +56,20 @@ func _on_body_entered(body: Node) -> void:
 	var health := _find_health(body)
 	if health:
 		health.take_damage(damage)
+		var status := _find_status(body)
+		if status:
+			for spec in on_hit_effects:
+				status.apply(spec)
 	queue_free()
 
 func _find_health(body: Node) -> Health:
 	for child in body.get_children():
 		if child is Health:
+			return child
+	return null
+
+func _find_status(body: Node) -> StatusReceiver:
+	for child in body.get_children():
+		if child is StatusReceiver:
 			return child
 	return null
