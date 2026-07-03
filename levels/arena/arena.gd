@@ -6,7 +6,6 @@ const GRID := 128
 const EXTENT := 2400
 
 @onready var _player: Vehicle = $Vehicle
-@onready var _readout: Label = $HUD/Readout
 
 func _ready() -> void:
 	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
@@ -17,13 +16,6 @@ func _ready() -> void:
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	if Dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
-
-func _process(_delta: float) -> void:
-	if _player and is_instance_valid(_player) and _readout:
-		_readout.text = "speed %4.0f px/s\nheading %5.1f deg\nsurface %s\nheight %3.0f\nhp %3.0f" % [
-			_player.get_speed(), rad_to_deg(_player.heading), _player.current_terrain,
-			_player.height, _player.get_hp()
-		]
 
 func _draw() -> void:
 	var c := Color(1, 1, 1, 0.08)

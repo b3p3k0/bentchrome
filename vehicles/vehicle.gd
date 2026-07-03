@@ -163,6 +163,9 @@ func get_hp_fraction() -> float:
 func get_rack() -> WeaponRack:
 	return _rack
 
+func get_mg_mount() -> WeaponMount:
+	return _mg_mount
+
 func get_speed_scale() -> float:
 	return _status.speed_scale() if _status else 1.0
 
