@@ -59,6 +59,7 @@ shape = SubResource("CircleShape2D_sensor")
 
 [node name="MachineGunMount" type="Node" parent="."]
 script = ExtResource("5_wm")
+heat_per_shot = 4.8
 projectile_scene = ExtResource("7_proj")
 
 [node name="Health" type="Node" parent="."]

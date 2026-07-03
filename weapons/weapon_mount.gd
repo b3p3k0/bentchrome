@@ -17,6 +17,14 @@ extends Node
 @export var pellets := 1
 @export var projectile_scene: PackedScene
 
+@export_group("Heat")
+@export var heat_per_shot := 0.0   # 0 = no heat mechanic (secondaries)
+@export var heat_max := 100.0
+@export var cool_per_sec := 28.0
+@export var resume_frac := 0.35    # locked until heat cools below this fraction
+
+var heat := 0.0
+var _locked := false
 var _cooldown := 0.0
 var _stub := false
 var on_hit_effects: Array = []
@@ -43,14 +51,31 @@ func set_weapon(w: WeaponDef) -> void:
 	on_hit_effects = w.on_hit_effects
 
 func _physics_process(delta: float) -> void:
+	tick(delta)
+
+func tick(delta: float) -> void:
 	if _cooldown > 0.0:
 		_cooldown -= delta
+	if heat > 0.0:
+		heat = maxf(heat - cool_per_sec * delta, 0.0)
+		if _locked and heat <= heat_max * resume_frac:
+			_locked = false
+
+func heat_fraction() -> float:
+	return heat / heat_max if heat_max > 0.0 else 0.0
+
+func is_locked() -> bool:
+	return _locked
 
 ## Returns true when a shot actually left the mount (ammo is consumed on true).
 func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
-	if _stub or _cooldown > 0.0 or projectile_scene == null:
+	if _stub or _locked or _cooldown > 0.0 or projectile_scene == null:
 		return false
 	_cooldown = 1.0 / fire_rate
+	if heat_per_shot > 0.0:
+		heat = minf(heat + heat_per_shot, heat_max)
+		if heat >= heat_max:
+			_locked = true
 	var tgt: Node2D = null
 	if turn_rate_deg > 0.0 and acquisition_radius > 0.0:
 		tgt = Targeting.nearest_other(origin, shooter, acquisition_radius)
