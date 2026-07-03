@@ -9,6 +9,9 @@ config_version=5
 config/name="Bent Chrome"
 config/description="Top-down vehicular combat — clean-slate rebuild"
 run/main_scene="res://ui/title.tscn"
+; Editor-only builds (export preset with a custom "level_editor" feature tag)
+; boot straight into the level editor; the game preset is untouched.
+run/main_scene.level_editor="res://editor/editor_main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

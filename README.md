@@ -56,6 +56,9 @@ Both. Same steer-to-drive scheme either way — throttle, brake/reverse, steer �
 **Can I remap controls?**  
 Yep—Settings > Controls. If something refuses to bind, log an issue and we’ll slap it back into shape.
 
+**Can I build my own arena?**  
+Yes. `tools/editor.sh` launches the level editor: drop in blocks, ammo crates, terrain patches, and up to four enemy starts, then hit Playtest. Levels are plain JSON in your `user://levels/` folder — swap files with other drivers freely; they're data, not code, so nothing in them can run on your machine. Full manual in `docs/level_editor.md`. (An in-game custom-levels menu is still in the garage — for now the editor's Playtest button and a `--level=` launch flag are the way in.)
+
 **Multiplayer when?**  
 Not yet. The wasteland is lonely on purpose, but co-op/versus are parked in the Future Hooks garage.
 

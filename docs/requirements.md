@@ -24,6 +24,7 @@ This document condenses the master design specs into quick-reference points we c
 - **Combat:** Machine guns (infinite, overheat lockout — built), pickup-fed standard/homing missiles (built), regenerating per-car specials (built, per-car caps via `VehicleStats`), temporary power-ups (pending).
 - **Health:** Shared major restore points (3 per level), random minor pickups, persistent inventory between levels.
 - **Environment:** Destructible props, ramps, verticality, hazards (explosives, electrical, debris).
+- **Custom levels:** JSON level format + whitelisting loader + standalone graphical editor (built — `docs/level_editor.md`); in-game custom-levels menu (pending, ships with editor/game UI integration).
 
 ## Technical Targets
 - Engine: Godot 4 (primary) with GDScript; optional C# modules.

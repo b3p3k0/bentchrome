@@ -12,9 +12,9 @@ arena, never your machine.
 ## Where files live
 
 `user://levels/*.json` — on Linux that's
-`~/.local/share/godot/app_userdata/Bent Chrome/levels/`. The editor has an
-"Open Levels Folder" button so you never have to remember that path. To install
-someone else's level, drop the `.json` in that folder.
+`~/.local/share/godot/app_userdata/Bent Chrome/levels/`. The editor's
+"Levels Folder" toolbar button opens it so you never have to remember that
+path. To install someone else's level, drop the `.json` in that folder.
 
 ## Example
 

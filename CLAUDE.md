@@ -27,7 +27,8 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - `vehicles/` — the single `Vehicle` scene/script + `DrivingController`, directional sprite, depth, and `drivers/` (player + AI).
 - `weapons/` — `WeaponMount`, pooled `Projectile`, and `guidance/` strategies.
 - `ai/` — `AIDriver` behaviors, archetypes, targeting.
-- `levels/`, `environment/`, `ui/` — scenes grouped by area.
+- `levels/`, `environment/`, `ui/` — scenes grouped by area. `levels/` also holds the custom-level stack: `LevelSchema` (fan-level JSON format), `EntityCatalog` (placeable whitelist), `LevelLoader`, and `custom_level.tscn` (runtime host; `-- --level=<path>` debug launch).
+- `editor/` — the standalone level editor (`tools/editor.sh`, or the `level_editor` feature tag in exports). Game export presets must exclude `editor/*`. Docs: `docs/level_editor.md`, `docs/level_format.md`.
 - `resources/` — typed `Resource` class scripts (schemas: `VehicleStats`, `WeaponDef`, …).
 - `data/` — content instances (`.tres`) + `source_json/` authoring source.
 - `assets/`, `shaders/`, `tests/`, `tools/`.
