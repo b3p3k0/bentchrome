@@ -1,0 +1,30 @@
+{
+	"format": "bentchrome-level",
+	"version": 1,
+	"name": "Sample Bowl",
+	"author": "bentchrome tests",
+	"description": "Exercises every v1 entity type. Keep valid: test_level_schema.gd asserts zero validation errors.",
+	"grid": 128,
+	"bounds": { "width": 2944, "height": 2816 },
+	"player_spawn": { "pos": [0, 0], "heading_deg": 0 },
+	"enemy_spawns": [
+		{ "pos": [448, -256] },
+		{ "pos": [-704, 384] }
+	],
+	"blocks": [
+		{ "pos": [-448, -256], "size": [128, 128] },
+		{ "pos": [640, 512], "size": [256, 128] }
+	],
+	"pickups": [
+		{ "pos": [640, -128], "kind": "standard", "amount": 2, "respawn_seconds": 20.0 },
+		{ "pos": [-640, -128], "kind": "homing", "amount": 1, "respawn_seconds": 25.0 }
+	],
+	"dummies": [
+		{ "pos": [448, 128], "max_hp": 60.0 }
+	],
+	"terrain": [
+		{ "type": "dirt", "rect": [-1152, -768, 640, 512] },
+		{ "type": "ice", "rect": [256, 256, 512, 384] },
+		{ "type": "water", "rect": [-384, 896, 384, 256] }
+	]
+}
