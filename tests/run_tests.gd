@@ -13,6 +13,7 @@ const SUITES := [
 	preload("res://tests/test_entity_catalog.gd"),
 	preload("res://tests/test_level_loader.gd"),
 	preload("res://tests/test_editor_document.gd"),
+	preload("res://tests/test_driving_controller.gd"),
 	preload("res://tests/test_corner_escape.gd"),
 ]
 
