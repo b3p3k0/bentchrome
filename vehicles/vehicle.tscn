@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="8_msl"]
 [ext_resource type="Script" path="res://vehicles/status_receiver.gd" id="9_status"]
 [ext_resource type="Script" path="res://vehicles/special_controller.gd" id="10_special"]
+[ext_resource type="Script" path="res://vehicles/weapon_rack.gd" id="11_rack"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
 radius = 18.0
@@ -82,3 +83,6 @@ script = ExtResource("9_status")
 
 [node name="SpecialController" type="Node" parent="."]
 script = ExtResource("10_special")
+
+[node name="WeaponRack" type="Node" parent="."]
+script = ExtResource("11_rack")

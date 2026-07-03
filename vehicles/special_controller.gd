@@ -16,25 +16,27 @@ func set_weapon(def: WeaponDef) -> void:
 	if _mount:
 		_mount.set_weapon(def)   # projectile-kind firing lives in the mount
 
-func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node) -> void:
+## Returns true when the weapon actually fired (ammo is consumed on true).
+func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if _def == null:
-		return
+		return false
 	match _def.kind:
 		WeaponDef.Kind.PROJECTILE:
 			if pressed and _mount:
-				_mount.try_fire(origin, direction, shooter)
+				return _mount.try_fire(origin, direction, shooter)
 		WeaponDef.Kind.BEAM:
-			_beam(pressed, origin, direction, shooter)
+			return _beam(pressed, origin, direction, shooter)
 		WeaponDef.Kind.DASH:
-			_dash(pressed, origin, direction, shooter)
+			return _dash(pressed, origin, direction, shooter)
 		WeaponDef.Kind.TRIGGER:
-			_trigger(pressed, origin, direction, shooter)
+			return _trigger(pressed, origin, direction, shooter)
+	return false
 
-func _beam(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> void:
-	pass  # TODO (Taser): close-range channeled beam + slow status while held
+func _beam(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
+	return false  # TODO (Taser): close-range channeled beam + slow status while held
 
-func _dash(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> void:
-	pass  # TODO (Leap): dash the caster toward the nearest target + brief invuln
+func _dash(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
+	return false  # TODO (Leap): dash the caster toward the nearest target + brief invuln
 
-func _trigger(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> void:
-	pass  # TODO (Toe Jam): arm a charged collision hit until the next ram
+func _trigger(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
+	return false  # TODO (Toe Jam): arm a charged collision hit until the next ram

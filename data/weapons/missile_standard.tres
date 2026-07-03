@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="2_proj"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Missile"
+cooldown = 0.6
+damage = 30.0
+projectile_speed = 900.0
+projectile_lifetime = 2.5
+projectile_scene = ExtResource("2_proj")
+note = "Generic dumb-fire missile. Pickup-fed, shared by every car."

@@ -28,8 +28,15 @@ if [[ ! -d "$PROJECT_DIR/.godot" ]]; then
 fi
 
 echo "== tests: engine $("$GODOT" --version 2>/dev/null | head -n1)"
-OUT="$("$GODOT" --headless --path "$PROJECT_DIR" -s res://tests/run_tests.gd 2>&1)"
+# timeout guard: if the runner script fails to compile, quit() never runs and
+# headless Godot idles forever — never let that hang CI.
+OUT="$(timeout 120 "$GODOT" --headless --path "$PROJECT_DIR" -s res://tests/run_tests.gd 2>&1)"
 CODE=$?
+if [[ $CODE -eq 124 ]]; then
+  echo "$OUT"
+  echo "== tests: FAIL (timed out — runner likely failed to compile and never quit)"
+  exit 1
+fi
 echo "$OUT"
 if [[ $CODE -ne 0 ]] || echo "$OUT" | grep -qiE "$ERR_RE" || ! echo "$OUT" | grep -q '^TESTS: PASS'; then
   echo "== tests: FAIL"

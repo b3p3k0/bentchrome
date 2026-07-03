@@ -46,6 +46,7 @@ var _ram_cd := 0.0        # cooldown between ram hits
 @onready var _muzzle: Marker2D = $Visual/Muzzle
 @onready var _health: Health = $Health
 @onready var _status: StatusReceiver = $Status
+@onready var _rack: WeaponRack = $WeaponRack
 
 func _ready() -> void:
 	if stats == null and faction == &"player":
@@ -62,6 +63,9 @@ func _ready() -> void:
 		($Visual/Body as Polygon2D).color = body_color
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
+	if _rack and _special:
+		# Selection drives what the special/secondary path fires next.
+		_rack.selection_changed.connect(func(_i: int) -> void: _special.set_weapon(_rack.selected_def()))
 	if _health:
 		_health.died.connect(_on_died)
 	heading = rotation
@@ -75,8 +79,10 @@ func _apply_stats() -> void:
 		_controller.set(k, stats.handling_overrides[k])
 	body_color = stats.primary_color
 	($Visual/Body as Polygon2D).color = body_color
+	if _rack:
+		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds)
 	if stats.special and _special:
-		_special.set_weapon(stats.special)
+		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
 
 func set_stats(new_stats: VehicleStats) -> void:
 	if new_stats == null:
@@ -100,8 +106,17 @@ func _physics_process(delta: float) -> void:
 	var aim := Vector2.RIGHT.rotated(heading)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
 		_mg_mount.try_fire(_muzzle.global_position, aim, self)
+	if _rack:
+		if intent.get("weapon_prev", false):
+			_rack.select_prev()
+		if intent.get("weapon_next", false):
+			_rack.select_next()
 	if _special and _muzzle:
-		_special.activate(intent.get("fire_selected", false), _muzzle.global_position, aim, self)
+		var wants_fire: bool = intent.get("fire_selected", false)
+		if _rack:
+			wants_fire = wants_fire and _rack.can_consume()
+		if _special.activate(wants_fire, _muzzle.global_position, aim, self) and _rack:
+			_rack.consume()
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:
@@ -142,6 +157,9 @@ func get_hp() -> float:
 
 func get_hp_fraction() -> float:
 	return _health.hp / _health.max_hp if _health and _health.max_hp > 0.0 else 1.0
+
+func get_rack() -> WeaponRack:
+	return _rack
 
 func get_speed_scale() -> float:
 	return _status.speed_scale() if _status else 1.0

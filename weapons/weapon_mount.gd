@@ -46,9 +46,10 @@ func _physics_process(delta: float) -> void:
 	if _cooldown > 0.0:
 		_cooldown -= delta
 
-func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
+## Returns true when a shot actually left the mount (ammo is consumed on true).
+func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if _stub or _cooldown > 0.0 or projectile_scene == null:
-		return
+		return false
 	_cooldown = 1.0 / fire_rate
 	var tgt: Node2D = null
 	if turn_rate_deg > 0.0 and acquisition_radius > 0.0:
@@ -64,3 +65,4 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 		get_tree().current_scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects
+	return true
