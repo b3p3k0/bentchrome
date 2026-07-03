@@ -67,6 +67,7 @@ script = ExtResource("6_hp")
 max_hp = 100.0
 
 [node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.6, 0.6)
 position_smoothing_enabled = true
 
 [node name="SecondaryMount" type="Node" parent="."]
