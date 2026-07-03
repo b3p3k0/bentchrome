@@ -40,7 +40,7 @@ After confirming your selection, you'll drop directly into the Test Arena to put
 ### Combat Controls
 - Movement: steer-to-drive. `W`/`Up` throttles, `S`/`Down` brakes into reverse, `A`/`D` or `Left`/`Right` steer (`left stick` does the same on a controller). Expect inertia and drift — these are scrap sleds, not go-karts, and every surface grips differently.
 - Machine Gun: `Right click` or `Space`. Infinite ammo, chip damage, fires off the nose. Watch the heat bar — redline it and the gun locks out until it cools.
-- Selected Weapon: `Left click` or `K` fires whatever slot is active. Cycle slots with `Q`/`E` or the mouse wheel: your car's signature special (recharges on its own — don't hoard it), dumb-fire missiles, and homing missiles.
+- Selected Weapon: `Left click` or `K` fires whatever slot is active. Cycle slots with `Q`/`E` or the mouse wheel: your car's signature special (recharges on its own — don't hoard it), dumb-fire missiles, and homing missiles. All nine signature specials are live — flame cones, lock-on taser zaps, body-check leaps, charged rams; every driver fights different.
 - Ammo: missiles are scavenged, not printed. Grab the green `M` and cyan `H` crates around the arena; crates respawn, your patience won't.
 - Turbo: `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes.
 - Pause: `ESC` — resume, restart the arena, or quit while you're behind.
