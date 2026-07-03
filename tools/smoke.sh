@@ -47,4 +47,12 @@ if echo "$LEVEL_OUT" | grep -qiE "$ERR_RE" || ! echo "$LEVEL_OUT" | grep -q '^\[
   echo "== smoke: FAIL (custom level)"; exit 1
 fi
 
+echo "== smoke: editor"
+EDITOR_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://editor/editor_main.tscn --quit-after 10 2>&1)"
+echo "$EDITOR_OUT" | grep -E '^\[boot\]' || true
+if echo "$EDITOR_OUT" | grep -qiE "$ERR_RE" || ! echo "$EDITOR_OUT" | grep -q '^\[boot\] editor ready'; then
+  echo "$EDITOR_OUT" | grep -iE "$ERR_RE" || true
+  echo "== smoke: FAIL (editor)"; exit 1
+fi
+
 echo "== smoke: PASS"
