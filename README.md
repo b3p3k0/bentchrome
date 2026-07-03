@@ -39,11 +39,12 @@ After confirming your selection, you'll drop directly into the Test Arena to put
 
 ### Combat Controls
 - Movement: steer-to-drive. `W`/`Up` throttles, `S`/`Down` brakes into reverse, `A`/`D` or `Left`/`Right` steer (`left stick` does the same on a controller). Expect inertia and drift — these are scrap sleds, not go-karts, and every surface grips differently.
-- Aim/Fire: mouse or right stick to aim, left click / right trigger to hose bullets.
-- Special Weapon: `Space` / north face button. Cooldown regenerates—don't hoard it.
+- Machine Gun: `Right click` or `Space`. Infinite ammo, chip damage, fires off the nose. Watch the heat bar — redline it and the gun locks out until it cools.
+- Selected Weapon: `Left click` or `K` fires whatever slot is active. Cycle slots with `Q`/`E` or the mouse wheel: your car's signature special (recharges on its own — don't hoard it), dumb-fire missiles, and homing missiles.
+- Ammo: missiles are scavenged, not printed. Grab the green `M` and cyan `H` crates around the arena; crates respawn, your patience won't.
 - Turbo: `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes.
-- Camera: mouse edge-pan or right stick nudge, depending on your input poison.
-- HUD: flashing red means you're about to join the scrap heap. Hunt for repair pods or lean into the fireworks.
+- Pause: `ESC` — resume, restart the arena, or quit while you're behind.
+- HUD: the dash on the left tracks HP, speed, MG heat, and your weapon slots (with a key cheat-sheet at the bottom); the radar on the right keeps your nose pointed up and paints enemies red. Everything fires where the car points — get good and learn the trick shots.
 
 First arena (Arena) is the tutorial crash-test. Freeway introduces overpasses and multipoint ambushes. Expect hidden pickups tucked behind debris piles; if you see a suspicious billboard, ram it.
 

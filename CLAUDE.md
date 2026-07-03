@@ -10,7 +10,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - Top-down view with fake depth (drop-shadows + height for ramps/pits/jumps); 16-bit grimy dystopian style.
 - Arcade driving with inertia, drift, and surface-based handling; each vehicle feels distinct (motorcycle vs land-yacht).
 - Vehicles rendered as **directional sprites** — a real per-angle view (16 frames), not one sprite rotated.
-- Weapons: a **machine gun** (infinite, car-relative, low chip damage — many hits to kill) plus a **selectable secondary** slot. Secondaries — generic ammo-limited weapons (missiles/rockets) and each vehicle's unique signature **"special"** — are organized, bound, and fired the same way: select one, fire it. A "special" is simply a secondary unique to one vehicle. Secondaries vary by guidance (straight / mild / aggressive homing), ammo, and recharge.
+- Weapons: a **machine gun** (infinite, car-relative, low chip damage; **overheats** — sustained fire locks it until it cools) plus a **selectable secondary** slot (`WeaponRack`: special / standard missile / homing missile; cycle Q/E/wheel, fire LMB, MG on RMB). Specials **recharge** to a per-car cap; missiles are **pickup-fed** (arena ammo crates). Everything launches forward from the nose; guidance (homing) and cover-piercing are per-weapon data.
 - **Free-for-all:** every vehicle (player and all AI) can damage every other — no teams. The only immunity is a shooter to its own fire; AI may engage any combatant.
 - AI archetypes: **aggressor** (charges the nearest, fights to near-death), **ambusher** (flanks, hit-and-run), **opportunist** (stalks the weakest car, pounces, flees early) — expressed as a **blendable weight mix** `Vector3(aggressor, ambusher, opportunist)`, so pure types and any hybrid (e.g. brawler-jackal) share one system; traits (range, flee, flank, target scoring) interpolate. Plus tougher **mini-boss/boss** variants. Not a passive "defender."
 - Environmental destruction, verticality (ramps/pits), scavenging.
@@ -39,6 +39,8 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - **Data-driven content.** Vehicles, weapons, and AI profiles are typed `Resource` files; adding a car or weapon is a `.tres`, not code.
 - **Physics:** CharacterBody2D arcade driving with velocity decomposition + lateral-friction grip; per-vehicle feel comes from data, not forks. Tuning history in `VEHICLE_PHYSICS_PROGRESSION.md`.
 - **Rendering:** 2D sprites, GL Compatibility, nearest-neighbor filter; fake depth via a separate shadow sprite + height offset + per-level Y-sort.
+- **Screen layout:** fullscreen on a 1280×720 base viewport — a centered **720×720 play square** with opaque 280px gutters (`ui/hud.gd`): left = dash (HP/speed/MG heat/weapon slots/keyguide), right = rotating player-up radar (`ui/radar.gd`). ESC pause menu in `ui/pause_menu.gd`.
+- **Collision layers** (named in project.godot): 1 = ground (vehicles, dummies), 2 = wall (arena boundary), 3 = obstacle (blocks/cover — airborne cars and `pierces_cover` projectiles ignore it), 8 = terrain zones.
 - **Performance:** 60 FPS locked on mid-range GPUs.
 - **Packaging:** AppImage for Linux.
 

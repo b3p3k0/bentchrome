@@ -21,7 +21,7 @@ This document condenses the master design specs into quick-reference points we c
 
 ## Systems Checklist
 - **Movement:** Inertia, drift, handling modifiers per surface, respect impassable deep water.
-- **Combat:** Machine guns (infinite), pickup-based primaries, regenerating specials, temporary power-ups.
+- **Combat:** Machine guns (infinite, overheat lockout — built), pickup-fed standard/homing missiles (built), regenerating per-car specials (built, per-car caps via `VehicleStats`), temporary power-ups (pending).
 - **Health:** Shared major restore points (3 per level), random minor pickups, persistent inventory between levels.
 - **Environment:** Destructible props, ramps, verticality, hazards (explosives, electrical, debris).
 
