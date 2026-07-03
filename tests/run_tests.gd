@@ -10,6 +10,8 @@ const SUITES := [
 	preload("res://tests/test_specials_data.gd"),
 	preload("res://tests/test_enemy_driver.gd"),
 	preload("res://tests/test_level_schema.gd"),
+	preload("res://tests/test_entity_catalog.gd"),
+	preload("res://tests/test_corner_escape.gd"),
 ]
 
 var _checks := 0
@@ -26,7 +28,8 @@ func _run_all() -> void:
 		var suite = suite_script.new(self)
 		for m in suite.get_method_list():
 			if m.name.begins_with("test_"):
-				suite.call(m.name)
+				# await lets integration tests pump frames; sync tests pass through
+				await suite.call(m.name)
 	if _failures > 0:
 		print("TESTS: FAIL (%d checks, %d failures)" % [_checks, _failures])
 		quit(1)

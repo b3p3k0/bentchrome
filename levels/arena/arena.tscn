@@ -1,6 +1,7 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
 [ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
@@ -29,6 +30,9 @@ size = Vector2(40, 2940)
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("1_grid")
 
 [node name="DirtZone" type="Area2D" parent="."]
 position = Vector2(-800, -500)
