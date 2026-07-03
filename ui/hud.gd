@@ -64,6 +64,19 @@ func _build_ui() -> void:
 	add_child(_gutter_panel(0))
 	add_child(_gutter_panel(1280 - GUTTER))
 	_build_dash()
+	_build_radar()
+
+func _build_radar() -> void:
+	var hdr := Label.new()
+	hdr.text = "RADAR"
+	hdr.add_theme_font_size_override("font_size", 14)
+	hdr.modulate = DIM_TEXT
+	hdr.position = Vector2(1280 - GUTTER + 16, 16)
+	add_child(hdr)
+	var radar := preload("res://ui/radar.gd").new()
+	radar.position = Vector2(1280 - GUTTER + 20, 44)
+	radar.size = Vector2(240, 240)
+	add_child(radar)
 
 func _gutter_panel(x: int) -> ColorRect:
 	var p := ColorRect.new()

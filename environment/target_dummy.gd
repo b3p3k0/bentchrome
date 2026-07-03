@@ -6,6 +6,7 @@ extends StaticBody2D
 @onready var _label: Label = $Label
 
 func _ready() -> void:
+	add_to_group(&"dummies")  # radar shows them as faint practice contacts
 	_health.damaged.connect(_on_changed)
 	_health.died.connect(queue_free)
 	_refresh()
