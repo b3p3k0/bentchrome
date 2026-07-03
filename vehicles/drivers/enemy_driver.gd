@@ -29,7 +29,7 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 
@@ -38,6 +38,8 @@ const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
 const STUCK_TRIP := 0.6          # seconds of stuckness before the escape kicks in
 const UNSTICK_TIME := 1.0        # how long to back out
 const UNSTICK_EXIT_SPEED := 140.0  # moving this fast again = free early
+const CLEAR_TIME := 0.7          # post-unstick commit: drive to open space
+								 # before target logic can steer back in
 
 # Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
 const FEELER_MASK := 6
@@ -57,6 +59,8 @@ var _avoid_bias := 0.0   # last feeler steering bias (also unstick escape hint)
 var _blocked := false    # center feeler hit close ahead
 var _stuck_t := 0.0
 var _unstick_t := 0.0
+var _unstick_steer := 0.0  # committed at UNSTICK entry so the swing can't flip sides
+var _clear_t := 0.0
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -91,13 +95,39 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 
 	_update_feelers(vehicle)
 
+	# Stuck sensing must use ACTUAL displacement, not vehicle.velocity — wedged
+	# in a corner, move_and_slide is fully blocked while velocity stays high
+	# (400+), so get_speed() lies. get_real_velocity() reports what happened.
+	var real_vel: Vector2 = vehicle.get_real_velocity()
+
 	if _mode == Mode.UNSTICK:
 		_unstick_t -= delta
-		if _unstick_t <= 0.0 or vehicle.get_speed() > UNSTICK_EXIT_SPEED:
-			_mode = Mode.PURSUE
+		# Early exit only on real FORWARD speed — raw speed would trip on our
+		# own reversing (cap 180) and abort the escape almost immediately.
+		var fwd_speed: float = real_vel.dot(Vector2.RIGHT.rotated(vehicle.heading))
+		if _unstick_t <= 0.0 or fwd_speed > UNSTICK_EXIT_SPEED:
+			# Don't hand control straight back to pursue/evade — in a corner the
+			# flee direction points right back in. Commit to open space first.
+			_mode = Mode.CLEAR
+			_clear_t = CLEAR_TIME
 			_stuck_t = 0.0
 		else:
-			return _unstick_intent(vehicle.heading, bearing)
+			return _unstick_intent()
+
+	if _mode == Mode.CLEAR:
+		_clear_t -= delta
+		if _clear_t <= 0.0:
+			_mode = Mode.PURSUE
+		else:
+			if _update_stuck(real_vel.length(), true, delta):
+				_enter_unstick(vehicle.heading, bearing)
+				return _unstick_intent()
+			return {
+				"throttle": 1.0,
+				"steer": clampf(_avoid_bias * 2.0, -1.0, 1.0),
+				"fire_mg": false,
+				"fire_selected": false,
+			}
 
 	if vehicle.get_hp_fraction() < _flee:
 		_mode = Mode.EVADE
@@ -109,9 +139,12 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	var intent: Dictionary
 	if _mode == Mode.EVADE:
 		var away := wrapf(bearing + PI - vehicle.heading, -PI, PI)
+		# A wall dead ahead outranks "directly away from the threat" — slide
+		# along it instead of pinning yourself (the corner trap).
+		var away_gain := 0.6 if _blocked else 2.0
 		intent = {
 			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
-			"steer": clampf(away * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"steer": clampf(away * away_gain + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
 		}
@@ -128,10 +161,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"fire_selected": false,
 		}
 
-	if _update_stuck(vehicle.get_speed(), absf(intent["throttle"]) > 0.5, delta):
-		_mode = Mode.UNSTICK
-		_unstick_t = UNSTICK_TIME
-		return _unstick_intent(vehicle.heading, bearing)
+	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
+		_enter_unstick(vehicle.heading, bearing)
+		return _unstick_intent()
 	return intent
 
 ## Accumulates stuckness (trying to move but barely moving); trips once per
@@ -146,16 +178,23 @@ func _update_stuck(speed: float, wants_move: bool, delta: float) -> bool:
 		return true
 	return false
 
-## Back out of the pin: full reverse, swinging the nose toward the escape
-## direction (away from the blocked side, else toward the target). Steering is
-## sign-inverted because the controller flips steer while reversing.
-func _unstick_intent(heading: float, bearing: float) -> Dictionary:
+## Commits the escape swing once at entry (away from the blocked side, else
+## toward the target) so the feelers can't flip it side-to-side mid-reverse.
+func _enter_unstick(heading: float, bearing: float) -> void:
+	_mode = Mode.UNSTICK
+	_unstick_t = UNSTICK_TIME
 	var desired := _avoid_bias
 	if absf(desired) < 0.05:
 		desired = clampf(wrapf(bearing - heading, -PI, PI), -1.0, 1.0)
+	_unstick_steer = clampf(desired, -1.0, 1.0)
+
+## Back out of the pin: full reverse, swinging the nose toward the committed
+## escape direction. Steering is sign-inverted because the controller flips
+## steer while reversing.
+func _unstick_intent() -> Dictionary:
 	return {
 		"throttle": -1.0,
-		"steer": -clampf(desired, -1.0, 1.0),
+		"steer": -_unstick_steer,
 		"fire_mg": false,
 		"fire_selected": false,
 	}

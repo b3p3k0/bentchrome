@@ -52,8 +52,10 @@ var _ram_cd := 0.0        # cooldown between ram hits
 func _ready() -> void:
 	if stats == null and faction == &"player":
 		# Player car comes from the picker (GameState); fall back to Ghost so a
-		# direct/dev arena launch still works.
-		var id: StringName = GameState.selected_vehicle_id
+		# direct/dev arena launch still works. Autoload fetched by path so this
+		# script compiles in headless -s test runs (no autoloads there).
+		var gs := get_node_or_null(^"/root/GameState")
+		var id: StringName = gs.selected_vehicle_id if gs else &""
 		var path := "res://data/vehicles/ghost.tres"
 		if id != &"":
 			path = "res://data/vehicles/%s.tres" % id

@@ -47,11 +47,14 @@ func test_stuck_resets_when_moving_or_idle() -> void:
 func test_unstick_intent_reverses_with_inverted_steer() -> void:
 	var d = DriverScript.new()
 	d._avoid_bias = 0.8  # blocked on the left -> escape steers right (pre-inversion)
-	var intent: Dictionary = d._unstick_intent(0.0, 0.0)
+	d._enter_unstick(0.0, 0.0)
+	var intent: Dictionary = d._unstick_intent()
 	t.check_approx(intent["throttle"], -1.0, "unstick: full reverse")
 	t.check_approx(intent["steer"], -0.8, "unstick: steer inverted for reversing")
 	t.check(not intent["fire_mg"], "unstick: holds fire")
 	d._avoid_bias = 0.0  # nothing blocked -> swing toward the target bearing
-	var toward: Dictionary = d._unstick_intent(0.0, 1.0)
-	t.check_approx(toward["steer"], -1.0, "unstick: falls back to target bearing")
+	d._enter_unstick(0.0, 1.0)
+	t.check_approx(d._unstick_intent()["steer"], -1.0, "unstick: falls back to target bearing")
+	d._avoid_bias = -0.9  # commit holds even if the feelers flip afterward
+	t.check_approx(d._unstick_intent()["steer"], -1.0, "unstick: escape swing stays committed")
 	d.free()

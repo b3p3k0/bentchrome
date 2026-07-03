@@ -3,6 +3,9 @@ extends CanvasLayer
 ## Instanced per-level (arena.gd). Runs while the tree is paused
 ## (PROCESS_MODE_ALWAYS); everything else freezes on get_tree().paused.
 
+const IR := preload("res://game/input_router.gd")  # consts, not the autoload —
+												   # compiles under headless -s
+
 var _resume_btn: Button
 
 func _ready() -> void:
@@ -12,7 +15,7 @@ func _ready() -> void:
 	_build_ui()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(InputRouter.ACTION_PAUSE):
+	if event.is_action_pressed(IR.ACTION_PAUSE):
 		get_viewport().set_input_as_handled()
 		_set_paused(not visible)
 
@@ -24,11 +27,15 @@ func _set_paused(on: bool) -> void:
 
 func _on_restart() -> void:
 	_set_paused(false)
-	SceneFlow.to_arena()
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow:
+		flow.to_arena()
 
 func _on_quit_title() -> void:
 	_set_paused(false)
-	SceneFlow.to_title()
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow:
+		flow.to_title()
 
 func _build_ui() -> void:
 	var dim := ColorRect.new()
