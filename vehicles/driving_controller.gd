@@ -21,6 +21,10 @@ extends Node
 @export_group("Grip")
 @export var lateral_grip := 7.5
 
+@export_group("Handbrake")
+@export var handbrake_deceleration := 400.0        # gentler than the S pedal
+@export_range(0.0, 1.0) var handbrake_grip_factor := 0.15  # rear end breaks loose
+
 @export_group("Mass")
 @export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
 
@@ -35,11 +39,14 @@ const TERRAIN := {
 func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var throttle: float = clampf(intent.get("throttle", 0.0), -1.0, 1.0)
 	var steer: float = clampf(intent.get("steer", 0.0), -1.0, 1.0)
+	var handbrake: bool = intent.get("handbrake", false)
 
 	var mod: Dictionary = TERRAIN.get(vehicle.current_terrain, TERRAIN[&"road"])
 	var accel: float = acceleration * mod["accel"]
 	var top: float = max_speed * mod["top"]
 	var grip: float = lateral_grip * mod["grip"]
+	if handbrake:
+		grip *= handbrake_grip_factor  # traction breaks loose — the drift tool
 	var scale: float = vehicle.get_speed_scale() if vehicle.has_method(&"get_speed_scale") else 1.0
 	accel *= scale
 	top *= scale
@@ -65,8 +72,12 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var brake_eff := brake_deceleration * lerpf(1.2, 0.8, mf)
 	var coast_eff := coast_deceleration * lerpf(1.35, 0.65, mf)
 
-	# Throttle / brake / reverse along the nose.
-	if throttle > 0.0:
+	# Throttle / brake / reverse along the nose. A held handbrake overrides
+	# the pedals: gentle forward decel while the car slides on dead grip.
+	if handbrake:
+		var eased_hb := move_toward(fwd_speed, 0.0, handbrake_deceleration * delta)
+		vehicle.velocity += forward * (eased_hb - fwd_speed)
+	elif throttle > 0.0:
 		vehicle.velocity += forward * accel_eff * throttle * delta
 	elif throttle < 0.0:
 		if fwd_speed > 10.0:

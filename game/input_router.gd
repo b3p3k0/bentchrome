@@ -14,6 +14,7 @@ const ACTION_FIRE_MG := &"fire_mg"
 const ACTION_FIRE_SELECTED := &"fire_selected"
 const ACTION_WEAPON_PREV := &"weapon_prev"
 const ACTION_WEAPON_NEXT := &"weapon_next"
+const ACTION_HANDBRAKE := &"handbrake"
 const ACTION_PAUSE := &"pause"
 const ACTION_SELECT_PREV := &"select_prev"
 const ACTION_SELECT_NEXT := &"select_next"
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_ensure_action(ACTION_FIRE_SELECTED, [_mouse(MOUSE_BUTTON_LEFT), _key(KEY_K)])
 	_ensure_action(ACTION_WEAPON_PREV, [_key(KEY_Q), _mouse(MOUSE_BUTTON_WHEEL_UP)])
 	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_E), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
+	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_B)])
 	_ensure_action(ACTION_PAUSE, [_key(KEY_ESCAPE), _joy_button(JOY_BUTTON_START)])
 	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
 	_ensure_action(ACTION_SELECT_NEXT, [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])

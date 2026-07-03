@@ -108,6 +108,35 @@ func test_brake_is_drastic_but_never_instant() -> void:
 	mid.free()
 	heavy.free()
 
+func test_handbrake_is_gentler_than_pedal() -> void:
+	var mid = _ctrl(5.0, 207.0)
+	# Handbrake stop takes clearly longer than the S pedal.
+	var stub := StubVehicle.new()
+	stub.velocity = Vector2.RIGHT * TOP
+	var intent := {"throttle": 0.0, "steer": 0.0, "handbrake": true}
+	var elapsed := 0.0
+	while _fwd(stub) > TOP * 0.05 and elapsed < 20.0:
+		mid.apply(stub, intent, DT)
+		elapsed += DT
+	var pedal := _brake_time(mid, 0.05)
+	t.check(elapsed > pedal * 1.15, "handbrake: stops slower than the pedal (%.2f vs %.2f)" % [elapsed, pedal])
+	mid.free()
+
+func test_handbrake_kills_lateral_grip() -> void:
+	var mid = _ctrl(5.0, 207.0)
+	# Same sideways velocity, one tick: with the handbrake the lateral
+	# component must survive far better (grip * 0.15).
+	var gripped := StubVehicle.new()
+	gripped.velocity = Vector2(0.0, 300.0)  # pure lateral (heading is +X)
+	mid.apply(gripped, {"throttle": 0.0, "steer": 0.0}, DT)
+	var sliding := StubVehicle.new()
+	sliding.velocity = Vector2(0.0, 300.0)
+	mid.apply(sliding, {"throttle": 0.0, "steer": 0.0, "handbrake": true}, DT)
+	var kept_gripped: float = absf(sliding.velocity.y) - absf(gripped.velocity.y)
+	t.check(kept_gripped > 0.0, "handbrake: lateral velocity survives better while sliding")
+	t.check_approx(absf(sliding.velocity.y), 300.0 * (1.0 - 7.5 * 0.15 * DT), "handbrake: grip scaled by factor")
+	mid.free()
+
 func test_coast_heavy_rolls_farther() -> void:
 	var bike = _ctrl(1.0, 207.0)
 	var mid = _ctrl(5.0, 207.0)
