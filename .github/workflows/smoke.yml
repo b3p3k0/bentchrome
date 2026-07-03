@@ -28,3 +28,9 @@ jobs:
           export GODOT_BIN="$HOME/bin/godot"
           "$GODOT_BIN" --version
           ./tools/smoke.sh
+
+      - name: Unit tests
+        run: |
+          set -euo pipefail
+          export GODOT_BIN="$HOME/bin/godot"
+          ./tools/test.sh

@@ -47,7 +47,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - **File size:** ≤1200 lines excellent; 1700 is a hard stop — pause and modularize. Shared logic lives once; never duplicate player/AI or weapon logic.
 - **Idiomatic Godot 4:** typed `Resource` classes, `class_name`, and composition are expected. (The retired build banned `class_name` to cope with a tangled codebase; that ban is dropped — a clean dependency graph plus the CI parse gate is the real protection.)
 - **Validate InputMap actions on boot** — carried-forward safety against missing-action regressions.
-- **After any script change, run the smoke gate:** `tools/smoke.sh` (headless import + boot; fails on parse errors, failed loads, or missing autoloads). CI runs the same on push/PR via `.github/workflows/smoke.yml`.
+- **After any script change, run the smoke gate:** `tools/smoke.sh` (headless import + boot; fails on parse errors, failed loads, or missing autoloads) **and the unit tests:** `tools/test.sh` (headless suites in `tests/`, driven by `tests/run_tests.gd`). CI runs both on push/PR via `.github/workflows/smoke.yml`.
 
 ## Level progression
 
