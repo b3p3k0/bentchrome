@@ -33,6 +33,13 @@ enum Mode { PURSUE, EVADE }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 
+# Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
+const FEELER_MASK := 6
+const FEELER_BASE := 200.0        # feeler length at standstill
+const FEELER_SPEED_FACTOR := 0.25 # extra length per px/s of speed
+const FEELER_ANGLE := deg_to_rad(35.0)
+const AVOID_GAIN := 1.5           # steering bias weight
+
 var _near := 140.0
 var _far := 340.0
 var _flee := 0.15
@@ -40,6 +47,8 @@ var _w_near := 1.0
 var _w_weak := 0.0
 var _flank := 0.0
 var _mode: Mode = Mode.PURSUE
+var _avoid_bias := 0.0   # last feeler steering bias (also unstick escape hint)
+var _blocked := false    # center feeler hit close ahead
 
 func _ready() -> void:
 	var w := mix
@@ -74,11 +83,13 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 	elif dist < _near:
 		_mode = Mode.EVADE
 
+	_update_feelers(vehicle)
+
 	if _mode == Mode.EVADE:
 		var away := wrapf(bearing + PI - vehicle.heading, -PI, PI)
 		return {
 			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
-			"steer": clampf(away * 2.0, -1.0, 1.0),
+			"steer": clampf(away * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
 		}
@@ -90,10 +101,34 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 	var aim := wrapf(bearing - vehicle.heading, -PI, PI)
 	return {
 		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
-		"steer": clampf(diff * 2.0, -1.0, 1.0),
+		"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 		"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE,
 		"fire_selected": false,
 	}
+
+## Casts three feelers (nose, ±35°) against walls/blocks and derives a steering
+## bias away from the obstruction; sets _blocked when the nose ray hits close.
+func _update_feelers(vehicle) -> void:
+	_avoid_bias = 0.0
+	_blocked = false
+	if not (vehicle is CollisionObject2D):
+		return
+	var length: float = FEELER_BASE + vehicle.get_speed() * FEELER_SPEED_FACTOR
+	var origin: Vector2 = vehicle.global_position
+	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
+	var frac := []  # hit fraction per feeler [left, center, right]; 1.0 = clear
+	for offset in [-FEELER_ANGLE, 0.0, FEELER_ANGLE]:
+		var dir := Vector2.RIGHT.rotated(vehicle.heading + offset)
+		var query := PhysicsRayQueryParameters2D.create(origin, origin + dir * length, FEELER_MASK)
+		query.exclude = [(vehicle as CollisionObject2D).get_rid()]
+		var hit := space.intersect_ray(query)
+		frac.append(origin.distance_to(hit["position"]) / length if not hit.is_empty() else 1.0)
+	# Side hits push away, closer = stronger; positive steer turns right.
+	_avoid_bias = (1.0 - frac[0]) - (1.0 - frac[2])
+	if frac[1] < 1.0:
+		_blocked = frac[1] < 0.6
+		# Nose blocked: commit toward whichever side reads clearer.
+		_avoid_bias += (1.0 - frac[1]) * (1.0 if frac[2] >= frac[0] else -1.0)
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak).
 func _select_target(vehicle) -> Node2D:
