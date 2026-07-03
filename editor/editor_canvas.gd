@@ -31,7 +31,14 @@ var _paint_current := Vector2.ZERO
 
 func bind(doc: EditorDocument) -> void:
 	document = doc
-	document.changed.connect(queue_redraw)
+	document.changed.connect(_on_document_changed)
+	queue_redraw()
+
+func _on_document_changed() -> void:
+	# Undo/open can invalidate an index-based selection; drop it if stale.
+	if not selection.is_empty() and selection.list_key != "player_spawn" \
+			and selection.index >= document.count(selection.list_key):
+		_set_selection({})
 	queue_redraw()
 
 func set_tool(id: String) -> void:
@@ -47,7 +54,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			MOUSE_BUTTON_RIGHT:
 				_cancel()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_dragging = false
+		if _dragging:
+			_dragging = false
+			document.end_action()  # next drag of the same entity = its own undo step
 		if _painting:
 			_commit_paint()
 	elif event is InputEventMouseMotion and _painting:

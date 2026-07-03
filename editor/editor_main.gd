@@ -25,6 +25,9 @@ var _status_label: Label
 var _open_dialog: FileDialog
 var _save_dialog: FileDialog
 var _report_dialog: AcceptDialog
+var _confirm_dialog: ConfirmationDialog
+var _pending_action := Callable()
+var _validation_label: Label
 var _name_edit: LineEdit
 var _author_edit: LineEdit
 var _desc_edit: LineEdit
@@ -32,6 +35,9 @@ var _width_spin: SpinBox
 var _height_spin: SpinBox
 
 func _ready() -> void:
+	# Intercept window close so unsaved work gets a confirm. Playtest hands
+	# quit handling back to the game before leaving this scene.
+	get_tree().auto_accept_quit = false
 	DirAccess.make_dir_recursive_absolute(LEVELS_DIR)
 	document = DocumentScript.new()
 	_build_world()
@@ -70,6 +76,8 @@ func _refresh() -> void:
 	_floor.set_extent(document.bounds_half() + Vector2(Loader.FLOOR_OVERSCAN, Loader.FLOOR_OVERSCAN))
 	var file_name := document.path.get_file() if not document.path.is_empty() else "(unsaved)"
 	_title_label.text = "%s%s" % [file_name, " *" if document.dirty else ""]
+	var problems := document.validate()
+	_validation_label.text = "valid" if problems.is_empty() else "%d problem(s)" % problems.size()
 	_sync_inspector()
 
 func _sync_inspector() -> void:
@@ -85,11 +93,37 @@ func _sync_inspector() -> void:
 func _status(message: String) -> void:
 	_status_label.text = message
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_confirm_discard(func() -> void: get_tree().quit())
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed:
+		match event.keycode:
+			KEY_Z:
+				if event.shift_pressed:
+					_status("Redo" if document.redo() else "Nothing to redo")
+				else:
+					_status("Undo" if document.undo() else "Nothing to undo")
+			KEY_Y:
+				_status("Redo" if document.redo() else "Nothing to redo")
+			KEY_S:
+				_on_save()
+
+## Runs `action` immediately, or after a confirm when unsaved changes exist.
+func _confirm_discard(action: Callable) -> void:
+	if not document.dirty:
+		action.call()
+		return
+	_pending_action = action
+	_confirm_dialog.popup_centered()
+
 # --- file actions -----------------------------------------------------------
 
 func _on_new() -> void:
-	document.new_level()
-	_status("New level")
+	_confirm_discard(func() -> void:
+		document.new_level()
+		_status("New level"))
 
 func _on_open_selected(path: String) -> void:
 	var problems := document.open(path)
@@ -144,6 +178,7 @@ func _on_playtest() -> void:
 		return
 	gs.playtest_return_to_editor = true
 	gs.editor_open_path = document.path
+	get_tree().auto_accept_quit = true  # the game owns the window again
 	flow.to_custom_level(PLAYTEST_PATH)
 
 func _report(title: String, body: String) -> void:
@@ -175,6 +210,11 @@ func _build_ui() -> void:
 	ui.add_child(_save_dialog)
 	_report_dialog = AcceptDialog.new()
 	ui.add_child(_report_dialog)
+	_confirm_dialog = ConfirmationDialog.new()
+	_confirm_dialog.title = "Unsaved changes"
+	_confirm_dialog.dialog_text = "This will DISCARD your unsaved changes. Continue?"
+	_confirm_dialog.confirmed.connect(func() -> void: _pending_action.call())
+	ui.add_child(_confirm_dialog)
 
 func _build_toolbar() -> Control:
 	var panel := PanelContainer.new()
@@ -183,11 +223,14 @@ func _build_toolbar() -> Control:
 	bar.add_theme_constant_override("separation", 8)
 	panel.add_child(bar)
 	_add_button(bar, "New", _on_new)
-	_add_button(bar, "Open", func() -> void: _open_dialog.popup_centered())
+	_add_button(bar, "Open", func() -> void:
+		_confirm_discard(func() -> void: _open_dialog.popup_centered()))
 	_add_button(bar, "Save", _on_save)
 	_add_button(bar, "Save As", func() -> void: _save_dialog.popup_centered())
 	_add_button(bar, "Validate", _on_validate)
 	_add_button(bar, "Playtest", _on_playtest)
+	_add_button(bar, "Levels Folder", func() -> void:
+		OS.shell_open(ProjectSettings.globalize_path(LEVELS_DIR)))
 	_title_label = Label.new()
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -217,10 +260,15 @@ func _build_status_bar() -> Control:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var bar := HBoxContainer.new()
+	panel.add_child(bar)
 	_status_label = Label.new()
 	_status_label.text = "Bent Chrome level editor — levels save to " \
 			+ ProjectSettings.globalize_path(LEVELS_DIR)
-	panel.add_child(_status_label)
+	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(_status_label)
+	_validation_label = Label.new()
+	bar.add_child(_validation_label)
 	return panel
 
 func _make_dialog(mode: FileDialog.FileMode, on_selected: Callable) -> FileDialog:

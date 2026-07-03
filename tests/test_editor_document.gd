@@ -75,6 +75,48 @@ func test_player_spawn_ops() -> void:
 	doc.set_player_heading(90.0)
 	t.check_approx(doc.level.player_spawn.heading_deg, 90.0, "heading set")
 
+func test_undo_redo() -> void:
+	var doc := _doc()
+	doc.add_entity("blocks", {"pos": [128.0, 128.0], "size": [128.0, 128.0]})
+	doc.set_field("name", "After")
+	t.check(doc.undo(), "undo the rename")
+	t.check(doc.level.name == "Untitled", "rename undone")
+	t.check(doc.undo(), "undo the add")
+	t.check(doc.count("blocks") == 0, "add undone")
+	t.check(not doc.dirty, "back to pristine -> not dirty")
+	t.check(not doc.undo(), "empty stack refuses")
+	t.check(doc.redo(), "redo the add")
+	t.check(doc.count("blocks") == 1 and doc.dirty, "add redone, dirty again")
+	t.check(doc.redo(), "redo the rename")
+	t.check(doc.level.name == "After", "rename redone")
+	doc.set_field("author", "kevin")
+	t.check(not doc.redo(), "new mutation clears the redo stack")
+
+func test_undo_coalesces_drags() -> void:
+	var doc := _doc()
+	doc.add_entity("dummies", {"pos": [0.0, 0.0], "max_hp": 60.0})
+	# One drag = many move_entity calls; must be a single undo step.
+	doc.move_entity("dummies", 0, Vector2(64.0, 0.0))
+	doc.move_entity("dummies", 0, Vector2(128.0, 0.0))
+	doc.move_entity("dummies", 0, Vector2(192.0, 0.0))
+	doc.end_action()
+	doc.move_entity("dummies", 0, Vector2(512.0, 0.0))  # a second drag
+	t.check(doc.undo(), "undo second drag")
+	t.check(doc.level.dummies[0].pos == [192.0, 0.0], "second drag undone as one step")
+	t.check(doc.undo(), "undo first drag")
+	t.check(doc.level.dummies[0].pos == [0.0, 0.0], "first drag undone as one step")
+
+func test_open_clears_history() -> void:
+	var doc := _doc()
+	doc.set_field("name", "History")
+	doc.level.enemy_spawns.append({"pos": [448.0, -256.0]})
+	t.check(doc.save_as(TEMP_PATH) == OK, "saved")
+	var doc2 := _doc()
+	doc2.set_field("name", "Other")
+	doc2.open(TEMP_PATH)
+	t.check(not doc2.undo(), "open wipes undo history")
+	_cleanup()
+
 func test_restore_playtest() -> void:
 	var playtest_path := "user://levels/_test_playtest.json"
 	var doc := _doc()
