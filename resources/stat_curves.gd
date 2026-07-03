@@ -12,6 +12,7 @@ static func apply(stats: VehicleStats, controller, health) -> void:
 	controller.acceleration = _scale(stats.acceleration, 450.0, 1300.0)
 	controller.turn_rate_deg = _scale(stats.handling, 130.0, 250.0)
 	controller.lateral_grip = _scale(stats.handling, 4.5, 10.0)
+	controller.mass = float(stats.mass)
 	if health:
 		var hp := _scale(stats.armor, 70.0, 180.0)
 		health.max_hp = hp

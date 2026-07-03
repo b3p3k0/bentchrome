@@ -16,6 +16,7 @@ extends Resource
 @export_range(1, 10) var handling: int = 5
 @export_range(1, 10) var armor: int = 5
 @export_range(1, 10) var special_power: int = 5
+@export_range(1, 10) var mass: int = 5  # 1 = motorcycle, 8 = monster truck; >8 reserved
 
 @export var primary_color := Color(0.85, 0.2, 0.3)
 @export var accent_color := Color(1, 1, 1)

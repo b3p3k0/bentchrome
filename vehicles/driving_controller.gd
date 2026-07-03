@@ -19,6 +19,9 @@ extends Node
 @export_group("Grip")
 @export var lateral_grip := 7.5
 
+@export_group("Mass")
+@export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
+
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 const TERRAIN := {
 	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},

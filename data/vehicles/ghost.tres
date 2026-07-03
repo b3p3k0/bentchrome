@@ -16,6 +16,7 @@ top_speed = 9
 handling = 7
 armor = 3
 special_power = 6
+mass = 3
 primary_color = Color(0.99215686, 0.99215686, 0.99215686, 1)
 accent_color = Color(0.84313726, 0.8901961, 1, 1)
 special = ExtResource("2_cp2mh")

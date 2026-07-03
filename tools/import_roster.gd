@@ -57,6 +57,7 @@ func _init() -> void:
 
 		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
 		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
+		vs.mass = int(c.get("mass", 5))
 
 		var sid := String(c.get("id", ""))
 		if SPECIALS.has(sid):
