@@ -61,7 +61,7 @@ func _ready() -> void:
 func get_intent(vehicle, _delta: float) -> Dictionary:
 	var target := _select_target(vehicle)
 	if target == null:
-		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_special": false}
+		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
@@ -80,7 +80,7 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
 			"steer": clampf(away * 2.0, -1.0, 1.0),
 			"fire_mg": false,
-			"fire_special": false,
+			"fire_selected": false,
 		}
 
 	var approach := bearing
@@ -92,7 +92,7 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 		"throttle": 1.0 if absf(diff) < 1.2 else 0.2,
 		"steer": clampf(diff * 2.0, -1.0, 1.0),
 		"fire_mg": absf(aim) < 0.25 and dist < FIRE_RANGE,
-		"fire_special": false,
+		"fire_selected": false,
 	}
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak).

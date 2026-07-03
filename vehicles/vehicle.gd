@@ -101,7 +101,7 @@ func _physics_process(delta: float) -> void:
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
 		_mg_mount.try_fire(_muzzle.global_position, aim, self)
 	if _special and _muzzle:
-		_special.activate(intent.get("fire_special", false), _muzzle.global_position, aim, self)
+		_special.activate(intent.get("fire_selected", false), _muzzle.global_position, aim, self)
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:
