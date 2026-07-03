@@ -35,11 +35,13 @@ const FIRE_RANGE := 1000.0
 
 # Stuck escape: pinned against a wall/block -> reverse out, then re-engage.
 const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
-const STUCK_TRIP := 0.6          # seconds of stuckness before the escape kicks in
-const UNSTICK_TIME := 1.0        # how long to back out
+const STUCK_TRIP := 0.45         # seconds of stuckness before the escape kicks in
+const UNSTICK_MIN := 0.5         # always back out at least this long
+const UNSTICK_TIME := 1.8        # max back-out (slow heavies need the room)
 const UNSTICK_EXIT_SPEED := 140.0  # moving this fast again = free early
-const CLEAR_TIME := 0.7          # post-unstick commit: drive to open space
+const CLEAR_TIME := 2.2          # post-unstick commit: drive to open space
 								 # before target logic can steer back in
+const CLEAR_DIST := 450.0        # ...or until this far from the pin
 
 # Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
 const FEELER_MASK := 6
@@ -61,6 +63,8 @@ var _stuck_t := 0.0
 var _unstick_t := 0.0
 var _unstick_steer := 0.0  # committed at UNSTICK entry so the swing can't flip sides
 var _clear_t := 0.0
+var _last_pin := Vector2.INF   # where this escape episode started
+var _escape_dir := Vector2.RIGHT  # committed world-space CLEAR direction
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -105,26 +109,39 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		# Early exit only on real FORWARD speed — raw speed would trip on our
 		# own reversing (cap 180) and abort the escape almost immediately.
 		var fwd_speed: float = real_vel.dot(Vector2.RIGHT.rotated(vehicle.heading))
-		if _unstick_t <= 0.0 or fwd_speed > UNSTICK_EXIT_SPEED:
+		# Once the swing has the nose pointing at open space, stop reversing —
+		# a fixed timer wastes escape time (or cuts the swing short) depending
+		# on how deep the pin was.
+		var nose_clear: bool = (UNSTICK_TIME - _unstick_t) >= UNSTICK_MIN and not _blocked
+		if _unstick_t <= 0.0 or fwd_speed > UNSTICK_EXIT_SPEED or nose_clear:
 			# Don't hand control straight back to pursue/evade — in a corner the
-			# flee direction points right back in. Commit to open space first.
+			# flee direction points right back in. Commit to a WORLD direction:
+			# from the pin toward us (for a corner pin that's open arena by
+			# construction), and drive it until genuinely clear.
 			_mode = Mode.CLEAR
 			_clear_t = CLEAR_TIME
 			_stuck_t = 0.0
+			if _last_pin != Vector2.INF:
+				_escape_dir = (vehicle.global_position - _last_pin).normalized()
+			else:
+				_escape_dir = Vector2.RIGHT.rotated(vehicle.heading)
 		else:
 			return _unstick_intent()
 
 	if _mode == Mode.CLEAR:
 		_clear_t -= delta
-		if _clear_t <= 0.0:
+		var clear_of_pin: bool = _last_pin == Vector2.INF \
+			or vehicle.global_position.distance_to(_last_pin) > CLEAR_DIST
+		if _clear_t <= 0.0 or clear_of_pin:
 			_mode = Mode.PURSUE
 		else:
 			if _update_stuck(real_vel.length(), true, delta):
-				_enter_unstick(vehicle.heading, bearing)
+				_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
 				return _unstick_intent()
+			var esc_diff := wrapf(_escape_dir.angle() - vehicle.heading, -PI, PI)
 			return {
 				"throttle": 1.0,
-				"steer": clampf(_avoid_bias * 2.0, -1.0, 1.0),
+				"steer": clampf(esc_diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 				"fire_mg": false,
 				"fire_selected": false,
 			}
@@ -140,10 +157,11 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	if _mode == Mode.EVADE:
 		var away := wrapf(bearing + PI - vehicle.heading, -PI, PI)
 		# A wall dead ahead outranks "directly away from the threat" — slide
-		# along it instead of pinning yourself (the corner trap).
+		# along it instead of pinning yourself (the corner trap). While wall-
+		# sliding the nose can't point away, so don't throttle down for that.
 		var away_gain := 0.6 if _blocked else 2.0
 		intent = {
-			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
+			"throttle": 1.0 if (_blocked or absf(away) < 1.2) else 0.3,
 			"steer": clampf(away * away_gain + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
@@ -162,7 +180,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		}
 
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
-		_enter_unstick(vehicle.heading, bearing)
+		_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
 		return _unstick_intent()
 	return intent
 
@@ -180,9 +198,13 @@ func _update_stuck(speed: float, wants_move: bool, delta: float) -> bool:
 
 ## Commits the escape swing once at entry (away from the blocked side, else
 ## toward the target) so the feelers can't flip it side-to-side mid-reverse.
-func _enter_unstick(heading: float, bearing: float) -> void:
+func _enter_unstick(heading: float, bearing: float, pin := Vector2.INF) -> void:
 	_mode = Mode.UNSTICK
 	_unstick_t = UNSTICK_TIME
+	# First pin of an episode wins: re-sticking nearby mid-escape must keep
+	# escaping from the ORIGINAL corner, not from wherever we stalled last.
+	if pin != Vector2.INF and _last_pin.distance_to(pin) > CLEAR_DIST:
+		_last_pin = pin
 	var desired := _avoid_bias
 	if absf(desired) < 0.05:
 		desired = clampf(wrapf(bearing - heading, -PI, PI), -1.0, 1.0)

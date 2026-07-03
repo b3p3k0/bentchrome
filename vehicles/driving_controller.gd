@@ -7,9 +7,11 @@ extends Node
 @export_group("Speed")
 @export var max_speed := 520.0
 @export var reverse_max_speed := 180.0
-@export var acceleration := 900.0
-@export var brake_deceleration := 1500.0
-@export var coast_deceleration := 420.0
+@export var acceleration := 207.0        # base pull; launch_boost carries the low end
+@export var brake_deceleration := 570.0  # S pedal: mid car stops from top in ~0.9s
+@export var coast_deceleration := 260.0  # lift-off falloff; mass stretches/shrinks it
+@export_range(0.0, 0.95) var accel_taper := 0.65  # pull lost as speed nears top
+@export var launch_boost := 1.6          # extra shove below 30% of top speed
 
 @export_group("Steering")
 @export var turn_rate_deg := 190.0
@@ -52,16 +54,27 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	vehicle.heading += deg_to_rad(turn_rate_deg) * scale * steer * authority * dir_sign * delta
 	forward = Vector2.RIGHT.rotated(vehicle.heading)
 
+	# Mass (1-10) shapes the dynamics: heavy = weak launch, long coast, soft
+	# brakes; light = jumps off the line, sheds speed on lift, bites when braking.
+	var mf := clampf((mass - 1.0) / 9.0, 0.0, 1.0)
+	var accel_mass := lerpf(1.3, 0.5, mf)
+	var boost_top := lerpf(launch_boost * 1.4, launch_boost * 0.7, mf)
+	var boost := lerpf(maxf(boost_top, 1.0), 1.0, clampf(fwd_speed / maxf(top * 0.3, 1.0), 0.0, 1.0))
+	var taper := 1.0 - accel_taper * clampf(fwd_speed / maxf(top, 1.0), 0.0, 1.0)
+	var accel_eff := accel * accel_mass * boost * taper
+	var brake_eff := brake_deceleration * lerpf(1.2, 0.8, mf)
+	var coast_eff := coast_deceleration * lerpf(1.35, 0.65, mf)
+
 	# Throttle / brake / reverse along the nose.
 	if throttle > 0.0:
-		vehicle.velocity += forward * accel * throttle * delta
+		vehicle.velocity += forward * accel_eff * throttle * delta
 	elif throttle < 0.0:
 		if fwd_speed > 10.0:
-			vehicle.velocity -= forward * brake_deceleration * delta
+			vehicle.velocity -= forward * brake_eff * delta
 		else:
-			vehicle.velocity += forward * accel * throttle * delta
+			vehicle.velocity += forward * accel_eff * throttle * delta
 	else:
-		var eased := move_toward(fwd_speed, 0.0, coast_deceleration * delta)
+		var eased := move_toward(fwd_speed, 0.0, coast_eff * delta)
 		vehicle.velocity += forward * (eased - fwd_speed)
 
 	# Lateral grip: bleed sideways velocity for predictable drift.

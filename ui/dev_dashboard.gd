@@ -8,17 +8,21 @@ const TUNABLE := [
 	"max_speed", "acceleration", "turn_rate_deg", "lateral_grip",
 	"brake_deceleration", "reverse_max_speed", "coast_deceleration",
 	"turn_authority_speed", "min_turn_authority",
+	"mass", "accel_taper", "launch_boost",
 ]
 const RANGES := {
 	"max_speed": [100.0, 900.0, 5.0],
-	"acceleration": [200.0, 2000.0, 10.0],
+	"acceleration": [60.0, 900.0, 5.0],
 	"turn_rate_deg": [60.0, 360.0, 2.0],
 	"lateral_grip": [1.0, 15.0, 0.1],
-	"brake_deceleration": [400.0, 3000.0, 10.0],
+	"brake_deceleration": [200.0, 2000.0, 10.0],
 	"reverse_max_speed": [40.0, 400.0, 5.0],
 	"coast_deceleration": [100.0, 900.0, 5.0],
 	"turn_authority_speed": [40.0, 400.0, 5.0],
 	"min_turn_authority": [0.0, 1.0, 0.01],
+	"mass": [1.0, 10.0, 0.5],
+	"accel_taper": [0.0, 0.95, 0.01],
+	"launch_boost": [1.0, 3.0, 0.05],
 }
 
 var _player: Node = null

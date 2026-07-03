@@ -7,8 +7,10 @@ extends RefCounted
 const ArenaScene := preload("res://levels/arena/arena.tscn")
 
 const CORNER := Vector2(1500.0, -1300.0)
-const ESCAPE_DIST := 500.0
-const MAX_FRAMES := 360  # 6s at 60 Hz; a working escape takes ~2-3s
+const UNPIN_DIST := 250.0   # out of the corner pocket
+const UNPIN_FRAMES := 330   # ...within 5.5s (mass-7 truck 3-point turn; never stationary)
+const ESCAPE_DIST := 500.0  # fully clear and re-engaging
+const MAX_FRAMES := 540     # ...within 9s (mass-7 truck: slow is correct now)
 
 var t
 
@@ -35,13 +37,20 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	for name in ["Enemy2", "Enemy3", "Enemy4"]:
 		arena.get_node(name).global_position = Vector2(-1300.0, 1400.0)
 
+	var unpinned_at := -1
 	var escaped_at := -1
 	for i in MAX_FRAMES:
 		await t.physics_frame
-		if enemy.global_position.distance_to(CORNER) > ESCAPE_DIST:
+		var d: float = enemy.global_position.distance_to(CORNER)
+		if unpinned_at < 0 and d > UNPIN_DIST:
+			unpinned_at = i
+		if d > ESCAPE_DIST:
 			escaped_at = i
 			break
-	t.check(escaped_at >= 0, "corner: pinned enemy gets 500px clear within 6s (escaped_at=%d)" % escaped_at)
+	t.check(unpinned_at >= 0 and unpinned_at <= UNPIN_FRAMES,
+		"corner: out of the pocket within 5.5s (unpinned_at=%d)" % unpinned_at)
+	t.check(escaped_at >= 0,
+		"corner: fully clear (500px) within 9s (escaped_at=%d)" % escaped_at)
 
 	t.current_scene = null
 	t.root.remove_child(arena)

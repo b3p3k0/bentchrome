@@ -9,7 +9,9 @@ static func _scale(v: int, lo: float, hi: float) -> float:
 
 static func apply(stats: VehicleStats, controller, health) -> void:
 	controller.max_speed = _scale(stats.top_speed, 360.0, 640.0)
-	controller.acceleration = _scale(stats.acceleration, 450.0, 1300.0)
+	# Base pull is deliberately low: launch_boost carries the standing start and
+	# accel_taper thins the pull near top (mid car ~3.5s to top, not the old 0.6s).
+	controller.acceleration = _scale(stats.acceleration, 80.0, 365.0)
 	controller.turn_rate_deg = _scale(stats.handling, 130.0, 250.0)
 	controller.lateral_grip = _scale(stats.handling, 4.5, 10.0)
 	controller.mass = float(stats.mass)
