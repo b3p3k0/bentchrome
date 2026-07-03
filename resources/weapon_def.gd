@@ -20,5 +20,6 @@ enum Kind { PROJECTILE, BEAM, DASH, TRIGGER }
 @export var spread_deg := 0.0           # fan width for multi-pellet salvos
 @export var pellets := 1
 @export var projectile_scene: PackedScene
+@export var pierces_cover := false      # projectile ignores obstacles (layer 3)
 @export var stub := false               # not implemented yet — fires nothing
 @export_multiline var note := ""        # design intent (esp. for stubs)

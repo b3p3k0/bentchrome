@@ -28,6 +28,13 @@ window/size/viewport_height=720
 window/size/resizable=false
 window/stretch/mode="viewport"
 
+[layer_names]
+
+2d_physics/layer_1="ground"
+2d_physics/layer_2="wall"
+2d_physics/layer_3="obstacle"
+2d_physics/layer_8="terrain"
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0

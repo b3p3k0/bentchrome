@@ -123,6 +123,7 @@ position = Vector2(760, -120)
 position = Vector2(560, 300)
 
 [node name="Block1" type="StaticBody2D" parent="."]
+collision_layer = 4
 position = Vector2(-420, -240)
 
 [node name="Vis" type="Polygon2D" parent="Block1"]
@@ -133,6 +134,7 @@ polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
 shape = SubResource("RectangleShape2D_block")
 
 [node name="Block2" type="StaticBody2D" parent="."]
+collision_layer = 4
 position = Vector2(-520, 180)
 
 [node name="Vis" type="Polygon2D" parent="Block2"]
@@ -143,6 +145,7 @@ polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
 shape = SubResource("RectangleShape2D_block")
 
 [node name="Block3" type="StaticBody2D" parent="."]
+collision_layer = 4
 position = Vector2(120, 520)
 
 [node name="Vis" type="Polygon2D" parent="Block3"]

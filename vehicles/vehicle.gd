@@ -8,12 +8,13 @@ extends CharacterBody2D
 ## never spins); only the Visual rotates. Combat is free-for-all: faction is
 ## identity only, not damage immunity.
 ##
-## Collision layers: 1 = ground (vehicles, blocks, dummies), 2 = walls/barriers.
-## While airborne the car drops the ground bit (clears blocks) but keeps the wall
-## bit, so ramp jumps can't leave the arena.
+## Collision layers: 1 = ground (vehicles, dummies), 2 = walls/barriers,
+## 4 = obstacles (blocks/cover). While airborne the car keeps only the wall bit,
+## so ramp jumps clear obstacles but can't leave the arena.
 
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
+const LAYER_OBSTACLE := 4
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -133,8 +134,9 @@ func _update_depth(delta: float) -> void:
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
 
 func _set_airborne(on: bool) -> void:
-	# Airborne: keep the wall bit (stay in the arena), drop ground (clear blocks).
-	set_deferred("collision_mask", LAYER_WALL if on else (LAYER_GROUND | LAYER_WALL))
+	# Airborne: keep the wall bit (stay in the arena), drop ground + obstacles
+	# (clear other cars and blocks — ramp jumps sail over cover).
+	set_deferred("collision_mask", LAYER_WALL if on else (LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE))
 
 func launch_from_ramp() -> void:
 	if height > 0.0 or velocity.length() < min_launch_speed:

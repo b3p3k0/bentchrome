@@ -16,6 +16,7 @@ extends Node
 @export var spread_deg := 0.0
 @export var pellets := 1
 @export var projectile_scene: PackedScene
+@export var pierces_cover := false      # spawned shots ignore the obstacle layer
 
 @export_group("Heat")
 @export var heat_per_shot := 0.0   # 0 = no heat mechanic (secondaries)
@@ -47,6 +48,7 @@ func set_weapon(w: WeaponDef) -> void:
 	pellets = maxi(w.pellets, 1)
 	if w.projectile_scene:
 		projectile_scene = w.projectile_scene
+	pierces_cover = w.pierces_cover
 	_stub = w.stub
 	on_hit_effects = w.on_hit_effects
 
@@ -87,6 +89,8 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 		elif spread_deg > 0.0:
 			dir = direction.rotated(deg_to_rad(randf_range(-spread_deg * 0.5, spread_deg * 0.5)))
 		var p := projectile_scene.instantiate() as Projectile
+		if pierces_cover:
+			p.collision_mask &= ~4  # drop the obstacle bit — flies through cover
 		get_tree().current_scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects

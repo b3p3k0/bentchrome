@@ -13,4 +13,5 @@ projectile_lifetime = 6.0
 turn_rate_deg = 200.0
 acquisition_radius = 3000.0
 projectile_scene = ExtResource("2_proj")
-note = "Map-wide aggressive homing. 'Passes through cover' (wall-ignoring projectile) deferred."
+pierces_cover = true
+note = "Map-wide aggressive homing. Passes through cover (obstacle layer); the arena boundary still stops it."
