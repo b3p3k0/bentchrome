@@ -24,9 +24,9 @@ const PRESET_WILDCARD := Vector3(1, 1, 1)   # all-rounder
 
 # Pure trait sets, blended by `mix`. [near, far, flee_hp, w_near, w_weak, flank]
 const PURE := {
-	"agg": {"near": 140.0, "far": 340.0, "flee": 0.15, "w_near": 1.0, "w_weak": 0.0, "flank": 0.0},
-	"amb": {"near": 200.0, "far": 480.0, "flee": 0.30, "w_near": 1.0, "w_weak": 0.0, "flank": 1.0},
-	"opp": {"near": 320.0, "far": 640.0, "flee": 0.45, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
+	"agg": {"near": 110.0, "far": 300.0, "flee": 0.10, "w_near": 1.0, "w_weak": 0.0, "flank": 0.0},
+	"amb": {"near": 160.0, "far": 420.0, "flee": 0.22, "w_near": 1.0, "w_weak": 0.0, "flank": 1.0},
+	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
 enum Mode { PURSUE, EVADE }
@@ -89,9 +89,9 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 	var diff := wrapf(approach - vehicle.heading, -PI, PI)
 	var aim := wrapf(bearing - vehicle.heading, -PI, PI)
 	return {
-		"throttle": 1.0 if absf(diff) < 1.2 else 0.2,
+		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
 		"steer": clampf(diff * 2.0, -1.0, 1.0),
-		"fire_mg": absf(aim) < 0.25 and dist < FIRE_RANGE,
+		"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE,
 		"fire_selected": false,
 	}
 
