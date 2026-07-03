@@ -14,7 +14,7 @@ check_cmd() {
 }
 
 detect_godot() {
-  local candidates=("godot4" "godot" "godot4.2" "godot4.1" "godot4.0")
+  local candidates=("godot4.7" "godot4" "godot" "godot4.2" "godot4.1" "godot4.0")
   for candidate in "${candidates[@]}"; do
     if command -v "$candidate" >/dev/null 2>&1; then
       printf "✅ %-8s %s\n" "$candidate" "$(command -v "$candidate")"
@@ -27,7 +27,7 @@ detect_godot() {
     return 0
   fi
 
-  local search_dirs=("$HOME/Applications" "$HOME/bin" "/opt/godot" "/usr/local/bin")
+  local search_dirs=("$HOME/.local/bin" "$HOME/Applications" "$HOME/bin" "/opt/godot" "/usr/local/bin")
   for dir in "${search_dirs[@]}"; do
     if [ -d "$dir" ]; then
       local found
