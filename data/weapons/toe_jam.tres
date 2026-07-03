@@ -5,5 +5,6 @@
 [resource]
 script = ExtResource("1_def")
 display_name = "Toe Jam"
-stub = true
-note = "Triggers on collision when held; heavy hit replacing normal crash damage. Needs collision-charge system."
+kind = 3
+damage = 60.0
+note = "Charged ram: arm it (bumper glows) and the next landed ram deals a flat 60 instead of speed-scaled crash damage. Held until it connects; still needs a real hit (above ram_min_speed)."

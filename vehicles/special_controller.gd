@@ -25,6 +25,7 @@ var _beam_line: Line2D = null
 var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
+var _armed := false
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -170,5 +171,29 @@ func _end_dash(vehicle: CharacterBody2D) -> void:
 	var airborne: bool = vehicle.get("height") != null and vehicle.get("height") > 0.0
 	vehicle.set_deferred("collision_mask", 2 if airborne else 7)
 
-func _trigger(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
-	return false  # TODO (Toe Jam): arm a charged collision hit until the next ram
+## Toe Jam: arm a charge that replaces the next landed ram's speed-scaled
+## damage with one heavy flat hit (def.damage). Held until it connects; the
+## front bumper glows while armed.
+func _trigger(pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
+	if not pressed or _armed:
+		return false
+	_armed = true
+	_set_bumper_glow(true)
+	return true
+
+## Called by Vehicle._update_ram on a landed ram. Pays out the charged damage
+## exactly once (0.0 when unarmed).
+func take_armed_hit() -> float:
+	if not _armed:
+		return 0.0
+	_armed = false
+	_set_bumper_glow(false)
+	return _def.damage if _def else 0.0
+
+func _set_bumper_glow(on: bool) -> void:
+	var parent := get_parent()
+	if parent == null:
+		return
+	var bumper := parent.get_node_or_null("Visual/FrontBumper") as CanvasItem
+	if bumper:
+		bumper.modulate = Color(2.2, 1.6, 0.6) if on else Color.WHITE

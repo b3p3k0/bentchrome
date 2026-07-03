@@ -190,6 +190,11 @@ func _update_ram(delta: float) -> void:
 		if other is Vehicle and other != self:
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
-				other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale)
+				# An armed Toe Jam charge replaces the speed-scaled hit.
+				var charged: float = _special.take_armed_hit() if _special else 0.0
+				if charged > 0.0:
+					other.take_ram_damage(charged)
+				else:
+					other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale)
 				_ram_cd = ram_cooldown
 				break
