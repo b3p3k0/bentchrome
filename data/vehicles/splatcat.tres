@@ -18,3 +18,5 @@ special_power = 8
 primary_color = Color(0.7882353, 0.32941177, 0.101960786, 1)
 accent_color = Color(1, 0.5411765, 0.25490198, 1)
 special = ExtResource("2_a4rq5")
+special_ammo_cap = 2
+special_recharge_seconds = 6.0

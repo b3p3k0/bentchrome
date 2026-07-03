@@ -1,7 +1,14 @@
-[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
 [ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="2_proj"]
+[ext_resource type="Script" path="res://resources/status_effect.gd" id="3_fx"]
+
+[sub_resource type="Resource" id="Res_molotov_burn"]
+script = ExtResource("3_fx")
+kind = &"burn"
+duration = 15.0
+magnitude = 3.0
 
 [resource]
 script = ExtResource("1_def")
@@ -11,4 +18,5 @@ damage = 12.0
 projectile_speed = 850.0
 projectile_lifetime = 1.6
 projectile_scene = ExtResource("2_proj")
-note = "Impact burst implemented; 15s burn-over-time deferred to the status-effect system."
+on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_molotov_burn")])
+note = "Flaming bottle: low initial hit, then a 15s burn (3 dps)."

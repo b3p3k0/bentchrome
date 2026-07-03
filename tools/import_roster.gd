@@ -55,6 +55,9 @@ func _init() -> void:
 		vs.primary_color = Color(cols.get("primary", "#cccccc"))
 		vs.accent_color = Color(cols.get("accent", "#ffffff"))
 
+		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
+		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
+
 		var sid := String(c.get("id", ""))
 		if SPECIALS.has(sid):
 			vs.special = load(SPECIALS[sid])

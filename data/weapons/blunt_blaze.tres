@@ -1,9 +1,24 @@
-[gd_resource type="Resource" script_class="WeaponDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="2_proj"]
+[ext_resource type="Script" path="res://resources/status_effect.gd" id="3_fx"]
+
+[sub_resource type="Resource" id="Res_blaze_burn"]
+script = ExtResource("3_fx")
+kind = &"burn"
+duration = 10.0
+magnitude = 4.0
 
 [resource]
 script = ExtResource("1_def")
 display_name = "Blunt Blaze"
-stub = true
-note = "Front cone of fire that widens with distance + 10s burn. Needs cone shape + burn DoT."
+cooldown = 0.25
+damage = 4.0
+projectile_speed = 480.0
+projectile_lifetime = 0.5
+spread_deg = 40.0
+pellets = 7
+projectile_scene = ExtResource("2_proj")
+on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_blaze_burn")])
+note = "Front fire cone (~240px, widens with distance). Hold to torch — ammo cap 24 recharging 0.6s makes it a sustained flamethrower. Hits ignite for 10s."

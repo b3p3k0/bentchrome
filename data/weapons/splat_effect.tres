@@ -1,9 +1,22 @@
-[gd_resource type="Resource" script_class="WeaponDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="2_proj"]
+[ext_resource type="Script" path="res://resources/status_effect.gd" id="3_fx"]
+
+[sub_resource type="Resource" id="Res_splat_slow"]
+script = ExtResource("3_fx")
+kind = &"slow"
+duration = 3.0
+magnitude = 0.5
 
 [resource]
 script = ExtResource("1_def")
 display_name = "Splat Effect"
-stub = true
-note = "On hit, halve target speed (capped 50%) for 3s. Needs slow debuff."
+cooldown = 2.0
+damage = 10.0
+projectile_speed = 820.0
+projectile_lifetime = 2.2
+projectile_scene = ExtResource("2_proj")
+on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_splat_slow")])
+note = "Paint glob: light hit, victim's speed halved for 3s (slow status). Chase denial."

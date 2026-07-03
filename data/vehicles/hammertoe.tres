@@ -17,3 +17,4 @@ special_power = 7
 primary_color = Color(0.5411765, 0.25882354, 1, 1)
 accent_color = Color(0.32156864, 0.07058824, 0.6431373, 1)
 special = ExtResource("2_dd6xq")
+special_recharge_seconds = 8.0
