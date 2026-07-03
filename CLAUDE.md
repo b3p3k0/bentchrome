@@ -19,7 +19,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 ## Development environment
 
 - **Godot 4.7** standard build. A binary is installed at `~/.local/bin/godot` but may not be on `PATH`. Tooling resolves the engine via `GODOT_BIN`, then `PATH`, then `~/.local/bin/godot`.
-- **Python 3.10+**, **git**, **rg** (ripgrep). `./RUNME.sh` checks for these (note: its Godot search does not yet cover `~/.local/bin`; set `GODOT_BIN` if needed).
+- **Python 3.10+**, **git**, **rg** (ripgrep). `./RUNME.sh` checks for these.
 
 ## Repository layout
 

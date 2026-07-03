@@ -3,7 +3,7 @@
 This document condenses the master design specs into quick-reference points we can reference while scoping tasks or writing prompts for Claude Code.
 
 ## Core Pillars
-- Speedy, destructive vehicular combat with eight-directional driving, ramps, pits, and multiple surface types that affect traction.
+- Speedy, destructive vehicular combat with free-angle arcade driving (inertia, drift, surface-sensitive handling; vehicles drawn as 16-frame directional sprites), ramps, pits, and multiple surface types that affect traction.
 - Distinct vehicle silhouettes and handling; each car has machine guns (infinite), a finite primary weapon, and an auto-recharging special.
 - Arena structure that rewards scavenging, environmental destruction, and short-term improvisation under pressure.
 
@@ -16,7 +16,7 @@ This document condenses the master design specs into quick-reference points we c
 6. **Central Park (Boss)** – confined boss arena continuing Downtown’s topology.
 
 ## Enemy & AI Variety
-- Archetypes: aggressor, ambusher, defender, mini-boss, boss.
+- Archetypes: aggressor, ambusher, opportunist — a blendable weight mix `Vector3(aggressor, ambusher, opportunist)` so pure types and hybrids share one system; plus tougher mini-boss/boss variants.
 - Mix behaviors per level for unpredictability: target switching, cover use, aggression ramps.
 
 ## Systems Checklist
@@ -29,7 +29,7 @@ This document condenses the master design specs into quick-reference points we c
 - Engine: Godot 4 (primary) with GDScript; optional C# modules.
 - Physics baseline: Tilemap-first with lightweight rigid bodies.
 - Rendering: 2D sprites + pseudo-lighting overlays, 16-bit grimy dystopian aesthetic.
-- Input abstraction: SDL2/native for keyboard, mouse, controllers.
+- Input: Godot `InputMap` actions (keyboard, mouse, controllers) via the `InputRouter` autoload; actions validated on boot.
 - Packaging: AppImage focus; 60 FPS on mid-range GPUs.
 
 Use this page when drafting implementation prompts so we keep scope aligned with the official master plan.

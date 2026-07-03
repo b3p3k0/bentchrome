@@ -38,7 +38,7 @@ Each character has five core combat statistics rated 1-10:
 After confirming your selection, you'll drop directly into the Test Arena to put your chosen driver through their paces.
 
 ### Combat Controls
-- Movement: `WASD` moves strictly up/down/left/right with acceleration/deceleration for 16-bit arcade feel. Last key pressed wins; no diagonal movement. Controllers follow the same 4-direction rules (`arrow keys`, `D-pad`, `left stick` also supported).
+- Movement: steer-to-drive. `W`/`Up` throttles, `S`/`Down` brakes into reverse, `A`/`D` or `Left`/`Right` steer (`left stick` does the same on a controller). Expect inertia and drift — these are scrap sleds, not go-karts, and every surface grips differently.
 - Aim/Fire: mouse or right stick to aim, left click / right trigger to hose bullets.
 - Special Weapon: `Space` / north face button. Cooldown regenerates—don't hoard it.
 - Turbo: `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes.
@@ -50,7 +50,7 @@ First arena (Arena) is the tutorial crash-test. Freeway introduces overpasses an
 ## FAQs
 
 **Keyboard or controller?**  
-Both. Both inputs use the same 4-direction movement with responsive acceleration/deceleration for precise arcade control.
+Both. Same steer-to-drive scheme either way — throttle, brake/reverse, steer — with the same inertia and drift.
 
 **Can I remap controls?**  
 Yep—Settings > Controls. If something refuses to bind, log an issue and we’ll slap it back into shape.
@@ -75,7 +75,7 @@ Because I can't code and I can't draw and instead of spending hours learning how
 - Issues and feature requests: open a ticket with logs, repro steps, and screenshots of the carnage.
 - Contributing:
   1. Fork, branch, and keep changes scoped to one arena/system.
-  2. Run lint/tests (doc incoming) and attach short clips/gifs with your PR.
+  2. Run `tools/smoke.sh` and `tools/test.sh` (both headless, both must pass) and attach short clips/gifs with your PR.
   3. Lore-friendly commit messages earn imaginary salvage credits.
 
 ## Acknowledgements

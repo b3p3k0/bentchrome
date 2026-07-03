@@ -21,8 +21,11 @@ the behavior — the data and wiring already exist.
 | Smoky | Taser | close-range channeled beam + handling cripple (slow) |
 | Splat Cat | Splat Effect | on-hit speed-halving debuff |
 
-## Shared systems to build first
-- **Status effects** — burn-over-time, slow (covers Blunt Blaze, Molotov burn, Taser, Splat Effect).
-- **Dash / leap** movement ability (Leap).
-- **Collision-trigger** charge (Toe Jam).
-- **Channeled beam** weapon type (Taser).
+## Shared systems
+- **Status effects** — **built**: `StatusEffectSpec` (`resources/status_effect.gd`) +
+  `StatusReceiver` (`vehicles/status_receiver.gd`); burn / slow / invuln with
+  duration refresh, tested by `tests/test_status_effects.gd`. Remaining work is
+  wiring specials to apply them (Blunt Blaze, Molotov burn, Taser, Splat Effect).
+- **Dash / leap** movement ability (Leap) — pending; `SpecialController` DASH slot exists.
+- **Collision-trigger** charge (Toe Jam) — pending; TRIGGER slot exists, general ram damage landed.
+- **Channeled beam** weapon type (Taser) — pending; BEAM slot exists.
