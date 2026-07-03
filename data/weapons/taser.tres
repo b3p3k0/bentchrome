@@ -5,5 +5,7 @@
 [resource]
 script = ExtResource("1_def")
 display_name = "Taser"
-stub = true
-note = "Close-range auto-lock channeled shock + handling cripple (up to 20s). Needs channel beam + slow."
+kind = 1
+damage = 12.0
+acquisition_radius = 200.0
+note = "Burst zap: latches the nearest car within ~3 car lengths and shocks it for 4s (12 dps + handling cripple). Latch holds through turns; breaks only if cover or another car crosses the beam. 3 charges, 8s recharge each."
