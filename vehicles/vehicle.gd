@@ -80,6 +80,7 @@ func _apply_stats() -> void:
 		_controller.set(k, stats.handling_overrides[k])
 	body_color = stats.primary_color
 	($Visual/Body as Polygon2D).color = body_color
+	($Visual/FrontBumper as Polygon2D).color = stats.accent_color
 	if _rack:
 		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds)
 	if stats.special and _special:

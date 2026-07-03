@@ -13,7 +13,7 @@
 [ext_resource type="Script" path="res://vehicles/weapon_rack.gd" id="11_rack"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
-radius = 18.0
+radius = 22.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_sensor"]
 radius = 6.0
@@ -31,20 +31,20 @@ script = ExtResource("3_drv")
 
 [node name="Shadow" type="Polygon2D" parent="."]
 color = Color(0, 0, 0, 0.35)
-polygon = PackedVector2Array(-22, 0, -16, -10, 16, -10, 22, 0, 16, 10, -16, 10)
+polygon = PackedVector2Array(-28, -20, 28, -20, 28, 20, -28, 20)
 
 [node name="Visual" type="Node2D" parent="."]
 
 [node name="Body" type="Polygon2D" parent="Visual"]
 color = Color(0.85, 0.2, 0.3, 1)
-polygon = PackedVector2Array(-24, -14, 24, -14, 24, 14, -24, 14)
+polygon = PackedVector2Array(-26, -22, 26, -22, 26, 22, -26, 22)
 
-[node name="Nose" type="Polygon2D" parent="Visual"]
+[node name="FrontBumper" type="Polygon2D" parent="Visual"]
 color = Color(1, 0.85, 0.2, 1)
-polygon = PackedVector2Array(24, -10, 40, 0, 24, 10)
+polygon = PackedVector2Array(20, -22, 26, -22, 26, 22, 20, 22)
 
 [node name="Muzzle" type="Marker2D" parent="Visual"]
-position = Vector2(40, 0)
+position = Vector2(30, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_veh")
