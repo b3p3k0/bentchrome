@@ -67,6 +67,48 @@ func set_bounds(width: float, height: float) -> void:
 	level.bounds = {"width": width, "height": height}
 	_mutated()
 
+# --- entity mutations (canvas/palette/inspector go through these) ------------
+
+func count(list_key: String) -> int:
+	return level[list_key].size()
+
+## Appends and returns the new index.
+func add_entity(list_key: String, entry: Dictionary) -> int:
+	level[list_key].append(entry)
+	_mutated()
+	return level[list_key].size() - 1
+
+func remove_entity(list_key: String, index: int) -> void:
+	level[list_key].remove_at(index)
+	_mutated()
+
+func move_entity(list_key: String, index: int, pos: Vector2) -> void:
+	var entry: Dictionary = level[list_key][index]
+	if entry.pos[0] == pos.x and entry.pos[1] == pos.y:
+		return
+	entry.pos = [pos.x, pos.y]
+	_mutated()
+
+func set_entity_prop(list_key: String, index: int, key: String, value: Variant) -> void:
+	var entry: Dictionary = level[list_key][index]
+	if entry.get(key) == value:
+		return
+	entry[key] = value
+	_mutated()
+
+## The player spawn always exists (schema default), so "placing" it moves it.
+func move_player_spawn(pos: Vector2) -> void:
+	if level.player_spawn.pos[0] == pos.x and level.player_spawn.pos[1] == pos.y:
+		return
+	level.player_spawn.pos = [pos.x, pos.y]
+	_mutated()
+
+func set_player_heading(deg: float) -> void:
+	if level.player_spawn.heading_deg == deg:
+		return
+	level.player_spawn.heading_deg = deg
+	_mutated()
+
 func _mutated() -> void:
 	dirty = true
 	changed.emit()

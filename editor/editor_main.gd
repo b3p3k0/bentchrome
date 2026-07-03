@@ -7,6 +7,8 @@ extends Node2D
 const DocumentScript := preload("res://editor/editor_document.gd")
 const CanvasScript := preload("res://editor/editor_canvas.gd")
 const CameraScript := preload("res://editor/editor_camera.gd")
+const PaletteScript := preload("res://editor/palette.gd")
+const EntityInspectorScript := preload("res://editor/entity_inspector.gd")
 const GridFloorScript := preload("res://levels/grid_floor.gd")
 const Loader := preload("res://levels/level_loader.gd")
 const Schema := preload("res://levels/level_schema.gd")
@@ -109,6 +111,15 @@ func _build_ui() -> void:
 	ui.add_child(_build_toolbar())
 	ui.add_child(_build_inspector())
 	ui.add_child(_build_status_bar())
+	var palette: PanelContainer = PaletteScript.new()
+	palette.setup(document)
+	palette.tool_changed.connect(_canvas.set_tool)
+	ui.add_child(palette)
+	var entity_inspector: PanelContainer = EntityInspectorScript.new()
+	entity_inspector.setup(document)
+	ui.add_child(entity_inspector)
+	_canvas.selection_changed.connect(entity_inspector.set_selection)
+	_canvas.tool_cancelled.connect(palette.reset_to_select)
 	_open_dialog = _make_dialog(FileDialog.FILE_MODE_OPEN_FILE, _on_open_selected)
 	_save_dialog = _make_dialog(FileDialog.FILE_MODE_SAVE_FILE, _on_save_as_selected)
 	ui.add_child(_open_dialog)
@@ -132,8 +143,8 @@ func _build_toolbar() -> Control:
 
 func _build_inspector() -> Control:
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	panel.anchor_top = 0.5
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_top = 48  # clear the toolbar
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	panel.custom_minimum_size = Vector2(240, 0)
 	var box := VBoxContainer.new()

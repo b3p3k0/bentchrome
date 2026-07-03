@@ -47,3 +47,14 @@ func test_terrain_types_all_covered() -> void:
 func test_by_id() -> void:
 	t.check(Catalog.by_id("block").list_key == "blocks", "by_id finds block")
 	t.check(Catalog.by_id("no_such_thing").is_empty(), "by_id misses cleanly")
+
+func test_for_entity_resolves_presets() -> void:
+	var homing := Catalog.for_entity("pickups", {"pos": [0.0, 0.0], "kind": "homing"})
+	t.check(homing.id == "pickup_homing", "homing crate resolves by preset")
+	var standard := Catalog.for_entity("pickups", {"pos": [0.0, 0.0], "kind": "standard"})
+	t.check(standard.id == "pickup_standard", "standard crate resolves by preset")
+	var ice := Catalog.for_entity("terrain", {"type": "ice", "rect": [0.0, 0.0, 128.0, 128.0]})
+	t.check(ice.id == "terrain_ice", "terrain resolves by type")
+	var player := Catalog.for_entity("player_spawn", {"pos": [0.0, 0.0], "heading_deg": 0.0})
+	t.check(player.id == "player_spawn", "player spawn resolves without preset")
+	t.check(Catalog.for_entity("pickups", {"kind": "nuke"}).is_empty(), "unknown preset misses cleanly")

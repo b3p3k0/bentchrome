@@ -52,6 +52,29 @@ func test_save_and_reopen_round_trip() -> void:
 	t.check(doc2.level.enemy_spawns.size() == 1, "reopen: entities survived")
 	_cleanup()
 
+func test_entity_ops() -> void:
+	var doc := _doc()
+	var index: int = doc.add_entity("blocks", {"pos": [128.0, 128.0], "size": [128.0, 128.0]})
+	t.check(index == 0 and doc.count("blocks") == 1, "add_entity appends and counts")
+	t.check(doc.dirty, "add_entity marks dirty")
+	doc.move_entity("blocks", 0, Vector2(256.0, -128.0))
+	t.check(doc.level.blocks[0].pos == [256.0, -128.0], "move_entity updates pos")
+	doc.set_entity_prop("blocks", 0, "size", [256.0, 128.0])
+	t.check(doc.level.blocks[0].size == [256.0, 128.0], "set_entity_prop updates value")
+	doc.remove_entity("blocks", 0)
+	t.check(doc.count("blocks") == 0, "remove_entity deletes")
+
+func test_player_spawn_ops() -> void:
+	var doc := _doc()
+	var signals := [0]
+	doc.changed.connect(func() -> void: signals[0] += 1)
+	doc.move_player_spawn(Vector2(320.0, 0.0))
+	t.check(doc.level.player_spawn.pos == [320.0, 0.0], "player spawn moves")
+	doc.move_player_spawn(Vector2(320.0, 0.0))
+	t.check(signals[0] == 1, "same position doesn't re-emit")
+	doc.set_player_heading(90.0)
+	t.check_approx(doc.level.player_spawn.heading_deg, 90.0, "heading set")
+
 func test_open_reports_problems() -> void:
 	var doc := _doc()
 	t.check(not doc.open("user://levels/_no_such_file.json").is_empty(), "missing file reported")

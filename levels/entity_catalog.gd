@@ -41,7 +41,7 @@ const ENTRIES := [
 		"scene": "res://vehicles/vehicle.tscn",
 		"single": true,
 		"props": [
-			{"key": "heading_deg", "display": "Facing (deg)", "min": 0.0, "max": 360.0, "default": 0.0},
+			{"key": "heading_deg", "display": "Facing (deg)", "min": 0.0, "max": 360.0, "step": 15.0, "default": 0.0},
 		],
 		"ghost": {"color": Color(0.3, 0.9, 0.4, 0.9), "half_size": Vector2(28, 20), "tag": "P"},
 	},
@@ -60,7 +60,7 @@ const ENTRIES := [
 		"display": "Block",
 		"builtin": "block",
 		"props": [
-			{"key": "size", "display": "Size (w, h)", "min": Schema.BLOCK_SIDE_MIN, "max": Schema.BLOCK_SIDE_MAX, "default": [128.0, 128.0]},
+			{"key": "size", "display": "Size", "min": Schema.BLOCK_SIDE_MIN, "max": Schema.BLOCK_SIDE_MAX, "step": 64.0, "default": [128.0, 128.0]},
 		],
 		"ghost": {"color": BLOCK_COLOR, "half_size": Vector2(64, 64), "tag": ""},
 	},
@@ -71,8 +71,8 @@ const ENTRIES := [
 		"scene": "res://environment/ammo_pickup.tscn",
 		"preset": {"kind": "standard"},
 		"props": [
-			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "default": 2.0},
-			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "default": 20.0},
+			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 2.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
 		],
 		"ghost": {"color": PICKUP_COLORS["standard"], "half_size": Vector2(14, 14), "tag": "M"},
 	},
@@ -83,8 +83,8 @@ const ENTRIES := [
 		"scene": "res://environment/ammo_pickup.tscn",
 		"preset": {"kind": "homing"},
 		"props": [
-			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "default": 1.0},
-			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "default": 20.0},
+			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 1.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
 		],
 		"ghost": {"color": PICKUP_COLORS["homing"], "half_size": Vector2(14, 14), "tag": "H"},
 	},
@@ -94,7 +94,7 @@ const ENTRIES := [
 		"display": "Target Dummy",
 		"scene": "res://environment/target_dummy.tscn",
 		"props": [
-			{"key": "max_hp", "display": "Hit Points", "min": Schema.HP_MIN, "max": Schema.HP_MAX, "default": 60.0},
+			{"key": "max_hp", "display": "Hit Points", "min": Schema.HP_MIN, "max": Schema.HP_MAX, "step": 10.0, "default": 60.0},
 		],
 		"ghost": {"color": Color(0.75, 0.65, 0.3, 0.9), "half_size": Vector2(28, 28), "tag": "D"},
 	},
@@ -130,5 +130,21 @@ const ENTRIES := [
 static func by_id(id: String) -> Dictionary:
 	for entry in ENTRIES:
 		if entry.id == id:
+			return entry
+	return {}
+
+## Catalog entry for an already-placed entity: matches list_key, and every
+## preset field must agree (distinguishes standard vs homing crates, terrain
+## types). Player spawn passes any entity because it has no preset.
+static func for_entity(list_key: String, entity: Dictionary) -> Dictionary:
+	for entry in ENTRIES:
+		if entry.list_key != list_key:
+			continue
+		var preset: Dictionary = entry.get("preset", {})
+		var matches := true
+		for key in preset:
+			if entity.get(key) != preset[key]:
+				matches = false
+		if matches:
 			return entry
 	return {}
