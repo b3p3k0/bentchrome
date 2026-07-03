@@ -29,9 +29,15 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE }
+enum Mode { PURSUE, EVADE, UNSTICK }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
+
+# Stuck escape: pinned against a wall/block -> reverse out, then re-engage.
+const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
+const STUCK_TRIP := 0.6          # seconds of stuckness before the escape kicks in
+const UNSTICK_TIME := 1.0        # how long to back out
+const UNSTICK_EXIT_SPEED := 140.0  # moving this fast again = free early
 
 # Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
 const FEELER_MASK := 6
@@ -49,25 +55,32 @@ var _flank := 0.0
 var _mode: Mode = Mode.PURSUE
 var _avoid_bias := 0.0   # last feeler steering bias (also unstick escape hint)
 var _blocked := false    # center feeler hit close ahead
+var _stuck_t := 0.0
+var _unstick_t := 0.0
 
-func _ready() -> void:
-	var w := mix
+## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
+static func blend_params(m: Vector3) -> Dictionary:
+	var w := m
 	var sum := w.x + w.y + w.z
 	if sum <= 0.0:
 		w = Vector3(1, 0, 0)
 		sum = 1.0
 	w /= sum
-	var a: Dictionary = PURE["agg"]
-	var b: Dictionary = PURE["amb"]
-	var o: Dictionary = PURE["opp"]
-	_near = w.x * a["near"] + w.y * b["near"] + w.z * o["near"]
-	_far = w.x * a["far"] + w.y * b["far"] + w.z * o["far"]
-	_flee = w.x * a["flee"] + w.y * b["flee"] + w.z * o["flee"]
-	_w_near = w.x * a["w_near"] + w.y * b["w_near"] + w.z * o["w_near"]
-	_w_weak = w.x * a["w_weak"] + w.y * b["w_weak"] + w.z * o["w_weak"]
-	_flank = w.x * a["flank"] + w.y * b["flank"] + w.z * o["flank"]
+	var out := {}
+	for key in ["near", "far", "flee", "w_near", "w_weak", "flank"]:
+		out[key] = w.x * PURE["agg"][key] + w.y * PURE["amb"][key] + w.z * PURE["opp"][key]
+	return out
 
-func get_intent(vehicle, _delta: float) -> Dictionary:
+func _ready() -> void:
+	var p := blend_params(mix)
+	_near = p["near"]
+	_far = p["far"]
+	_flee = p["flee"]
+	_w_near = p["w_near"]
+	_w_weak = p["w_weak"]
+	_flank = p["flank"]
+
+func get_intent(vehicle, delta: float) -> Dictionary:
 	var target := _select_target(vehicle)
 	if target == null:
 		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
@@ -76,6 +89,16 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 	var dist := to_target.length()
 	var bearing := to_target.angle()
 
+	_update_feelers(vehicle)
+
+	if _mode == Mode.UNSTICK:
+		_unstick_t -= delta
+		if _unstick_t <= 0.0 or vehicle.get_speed() > UNSTICK_EXIT_SPEED:
+			_mode = Mode.PURSUE
+			_stuck_t = 0.0
+		else:
+			return _unstick_intent(vehicle.heading, bearing)
+
 	if vehicle.get_hp_fraction() < _flee:
 		_mode = Mode.EVADE
 	elif dist > _far:
@@ -83,26 +106,57 @@ func get_intent(vehicle, _delta: float) -> Dictionary:
 	elif dist < _near:
 		_mode = Mode.EVADE
 
-	_update_feelers(vehicle)
-
+	var intent: Dictionary
 	if _mode == Mode.EVADE:
 		var away := wrapf(bearing + PI - vehicle.heading, -PI, PI)
-		return {
+		intent = {
 			"throttle": 1.0 if absf(away) < 1.2 else 0.3,
 			"steer": clampf(away * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
 		}
+	else:
+		var approach := bearing
+		if _flank > 0.0 and dist > _near * 1.5:
+			approach += deg_to_rad(35.0 * _flank)
+		var diff := wrapf(approach - vehicle.heading, -PI, PI)
+		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
+		intent = {
+			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
+			"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE,
+			"fire_selected": false,
+		}
 
-	var approach := bearing
-	if _flank > 0.0 and dist > _near * 1.5:
-		approach += deg_to_rad(35.0 * _flank)
-	var diff := wrapf(approach - vehicle.heading, -PI, PI)
-	var aim := wrapf(bearing - vehicle.heading, -PI, PI)
+	if _update_stuck(vehicle.get_speed(), absf(intent["throttle"]) > 0.5, delta):
+		_mode = Mode.UNSTICK
+		_unstick_t = UNSTICK_TIME
+		return _unstick_intent(vehicle.heading, bearing)
+	return intent
+
+## Accumulates stuckness (trying to move but barely moving); trips once per
+## STUCK_TRIP seconds of it.
+func _update_stuck(speed: float, wants_move: bool, delta: float) -> bool:
+	if wants_move and speed < STUCK_SPEED:
+		_stuck_t += delta
+	else:
+		_stuck_t = 0.0
+	if _stuck_t >= STUCK_TRIP:
+		_stuck_t = 0.0
+		return true
+	return false
+
+## Back out of the pin: full reverse, swinging the nose toward the escape
+## direction (away from the blocked side, else toward the target). Steering is
+## sign-inverted because the controller flips steer while reversing.
+func _unstick_intent(heading: float, bearing: float) -> Dictionary:
+	var desired := _avoid_bias
+	if absf(desired) < 0.05:
+		desired = clampf(wrapf(bearing - heading, -PI, PI), -1.0, 1.0)
 	return {
-		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
-		"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
-		"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE,
+		"throttle": -1.0,
+		"steer": -clampf(desired, -1.0, 1.0),
+		"fire_mg": false,
 		"fire_selected": false,
 	}
 
