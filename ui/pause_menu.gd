@@ -27,9 +27,15 @@ func _set_paused(on: bool) -> void:
 
 func _on_restart() -> void:
 	_set_paused(false)
+	# Reload whatever level is running — arena or a custom level (whose loader
+	# re-reads GameState.pending_level_path on _ready).
+	get_tree().reload_current_scene()
+
+func _on_return_to_editor() -> void:
+	_set_paused(false)
 	var flow := get_node_or_null(^"/root/SceneFlow")
 	if flow:
-		flow.to_arena()
+		flow.goto_scene("res://editor/editor_main.tscn")
 
 func _on_quit_title() -> void:
 	_set_paused(false)
@@ -64,6 +70,9 @@ func _build_ui() -> void:
 
 	_resume_btn = _button(vbox, "Resume", func() -> void: _set_paused(false))
 	_button(vbox, "Restart", _on_restart)
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs and gs.playtest_return_to_editor:
+		_button(vbox, "Return to Editor", _on_return_to_editor)
 	_button(vbox, "Quit to Title", _on_quit_title)
 	_button(vbox, "Quit Desktop", func() -> void: get_tree().quit())
 

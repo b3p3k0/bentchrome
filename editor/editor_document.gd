@@ -51,6 +51,19 @@ func save() -> Error:
 func validate() -> Array[String]:
 	return Schema.validate(level)
 
+## Coming back from a playtest: reload the exact playtested state (including
+## edits that were never saved) but point the document back at its real file.
+## Dirty iff the content no longer matches what's on disk there.
+func restore_playtest(playtest_path: String, original_path: String) -> Array[String]:
+	var problems := open(playtest_path)
+	if path != playtest_path:
+		return problems  # playtest file unreadable/corrupt; document unchanged
+	path = original_path
+	dirty = original_path.is_empty() \
+			or FileAccess.get_file_as_string(original_path) != Schema.serialize(level)
+	changed.emit()
+	return problems
+
 func bounds_half() -> Vector2:
 	return Vector2(level.bounds.width, level.bounds.height) * 0.5
 

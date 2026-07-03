@@ -14,6 +14,7 @@ const Loader := preload("res://levels/level_loader.gd")
 const Schema := preload("res://levels/level_schema.gd")
 
 const LEVELS_DIR := "user://levels"
+const PLAYTEST_PATH := "user://levels/_playtest.json"
 
 var document: EditorDocument
 
@@ -23,6 +24,7 @@ var _title_label: Label
 var _status_label: Label
 var _open_dialog: FileDialog
 var _save_dialog: FileDialog
+var _report_dialog: AcceptDialog
 var _name_edit: LineEdit
 var _author_edit: LineEdit
 var _desc_edit: LineEdit
@@ -35,8 +37,20 @@ func _ready() -> void:
 	_build_world()
 	_build_ui()
 	document.changed.connect(_refresh)
+	_restore_from_playtest()
 	_refresh()
 	print("[boot] editor ready")
+
+## Booted via the pause menu's "Return to Editor": reopen the playtested state.
+func _restore_from_playtest() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null or not gs.playtest_return_to_editor:
+		return
+	document.restore_playtest(PLAYTEST_PATH, gs.editor_open_path)
+	gs.playtest_return_to_editor = false
+	gs.pending_level_path = ""
+	gs.editor_open_path = ""
+	_status("Back from playtest")
 
 func _build_world() -> void:
 	_floor = GridFloorScript.new()
@@ -102,6 +116,41 @@ func _save_to(path: String) -> void:
 	else:
 		_status("Save failed: %s (%s)" % [path, error_string(err)])
 
+func _on_validate() -> void:
+	var errors := document.validate()
+	if errors.is_empty():
+		_report("Validation", "Level is valid — ready to play.")
+	else:
+		_report("Validation — %d problem(s)" % errors.size(), "\n".join(errors))
+
+## Playtest: refuse invalid levels, save the working state to _playtest.json
+## (explicit Save still owns the real file), then drive into the game. The
+## pause menu's "Return to Editor" brings this exact state back.
+func _on_playtest() -> void:
+	var errors := document.validate()
+	if not errors.is_empty():
+		_report("Can't playtest — %d problem(s)" % errors.size(), "\n".join(errors))
+		return
+	var file := FileAccess.open(PLAYTEST_PATH, FileAccess.WRITE)
+	if file == null:
+		_status("Playtest failed: can't write " + PLAYTEST_PATH)
+		return
+	file.store_string(Schema.serialize(document.level))
+	file.close()
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs == null or flow == null:
+		_status("Playtest failed: game autoloads missing")
+		return
+	gs.playtest_return_to_editor = true
+	gs.editor_open_path = document.path
+	flow.to_custom_level(PLAYTEST_PATH)
+
+func _report(title: String, body: String) -> void:
+	_report_dialog.title = title
+	_report_dialog.dialog_text = body
+	_report_dialog.popup_centered()
+
 # --- UI assembly -------------------------------------------------------------
 
 func _build_ui() -> void:
@@ -124,6 +173,8 @@ func _build_ui() -> void:
 	_save_dialog = _make_dialog(FileDialog.FILE_MODE_SAVE_FILE, _on_save_as_selected)
 	ui.add_child(_open_dialog)
 	ui.add_child(_save_dialog)
+	_report_dialog = AcceptDialog.new()
+	ui.add_child(_report_dialog)
 
 func _build_toolbar() -> Control:
 	var panel := PanelContainer.new()
@@ -135,6 +186,8 @@ func _build_toolbar() -> Control:
 	_add_button(bar, "Open", func() -> void: _open_dialog.popup_centered())
 	_add_button(bar, "Save", _on_save)
 	_add_button(bar, "Save As", func() -> void: _save_dialog.popup_centered())
+	_add_button(bar, "Validate", _on_validate)
+	_add_button(bar, "Playtest", _on_playtest)
 	_title_label = Label.new()
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

@@ -75,6 +75,34 @@ func test_player_spawn_ops() -> void:
 	doc.set_player_heading(90.0)
 	t.check_approx(doc.level.player_spawn.heading_deg, 90.0, "heading set")
 
+func test_restore_playtest() -> void:
+	var playtest_path := "user://levels/_test_playtest.json"
+	var doc := _doc()
+	doc.set_field("name", "Playtested")
+	doc.level.enemy_spawns.append({"pos": [448.0, -256.0]})
+	t.check(doc.save_as(TEMP_PATH) == OK, "original saved")
+	# Unsaved edit, then playtest snapshot written (as _on_playtest does).
+	doc.move_player_spawn(Vector2(320.0, 320.0))
+	t.check(doc.save_as(playtest_path) == OK, "playtest snapshot written")
+	var back := _doc()
+	back.restore_playtest(playtest_path, TEMP_PATH)
+	t.check(back.path == TEMP_PATH, "restore points back at the real file")
+	t.check(back.level.player_spawn.pos == [320.0, 320.0], "unsaved edit survived the loop")
+	t.check(back.dirty, "differs from disk -> dirty")
+	# A clean playtest (no edits since save) restores not-dirty.
+	var clean := _doc()
+	clean.open(TEMP_PATH)
+	t.check(clean.save_as(playtest_path) == OK, "clean snapshot written")
+	var back2 := _doc()
+	back2.restore_playtest(playtest_path, TEMP_PATH)
+	t.check(not back2.dirty, "matches disk -> not dirty")
+	# Never-saved level: restore keeps it pathless and dirty.
+	var back3 := _doc()
+	back3.restore_playtest(playtest_path, "")
+	t.check(back3.path.is_empty() and back3.dirty, "unsaved original stays pathless + dirty")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(playtest_path))
+	_cleanup()
+
 func test_open_reports_problems() -> void:
 	var doc := _doc()
 	t.check(not doc.open("user://levels/_no_such_file.json").is_empty(), "missing file reported")
