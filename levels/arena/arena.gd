@@ -14,6 +14,7 @@ func _ready() -> void:
 			push_warning("autoload MISSING: " + autoload_name)
 	print("[boot] arena ready — WASD to drive, Space/LMB to fire")
 	queue_redraw()
+	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	if Dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
 
