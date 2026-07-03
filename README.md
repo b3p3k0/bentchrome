@@ -38,7 +38,8 @@ Each character has five core combat statistics rated 1-10:
 After confirming your selection, you'll drop directly into the Test Arena to put your chosen driver through their paces.
 
 ### Combat Controls
-- Movement: steer-to-drive. `W`/`Up` throttles, `S`/`Down` brakes into reverse, `A`/`D` or `Left`/`Right` steer (`left stick` does the same on a controller). Expect inertia and drift — these are scrap sleds, not go-karts, and every surface grips differently.
+- Movement: steer-to-drive. `W`/`Up` throttles, `S`/`Down` is the brake pedal (hard, but nothing here stops on a dime) and backs up once you're crawling, `A`/`D` or `Left`/`Right` steer (`left stick` does the same on a controller). Weight is real: a motorcycle snaps off the line while a truck grinds up to speed, and lifting the throttle coasts you down gradually — the heavier the ride, the farther it rolls.
+- Handbrake: `Left Ctrl` / east face button. Yanks the rear traction — the car slides and rotates while shedding speed gently. Charge the corner, pull it, swing the nose, release, launch. Drifting is a lifestyle.
 - Machine Gun: `Right click` or `Space`. Infinite ammo, chip damage, fires off the nose. Watch the heat bar — redline it and the gun locks out until it cools.
 - Selected Weapon: `Left click` or `K` fires whatever slot is active. Cycle slots with `Q`/`E` or the mouse wheel: your car's signature special (recharges on its own — don't hoard it), dumb-fire missiles, and homing missiles. All nine signature specials are live — flame cones, lock-on taser zaps, body-check leaps, charged rams; every driver fights different.
 - Ammo: missiles are scavenged, not printed. Grab the green `M` and cyan `H` crates around the arena; crates respawn, your patience won't.

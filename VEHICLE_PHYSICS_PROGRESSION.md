@@ -381,3 +381,24 @@ Console Output (when DEBUG_VEHICLE_TUNING = true):
 ---
 
 *Document updated: Phase 3 complete - Enhanced slip angle physics creates dramatic drifting sensation with "laying rubber down" feel*
+---
+
+## Phase 4 (July 2026) — Mass model, implemented in the rebuild
+
+> Everything above this line describes the **retired prototype** (`scripts/vehicles/player_car.gd` etc. no longer exist). Phase 4 is the first entry for the clean-slate rebuild, where all physics lives in `vehicles/driving_controller.gd` and per-car numbers come from `StatCurves` + `roster.json`.
+
+### What landed
+- **Per-car `mass` stat (1–10)** in `roster.json` → `VehicleStats.mass` → `DrivingController.mass`. Current roster: Mr. Ghastly 1 (bike) … Hammertoe 8 (monster truck); 9–10 reserved for future heavies.
+- **Acceleration** = `acceleration * lerp(1.3, 0.5, mf) * launch_boost * taper` where `mf = (mass−1)/9`, the launch boost (default 1.6, ±40% by mass) fades by 30% of top speed, and `accel_taper` (0.65) thins the pull as speed approaches top. `StatCurves` accel range moved 450–1300 → **80–365** — the boost carries the standing start.
+- **Brake pedal** (`S`): `brake_deceleration` 1500 → **570**, effective `* lerp(1.2, 0.8, mf)`.
+- **Coast**: `coast_deceleration` 420 → **260**, effective `* lerp(1.35, 0.65, mf)` — heavy coasts farther.
+- **Handbrake** (`LCTRL`, new): gentle decel (400) + lateral grip × **0.15** while held — the drift tool.
+
+### Test-locked feel bands (`tests/test_driving_controller.gd`)
+| Measure | Light (m1) | Mid (m5) | Heavy (m8) |
+|---|---|---|---|
+| 0 → 95% top | ≤ 2.4s | 3.0–4.2s | 5.0–7.5s |
+| Brake, top → stop | < mid | 0.7–1.1s | > mid |
+| Coast distance | < mid | ≥ 400px | > mid |
+
+Plus: 0.15s of braking still leaves >60% of top speed ("drastic, never instant"), and the handbrake stops slower than the pedal while lateral velocity survives per the grip factor. Retune freely — but keep these bands green or consciously move them.
