@@ -2,8 +2,8 @@ extends Node2D
 ## World-space view of the open level: draws the wall band exactly where
 ## LevelLoader builds it plus a ghost per entity (catalog colors, so the
 ## preview matches the game's flat-polygon look), and owns mouse interaction —
-## armed-tool placement, click select, drag move, Delete. Terrain rects are
-## the painting card's job.
+## armed-tool placement, click select, drag move, Delete, and drag-rect
+## terrain painting on a 128px grid.
 ##
 ## The editor camera (a later sibling) sees input first and eats space+drag
 ## pans, so a press reaching this node is always meant for the level.
@@ -15,15 +15,19 @@ const Schema := preload("res://levels/level_schema.gd")
 const Catalog := preload("res://levels/entity_catalog.gd")
 
 const SNAP := 64.0
+const TERRAIN_SNAP := 128.0
 const TAG_FONT_SIZE := 28
 # Bottom-to-top draw order; hit-testing walks it top-to-bottom.
-const DRAW_ORDER := ["blocks", "pickups", "dummies", "enemy_spawns"]
+const DRAW_ORDER := ["terrain", "blocks", "pickups", "dummies", "enemy_spawns"]
 
 var document: EditorDocument
 var tool_id := "select"
 var selection := {}  # {"list_key": String, "index": int}; player_spawn uses index -1
 
 var _dragging := false
+var _painting := false
+var _paint_anchor := Vector2.ZERO
+var _paint_current := Vector2.ZERO
 
 func bind(doc: EditorDocument) -> void:
 	document = doc
@@ -44,6 +48,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				_cancel()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_dragging = false
+		if _painting:
+			_commit_paint()
+	elif event is InputEventMouseMotion and _painting:
+		_paint_current = get_global_mouse_position().snapped(Vector2(TERRAIN_SNAP, TERRAIN_SNAP))
+		queue_redraw()
 	elif event is InputEventMouseMotion and _dragging and not selection.is_empty():
 		_move_selected(_snap(get_global_mouse_position()))
 	elif event is InputEventKey and event.pressed and not event.echo:
@@ -57,6 +66,11 @@ func _on_press(world: Vector2) -> void:
 	if tool_id == "select":
 		_set_selection(_hit_test(world))
 		_dragging = not selection.is_empty()
+	elif Catalog.by_id(tool_id).get("builtin", "") == "terrain":
+		_painting = true
+		_paint_anchor = world.snapped(Vector2(TERRAIN_SNAP, TERRAIN_SNAP))
+		_paint_current = _paint_anchor
+		queue_redraw()
 	else:
 		_place(world)
 
@@ -79,9 +93,32 @@ func _place(world: Vector2) -> void:
 	var index := document.add_entity(entry.list_key, entity)
 	_set_selection({"list_key": entry.list_key, "index": index})
 
+func _commit_paint() -> void:
+	_painting = false
+	var rect := _paint_rect()
+	queue_redraw()
+	if rect.size.x < TERRAIN_SNAP or rect.size.y < TERRAIN_SNAP:
+		return  # a click without a real drag paints nothing
+	var entry := Catalog.by_id(tool_id)
+	var index := document.add_entity("terrain", {
+		"type": entry.preset.type,
+		"rect": [rect.position.x, rect.position.y, rect.size.x, rect.size.y],
+	})
+	_set_selection({"list_key": "terrain", "index": index})
+
+func _paint_rect() -> Rect2:
+	var top_left := Vector2(minf(_paint_anchor.x, _paint_current.x), minf(_paint_anchor.y, _paint_current.y))
+	return Rect2(top_left, (_paint_current - _paint_anchor).abs())
+
 func _move_selected(pos: Vector2) -> void:
 	if selection.list_key == "player_spawn":
 		document.move_player_spawn(pos)
+	elif selection.list_key == "terrain":
+		# Move the rect by its top-left, keeping size; terrain snaps to 128.
+		var entity: Dictionary = document.level.terrain[selection.index]
+		var snapped_pos := pos.snapped(Vector2(TERRAIN_SNAP, TERRAIN_SNAP))
+		document.set_entity_prop("terrain", selection.index, "rect",
+				[snapped_pos.x, snapped_pos.y, entity.rect[2], entity.rect[3]])
 	else:
 		document.move_entity(selection.list_key, selection.index, pos)
 
@@ -93,6 +130,9 @@ func _delete_selected() -> void:
 
 func _cancel() -> void:
 	_dragging = false
+	if _painting:
+		_painting = false
+		queue_redraw()
 	if tool_id != "select":
 		tool_cancelled.emit()
 	elif not selection.is_empty():
@@ -116,6 +156,8 @@ func _hit_test(world: Vector2) -> Dictionary:
 	return {}
 
 func _entity_rect(list_key: String, entity: Dictionary) -> Rect2:
+	if list_key == "terrain":
+		return Rect2(entity.rect[0], entity.rect[1], entity.rect[2], entity.rect[3])
 	var pos := Vector2(entity.pos[0], entity.pos[1])
 	if list_key == "blocks":
 		var size := Vector2(entity.size[0], entity.size[1])
@@ -137,6 +179,10 @@ func _draw() -> void:
 		for entity in list:
 			_draw_ghost(list_key, entity)
 	_draw_player()
+	if _painting:
+		var preview := _paint_rect()
+		draw_rect(preview, Catalog.by_id(tool_id).ghost.color)
+		draw_rect(preview, Color(1, 1, 1, 0.6), false, 2.0)
 	if not selection.is_empty():
 		var entity: Dictionary = document.level.player_spawn \
 				if selection.list_key == "player_spawn" \
