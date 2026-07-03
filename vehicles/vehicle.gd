@@ -99,7 +99,9 @@ func _physics_process(delta: float) -> void:
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
-	if _controller:
+	if _controller and not (_special and _special.is_dashing()):
+		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
+		# doesn't eat the dash velocity.
 		_controller.apply(self, intent, delta)
 	move_and_slide()
 	_update_ram(delta)

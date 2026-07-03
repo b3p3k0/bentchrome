@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_def")
 display_name = "Leap"
-stub = true
-note = "Locks nearest target, full-throttle body-check, 2s invuln after impact. Needs dash mechanic."
+kind = 2
+note = "Lock-on body-check: dashes at the nearest car within 700px (straight ahead otherwise) at 1400px/s, sailing over obstacles. Connecting drains the victim's speed (0.5x, 2s) and grants 2s invulnerability; the hit itself is dash-speed ram damage."

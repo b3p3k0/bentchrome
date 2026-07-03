@@ -11,10 +11,20 @@ const BEAM_DURATION := 4.0        # seconds a zap stays latched
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
 
+const DASH_SPEED := 1400.0        # body-check velocity (well past any top speed)
+const DASH_DURATION := 0.4        # ~560px of travel
+const DASH_LOCK_RANGE := 700.0    # lock the nearest vehicle inside this
+const DASH_INVULN_T := 2.0        # invulnerability after connecting
+const DASH_SLOW := 0.5            # victim speed drain
+const DASH_SLOW_T := 2.0
+
 var _def: WeaponDef = null
 var _beam_target: Node2D = null
 var _beam_t := 0.0
 var _beam_line: Line2D = null
+var _dash_t := 0.0
+var _dash_target: Node2D = null
+var _dash_dir := Vector2.RIGHT
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -60,6 +70,8 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node) -
 func _physics_process(delta: float) -> void:
 	if _beam_t > 0.0:
 		_beam_tick(delta)
+	if _dash_t > 0.0:
+		_dash_tick(delta)
 
 func _beam_tick(delta: float) -> void:
 	var vehicle := get_parent() as Node2D
@@ -104,8 +116,59 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 func _exit_tree() -> void:
 	_end_beam()  # don't leave an orphaned beam line if the car dies mid-zap
 
-func _dash(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
-	return false  # TODO (Leap): dash the caster toward the nearest target + brief invuln
+## Leap: lock the nearest vehicle in range and full-throttle body-check it
+## (straight ahead when nothing is in range). The dash overrides normal driving,
+## sails over obstacles, and on connecting drains the victim's speed and grants
+## the caster brief invulnerability. Ram damage itself comes from the existing
+## ram loop — at dash speed that's already a massive hit.
+func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
+	if not pressed or _dash_t > 0.0:
+		return false
+	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE)
+	_dash_dir = direction
+	_dash_t = DASH_DURATION
+	if shooter is CollisionObject2D:
+		shooter.collision_mask &= ~4  # ignore obstacles mid-leap
+	return true
+
+func is_dashing() -> bool:
+	return _dash_t > 0.0
+
+func _dash_tick(delta: float) -> void:
+	var vehicle := get_parent() as CharacterBody2D
+	if vehicle == null:
+		_dash_t = 0.0
+		return
+	if _dash_target and is_instance_valid(_dash_target):
+		_dash_dir = (_dash_target.global_position - vehicle.global_position).normalized()
+	vehicle.velocity = _dash_dir * DASH_SPEED
+	vehicle.set("heading", _dash_dir.angle())
+	for i in vehicle.get_slide_collision_count():
+		var other := vehicle.get_slide_collision(i).get_collider()
+		if other is CharacterBody2D and other != vehicle and other.has_method("apply_effect"):
+			var slow := StatusEffectSpec.new()
+			slow.kind = &"slow"
+			slow.duration = DASH_SLOW_T
+			slow.magnitude = DASH_SLOW
+			other.apply_effect(slow)
+			var invuln := StatusEffectSpec.new()
+			invuln.kind = &"invuln"
+			invuln.duration = DASH_INVULN_T
+			if vehicle.has_method("apply_effect"):
+				vehicle.apply_effect(invuln)
+			_end_dash(vehicle)
+			return
+	_dash_t -= delta
+	if _dash_t <= 0.0:
+		_end_dash(vehicle)
+
+func _end_dash(vehicle: CharacterBody2D) -> void:
+	_dash_t = 0.0
+	_dash_target = null
+	# Restore the mask to match the car's air state (grounded 7 / airborne 2),
+	# same split as Vehicle._set_airborne.
+	var airborne: bool = vehicle.get("height") != null and vehicle.get("height") > 0.0
+	vehicle.set_deferred("collision_mask", 2 if airborne else 7)
 
 func _trigger(_pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
 	return false  # TODO (Toe Jam): arm a charged collision hit until the next ram
