@@ -1,7 +1,8 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
 [ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
@@ -195,6 +196,22 @@ polygon = PackedVector2Array(-20, -1470, 20, -1470, 20, 1470, -20, 1470)
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(1500, 150)
 shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(650, -150)
+
+[node name="AmmoStandard2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-250, 650)
+
+[node name="AmmoHoming1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-900, 400)
+kind = "homing"
+amount = 1
+
+[node name="AmmoHoming2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(900, -600)
+kind = "homing"
+amount = 1
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]
 text = "speed"
