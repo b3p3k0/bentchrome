@@ -11,6 +11,7 @@ const SUITES := [
 	preload("res://tests/test_enemy_driver.gd"),
 	preload("res://tests/test_level_schema.gd"),
 	preload("res://tests/test_entity_catalog.gd"),
+	preload("res://tests/test_level_loader.gd"),
 	preload("res://tests/test_corner_escape.gd"),
 ]
 

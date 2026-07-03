@@ -39,4 +39,12 @@ if echo "$BOOT_OUT" | grep -qiE "$ERR_RE"; then
   echo "== smoke: FAIL (boot)"; exit 1
 fi
 
+echo "== smoke: custom level (fixture)"
+LEVEL_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://levels/custom_level.tscn --quit-after 10 -- --level=res://tests/fixtures/sample_level.json 2>&1)"
+echo "$LEVEL_OUT" | grep -E '^\[boot\]' || true
+if echo "$LEVEL_OUT" | grep -qiE "$ERR_RE" || ! echo "$LEVEL_OUT" | grep -q '^\[boot\] custom level ready'; then
+  echo "$LEVEL_OUT" | grep -iE "$ERR_RE" || true
+  echo "== smoke: FAIL (custom level)"; exit 1
+fi
+
 echo "== smoke: PASS"

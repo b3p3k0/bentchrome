@@ -5,6 +5,7 @@ extends Node
 const TITLE := "res://ui/title.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const ARENA := "res://levels/arena/arena.tscn"
+const CUSTOM := "res://levels/custom_level.tscn"
 
 func to_title() -> void:
 	goto_scene(TITLE)
@@ -14,6 +15,10 @@ func to_select() -> void:
 
 func to_arena() -> void:
 	goto_scene(ARENA)
+
+func to_custom_level(path: String) -> void:
+	GameState.pending_level_path = path
+	goto_scene(CUSTOM)
 
 func goto_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
