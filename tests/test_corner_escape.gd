@@ -38,6 +38,9 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	var health = enemy.get_node("Health")
 	health.hp = 5.0
 	health.invulnerable = true
+	# Enemies shoot now: an unkillable player keeps stray fire from ending the
+	# round (the end screen would pause the tree and stall the frame pump).
+	player.get_node("Health").invulnerable = true
 	# Park the other combatants out of scan range so nothing rams it free.
 	for name in ["Enemy2", "Enemy3", "Enemy4"]:
 		arena.get_node(name).global_position = Vector2(-1700.0, 1700.0)

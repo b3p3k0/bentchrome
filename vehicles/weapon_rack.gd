@@ -90,6 +90,14 @@ func _auto_cycle() -> void:
 			_select(i)
 			return
 
+## Selects the first slot holding ammo (special first — it recharges). Used by
+## the AI to re-arm after running a slot dry; no-op when everything is empty.
+func select_first_armed() -> void:
+	for i in _slots.size():
+		if _slots[i].ammo > 0:
+			_select(i)
+			return
+
 ## Adds ammo to a slot (pickups). Returns how much was actually accepted.
 func add_ammo(index: int, amount: int) -> int:
 	if _slots.is_empty() or index >= _slots.size():

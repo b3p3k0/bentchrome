@@ -75,6 +75,20 @@ func test_refill_does_not_move_selection() -> void:
 	t.check(r.selected_index() == RackScript.Slot.STANDARD, "refill: pickups don't move selection")
 	r.free()
 
+func test_select_first_armed() -> void:
+	var r = _rack()  # special 1 / standard 2 / homing 1
+	r.consume()  # special dry -> auto-cycles to standard
+	r.tick(12.0)  # special recharges one round
+	r.select_first_armed()
+	t.check(r.selected_index() == RackScript.Slot.SPECIAL, "re-arm: prefers the recharged special")
+	r.consume()  # special dry again -> standard
+	r.consume()
+	r.consume()  # standard dry -> homing
+	r.consume()  # homing dry -> all empty
+	r.select_first_armed()
+	t.check(r.selected_index() == RackScript.Slot.HOMING, "re-arm: all dry is a no-op")
+	r.free()
+
 func test_add_ammo_respects_cap() -> void:
 	var r = _rack()
 	var accepted = r.add_ammo(RackScript.Slot.STANDARD, 10)

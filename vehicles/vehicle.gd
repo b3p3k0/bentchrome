@@ -20,6 +20,7 @@ const LAYER_OBSTACLE := 4
 @export var stats: VehicleStats
 @export var faction: StringName = &"player"
 @export var body_color := Color(0.85, 0.2, 0.3)
+@export var ai_cooldown_scale := 3.0  # AI mounts fire at 1/3 player rate
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -66,6 +67,13 @@ func _ready() -> void:
 		($Visual/Body as Polygon2D).color = body_color
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
+	if faction != &"player":
+		# Same loadout as the player, a third of the trigger speed.
+		if _mg_mount:
+			_mg_mount.cooldown_scale = ai_cooldown_scale
+		var secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
+		if secondary:
+			secondary.cooldown_scale = ai_cooldown_scale
 	if _rack and _special:
 		# Selection drives what the special/secondary path fires next.
 		_rack.selection_changed.connect(func(_i: int) -> void: _special.set_weapon(_rack.selected_def()))

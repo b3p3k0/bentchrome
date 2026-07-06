@@ -17,6 +17,7 @@ extends Node
 @export var pellets := 1
 @export var projectile_scene: PackedScene
 @export var pierces_cover := false      # spawned shots ignore the obstacle layer
+@export var cooldown_scale := 1.0       # >1 slows fire; AI mounts run at 3x
 
 @export_group("Heat")
 @export var heat_per_shot := 0.0   # 0 = no heat mechanic (secondaries)
@@ -73,7 +74,7 @@ func is_locked() -> bool:
 func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if _stub or _locked or _cooldown > 0.0 or projectile_scene == null:
 		return false
-	_cooldown = 1.0 / fire_rate
+	_cooldown = cooldown_scale / fire_rate
 	if heat_per_shot > 0.0:
 		heat = minf(heat + heat_per_shot, heat_max)
 		if heat >= heat_max:

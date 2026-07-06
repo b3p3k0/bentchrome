@@ -93,6 +93,11 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	if target == null:
 		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 
+	# Re-arm after running a slot dry (the special recharges back in).
+	var rack = vehicle.get_rack() if vehicle.has_method(&"get_rack") else null
+	if rack and not rack.can_consume():
+		rack.select_first_armed()
+
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
 	var bearing := to_target.angle()
@@ -172,11 +177,14 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			approach += deg_to_rad(35.0 * _flank)
 		var diff := wrapf(approach - vehicle.heading, -PI, PI)
 		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
+		# Don't chew on buildings: hold fire without line of sight. The mounts'
+		# 3x AI cooldown_scale gates the rate; ammo/recharge gate the specials.
+		var los := _los_clear(vehicle, target)
 		intent = {
 			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
 			"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
-			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE,
-			"fire_selected": false,
+			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE and los,
+			"fire_selected": absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
 		}
 
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
@@ -244,6 +252,17 @@ func _update_feelers(vehicle) -> void:
 		_blocked = frac[1] < 0.6
 		# Nose blocked: commit toward whichever side reads clearer.
 		_avoid_bias += (1.0 - frac[1]) * (1.0 if frac[2] >= frac[0] else -1.0)
+
+## True when no wall/block sits between the nose and the target (mask 6 —
+## other cars don't block; collateral fire is free-for-all gameplay).
+func _los_clear(vehicle, target: Node2D) -> bool:
+	if not (vehicle is CollisionObject2D and target is CollisionObject2D):
+		return false
+	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
+	var query := PhysicsRayQueryParameters2D.create(
+		vehicle.global_position, target.global_position, FEELER_MASK)
+	query.exclude = [(vehicle as CollisionObject2D).get_rid(), (target as CollisionObject2D).get_rid()]
+	return space.intersect_ray(query).is_empty()
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak).
 func _select_target(vehicle) -> Node2D:
