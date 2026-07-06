@@ -27,7 +27,7 @@ func test_splat_effect_def() -> void:
 
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
-	t.check(not d.stub and d.kind == 0 and d.pellets == 7, "blaze: live 7-pellet cone")
+	t.check(not d.stub and d.kind == 4, "blaze: live FLAME column")
 	var fx := _first_effect(d)
 	t.check(fx != null and fx.kind == &"burn", "blaze: burn on hit")
 	t.check_approx(fx.duration, 10.0, "blaze: 10s ignite")

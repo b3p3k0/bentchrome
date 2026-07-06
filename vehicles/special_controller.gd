@@ -18,6 +18,10 @@ const DASH_INVULN_T := 2.0        # invulnerability after connecting
 const DASH_SLOW := 0.5            # victim speed drain
 const DASH_SLOW_T := 2.0
 
+const FLAME_DURATION := 1.0       # seconds of column per ammo; hold to chain bursts
+const FLAME_LENGTH := 300.0       # nose-forward reach
+const FLAME_WIDTH := 70.0         # column thickness
+
 var _def: WeaponDef = null
 var _beam_target: Node2D = null
 var _beam_t := 0.0
@@ -26,6 +30,8 @@ var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
 var _armed := false
+var _flame_t := 0.0
+var _flame_vis: Polygon2D = null
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -48,6 +54,8 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			return _dash(pressed, origin, direction, shooter)
 		WeaponDef.Kind.TRIGGER:
 			return _trigger(pressed, origin, direction, shooter)
+		WeaponDef.Kind.FLAME:
+			return _flame(pressed)
 	return false
 
 ## Taser: burst zap — latch the nearest vehicle in close range and shock it for
@@ -73,6 +81,8 @@ func _physics_process(delta: float) -> void:
 		_beam_tick(delta)
 	if _dash_t > 0.0:
 		_dash_tick(delta)
+	if _flame_t > 0.0:
+		_flame_tick(delta)
 
 func _beam_tick(delta: float) -> void:
 	var vehicle := get_parent() as Node2D
@@ -115,7 +125,8 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 	return body.get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
 func _exit_tree() -> void:
-	_end_beam()  # don't leave an orphaned beam line if the car dies mid-zap
+	_end_beam()   # don't leave an orphaned beam line if the car dies mid-zap
+	_end_flame()  # same etiquette for the torch
 
 ## Leap: lock the nearest vehicle in range and full-throttle body-check it
 ## (straight ahead when nothing is in range). The dash overrides normal driving,
@@ -170,6 +181,73 @@ func _end_dash(vehicle: CharacterBody2D) -> void:
 	# same split as Vehicle._set_airborne.
 	var airborne: bool = vehicle.get("height") != null and vehicle.get("height") > 0.0
 	vehicle.set_deferred("collision_mask", 2 if airborne else 7)
+
+## Blunt Blaze: a column of flame off the nose for FLAME_DURATION per ammo —
+## holding fire chains bursts into a sustained torch (recharge-fed). Damage is
+## authored as dps; anything Health-bearing inside the column cooks, vehicles
+## also pick up the def's burn effect (refreshed every tick while bathed).
+func _flame(pressed: bool) -> bool:
+	if not pressed or _flame_t > 0.0:
+		return false
+	_flame_t = FLAME_DURATION
+	var vehicle := get_parent() as Node2D
+	var visual := vehicle.get_node_or_null("Visual") if vehicle else null
+	if visual:
+		_flame_vis = Polygon2D.new()
+		visual.add_child(_flame_vis)  # rides the rotating visual — tracks the nose
+	return true
+
+func _flame_tick(delta: float) -> void:
+	var vehicle := get_parent() as CollisionObject2D
+	if vehicle == null:
+		_end_flame()
+		return
+	if _flame_vis:
+		_flame_vis.polygon = _flame_shape()
+		_flame_vis.color = Color(1.0, lerpf(0.35, 0.6, randf()), 0.08, 0.8)
+	# Damage everything Health-bearing inside the column (cars, crates, dummies).
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(FLAME_LENGTH, FLAME_WIDTH)
+	var heading: float = vehicle.get("heading")
+	var forward := Vector2.RIGHT.rotated(heading)
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = shape
+	params.transform = Transform2D(heading, vehicle.global_position + forward * (FLAME_LENGTH * 0.5 + 30.0))
+	params.collision_mask = 5  # ground | obstacle
+	params.exclude = [vehicle.get_rid()]
+	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
+		var body: Node = hit["collider"]
+		for child in body.get_children():
+			if child is Health:
+				child.take_damage(_def.damage * delta)
+				break
+		if body.has_method("apply_effect"):
+			for spec in _def.on_hit_effects:
+				body.apply_effect(spec)
+	_flame_t -= delta
+	if _flame_t <= 0.0:
+		_end_flame()
+
+## A jagged, flickering column in the visual's local space (nose at +X).
+func _flame_shape() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var half := FLAME_WIDTH * 0.5
+	pts.append(Vector2(26.0, -6.0))
+	for i in 4:  # ragged top edge, widening with distance
+		var x := lerpf(80.0, 30.0 + FLAME_LENGTH, float(i) / 3.0)
+		pts.append(Vector2(x + randf_range(-12.0, 12.0), lerpf(-14.0, -half, float(i) / 3.0) + randf_range(-6.0, 6.0)))
+	pts.append(Vector2(30.0 + FLAME_LENGTH + randf_range(-8.0, 16.0), randf_range(-10.0, 10.0)))
+	for i in 4:  # ragged bottom edge back toward the nose
+		var x := lerpf(30.0 + FLAME_LENGTH, 80.0, float(i) / 3.0)
+		pts.append(Vector2(x + randf_range(-12.0, 12.0), lerpf(half, 14.0, float(i) / 3.0) + randf_range(-6.0, 6.0)))
+	pts.append(Vector2(26.0, 6.0))
+	return pts
+
+func _end_flame() -> void:
+	_flame_t = 0.0
+	if _flame_vis:
+		_flame_vis.queue_free()
+		_flame_vis = null
 
 ## Toe Jam: arm a charge that replaces the next landed ram's speed-scaled
 ## damage with one heavy flat hit (def.damage). Held until it connects; the
