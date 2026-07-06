@@ -29,11 +29,11 @@ extends Node
 @export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
 
 @export_group("Boost")
-@export var boost_top_factor := 1.35
-@export var boost_accel_factor := 1.5
-@export var boost_burn_rate := 0.02  # tank fraction per second held (full tank = 50s)
+@export var boost_top_factor := 1.5
+@export var boost_accel_factor := 2.0
+@export var boost_burn_rate := 5.0  # units per second held (full tank = 20s)
 
-var boost_fuel := 1.0  # 0..1; no recharge — resets with the scene
+var boost_fuel := 100.0  # 0..100; no recharge — resets with the scene
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 const TERRAIN := {

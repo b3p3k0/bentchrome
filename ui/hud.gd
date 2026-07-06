@@ -45,7 +45,7 @@ func _process(_delta: float) -> void:
 		_heat_label.modulate = Color(1.0, 0.35, 0.3) if mg.is_locked() else Color.WHITE
 	var ctrl := _player.get_controller()
 	if ctrl:
-		_boost_bar.value = ctrl.boost_fuel * 100.0
+		_boost_bar.value = ctrl.boost_fuel
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
