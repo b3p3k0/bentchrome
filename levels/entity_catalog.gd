@@ -32,6 +32,7 @@ const TERRAIN_COLORS := {
 const PICKUP_COLORS := {
 	"standard": Color(0.25, 0.8, 0.35),
 	"homing": Color(0.25, 0.7, 0.9),
+	"power": Color(0.9, 0.45, 0.2),
 }
 
 const ENTRIES := [
@@ -88,6 +89,18 @@ const ENTRIES := [
 			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
 		],
 		"ghost": {"color": PICKUP_COLORS["homing"], "half_size": Vector2(14, 14), "tag": "H"},
+	},
+	{
+		"id": "pickup_power",
+		"list_key": "pickups",
+		"display": "Power Crate",
+		"scene": "res://environment/ammo_pickup.tscn",
+		"preset": {"kind": "power"},
+		"props": [
+			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 1.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
+		],
+		"ghost": {"color": PICKUP_COLORS["power"], "half_size": Vector2(14, 14), "tag": "P"},
 	},
 	{
 		"id": "dummy",

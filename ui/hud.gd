@@ -49,15 +49,17 @@ func _process(_delta: float) -> void:
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
-			var def: WeaponDef = null
 			var name_txt := "—"
-			if i == WeaponRack.Slot.SPECIAL:
-				def = _player.stats.special if _player.stats else null
-				name_txt = def.display_name if def else "Special"
-			elif i == WeaponRack.Slot.STANDARD:
-				name_txt = "Missile"
-			else:
-				name_txt = "Homing"
+			match i:
+				WeaponRack.Slot.SPECIAL:
+					var def: WeaponDef = _player.stats.special if _player.stats else null
+					name_txt = def.display_name if def else "Special"
+				WeaponRack.Slot.STANDARD:
+					name_txt = "Fire Missile"
+				WeaponRack.Slot.HOMING:
+					name_txt = "Homing"
+				WeaponRack.Slot.POWER:
+					name_txt = "Power Missile"
 			var count := "x%d" % _rack.ammo(i)
 			if i == WeaponRack.Slot.SPECIAL and _rack.recharge_fraction() < 1.0:
 				count += "  %d%%" % int(_rack.recharge_fraction() * 100.0)
@@ -150,7 +152,7 @@ func _build_dash() -> void:
 
 	var weapons_hdr := _label(vbox, "WEAPONS  (Q/E)", 14)
 	weapons_hdr.modulate = DIM_TEXT
-	for i in 3:
+	for i in 4:
 		_slot_labels.append(_label(vbox, "", 15))
 
 	var fill := Control.new()

@@ -3,18 +3,25 @@ extends Area2D
 ## and respawns after a delay. Grabs nothing when the slot is full (crate stays).
 ## Any vehicle can collect; AI just doesn't use missiles yet.
 
-@export_enum("standard", "homing") var kind := "standard"
+@export_enum("standard", "homing", "power") var kind := "standard"
 @export var amount := 2
 @export var respawn_seconds := 20.0
 
+const STYLE := {
+	"standard": {"tag": "M", "color": Color(0.25, 0.8, 0.35), "slot": WeaponRack.Slot.STANDARD},
+	"homing": {"tag": "H", "color": Color(0.25, 0.7, 0.9), "slot": WeaponRack.Slot.HOMING},
+	"power": {"tag": "P", "color": Color(0.9, 0.45, 0.2), "slot": WeaponRack.Slot.POWER},
+}
+
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	var style: Dictionary = STYLE.get(kind, STYLE["standard"])
 	var tag := get_node_or_null("Tag") as Label
 	if tag:
-		tag.text = "M" if kind == "standard" else "H"
+		tag.text = style["tag"]
 	var vis := get_node_or_null("Vis") as Polygon2D
 	if vis:
-		vis.color = Color(0.25, 0.8, 0.35) if kind == "standard" else Color(0.25, 0.7, 0.9)
+		vis.color = style["color"]
 
 func _on_body_entered(body: Node) -> void:
 	if not body.has_method("get_rack"):
@@ -22,7 +29,7 @@ func _on_body_entered(body: Node) -> void:
 	var rack: WeaponRack = body.get_rack()
 	if rack == null:
 		return
-	var slot := WeaponRack.Slot.STANDARD if kind == "standard" else WeaponRack.Slot.HOMING
+	var slot: WeaponRack.Slot = STYLE.get(kind, STYLE["standard"])["slot"]
 	if rack.add_ammo(slot, amount) > 0:
 		_collect()
 

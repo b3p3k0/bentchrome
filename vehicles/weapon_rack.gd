@@ -8,13 +8,15 @@ extends Node
 signal selection_changed(index: int)
 signal ammo_changed(index: int, ammo: int)
 
-enum Slot { SPECIAL, STANDARD, HOMING }
+enum Slot { SPECIAL, STANDARD, HOMING, POWER }
 
 const STANDARD_DEF := preload("res://data/weapons/missile_standard.tres")
 const HOMING_DEF := preload("res://data/weapons/missile_homing.tres")
+const POWER_DEF := preload("res://data/weapons/missile_power.tres")
 
 @export var start_standard := 2
 @export var start_homing := 1
+@export var start_power := 1
 
 var _slots: Array = []  # each: {def: WeaponDef, ammo: int, cap: int, recharge: float}
 var _selected := 0
@@ -25,6 +27,7 @@ func configure(special_def: WeaponDef, special_cap: int, special_recharge_second
 		{"def": special_def, "ammo": special_cap, "cap": special_cap, "recharge": special_recharge_seconds},
 		{"def": STANDARD_DEF, "ammo": start_standard, "cap": 6, "recharge": 0.0},
 		{"def": HOMING_DEF, "ammo": start_homing, "cap": 3, "recharge": 0.0},
+		{"def": POWER_DEF, "ammo": start_power, "cap": 2, "recharge": 0.0},
 	]
 	_selected = Slot.SPECIAL
 	_recharge_t = 0.0

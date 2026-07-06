@@ -7,10 +7,10 @@
 script = ExtResource("1_def")
 display_name = "Homing Missile"
 cooldown = 0.8
-damage = 26.0
-projectile_speed = 750.0
+damage = 15.0
+projectile_speed = 940.0
 projectile_lifetime = 4.0
-turn_rate_deg = 140.0
+turn_rate_deg = 240.0
 acquisition_radius = 1200.0
 projectile_scene = ExtResource("2_proj")
-note = "Generic seeker: slower than a dumb-fire but corrects course. Pickup-fed."
+note = "Light payload, vicious tracking — it will find them, it just won't finish them."

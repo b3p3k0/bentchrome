@@ -24,6 +24,7 @@ func test_configure_defaults() -> void:
 	t.check(r.ammo(RackScript.Slot.SPECIAL) == 1, "rack: special starts at cap")
 	t.check(r.ammo(RackScript.Slot.STANDARD) == 2, "rack: 2 standard to start")
 	t.check(r.ammo(RackScript.Slot.HOMING) == 1, "rack: 1 homing to start")
+	t.check(r.ammo(RackScript.Slot.POWER) == 1, "rack: 1 power to start")
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
 	r.free()
 
@@ -34,9 +35,11 @@ func test_selection_cycles_and_wraps() -> void:
 	r.select_next()
 	t.check(r.selected_index() == RackScript.Slot.HOMING, "cycle: next -> homing")
 	r.select_next()
+	t.check(r.selected_index() == RackScript.Slot.POWER, "cycle: next -> power")
+	r.select_next()
 	t.check(r.selected_index() == RackScript.Slot.SPECIAL, "cycle: next wraps to special")
 	r.select_prev()
-	t.check(r.selected_index() == RackScript.Slot.HOMING, "cycle: prev wraps to homing")
+	t.check(r.selected_index() == RackScript.Slot.POWER, "cycle: prev wraps to power")
 	r.free()
 
 func test_consume_and_dry() -> void:
@@ -46,7 +49,8 @@ func test_consume_and_dry() -> void:
 	r.consume()
 	r.consume()  # standard dry -> auto-cycles to homing
 	t.check(r.ammo(RackScript.Slot.STANDARD) == 0, "consume: two shots spent")
-	r.consume()  # homing dry -> auto-cycles to special
+	r.consume()  # homing dry -> auto-cycles to power
+	r.consume()  # power dry -> auto-cycles to special
 	r.consume()  # special dry -> everything empty, stays put
 	t.check(not r.can_consume(), "consume: fully dry rack blocks fire")
 	r.consume()  # no-op
@@ -64,8 +68,10 @@ func test_depletion_auto_cycles() -> void:
 	t.check(r.selected_index() == RackScript.Slot.STANDARD, "auto-cycle: no advance while ammo remains")
 	r.consume()  # standard 1 -> 0
 	t.check(r.selected_index() == RackScript.Slot.HOMING, "auto-cycle: skips the dry recharging special")
-	r.consume()  # homing 1 -> 0; every slot dry
-	t.check(r.selected_index() == RackScript.Slot.HOMING, "auto-cycle: all dry stays put")
+	r.consume()  # homing 1 -> 0
+	t.check(r.selected_index() == RackScript.Slot.POWER, "auto-cycle: advances to power")
+	r.consume()  # power 1 -> 0; every slot dry
+	t.check(r.selected_index() == RackScript.Slot.POWER, "auto-cycle: all dry stays put")
 	r.free()
 
 func test_refill_does_not_move_selection() -> void:
@@ -76,7 +82,7 @@ func test_refill_does_not_move_selection() -> void:
 	r.free()
 
 func test_select_first_armed() -> void:
-	var r = _rack()  # special 1 / standard 2 / homing 1
+	var r = _rack()  # special 1 / standard 2 / homing 1 / power 1
 	r.consume()  # special dry -> auto-cycles to standard
 	r.tick(12.0)  # special recharges one round
 	r.select_first_armed()
@@ -84,9 +90,10 @@ func test_select_first_armed() -> void:
 	r.consume()  # special dry again -> standard
 	r.consume()
 	r.consume()  # standard dry -> homing
-	r.consume()  # homing dry -> all empty
+	r.consume()  # homing dry -> power
+	r.consume()  # power dry -> all empty
 	r.select_first_armed()
-	t.check(r.selected_index() == RackScript.Slot.HOMING, "re-arm: all dry is a no-op")
+	t.check(r.selected_index() == RackScript.Slot.POWER, "re-arm: all dry is a no-op")
 	r.free()
 
 func test_add_ammo_respects_cap() -> void:

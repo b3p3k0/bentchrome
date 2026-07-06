@@ -386,6 +386,16 @@ position = Vector2(1728, -64)
 kind = "homing"
 amount = 1
 
+[node name="AmmoPower1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-256, 1088)
+kind = "power"
+amount = 1
+
+[node name="AmmoPower2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1728, 704)
+kind = "power"
+amount = 1
+
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 576)
 
