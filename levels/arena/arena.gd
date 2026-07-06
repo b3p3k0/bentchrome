@@ -1,6 +1,7 @@
 extends Node2D
-## Phase 1/2 test arena: grid floor, a drivable vehicle, terrain patches, a
-## launch ramp, static blocks, target dummies, enemy cars, and a readout.
+## Test arena, city edition: streets carved by building blocks around a central
+## park (grass/pond/dirt), destructible crates and wall segments (some hiding
+## goodies), a ramp that jumps the secret courtyard's wall, and enemy cars.
 ## The floor grid is drawn by the GridFloor child (levels/grid_floor.gd).
 
 const Loader := preload("res://levels/level_loader.gd")

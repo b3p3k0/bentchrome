@@ -1,12 +1,13 @@
 extends RefCounted
 ## Integration repro for the corner trap: an enemy pinned in the arena's
-## top-right corner (walls meet at 1500, -1300) while fleeing the player must
-## back out and get clear instead of grinding into the walls. Runs the real
-## arena scene and pumps physics frames (the runner awaits test methods).
+## top-right corner (walls meet at 1876, -1812; the city map keeps this pocket
+## building-free) while fleeing the player must back out and get clear instead
+## of grinding into the walls. Runs the real arena scene and pumps physics
+## frames (the runner awaits test methods).
 
 const ArenaScene := preload("res://levels/arena/arena.tscn")
 
-const CORNER := Vector2(1500.0, -1300.0)
+const CORNER := Vector2(1876.0, -1812.0)
 const UNPIN_DIST := 250.0   # out of the corner pocket
 const UNPIN_FRAMES := 330   # ...within 5.5s (mass-7 truck 3-point turn; never stationary)
 const ESCAPE_DIST := 500.0  # fully clear and re-engaging
@@ -29,9 +30,9 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	enemy.get_node("Driver").mix = Vector3(1, 0, 0)
 	# Recreate the report: enemy tucked into the corner nose-first, player
 	# pressuring from the open arena so "away from threat" points into the walls.
-	enemy.global_position = Vector2(1420.0, -1220.0)
+	enemy.global_position = Vector2(1796.0, -1732.0)
 	enemy.heading = -PI / 4
-	player.global_position = Vector2(1000.0, -800.0)
+	player.global_position = Vector2(1376.0, -1312.0)
 	# Force flee mode (HP under the aggressor threshold) but keep it unkillable
 	# so a stray shot can't end the test early.
 	var health = enemy.get_node("Health")
@@ -39,7 +40,7 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	health.invulnerable = true
 	# Park the other combatants out of scan range so nothing rams it free.
 	for name in ["Enemy2", "Enemy3", "Enemy4"]:
-		arena.get_node(name).global_position = Vector2(-1300.0, 1400.0)
+		arena.get_node(name).global_position = Vector2(-1700.0, 1700.0)
 
 	var unpinned_at := -1
 	var escaped_at := -1
