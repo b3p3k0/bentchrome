@@ -78,6 +78,17 @@ func consume() -> void:
 		return
 	_slots[_selected].ammo -= 1
 	ammo_changed.emit(_selected, _slots[_selected].ammo)
+	if _slots[_selected].ammo == 0:
+		_auto_cycle()
+
+## Depleted slot: advance to the next slot holding ammo (a recharging special
+## at 0 counts as dry). All dry = stay put; the special recharges back.
+func _auto_cycle() -> void:
+	for step in range(1, _slots.size()):
+		var i: int = (_selected + step) % _slots.size()
+		if _slots[i].ammo > 0:
+			_select(i)
+			return
 
 ## Adds ammo to a slot (pickups). Returns how much was actually accepted.
 func add_ammo(index: int, amount: int) -> int:
