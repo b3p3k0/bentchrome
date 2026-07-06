@@ -32,6 +32,10 @@ const LAYER_OBSTACLE := 4
 @export var ram_min_speed := 220.0
 @export var ram_cooldown := 0.3
 
+@export_group("Bounce")
+@export var bounce_factor := 0.35     # fraction of the into-surface speed reflected
+@export var bounce_min_speed := 100.0  # below this, grinding along walls stays smooth
+
 var heading: float = 0.0  # radians; the direction the nose points
 var current_terrain: StringName = &"road"
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
@@ -115,9 +119,10 @@ func _physics_process(delta: float) -> void:
 		_controller.apply(self, intent, delta)
 	# Captured before move_and_slide: a head-on hit on a static body zeroes
 	# velocity during the slide, so post-slide speed under-reads the impact.
-	var impact_speed := velocity.length()
+	var pre_slide_vel := velocity
 	move_and_slide()
-	_update_ram(delta, impact_speed)
+	_apply_bounce(pre_slide_vel)
+	_update_ram(delta, pre_slide_vel.length())
 	_visual.rotation = heading
 	_update_depth(delta)
 	var aim := Vector2.RIGHT.rotated(heading)
@@ -221,6 +226,23 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				health.take_damage((impact_speed - ram_min_speed) * ram_damage_scale)
 				_ram_cd = ram_cooldown
 				break
+
+## Deflection: reflect the pre-slide velocity component that went INTO the
+## surface, scaled by bounce_factor — angled hits carom, dead-on stays a thud.
+## Sub-threshold contact (grinding along a wall) is left smooth. Hitting
+## another car shoves it along the same normal at half strength.
+func _apply_bounce(pre_vel: Vector2) -> void:
+	if get_slide_collision_count() == 0:
+		return
+	var col := get_slide_collision(0)
+	var n := col.get_normal()
+	var into := -pre_vel.dot(n)  # positive = moving into the surface
+	if into < bounce_min_speed:
+		return
+	velocity += n * into * bounce_factor
+	var other = col.get_collider()
+	if other is Vehicle and other != self:
+		other.velocity -= n * into * bounce_factor * 0.5
 
 func _find_health_child(body: Node) -> Health:
 	for child in body.get_children():
