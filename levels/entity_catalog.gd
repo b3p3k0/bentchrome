@@ -25,6 +25,7 @@ const WALL_COLOR := Color(0.4, 0.4, 0.46, 1.0)
 const BLOCK_COLOR := Color(0.3, 0.3, 0.36, 1.0)
 const TERRAIN_COLORS := {
 	"dirt": Color(0.5, 0.36, 0.2, 0.5),
+	"grass": Color(0.25, 0.5, 0.22, 0.5),
 	"ice": Color(0.6, 0.8, 0.95, 0.5),
 	"water": Color(0.15, 0.3, 0.55, 0.6),
 }
@@ -106,6 +107,15 @@ const ENTRIES := [
 		"preset": {"type": "dirt"},
 		"props": [],
 		"ghost": {"color": TERRAIN_COLORS["dirt"], "half_size": Vector2.ZERO, "tag": ""},
+	},
+	{
+		"id": "terrain_grass",
+		"list_key": "terrain",
+		"display": "Grass",
+		"builtin": "terrain",
+		"preset": {"type": "grass"},
+		"props": [],
+		"ghost": {"color": TERRAIN_COLORS["grass"], "half_size": Vector2.ZERO, "tag": ""},
 	},
 	{
 		"id": "terrain_ice",

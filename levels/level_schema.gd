@@ -17,7 +17,7 @@ const ENTITY_MARGIN := 64.0  # point entities keep this far from the wall's inne
 const SPAWN_MARGIN := 128.0  # vehicles need extra clearance
 const SPAWN_SEPARATION := 192.0
 
-const TERRAIN_TYPES := ["dirt", "ice", "water"]  # road is the unpainted floor
+const TERRAIN_TYPES := ["dirt", "grass", "ice", "water"]  # road is the unpainted floor
 const PICKUP_KINDS := ["standard", "homing"]
 
 const BLOCK_SIDE_MIN := 64.0
