@@ -16,4 +16,5 @@ func get_intent(_vehicle, _delta: float) -> Dictionary:
 		"weapon_prev": Input.is_action_just_pressed(IR.ACTION_WEAPON_PREV),
 		"weapon_next": Input.is_action_just_pressed(IR.ACTION_WEAPON_NEXT),
 		"handbrake": Input.is_action_pressed(IR.ACTION_HANDBRAKE),
+		"boost": Input.is_action_pressed(IR.ACTION_BOOST),
 	}

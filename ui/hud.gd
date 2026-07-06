@@ -22,6 +22,7 @@ var _hp_label: Label
 var _speed_label: Label
 var _heat_bar: ProgressBar
 var _heat_label: Label
+var _boost_bar: ProgressBar
 var _slot_labels: Array = []
 
 func _ready() -> void:
@@ -42,6 +43,9 @@ func _process(_delta: float) -> void:
 		_heat_bar.value = mg.heat_fraction() * 100.0
 		_heat_label.text = "MG HEAT — LOCKED" if mg.is_locked() else "MG HEAT"
 		_heat_label.modulate = Color(1.0, 0.35, 0.3) if mg.is_locked() else Color.WHITE
+	var ctrl := _player.get_controller()
+	if ctrl:
+		_boost_bar.value = ctrl.boost_fuel * 100.0
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
@@ -138,6 +142,10 @@ func _build_dash() -> void:
 	vbox.add_child(_spacer(8))
 	_heat_label = _label(vbox, "MG HEAT", 14)
 	_heat_bar = _bar(vbox, Color(0.95, 0.55, 0.15))
+	var boost_label := _label(vbox, "BOOST", 14)
+	boost_label.modulate = DIM_TEXT
+	_boost_bar = _bar(vbox, Color(0.25, 0.65, 0.9))
+	_boost_bar.value = 100.0
 	vbox.add_child(_spacer(12))
 
 	var weapons_hdr := _label(vbox, "WEAPONS  (Q/E)", 14)
@@ -150,6 +158,7 @@ func _build_dash() -> void:
 	vbox.add_child(fill)
 
 	var guide := _label(vbox, "WASD  drive
+SHIFT  boost
 Q/E/wheel  weapon
 LMB  fire selected
 RMB  machine gun

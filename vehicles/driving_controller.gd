@@ -28,6 +28,13 @@ extends Node
 @export_group("Mass")
 @export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
 
+@export_group("Boost")
+@export var boost_top_factor := 1.35
+@export var boost_accel_factor := 1.5
+@export var boost_burn_rate := 0.02  # tank fraction per second held (full tank = 50s)
+
+var boost_fuel := 1.0  # 0..1; no recharge — resets with the scene
+
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 const TERRAIN := {
 	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},
@@ -51,6 +58,12 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var scale: float = vehicle.get_speed_scale() if vehicle.has_method(&"get_speed_scale") else 1.0
 	accel *= scale
 	top *= scale
+
+	# Boost: hold to burn the tank (no recharge) for extra shove and headroom.
+	if intent.get("boost", false) and boost_fuel > 0.0:
+		boost_fuel = maxf(boost_fuel - boost_burn_rate * delta, 0.0)
+		accel *= boost_accel_factor
+		top *= boost_top_factor
 
 	var forward := Vector2.RIGHT.rotated(vehicle.heading)
 	var fwd_speed: float = vehicle.velocity.dot(forward)

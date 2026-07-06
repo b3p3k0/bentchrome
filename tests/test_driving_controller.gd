@@ -149,3 +149,25 @@ func test_coast_heavy_rolls_farther() -> void:
 	bike.free()
 	mid.free()
 	heavy.free()
+
+func test_boost_raises_top_and_burns_fuel() -> void:
+	var mid = _ctrl(5.0, 207.0)
+	var stub := StubVehicle.new()
+	var intent := {"throttle": 1.0, "steer": 0.0, "boost": true}
+	# 10s of held boost: past normal top, tank down by burn_rate * time.
+	for i in 600:
+		mid.apply(stub, intent, DT)
+	t.check(_fwd(stub) > TOP * 1.05, "boost: exceeds normal top speed (got %.0f)" % _fwd(stub))
+	t.check_approx(mid.boost_fuel, 1.0 - mid.boost_burn_rate * 10.0, "boost: tank burns at burn_rate per second")
+	mid.free()
+
+func test_boost_empty_tank_is_inert() -> void:
+	var mid = _ctrl(5.0, 207.0)
+	mid.boost_fuel = 0.0
+	var stub := StubVehicle.new()
+	var intent := {"throttle": 1.0, "steer": 0.0, "boost": true}
+	for i in 1200:  # plenty of time to reach whatever cap applies
+		mid.apply(stub, intent, DT)
+	t.check(_fwd(stub) <= TOP + 1.0, "boost: empty tank means normal top speed (got %.0f)" % _fwd(stub))
+	t.check(mid.boost_fuel == 0.0, "boost: tank never goes negative")
+	mid.free()
