@@ -23,6 +23,10 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	t.current_scene = arena  # weapon mounts spawn projectiles into current_scene
 	var enemy = arena.get_node("Enemy1")
 	var player = arena.get_node("Vehicle")
+	# The arena re-rolls enemy cars/mixes on boot (_randomize_enemies), so pin
+	# the historical worst case explicitly: mass-7 truck, pure-aggressor mix.
+	enemy.set_stats(load("res://data/vehicles/kandykane.tres"))
+	enemy.get_node("Driver").mix = Vector3(1, 0, 0)
 	# Recreate the report: enemy tucked into the corner nose-first, player
 	# pressuring from the open arena so "away from threat" points into the walls.
 	enemy.global_position = Vector2(1420.0, -1220.0)
