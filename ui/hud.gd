@@ -9,9 +9,13 @@ const VIEW_H := 720
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const SELECTED := Color(1.0, 0.85, 0.2)
+const ALIVE_TEXT := Color(0.8, 0.82, 0.86)   # soft white — pure white glares
+const DEAD_TEXT := Color(0.55, 0.14, 0.14)   # dark red for the wrecked
 
 var _player: Vehicle
 var _rack: WeaponRack
+var _opponents: Array = []  # each: {ref: Vehicle, label: Label}; snapshot at round start
+var _opponents_box: VBoxContainer
 
 var _hp_bar: ProgressBar
 var _hp_label: Label
@@ -25,6 +29,7 @@ func _ready() -> void:
 	_build_ui()
 
 func _process(_delta: float) -> void:
+	_update_opponents()
 	if _player == null or not is_instance_valid(_player):
 		_bind_player()
 		if _player == null:
@@ -65,6 +70,36 @@ func _build_ui() -> void:
 	add_child(_gutter_panel(1280 - GUTTER))
 	_build_dash()
 	_build_radar()
+	_build_opponents()
+
+## Names snapshot once from the first non-empty "enemies" frame (after the
+## arena's car re-roll); freed nodes then flip their label to DEAD_TEXT.
+func _update_opponents() -> void:
+	if _opponents.is_empty():
+		for enemy in get_tree().get_nodes_in_group(&"enemies"):
+			var lbl := Label.new()
+			var stats = enemy.get("stats")
+			lbl.text = stats.car_name if stats and stats.car_name != "" else String(enemy.name)
+			lbl.add_theme_font_size_override("font_size", 15)
+			lbl.modulate = ALIVE_TEXT
+			_opponents_box.add_child(lbl)
+			_opponents.append({"ref": enemy, "label": lbl})
+		return
+	for o in _opponents:
+		o.label.modulate = ALIVE_TEXT if is_instance_valid(o.ref) else DEAD_TEXT
+
+func _build_opponents() -> void:
+	var hdr := Label.new()
+	hdr.text = "OPPONENTS"
+	hdr.add_theme_font_size_override("font_size", 14)
+	hdr.modulate = DIM_TEXT
+	hdr.position = Vector2(1280 - GUTTER + 16, 300)
+	add_child(hdr)
+	_opponents_box = VBoxContainer.new()
+	_opponents_box.position = Vector2(1280 - GUTTER + 20, 324)
+	_opponents_box.size = Vector2(GUTTER - 40, 0)
+	_opponents_box.add_theme_constant_override("separation", 4)
+	add_child(_opponents_box)
 
 func _build_radar() -> void:
 	var hdr := Label.new()
