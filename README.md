@@ -43,10 +43,12 @@ After confirming your selection, you'll drop directly into the Test Arena to put
 - Machine Gun: `Right click` or `Space`. Infinite ammo, chip damage, fires off the nose. Watch the heat bar — redline it and the gun locks out until it cools.
 - Selected Weapon: `Left click` or `K` fires whatever slot is active. Cycle slots with `Q`/`E` or the mouse wheel: your car's signature special (recharges on its own — don't hoard it), dumb-fire missiles, and homing missiles. Run a slot dry and the rack auto-cycles to your next armed weapon — no dead clicks mid-brawl. All nine signature specials are live — flame cones, lock-on taser zaps, body-check leaps, charged rams; every driver fights different.
 - Ammo: missiles are scavenged, not printed. Grab the green `M` and cyan `H` crates around the arena; crates respawn, your patience won't.
-- Turbo: `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes.
+- Boost: hold `Shift` / left bumper for gap jumps, last-second dodges, or heroic mistakes. The tank burns 2% a second and nothing refills it — spend it like it's the last nitro on Earth, because this round, it is. Blue bar on the dash.
+- Repairs: the white pad with the red cross in the park fully patches you up. Two charges per round, 45 seconds between them, and it only answers to you — the mob can spin donuts on it all day.
+- They shoot back: every opponent runs the same arsenal you do — machine gun, missiles, their car's signature special — just on a lazier trigger finger. Cover matters now.
 - Pause: `ESC` — resume, restart the arena, or quit while you're behind.
 - Winning and losing: wreck every opponent and the round ends in lights; get wrecked and it ends in a shrug. Either way you get restart, a new ride, or the exit — no limping around an empty arena.
-- HUD: the dash on the left tracks HP, speed, MG heat, and your weapon slots (with a key cheat-sheet at the bottom); the right side keeps the radar (nose-up, enemies red) plus the opponent roster — names dim to dark red as you retire them. Everything fires where the car points — get good and learn the trick shots.
+- HUD: the dash on the left tracks HP, speed, MG heat, boost, and your weapon slots (with a key cheat-sheet at the bottom); the right side keeps the radar (nose-up, enemies red) plus the opponent roster — names dim to dark red as you retire them. Everything fires where the car points — get good and learn the trick shots.
 
 First arena (Arena) is the tutorial crash-test — a city block now: streets carved between buildings, a park with grass, dirt, and a pond that eats your momentum, and scenery that breaks. Crates and kiosks smash under gunfire or a good shoulder-check, some walls hide better loot than others, and the ramp clears more than potholes. Freeway introduces overpasses and multipoint ambushes. Expect hidden pickups tucked behind debris piles; if you see a suspicious billboard, ram it.
 
