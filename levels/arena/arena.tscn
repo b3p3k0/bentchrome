@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=27 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(3792, 40)
@@ -365,6 +366,9 @@ polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(1876, 0)
 shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="HealthStation" parent="." instance=ExtResource("10_heal")]
+position = Vector2(-384, -64)
 
 [node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
 position = Vector2(-768, -1216)
