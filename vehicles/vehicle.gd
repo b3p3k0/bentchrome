@@ -105,8 +105,11 @@ func _physics_process(delta: float) -> void:
 		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
 		# doesn't eat the dash velocity.
 		_controller.apply(self, intent, delta)
+	# Captured before move_and_slide: a head-on hit on a static body zeroes
+	# velocity during the slide, so post-slide speed under-reads the impact.
+	var impact_speed := velocity.length()
 	move_and_slide()
-	_update_ram(delta)
+	_update_ram(delta, impact_speed)
 	_visual.rotation = heading
 	_update_depth(delta)
 	var aim := Vector2.RIGHT.rotated(heading)
@@ -182,14 +185,18 @@ func take_ram_damage(amount: float) -> void:
 	if _health:
 		_health.take_damage(amount)
 
-## Speed-based collision damage to other vehicles after move_and_slide.
-func _update_ram(delta: float) -> void:
+## Speed-based collision damage after move_and_slide: other vehicles, plus any
+## Health-bearing body (destructible blocks, dummies). The rammer takes nothing
+## from static targets; Toe Jam's armed charge is saved for vehicles.
+func _update_ram(delta: float, impact_speed: float) -> void:
 	if _ram_cd > 0.0:
 		_ram_cd -= delta
 		return
 	for i in get_slide_collision_count():
 		var other = get_slide_collision(i).get_collider()
-		if other is Vehicle and other != self:
+		if other == self:
+			continue
+		if other is Vehicle:
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
@@ -200,3 +207,15 @@ func _update_ram(delta: float) -> void:
 					other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale)
 				_ram_cd = ram_cooldown
 				break
+		else:
+			var health := _find_health_child(other)
+			if health and impact_speed > ram_min_speed:
+				health.take_damage((impact_speed - ram_min_speed) * ram_damage_scale)
+				_ram_cd = ram_cooldown
+				break
+
+func _find_health_child(body: Node) -> Health:
+	for child in body.get_children():
+		if child is Health:
+			return child
+	return null
