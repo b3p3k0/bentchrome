@@ -41,7 +41,8 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - **Physics:** CharacterBody2D arcade driving with velocity decomposition + lateral-friction grip; per-vehicle feel comes from data, not forks. A per-car **mass** stat (1–10, roster.json) shapes launch, coast, and braking (heavy = slow launch, long coast, soft brakes); `LCTRL` handbrake cuts lateral grip for drift. Feel bands are test-locked in `tests/test_driving_controller.gd`; history + current model in `VEHICLE_PHYSICS_PROGRESSION.md` (Phase 4 = the rebuild).
 - **Rendering:** 2D sprites, GL Compatibility, nearest-neighbor filter; fake depth via a separate shadow sprite + height offset + per-level Y-sort.
 - **Screen layout:** fullscreen on a 1280×720 base viewport — a centered **720×720 play square** with opaque 280px gutters (`ui/hud.gd`): left = dash (HP/speed/MG heat/weapon slots/keyguide), right = rotating player-up radar (`ui/radar.gd`). ESC pause menu in `ui/pause_menu.gd`.
-- **Collision layers** (named in project.godot): 1 = ground (vehicles, dummies), 2 = wall (arena boundary), 3 = obstacle (blocks/cover — airborne cars and `pierces_cover` projectiles ignore it), 8 = terrain zones.
+- **Collision layers** (named in project.godot): 1 = ground (vehicles, dummies), 2 = wall (arena boundary), 3 = obstacle (blocks/cover — airborne cars and `pierces_cover` projectiles ignore it), 8 = terrain zones (road/grass/dirt/ice/water multipliers in `driving_controller.gd`).
+- **Destructibles:** any body with a `Health` child takes weapon fire and speed-scaled ram damage; `environment/destructible_block.gd` is the reusable obstacle flavor (layer 3, exported size/HP).
 - **Performance:** 60 FPS locked on mid-range GPUs.
 - **Packaging:** AppImage for Linux.
 

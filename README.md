@@ -47,7 +47,7 @@ After confirming your selection, you'll drop directly into the Test Arena to put
 - Pause: `ESC` — resume, restart the arena, or quit while you're behind.
 - HUD: the dash on the left tracks HP, speed, MG heat, and your weapon slots (with a key cheat-sheet at the bottom); the radar on the right keeps your nose pointed up and paints enemies red. Everything fires where the car points — get good and learn the trick shots.
 
-First arena (Arena) is the tutorial crash-test. Freeway introduces overpasses and multipoint ambushes. Expect hidden pickups tucked behind debris piles; if you see a suspicious billboard, ram it.
+First arena (Arena) is the tutorial crash-test — a city block now: streets carved between buildings, a park with grass, dirt, and a pond that eats your momentum, and scenery that breaks. Crates and kiosks smash under gunfire or a good shoulder-check, some walls hide better loot than others, and the ramp clears more than potholes. Freeway introduces overpasses and multipoint ambushes. Expect hidden pickups tucked behind debris piles; if you see a suspicious billboard, ram it.
 
 ## FAQs
 
