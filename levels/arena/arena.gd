@@ -15,6 +15,7 @@ func _ready() -> void:
 	_randomize_enemies()
 	print("[boot] arena ready — WASD to drive, Space/LMB to fire")
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
+	add_child(load("res://ui/end_screen.tscn").instantiate())
 	var dev := get_node_or_null(^"/root/Dev")
 	if dev and dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())

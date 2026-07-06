@@ -27,6 +27,7 @@ func _ready() -> void:
 	Loader.build(level, self)
 	add_child(load("res://ui/hud.tscn").instantiate())
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
+	add_child(load("res://ui/end_screen.tscn").instantiate())
 	var dev := get_node_or_null(^"/root/Dev")
 	if dev and dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
