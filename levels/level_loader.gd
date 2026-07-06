@@ -19,7 +19,7 @@ const HEADING_UP_OFFSET := -PI / 2
 ## INTERIM SHIM — ai_profiles.json archetypes -> EnemyDriver.mix weights
 ## (aggressor, ambusher, opportunist). The JSON's vocabulary predates the mix
 ## system ("defender" doesn't exist in-game; opportunist is the nearest fit).
-## When a real AIProfileLoader lands, replace _mix_for_car() and delete this.
+## When a real AIProfileLoader lands, replace mix_for_car() and delete this.
 const ARCHETYPE_MIX := {
 	"aggressor": Vector3(1, 0, 0),
 	"ambusher": Vector3(0, 1, 0),
@@ -164,38 +164,36 @@ static func _add_enemies(level: Dictionary, parent: Node2D, rng_seed: int) -> vo
 	else:
 		rng.randomize()
 	var scene: PackedScene = load(Catalog.by_id("enemy_spawn").scene)
-	var picks := _pick_cars(level.enemy_spawns.size(), parent, rng)
-	for i in level.enemy_spawns.size():
-		var enemy := scene.instantiate()
-		enemy.name = "Enemy%d" % (i + 1)
-		enemy.position = Vector2(level.enemy_spawns[i].pos[0], level.enemy_spawns[i].pos[1])
-		enemy.stats = load("res://data/vehicles/%s.tres" % picks[i])
-		enemy.get_node("Driver").mix = _mix_for_car(picks[i])
-		parent.add_child(enemy)
-
-## N distinct roster ids, preferring cars the player isn't driving; refills
-## with duplicates only if the roster runs short.
-static func _pick_cars(count: int, parent: Node2D, rng: RandomNumberGenerator) -> Array:
-	_load_car_data()
 	var player_id := ""
 	var gs := parent.get_node_or_null(^"/root/GameState")
 	if gs:
 		player_id = String(gs.selected_vehicle_id)
-	var pool := _car_ids.filter(func(id: String) -> bool: return id != player_id)
+	var picks := pick_cars(level.enemy_spawns.size(), player_id, rng)
+	for i in mini(picks.size(), level.enemy_spawns.size()):
+		var enemy := scene.instantiate()
+		enemy.name = "Enemy%d" % (i + 1)
+		enemy.position = Vector2(level.enemy_spawns[i].pos[0], level.enemy_spawns[i].pos[1])
+		enemy.stats = load("res://data/vehicles/%s.tres" % picks[i])
+		enemy.get_node("Driver").mix = mix_for_car(picks[i])
+		parent.add_child(enemy)
+
+## Up to `count` roster ids — always distinct, never `exclude_id` (the player's
+## car). If the roster can't cover the ask, returns fewer picks and warns;
+## callers spawn that many enemies.
+static func pick_cars(count: int, exclude_id: String, rng: RandomNumberGenerator) -> Array:
+	_load_car_data()
+	var pool := _car_ids.filter(func(id: String) -> bool: return id != exclude_id)
 	if pool.size() < count:
-		pool = _car_ids.duplicate()
+		push_warning("pick_cars: %d enemies asked, only %d distinct cars — spawning fewer" % [count, pool.size()])
 	# Fisher-Yates with the caller's RNG — Array.shuffle() isn't seedable.
 	for i in range(pool.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var tmp = pool[i]
 		pool[i] = pool[j]
 		pool[j] = tmp
-	var picks := []
-	for i in count:
-		picks.append(pool[i % pool.size()])
-	return picks
+	return pool.slice(0, count)
 
-static func _mix_for_car(car_id: String) -> Vector3:
+static func mix_for_car(car_id: String) -> Vector3:
 	_load_car_data()
 	var archetype: String = _archetype_by_id.get(car_id, "aggressor")
 	return ARCHETYPE_MIX.get(archetype, Vector3(1, 0, 0))

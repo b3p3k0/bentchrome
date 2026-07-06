@@ -132,8 +132,33 @@ func test_enemy_pick_is_seed_deterministic() -> void:
 	_done(f3)
 
 func test_archetype_mix_shim() -> void:
-	t.check(Loader._mix_for_car("cricket") == Vector3(1, 0, 0), "aggressor -> pure aggressor mix")
-	t.check(Loader._mix_for_car("hammertoe") == Vector3(0, 1, 0), "ambusher -> pure ambusher mix")
-	t.check(Loader._mix_for_car("bumper") == Vector3(0, 0, 1), "defender -> opportunist mix (shim)")
-	t.check(Loader._mix_for_car("kandykane") == Vector3(1, 1, 1), "mini_boss -> full blend")
-	t.check(Loader._mix_for_car("not_a_car") == Vector3(1, 0, 0), "unknown car -> aggressor fallback")
+	t.check(Loader.mix_for_car("cricket") == Vector3(1, 0, 0), "aggressor -> pure aggressor mix")
+	t.check(Loader.mix_for_car("hammertoe") == Vector3(0, 1, 0), "ambusher -> pure ambusher mix")
+	t.check(Loader.mix_for_car("bumper") == Vector3(0, 0, 1), "defender -> opportunist mix (shim)")
+	t.check(Loader.mix_for_car("kandykane") == Vector3(1, 1, 1), "mini_boss -> full blend")
+	t.check(Loader.mix_for_car("not_a_car") == Vector3(1, 0, 0), "unknown car -> aggressor fallback")
+
+func test_pick_cars_distinct_and_excludes() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	# 9-car roster minus the excluded one = 8 distinct picks, exactly the ask.
+	var picks: Array = Loader.pick_cars(8, "kandykane", rng)
+	t.check(picks.size() == 8, "full pool ask returns 8 picks")
+	t.check(not picks.has("kandykane"), "excluded car never picked")
+	var unique := {}
+	for id in picks:
+		unique[id] = true
+	t.check(unique.size() == picks.size(), "all picks distinct")
+
+func test_pick_cars_clamps_over_ask() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	# Asking past the pool clamps — never wraps into duplicates or the
+	# excluded car. (Warns; expected here.)
+	var picks: Array = Loader.pick_cars(20, "kandykane", rng)
+	t.check(picks.size() == 8, "over-ask clamps to pool size")
+	t.check(not picks.has("kandykane"), "excluded car stays out on over-ask")
+	var unique := {}
+	for id in picks:
+		unique[id] = true
+	t.check(unique.size() == picks.size(), "clamped picks still distinct")
