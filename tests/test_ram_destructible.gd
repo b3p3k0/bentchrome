@@ -65,6 +65,23 @@ func test_combat_scale_truth_table() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_ram_never_kills_a_car() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var attacker = VehicleScene.instantiate()  # player faction — full ram damage
+	container.add_child(attacker)
+	attacker.velocity = Vector2(650, 0)
+	var victim = EnemyScene.instantiate()
+	victim.position = Vector2(150, 0)
+	container.add_child(victim)
+	victim.get_node("Health").hp = 3.0  # one clean ram would normally end this
+	for i in 30:
+		await t.physics_frame
+	var alive: bool = is_instance_valid(victim) and victim.get_node("Health").hp > 0.0
+	t.check(alive, "ram floor: a crash never lands the killing blow")
+	t.root.remove_child(container)
+	container.free()
+
 func test_slow_nudge_is_free() -> void:
 	var f := _fixture(150.0, 90.0)
 	var health = f.block.get_node("Health")

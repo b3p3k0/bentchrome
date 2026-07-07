@@ -240,6 +240,9 @@ func get_speed() -> float:
 func get_hp() -> float:
 	return _health.hp if _health else 0.0
 
+func get_max_hp() -> float:
+	return _health.max_hp if _health else 0.0
+
 func get_hp_fraction() -> float:
 	return _health.hp / _health.max_hp if _health and _health.max_hp > 0.0 else 1.0
 
@@ -309,7 +312,11 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
-				other.take_ram_damage(hit * Combat.scale(self, other), self)
+				hit *= Combat.scale(self, other)
+				# Crashes never kill: clamp so the victim keeps >=1% — bumpers
+				# soften them up, guns finish them. (Blocks still die to rams.)
+				hit = minf(hit, maxf(other.get_hp() - 0.01 * other.get_max_hp(), 0.0))
+				other.take_ram_damage(hit, self)
 				_ram_cd = ram_cooldown
 				break
 		else:
