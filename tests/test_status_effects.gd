@@ -113,6 +113,16 @@ func test_clear_resets_everything() -> void:
 	t.check_approx(f.health.hp, 89.0, "clear: damage lands after clear")
 	_done(f)
 
+func test_clear_kind_targets_one_effect() -> void:
+	var f := _fixture()
+	f.status.apply(_spec(&"burn", 5.0, 10.0))
+	f.status.apply(_spec(&"slow", 5.0, 0.5))
+	t.check(f.status.has_effect(&"burn"), "clear_kind: burn active before")
+	f.status.clear_kind(&"burn")  # the boost-extinguish path
+	t.check(not f.status.has_effect(&"burn"), "clear_kind: burn extinguished")
+	t.check_approx(f.status.speed_scale(), 0.5, "clear_kind: slow untouched")
+	_done(f)
+
 func test_no_health_sibling_no_crash() -> void:
 	var f := _fixture(false)
 	f.status.apply(_spec(&"burn", 1.0, 10.0))

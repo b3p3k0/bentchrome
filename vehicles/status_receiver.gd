@@ -34,7 +34,7 @@ func tick(delta: float) -> void:
 			_active.remove_at(i)
 		i -= 1
 	if _health:
-		_health.invulnerable = _has(&"invuln")
+		_health.invulnerable = has_effect(&"invuln")
 
 func speed_scale() -> float:
 	var s := 1.0
@@ -43,11 +43,21 @@ func speed_scale() -> float:
 			s *= e.magnitude
 	return s
 
-func _has(kind: StringName) -> bool:
+func has_effect(kind: StringName) -> bool:
 	for e in _active:
 		if e.kind == kind:
 			return true
 	return false
+
+## Removes every effect of one kind (boost blows out a burn, etc.).
+func clear_kind(kind: StringName) -> void:
+	var i := _active.size() - 1
+	while i >= 0:
+		if _active[i].kind == kind:
+			_active.remove_at(i)
+		i -= 1
+	if _health:
+		_health.invulnerable = has_effect(&"invuln")
 
 func clear() -> void:
 	_active.clear()

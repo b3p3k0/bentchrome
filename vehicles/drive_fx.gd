@@ -19,6 +19,7 @@ var _vehicle: CharacterBody2D
 var _skids: Array = []  # the active pair of Line2Ds, parented to the level
 var _dust: CPUParticles2D
 var _flame: Polygon2D
+var _burn_fx: CPUParticles2D
 
 func _ready() -> void:
 	_vehicle = get_parent() as CharacterBody2D
@@ -34,6 +35,19 @@ func _ready() -> void:
 	_dust.scale_amount_max = 4.0
 	_dust.gravity = Vector2.ZERO
 	add_child(_dust)
+	# Burning: licks of fire riding the hull so a burn is never invisible.
+	_burn_fx = CPUParticles2D.new()
+	_burn_fx.emitting = false
+	_burn_fx.amount = 18
+	_burn_fx.lifetime = 0.4
+	_burn_fx.spread = 180.0
+	_burn_fx.initial_velocity_min = 15.0
+	_burn_fx.initial_velocity_max = 45.0
+	_burn_fx.scale_amount_min = 2.5
+	_burn_fx.scale_amount_max = 5.0
+	_burn_fx.gravity = Vector2.ZERO
+	_burn_fx.color = Color(1.0, 0.5, 0.1, 0.85)
+	add_child(_burn_fx)
 	var visual := _vehicle.get_node_or_null(^"Visual") if _vehicle else null
 	if visual:
 		_flame = Polygon2D.new()
@@ -57,6 +71,9 @@ func _physics_process(_delta: float) -> void:
 		_flame.visible = ctrl.boosting
 		if ctrl.boosting:
 			_flame.scale = Vector2(randf_range(0.7, 1.4), randf_range(0.8, 1.1))
+
+	if _burn_fx:
+		_burn_fx.emitting = _vehicle.has_method(&"is_burning") and _vehicle.is_burning()
 
 	var terrain: StringName = _vehicle.current_terrain
 	var dusty: bool = grounded and speed > DUST_MIN_SPEED and DUST_COLORS.has(terrain)

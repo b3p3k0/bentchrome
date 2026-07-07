@@ -148,6 +148,8 @@ func _physics_process(delta: float) -> void:
 		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
 		# doesn't eat the dash velocity.
 		_controller.apply(self, intent, delta)
+		if _controller.boosting and _status:
+			_status.clear_kind(&"burn")  # nitro wind blows the fire out
 	# Captured before move_and_slide: a head-on hit on a static body zeroes
 	# velocity during the slide, so post-slide speed under-reads the impact.
 	var pre_slide_vel := velocity
@@ -258,6 +260,9 @@ func get_speed_scale() -> float:
 func apply_effect(spec: StatusEffectSpec) -> void:
 	if _status:
 		_status.apply(spec)
+
+func is_burning() -> bool:
+	return _status != null and _status.has_effect(&"burn")
 
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.
