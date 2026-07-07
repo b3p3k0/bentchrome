@@ -70,15 +70,15 @@ func test_stuck_resets_when_moving_or_idle() -> void:
 	t.check(not d._update_stuck(10.0, false, 0.35), "stuck: idle throttle resets the timer")
 	d.free()
 
-func test_mercy_skips_dying_ai_but_not_player() -> void:
+func test_dying_ai_still_gets_targeted() -> void:
+	# Immunity lives in Vehicle.combat_scale, NOT targeting — the theatrics
+	# (AI shooting a nearly-dead AI) must keep happening.
 	var rig := _targeting_rig()
 	var driver = DriverScript.new()
-	var dying_ai := _car(rig[0], Vector2(100, 0), 0.1)
-	var healthy_ai := _car(rig[0], Vector2(600, 0), 1.0)
-	t.check(driver._select_target(rig[1]) == healthy_ai, "mercy: dying AI skipped for a farther healthy one")
-	t.check(driver._nearest_any(rig[1]) == healthy_ai, "mercy: hunt fallback skips the dying AI too")
-	dying_ai.add_to_group(&"player")  # now it's the player at 10% HP
-	t.check(driver._select_target(rig[1]) == dying_ai, "mercy: a dying PLAYER is always fair game")
+	var dying_ai := _car(rig[0], Vector2(100, 0), 0.05)
+	var _healthy_ai := _car(rig[0], Vector2(900, 0), 1.0)
+	t.check(driver._select_target(rig[1]) == dying_ai, "targeting: dying AI is still a target (w_weak even prefers it)")
+	t.check(driver._nearest_any(rig[1]) == dying_ai, "targeting: hunt fallback ignores hp")
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
