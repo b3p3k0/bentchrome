@@ -56,6 +56,8 @@ func _on_body_entered(body: Node) -> void:
 	var health := _find_health(body)
 	if health:
 		health.take_damage(damage)
+		if "last_attacker" in body and shooter is Node2D:
+			body.last_attacker = shooter  # AI holds a grudge against the trigger
 		var status := _find_status(body)
 		if status:
 			for spec in on_hit_effects:

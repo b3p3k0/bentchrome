@@ -96,7 +96,7 @@ func _beam_tick(delta: float) -> void:
 		_end_beam()
 		return
 	if _beam_target.has_method("take_ram_damage"):
-		_beam_target.take_ram_damage(_def.damage * delta)  # damage authored as dps
+		_beam_target.take_ram_damage(_def.damage * delta, vehicle)  # damage authored as dps
 	if _beam_target.has_method("apply_effect"):
 		var slow := StatusEffectSpec.new()
 		slow.kind = &"slow"
@@ -220,6 +220,8 @@ func _flame_tick(delta: float) -> void:
 		for child in body.get_children():
 			if child is Health:
 				child.take_damage(_def.damage * delta)
+				if "last_attacker" in body:
+					body.last_attacker = vehicle
 				break
 		if body.has_method("apply_effect"):
 			for spec in _def.on_hit_effects:

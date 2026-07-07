@@ -41,6 +41,7 @@ var current_terrain: StringName = &"road"
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
 var _ram_cd := 0.0        # cooldown between ram hits
+var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
@@ -194,7 +195,9 @@ func apply_effect(spec: StatusEffectSpec) -> void:
 	if _status:
 		_status.apply(spec)
 
-func take_ram_damage(amount: float) -> void:
+func take_ram_damage(amount: float, source: Node2D = null) -> void:
+	if source:
+		last_attacker = source
 	if _health:
 		_health.take_damage(amount)
 
@@ -215,9 +218,9 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				if charged > 0.0:
-					other.take_ram_damage(charged)
+					other.take_ram_damage(charged, self)
 				else:
-					other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale)
+					other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale, self)
 				_ram_cd = ram_cooldown
 				break
 		else:

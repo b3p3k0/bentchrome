@@ -325,10 +325,17 @@ func _los_clear(vehicle, target: Node2D) -> bool:
 	query.exclude = [(vehicle as CollisionObject2D).get_rid(), (target as CollisionObject2D).get_rid()]
 	return space.intersect_ray(query).is_empty()
 
-## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak).
+## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak),
+## plus a grudge bonus for whoever hurt us last — retaliation cascades keep
+## the free-for-all churning.
+const REVENGE_BONUS := 0.5
+
 func _select_target(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_score := -INF
+	var grudge: Node2D = vehicle.get("last_attacker")
+	if grudge != null and not is_instance_valid(grudge):
+		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
 		if v == vehicle:
 			continue
@@ -338,6 +345,8 @@ func _select_target(vehicle) -> Node2D:
 		var near_term := 1.0 - d / SCAN
 		var hpf: float = v.get_hp_fraction() if v.has_method(&"get_hp_fraction") else 1.0
 		var score := _w_near * near_term + _w_weak * (1.0 - hpf)
+		if v == grudge:
+			score += REVENGE_BONUS
 		if score > best_score:
 			best_score = score
 			best = v
