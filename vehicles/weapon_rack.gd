@@ -49,11 +49,20 @@ func tick(delta: float) -> void:
 			s.ammo += 1
 			ammo_changed.emit(Slot.SPECIAL, s.ammo)
 
+## Cycling only ever lands on a slot that can fire right now — empties (and a
+## recharging special at 0) are skipped, matching auto-cycle. All dry = no move.
 func select_next() -> void:
-	_select((_selected + 1) % _slots.size())
+	_select_armed(1)
 
 func select_prev() -> void:
-	_select((_selected - 1 + _slots.size()) % _slots.size())
+	_select_armed(-1)
+
+func _select_armed(step: int) -> void:
+	for i in range(1, _slots.size() + 1):
+		var idx: int = (_selected + step * i + _slots.size() * i) % _slots.size()
+		if _slots[idx].ammo > 0:
+			_select(idx)
+			return
 
 func _select(index: int) -> void:
 	if index == _selected or _slots.is_empty():

@@ -42,6 +42,24 @@ func test_selection_cycles_and_wraps() -> void:
 	t.check(r.selected_index() == RackScript.Slot.POWER, "cycle: prev wraps to power")
 	r.free()
 
+func test_cycling_skips_empty_slots() -> void:
+	var r = _rack()
+	r.select_next()  # standard, ammo 2
+	r.consume()
+	r.consume()  # standard dry -> auto-cycles to homing
+	r.select_prev()  # standard is empty now: prev skips it, lands on special
+	t.check(r.selected_index() == RackScript.Slot.SPECIAL, "cycle: prev skips the drained slot")
+	r.select_next()  # next armed after special: standard empty -> homing
+	t.check(r.selected_index() == RackScript.Slot.HOMING, "cycle: next skips the drained slot")
+	r.consume()  # homing dry -> power
+	r.consume()  # power dry -> special
+	r.consume()  # special dry -> everything empty
+	var parked := r.selected_index()
+	r.select_next()
+	r.select_prev()
+	t.check(r.selected_index() == parked, "cycle: fully dry rack doesn't move")
+	r.free()
+
 func test_consume_and_dry() -> void:
 	var r = _rack()
 	r.select_next()  # standard, ammo 2
