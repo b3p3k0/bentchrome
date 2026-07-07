@@ -89,7 +89,13 @@ func _ready() -> void:
 	_flank = p["flank"]
 
 func get_intent(vehicle, delta: float) -> Dictionary:
+	# Engagement target inside SCAN; beyond that, HUNT the nearest combatant
+	# anywhere — parking is not a strategy in a free-for-all. A hunt target is
+	# always past _far (anything closer would have been engaged), so the normal
+	# pursue flow drives it and the range gates keep the guns quiet.
 	var target := _select_target(vehicle)
+	if target == null:
+		target = _nearest_any(vehicle)
 	if target == null:
 		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 
@@ -170,6 +176,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"steer": clampf(away * away_gain + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
+			"boost": vehicle.get_hp_fraction() < _flee,  # nitro the getaway
 		}
 	else:
 		var approach := bearing
@@ -185,6 +192,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE and los,
 			"fire_selected": absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
+			"boost": dist > 900.0 and absf(diff) < 0.5,  # burn nitro to close long gaps
 		}
 
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
@@ -252,6 +260,20 @@ func _update_feelers(vehicle) -> void:
 		_blocked = frac[1] < 0.6
 		# Nose blocked: commit toward whichever side reads clearer.
 		_avoid_bias += (1.0 - frac[1]) * (1.0 if frac[2] >= frac[0] else -1.0)
+
+## Nearest combatant with no range limit — the HUNT fallback when the scan
+## radius is empty (big-map round starts).
+func _nearest_any(vehicle) -> Node2D:
+	var best: Node2D = null
+	var best_d := INF
+	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
+		if v == vehicle:
+			continue
+		var d: float = vehicle.global_position.distance_to(v.global_position)
+		if d < best_d:
+			best_d = d
+			best = v
+	return best
 
 ## True when no wall/block sits between the nose and the target (mask 6 —
 ## other cars don't block; collateral fire is free-for-all gameplay).
