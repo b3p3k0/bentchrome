@@ -6,6 +6,16 @@ const TITLE := "res://ui/title.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const ARENA := "res://levels/arena/arena.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
+const INTERSTITIAL := "res://ui/interstitial.tscn"
+
+## The campaign, in order. The fight rolls out of town: downtown brawl, up the
+## freeway, through the suburbs, into the mountains.
+const CAMPAIGN := [
+	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown"},
+	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop"},
+	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs"},
+	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass"},
+]
 
 func to_title() -> void:
 	goto_scene(TITLE)
@@ -15,6 +25,15 @@ func to_select() -> void:
 
 func to_arena() -> void:
 	goto_scene(ARENA)
+
+## Enters a campaign level by index (clamped); keeps GameState in step.
+func to_level(index: int) -> void:
+	index = clampi(index, 0, CAMPAIGN.size() - 1)
+	GameState.level_index = index
+	goto_scene(CAMPAIGN[index].scene)
+
+func to_interstitial() -> void:
+	goto_scene(INTERSTITIAL)
 
 func to_custom_level(path: String) -> void:
 	GameState.pending_level_path = path

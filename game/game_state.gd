@@ -8,7 +8,12 @@ signal level_changed(level_index: int)
 
 var selected_vehicle_id: StringName = &""
 var level_index: int = 0
+var lives: int = 3  # campaign lives; reset at car select, spent by levels
 var score: int = 0
+
+func reset_campaign() -> void:
+	level_index = 0
+	lives = 3
 
 # Custom-level flow (levels/custom_level.tscn). The editor's playtest sets all
 # three; a plain "--level=" debug launch uses none.

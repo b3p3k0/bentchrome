@@ -47,7 +47,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"select_confirm"):
 		_done = true
 		GameState.selected_vehicle_id = _cars[_index].id
-		SceneFlow.to_arena()
+		GameState.reset_campaign()
+		SceneFlow.to_level(0)
 
 func _show() -> void:
 	var car: Variant = _cars[_index]

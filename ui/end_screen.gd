@@ -30,13 +30,37 @@ func _process(_delta: float) -> void:
 	if not enemies.is_empty():
 		_seen_enemies = true
 	var player = get_tree().get_first_node_in_group(&"player")
-	if player and player.get_hp() <= 0.0:
+	var gs := get_node_or_null(^"/root/GameState")
+	# The level's lives loop respawns the player while lives remain; the round
+	# is only lost once the tank is empty (no GameState = old single-life rule).
+	if player and player.get_hp() <= 0.0 and (gs == null or gs.lives <= 0):
 		_show(false)
 	elif _seen_enemies and enemies.is_empty():
 		_show(true)
 
+## Mid-campaign win: advance the index and hand off to the interstitial
+## instead of the YOU WIN panel. Returns false off-campaign (custom levels)
+## and on the final level.
+func _campaign_advance() -> bool:
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs == null or flow == null:
+		return false
+	var here: String = get_tree().current_scene.scene_file_path
+	var idx := -1
+	for i in flow.CAMPAIGN.size():
+		if flow.CAMPAIGN[i].scene == here:
+			idx = i
+	if idx < 0 or idx + 1 >= flow.CAMPAIGN.size():
+		return false
+	gs.level_index = idx + 1
+	flow.to_interstitial()
+	return true
+
 func _show(win: bool) -> void:
 	_over = true
+	if win and _campaign_advance():
+		return
 	var accent := AMBER if win else RED
 	_title.text = "YOU WIN" if win else "YOU LOSE"
 	_title.modulate = accent
@@ -99,7 +123,22 @@ func _build_ui() -> void:
 	vbox.add_child(spacer)
 
 	_restart_btn = _button(vbox, "Restart", func() -> void:
-		_leave(func() -> void: get_tree().reload_current_scene()))
+		_leave(func() -> void:
+			# Campaign levels restart the whole run (full wipe, level 1, 3
+			# lives); custom levels just reload themselves.
+			var gs := get_node_or_null(^"/root/GameState")
+			var flow := get_node_or_null(^"/root/SceneFlow")
+			var here: String = get_tree().current_scene.scene_file_path
+			var on_campaign := false
+			if flow:
+				for entry in flow.CAMPAIGN:
+					if entry.scene == here:
+						on_campaign = true
+			if on_campaign and gs and flow:
+				gs.reset_campaign()
+				flow.to_level(0)
+			else:
+				get_tree().reload_current_scene()))
 	_button(vbox, "Change Car", func() -> void:
 		_leave(func() -> void:
 			var flow := get_node_or_null(^"/root/SceneFlow")
