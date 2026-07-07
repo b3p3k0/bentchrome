@@ -56,7 +56,14 @@ func _on_body_entered(body: Node) -> void:
 		return
 	var health := _find_health(body)
 	if health:
-		health.take_damage(damage * Combat.scale(shooter, body))
+		var hit := damage * Combat.scale(shooter, body)
+		# Rear weak spot (bosses): a shot traveling roughly the way the victim
+		# faces arrived from behind — thin plating back there.
+		if "rear_weakspot" in body and body.rear_weakspot > 1.0:
+			var facing := Vector2.RIGHT.rotated(body.heading)
+			if facing.dot(velocity.normalized()) > 0.4:
+				hit *= body.rear_weakspot
+		health.take_damage(hit)
 		# Validity first: the shooter can die while this shot is in flight, and
 		# stamping a freed instance into a typed property is a script error.
 		if is_instance_valid(shooter) and shooter is Node2D and "last_attacker" in body:

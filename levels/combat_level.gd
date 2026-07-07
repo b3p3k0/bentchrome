@@ -59,8 +59,8 @@ func _respawn() -> void:
 func _randomize_enemies() -> void:
 	var enemies := []
 	for child in get_children():
-		if child.is_in_group(&"enemies"):
-			enemies.append(child)
+		if child.is_in_group(&"enemies") and not child.get("fixed_loadout"):
+			enemies.append(child)  # bosses keep their authored car
 	if enemies.is_empty():
 		return
 	var player_id := ""

@@ -23,6 +23,8 @@ const ExplosionScene := preload("res://environment/explosion.tscn")
 @export var faction: StringName = &"player"
 @export var body_color := Color(0.85, 0.2, 0.3)
 @export var ai_cooldown_scale := 3.0  # AI mounts fire at 1/3 player rate
+@export var fixed_loadout := false    # bosses: the level's car re-roll skips this vehicle
+@export var rear_weakspot := 1.0      # >1 amplifies projectile hits that arrive from behind
 
 @export_group("Depth")
 @export var gravity_z := 1300.0

@@ -84,6 +84,36 @@ func test_ram_clamp_rules() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_rear_weakspot_amplifies_shots_from_behind() -> void:
+	var ProjectileScene := preload("res://weapons/projectile.tscn")
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var boss = EnemyScene.instantiate()
+	container.add_child(boss)  # heading 0 = facing +X
+	boss.rear_weakspot = 1.5
+	var health = boss.get_node("Health")
+	var hp0: float = health.hp
+	# Shot traveling +X (same way the boss faces) = arrives from behind.
+	var rear = ProjectileScene.instantiate()
+	container.add_child(rear)
+	rear.setup(boss.global_position - Vector2(120, 0), Vector2(1, 0), 900.0, 20.0, 1.0, null)
+	for i in 15:
+		await t.physics_frame
+	var rear_dmg: float = hp0 - health.hp
+	t.check_approx(rear_dmg, 30.0, "weakspot: rear shot amplified 1.5x")
+	var hp1: float = health.hp
+	# Head-on shot traveling -X: full frontal plating, normal damage.
+	var front = ProjectileScene.instantiate()
+	container.add_child(front)
+	front.setup(boss.global_position + Vector2(120, 0), Vector2(-1, 0), 900.0, 20.0, 1.0, null)
+	for i in 15:
+		await t.physics_frame
+	t.check_approx(hp1 - health.hp, 20.0, "weakspot: frontal shot normal damage")
+	t.current_scene = null  # don't leave a dangling pointer for later suites
+	t.root.remove_child(container)
+	container.free()
+
 func test_slow_nudge_is_free() -> void:
 	var f := _fixture(150.0, 90.0)
 	var health = f.block.get_node("Health")

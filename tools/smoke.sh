@@ -52,7 +52,7 @@ fi
 
 # Campaign levels: boot each hand-authored scene cold (parse errors, broken
 # instances, and load cycles in level content all surface here).
-for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn; do
+for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn levels/depot/depot.tscn; do
   echo "== smoke: level ($LEVEL)"
   LEVEL_BOOT="$("$GODOT" --headless --path "$PROJECT_DIR" "res://$LEVEL" --quit-after 10 2>&1)"
   if echo "$LEVEL_BOOT" | grep -qiE "$ERR_RE" || ! echo "$LEVEL_BOOT" | grep -q '^\[boot\] level ready'; then

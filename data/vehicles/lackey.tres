@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://data/weapons/lackey_cannon.tres" id="2_cannon"]
+
+[resource]
+script = ExtResource("1_stats")
+id = &"lackey"
+car_name = "Lackey"
+driver_name = "Lackey"
+flavor = "Corporate muscle in a surplus eight-wheeler. Not selectable, not sociable. The armor shrugs off everything you have — from the front. The engineers cut corners around the exhaust."
+special_name = "Breach Cannon"
+special_desc = "A straight-line siege shot. Enormous damage, glacial reload. Circle behind him — the rear plating is thin."
+acceleration = 4
+top_speed = 5
+handling = 3
+armor = 10
+special_power = 10
+mass = 9
+primary_color = Color(0.32, 0.36, 0.3, 1)
+accent_color = Color(0.65, 0.62, 0.4, 1)
+special = ExtResource("2_cannon")
+special_ammo_cap = 2
+special_recharge_seconds = 6.0
