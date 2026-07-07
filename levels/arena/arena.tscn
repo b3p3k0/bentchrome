@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=33 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
+[ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -167,6 +168,7 @@ shape = SubResource("RectangleShape2D_ramp")
 
 [node name="BuildingNW" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1280, -1280)
 
 [node name="Vis" type="Polygon2D" parent="BuildingNW"]
@@ -178,6 +180,7 @@ shape = SubResource("RectangleShape2D_b640x512")
 
 [node name="BuildingN" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-384, -1280)
 
 [node name="Vis" type="Polygon2D" parent="BuildingN"]
@@ -189,6 +192,7 @@ shape = SubResource("RectangleShape2D_b640x512")
 
 [node name="BuildingNE" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(576, -1280)
 
 [node name="Vis" type="Polygon2D" parent="BuildingNE"]
@@ -200,6 +204,7 @@ shape = SubResource("RectangleShape2D_b768x512")
 
 [node name="CourtNorth" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1344, -704)
 
 [node name="Vis" type="Polygon2D" parent="CourtNorth"]
@@ -211,6 +216,7 @@ shape = SubResource("RectangleShape2D_b512x128")
 
 [node name="CourtWest" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1536, -512)
 
 [node name="Vis" type="Polygon2D" parent="CourtWest"]
@@ -222,6 +228,7 @@ shape = SubResource("RectangleShape2D_b128x256")
 
 [node name="CourtEast" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1152, -512)
 
 [node name="Vis" type="Polygon2D" parent="CourtEast"]
@@ -233,6 +240,7 @@ shape = SubResource("RectangleShape2D_b128x256")
 
 [node name="CourtSW" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1536, -320)
 
 [node name="Vis" type="Polygon2D" parent="CourtSW"]
@@ -244,6 +252,7 @@ shape = SubResource("RectangleShape2D_b128x128")
 
 [node name="CourtSE" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1152, -320)
 
 [node name="Vis" type="Polygon2D" parent="CourtSE"]
@@ -255,6 +264,7 @@ shape = SubResource("RectangleShape2D_b128x128")
 
 [node name="BuildingW" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1344, 384)
 
 [node name="Vis" type="Polygon2D" parent="BuildingW"]
@@ -266,6 +276,7 @@ shape = SubResource("RectangleShape2D_b512x768")
 
 [node name="BuildingE1" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(1344, -640)
 
 [node name="Vis" type="Polygon2D" parent="BuildingE1"]
@@ -277,6 +288,7 @@ shape = SubResource("RectangleShape2D_b512x512")
 
 [node name="BuildingE2" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(1344, 192)
 
 [node name="Vis" type="Polygon2D" parent="BuildingE2"]
@@ -288,6 +300,7 @@ shape = SubResource("RectangleShape2D_b512x640")
 
 [node name="BuildingSW" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-1216, 1088)
 
 [node name="Vis" type="Polygon2D" parent="BuildingSW"]
@@ -299,6 +312,7 @@ shape = SubResource("RectangleShape2D_b768x640")
 
 [node name="BuildingS1" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-448, 1088)
 
 [node name="Vis" type="Polygon2D" parent="BuildingS1"]
@@ -310,6 +324,7 @@ shape = SubResource("RectangleShape2D_b256x640")
 
 [node name="BuildingS2" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-64, 1088)
 
 [node name="Vis" type="Polygon2D" parent="BuildingS2"]
@@ -321,6 +336,7 @@ shape = SubResource("RectangleShape2D_b256x640")
 
 [node name="BuildingSE" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(704, 1088)
 
 [node name="Vis" type="Polygon2D" parent="BuildingSE"]
@@ -332,6 +348,7 @@ shape = SubResource("RectangleShape2D_b768x640")
 
 [node name="Statue" type="StaticBody2D" parent="."]
 collision_layer = 4
+script = ExtResource("12_deco")
 position = Vector2(-256, -320)
 
 [node name="Vis" type="Polygon2D" parent="Statue"]
