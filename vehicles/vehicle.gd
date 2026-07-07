@@ -15,6 +15,17 @@ extends CharacterBody2D
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
+const AI_VS_AI_DAMAGE := 0.5  # governor: AI brawls are theater, kills are the player's
+
+## Damage multiplier for a hit: AI-on-AI runs at half power so opponents
+## skirmish without wiping each other; anything involving the player (or
+## non-vehicle scenery) is full strength.
+static func combat_scale(shooter: Node, victim: Node) -> float:
+	if not (shooter is Vehicle and victim is Vehicle):
+		return 1.0
+	if shooter.is_in_group(&"player") or victim.is_in_group(&"player"):
+		return 1.0
+	return AI_VS_AI_DAMAGE
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -217,10 +228,8 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 			if rel > ram_min_speed:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
-				if charged > 0.0:
-					other.take_ram_damage(charged, self)
-				else:
-					other.take_ram_damage((rel - ram_min_speed) * ram_damage_scale, self)
+				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
+				other.take_ram_damage(hit * combat_scale(self, other), self)
 				_ram_cd = ram_cooldown
 				break
 		else:

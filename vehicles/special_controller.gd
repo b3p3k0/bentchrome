@@ -96,7 +96,8 @@ func _beam_tick(delta: float) -> void:
 		_end_beam()
 		return
 	if _beam_target.has_method("take_ram_damage"):
-		_beam_target.take_ram_damage(_def.damage * delta, vehicle)  # damage authored as dps
+		# Damage authored as dps; AI-on-AI runs through the governor.
+		_beam_target.take_ram_damage(_def.damage * delta * Vehicle.combat_scale(vehicle, _beam_target), vehicle)
 	if _beam_target.has_method("apply_effect"):
 		var slow := StatusEffectSpec.new()
 		slow.kind = &"slow"
@@ -219,7 +220,7 @@ func _flame_tick(delta: float) -> void:
 		var body: Node = hit["collider"]
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(_def.damage * delta)
+				child.take_damage(_def.damage * delta * Vehicle.combat_scale(vehicle, body))
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
 				break
