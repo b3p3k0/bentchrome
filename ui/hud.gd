@@ -79,7 +79,8 @@ func _build_ui() -> void:
 	_build_opponents()
 
 ## Names snapshot once from the first non-empty "enemies" frame (after the
-## arena's car re-roll); freed nodes then flip their label to DEAD_TEXT.
+## arena's car re-roll); freed nodes then flip their label to DEAD_TEXT and
+## their bar to empty. Bars poll hp fraction while the enemy lives.
 func _update_opponents() -> void:
 	if _opponents.is_empty():
 		for enemy in get_tree().get_nodes_in_group(&"enemies"):
@@ -89,10 +90,17 @@ func _update_opponents() -> void:
 			lbl.add_theme_font_size_override("font_size", 15)
 			lbl.modulate = ALIVE_TEXT
 			_opponents_box.add_child(lbl)
-			_opponents.append({"ref": enemy, "label": lbl})
+			var bar := _bar(_opponents_box, Color(0.75, 0.2, 0.2), 6)
+			bar.value = 100.0
+			_opponents.append({"ref": enemy, "label": lbl, "bar": bar})
 		return
 	for o in _opponents:
-		o.label.modulate = ALIVE_TEXT if is_instance_valid(o.ref) else DEAD_TEXT
+		if is_instance_valid(o.ref):
+			o.label.modulate = ALIVE_TEXT
+			o.bar.value = o.ref.get_hp_fraction() * 100.0
+		else:
+			o.label.modulate = DEAD_TEXT
+			o.bar.value = 0.0
 
 func _build_opponents() -> void:
 	var hdr := Label.new()
@@ -174,11 +182,11 @@ func _label(parent: Node, text: String, size: int) -> Label:
 	parent.add_child(l)
 	return l
 
-func _bar(parent: Node, color: Color) -> ProgressBar:
+func _bar(parent: Node, color: Color, height := 14) -> ProgressBar:
 	var b := ProgressBar.new()
 	b.max_value = 100.0
 	b.show_percentage = false
-	b.custom_minimum_size = Vector2(0, 14)
+	b.custom_minimum_size = Vector2(0, height)
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = color
 	b.add_theme_stylebox_override("fill", fill)
