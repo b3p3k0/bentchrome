@@ -17,14 +17,23 @@ anchor_bottom = 1.0
 expand_mode = 1
 stretch_mode = 6
 
-[node name="Prompt" type="Label" parent="."]
+[node name="Menu" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -96.0
+offset_top = -140.0
+theme_override_constants/separation = 12
+
+[node name="Start" type="Label" parent="Menu"]
+layout_mode = 2
 theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
-vertical_alignment = 1
-text = "PRESS ANY KEY"
+text = "START"
+
+[node name="Story" type="Label" parent="Menu"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "STORY"
