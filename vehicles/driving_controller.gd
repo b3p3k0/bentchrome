@@ -34,6 +34,8 @@ extends Node
 @export var boost_burn_rate := 5.0  # units per second held (full tank = 20s)
 
 var boost_fuel := 100.0  # 0..100; no recharge — resets with the scene
+var boosting := false    # state flags for cosmetic FX (drive_fx.gd) — set each apply()
+var handbraking := false
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 const TERRAIN := {
@@ -60,7 +62,9 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	top *= scale
 
 	# Boost: hold to burn the tank (no recharge) for extra shove and headroom.
-	if intent.get("boost", false) and boost_fuel > 0.0:
+	boosting = intent.get("boost", false) and boost_fuel > 0.0
+	handbraking = handbrake
+	if boosting:
 		boost_fuel = maxf(boost_fuel - boost_burn_rate * delta, 0.0)
 		accel *= boost_accel_factor
 		top *= boost_top_factor
