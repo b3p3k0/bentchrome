@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -10,6 +10,43 @@
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
+
+[sub_resource type="ShaderMaterial" id="SM_asphalt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.11, 0.11, 0.13, 1)
+shader_parameter/speckle_color = Color(0.06, 0.06, 0.08, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_grass"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.25, 0.5, 0.22, 0.5)
+shader_parameter/speckle_color = Color(0.14, 0.36, 0.11, 1)
+shader_parameter/density = 0.35
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 10.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_water"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.15, 0.3, 0.55, 0.6)
+shader_parameter/speckle_color = Color(0.45, 0.65, 0.9, 1)
+shader_parameter/density = 0.22
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 14.0
+shader_parameter/shimmer = 1.6
+
+[sub_resource type="ShaderMaterial" id="SM_dirt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.5, 0.36, 0.2, 0.5)
+shader_parameter/speckle_color = Color(0.32, 0.22, 0.12, 1)
+shader_parameter/density = 0.3
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 8.0
+shader_parameter/shimmer = 0.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(3792, 40)
@@ -62,6 +99,10 @@ size = Vector2(160, 256)
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
 
+[node name="Asphalt" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-1856, -1792, 1856, -1792, 1856, 1792, -1856, 1792)
+
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("1_grid")
 extent = Vector2(2368, 2304)
@@ -74,6 +115,7 @@ script = ExtResource("3_zone")
 terrain_type = &"grass"
 
 [node name="Vis" type="Polygon2D" parent="GrassZone"]
+material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
 polygon = PackedVector2Array(-576, -576, 576, -576, 576, 576, -576, 576)
 
@@ -88,6 +130,7 @@ script = ExtResource("3_zone")
 terrain_type = &"water"
 
 [node name="Vis" type="Polygon2D" parent="PondZone"]
+material = SubResource("SM_water")
 color = Color(0.15, 0.3, 0.55, 0.6)
 polygon = PackedVector2Array(-192, -192, 192, -192, 192, 192, -192, 192)
 
@@ -102,6 +145,7 @@ script = ExtResource("3_zone")
 terrain_type = &"dirt"
 
 [node name="Vis" type="Polygon2D" parent="DirtPath"]
+material = SubResource("SM_dirt")
 color = Color(0.5, 0.36, 0.2, 0.5)
 polygon = PackedVector2Array(-576, -64, 576, -64, 576, 64, -576, 64)
 

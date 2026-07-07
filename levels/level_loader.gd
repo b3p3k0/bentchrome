@@ -12,6 +12,16 @@ const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 
 const ROSTER_PATH := "res://assets/data/roster.json"
 const AI_PROFILES_PATH := "res://assets/data/ai_profiles.json"
+const SPECKLE_SHADER := preload("res://shaders/terrain_speckle.gdshader")
+# Per-type speckle params (speckle color, density, cell scale, shimmer);
+# base color comes from Catalog.TERRAIN_COLORS. Matches the arena's look.
+const TERRAIN_SPECKLE := {
+	"grass": {"speckle": Color(0.14, 0.36, 0.11), "density": 0.35, "scale": 10.0, "shimmer": 0.0},
+	"dirt": {"speckle": Color(0.32, 0.22, 0.12), "density": 0.3, "scale": 8.0, "shimmer": 0.0},
+	"water": {"speckle": Color(0.45, 0.65, 0.9), "density": 0.22, "scale": 14.0, "shimmer": 1.6},
+	"ice": {"speckle": Color(0.85, 0.95, 1.0), "density": 0.18, "scale": 12.0, "shimmer": 0.0},
+}
+static var _speckle_cache: Dictionary = {}
 const FLOOR_OVERSCAN := 512.0  # grid drawn past the walls, like the arena
 # heading_deg 0 = nose up, clockwise; vehicle heading 0 = +X, so shift a quarter turn.
 const HEADING_UP_OFFSET := -PI / 2
@@ -114,6 +124,7 @@ static func _add_terrain(level: Dictionary, parent: Node2D) -> void:
 		var vis := Polygon2D.new()
 		vis.name = "Vis"
 		vis.color = Catalog.TERRAIN_COLORS[e.type]
+		vis.material = _speckle_material(String(e.type))
 		vis.polygon = _rect_points(size * 0.5)
 		zone.add_child(vis)
 		var col := CollisionShape2D.new()
@@ -208,6 +219,24 @@ static func _load_car_data() -> void:
 	if typeof(profiles) == TYPE_DICTIONARY:
 		for profile in profiles.get("profiles", []):
 			_archetype_by_id[String(profile.get("id", ""))] = String(profile.get("archetype", "aggressor"))
+
+## Cached per-type speckle material for zone visuals (arena parity).
+static func _speckle_material(type: String) -> ShaderMaterial:
+	if _speckle_cache.has(type):
+		return _speckle_cache[type]
+	var params: Dictionary = TERRAIN_SPECKLE.get(type, {})
+	if params.is_empty():
+		return null
+	var mat := ShaderMaterial.new()
+	mat.shader = SPECKLE_SHADER
+	mat.set_shader_parameter("base_color", Catalog.TERRAIN_COLORS[type])
+	mat.set_shader_parameter("speckle_color", params["speckle"])
+	mat.set_shader_parameter("density", params["density"])
+	mat.set_shader_parameter("intensity", 0.5)
+	mat.set_shader_parameter("scale", params["scale"])
+	mat.set_shader_parameter("shimmer", params["shimmer"])
+	_speckle_cache[type] = mat
+	return mat
 
 static func _rect_points(half: Vector2) -> PackedVector2Array:
 	return PackedVector2Array([
