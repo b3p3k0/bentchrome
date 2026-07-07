@@ -25,6 +25,9 @@ const ExplosionScene := preload("res://environment/explosion.tscn")
 @export var ai_cooldown_scale := 3.0  # AI mounts fire at 1/3 player rate
 @export var fixed_loadout := false    # bosses: the level's car re-roll skips this vehicle
 @export var rear_weakspot := 1.0      # >1 amplifies projectile hits that arrive from behind
+@export var body_scale := 1.0         # bosses: scales visuals + collision RADIUS — never
+									  # the body node (scaled physics bodies jam move_and_slide)
+@export var hp_scale := 1.0           # bosses: multiplies StatCurves HP
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -76,6 +79,13 @@ func _ready() -> void:
 		_apply_stats()
 	else:
 		($Visual/Body as Polygon2D).color = body_color
+	if body_scale != 1.0:
+		_visual.scale = Vector2.ONE * body_scale
+		var col := get_node_or_null(^"CollisionShape2D") as CollisionShape2D
+		if col and col.shape is CircleShape2D:
+			var big: CircleShape2D = col.shape.duplicate()  # never resize the shared resource
+			big.radius *= body_scale
+			col.shape = big
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
 	if faction != &"player":
@@ -123,6 +133,9 @@ func _process(delta: float) -> void:
 ## (the dev dashboard's car switcher uses set_stats()).
 func _apply_stats() -> void:
 	StatCurves.apply(stats, _controller, _health)
+	if _health and hp_scale != 1.0:
+		_health.max_hp *= hp_scale
+		_health.hp = _health.max_hp
 	for k in stats.handling_overrides:
 		_controller.set(k, stats.handling_overrides[k])
 	body_color = stats.primary_color
@@ -185,7 +198,7 @@ func _update_depth(delta: float) -> void:
 			_set_airborne(false)
 	_visual.position.y = -height
 	if _shadow:
-		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0)
+		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale
 		_shadow.scale = Vector2(s, s)
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
 
@@ -288,10 +301,10 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 		_health.hp = _health.max_hp
 	set_physics_process(true)
 	if _visual:
-		_visual.scale = Vector2.ONE  # pit falls shrink it
+		_visual.scale = Vector2.ONE * body_scale  # pit falls shrink it
 		_visual.modulate = Color.WHITE
 	if _shadow:
-		_shadow.scale = Vector2.ONE
+		_shadow.scale = Vector2.ONE * body_scale
 	if shield_seconds > 0.0 and _status:
 		var shield := StatusEffectSpec.new()
 		shield.kind = &"invuln"

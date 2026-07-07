@@ -12,6 +12,7 @@ extends Driver
 ##   OPPORTUNIST — scores the weakest car highest, hangs back, pounces, flees early.
 
 @export var mix := Vector3(1, 0, 0)  # weights: x=aggressor, y=ambusher, z=opportunist
+@export var relentless := false      # bosses: never RELENT, half-length BREAK arcs
 
 # Named blends (assign to `mix`). 3 pure + 3 pairs + 1 triple.
 const PRESET_BRAWLER := Vector3(1, 0, 0)
@@ -231,7 +232,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		}
 
 	# Pressure meter: only the player earns relent; AI-vs-AI is governed already.
-	if _mode != Mode.RELENT and target.is_in_group(&"player") \
+	# Bosses don't take breathers.
+	if not relentless and _mode != Mode.RELENT and target.is_in_group(&"player") \
 			and dist < FIRE_RANGE and _los_clear(vehicle, target):
 		if _engage_hp < 0.0:
 			_engage_hp = target.get_hp()
@@ -260,7 +262,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	elif dist < _near and not scavenging:
 		# (A crate isn't a threat — drive straight over it, no spacing arc.)
 		_mode = Mode.BREAK
-		_break_t = BREAK_TIME
+		_break_t = BREAK_TIME * (0.5 if relentless else 1.0)
 		# Veer toward the clearer side (feelers), committed for the whole arc.
 		_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 

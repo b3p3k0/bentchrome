@@ -253,12 +253,15 @@ position = Vector2(0, 1344)
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(0, -1216)
-scale = Vector2(1.5, 1.5)
 stats = ExtResource("14_boss")
+ai_cooldown_scale = 1.5
 fixed_loadout = true
 rear_weakspot = 1.5
+body_scale = 1.5
+hp_scale = 2.0
 
 [node name="Driver" parent="Enemy1" index="1"]
 mix = Vector3(1, 0, 0)
+relentless = true
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]
