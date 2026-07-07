@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tools/smoke.sh)",
+      "Bash(tools/smoke.sh *)",
+      "Bash(./tools/smoke.sh)",
+      "Bash(./tools/smoke.sh *)",
+      "Bash(tools/test.sh)",
+      "Bash(tools/test.sh *)",
+      "Bash(./tools/test.sh)",
+      "Bash(./tools/test.sh *)",
+      "Bash(~/.local/bin/godot --headless *)"
+    ]
+  }
+}
