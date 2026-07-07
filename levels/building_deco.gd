@@ -1,19 +1,25 @@
 extends StaticBody2D
-## Paint-only decoration for rectangular building bodies: drop shadow (fake
-## height, same trick as the vehicle shadows), flat fill, a deterministic
-## window grid (a few windows glow), and a parapet outline. Size comes from
-## the Col shape; the plain Vis polygon is hidden at runtime and kept only as
-## the editor preview. No collision or gameplay here — pure paint.
+## Paint-only ROOFTOP decoration for rectangular building bodies — this is a
+## top-down game, so buildings read as roofs, not facades: drop shadow (fake
+## height), gravel-speckled roof fill, HVAC units with fans, vent caps, and a
+## double parapet lip. All deterministic per building. Size comes from the Col
+## shape; the plain Vis polygon is hidden at runtime (kept as editor preview).
+## No collision or gameplay here — pure paint.
 
 const SHADOW := Color(0.0, 0.0, 0.0, 0.32)
 const SHADOW_OFFSET := Vector2(10, 14)
-const BODY_COLOR := Color(0.3, 0.3, 0.36)
-const WINDOW := Color(0.18, 0.2, 0.26)
-const WINDOW_LIT := Color(0.75, 0.65, 0.35, 0.9)
+const ROOF := Color(0.28, 0.28, 0.34)
+const GRAVEL_DARK := Color(0.24, 0.24, 0.29)
+const GRAVEL_LIGHT := Color(0.33, 0.33, 0.39)
+const HVAC := Color(0.4, 0.4, 0.46)
+const HVAC_SHADOW := Color(0.0, 0.0, 0.0, 0.25)
+const HVAC_EDGE := Color(0.5, 0.5, 0.56)
+const FAN_WELL := Color(0.2, 0.2, 0.25)
+const FAN_BLADE := Color(0.45, 0.45, 0.52)
+const VENT := Color(0.22, 0.22, 0.27)
 const PARAPET := Color(0.42, 0.42, 0.5)
-const CELL := 64.0                 # window grid pitch
-const WIN_SIZE := Vector2(20, 20)
-const MIN_WINDOW_DIM := 192.0      # smaller slabs (statue, court walls) skip windows
+const PARAPET_LIP := Color(0.18, 0.18, 0.22, 0.7)
+const MIN_FURNITURE_DIM := 192.0  # smaller slabs (statue, court walls) stay bare
 
 var _size := Vector2.ZERO
 var _rng_seed := 0
@@ -34,14 +40,40 @@ func _draw() -> void:
 		return
 	var half := _size * 0.5
 	draw_rect(Rect2(-half + SHADOW_OFFSET, _size), SHADOW)
-	draw_rect(Rect2(-half, _size), BODY_COLOR)
-	if _size.x >= MIN_WINDOW_DIM and _size.y >= MIN_WINDOW_DIM:
-		var cols := maxi(int((_size.x - 48.0) / CELL), 1)
-		var rows := maxi(int((_size.y - 48.0) / CELL), 1)
-		var start := Vector2(-(cols - 1), -(rows - 1)) * CELL * 0.5
-		for i in cols:
-			for j in rows:
-				var lit := (_rng_seed + i * 31 + j * 17) % 7 == 0
-				var p := start + Vector2(i, j) * CELL
-				draw_rect(Rect2(p - WIN_SIZE * 0.5, WIN_SIZE), WINDOW_LIT if lit else WINDOW)
+	draw_rect(Rect2(-half, _size), ROOF)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng_seed
+	# Roof gravel: sparse two-tone grit.
+	var dots := int(_size.x * _size.y / 3500.0)
+	for i in dots:
+		var p := Vector2(rng.randf_range(-half.x + 8.0, half.x - 11.0),
+			rng.randf_range(-half.y + 8.0, half.y - 11.0))
+		draw_rect(Rect2(p, Vector2(3, 3)), GRAVEL_DARK if rng.randf() < 0.6 else GRAVEL_LIGHT)
+
+	if _size.x >= MIN_FURNITURE_DIM and _size.y >= MIN_FURNITURE_DIM:
+		# HVAC units: boxed, edge-lit, big ones get a fan well.
+		for i in 2 + _rng_seed % 3:
+			var w := rng.randf_range(38.0, 66.0)
+			var h := rng.randf_range(32.0, 54.0)
+			var c := Vector2(rng.randf_range(-half.x + 32.0 + w * 0.5, half.x - 32.0 - w * 0.5),
+				rng.randf_range(-half.y + 32.0 + h * 0.5, half.y - 32.0 - h * 0.5))
+			var rect := Rect2(c - Vector2(w, h) * 0.5, Vector2(w, h))
+			draw_rect(Rect2(rect.position + Vector2(3, 4), rect.size), HVAC_SHADOW)
+			draw_rect(rect, HVAC)
+			draw_rect(rect, HVAC_EDGE, false, 1.5)
+			if w >= 48.0 and h >= 40.0:
+				draw_circle(c, minf(w, h) * 0.3, FAN_WELL)
+				var blades := minf(w, h) * 0.24
+				draw_line(c - Vector2(blades, 0), c + Vector2(blades, 0), FAN_BLADE, 2.0)
+				draw_line(c - Vector2(0, blades), c + Vector2(0, blades), FAN_BLADE, 2.0)
+		# Vent caps: little dark stacks.
+		for i in 3 + _rng_seed % 4:
+			var p := Vector2(rng.randf_range(-half.x + 24.0, half.x - 24.0),
+				rng.randf_range(-half.y + 24.0, half.y - 24.0))
+			draw_circle(p, 5.0, VENT)
+			draw_circle(p, 2.5, GRAVEL_LIGHT)
+
+	# Parapet: bright outer edge + dark inner lip = raised roof rim.
 	draw_rect(Rect2(-half, _size), PARAPET, false, 3.0)
+	draw_rect(Rect2(-half + Vector2(6, 6), _size - Vector2(12, 12)), PARAPET_LIP, false, 2.0)
