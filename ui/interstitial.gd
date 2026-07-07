@@ -1,12 +1,14 @@
 extends CanvasLayer
-## Between-levels breather — stub visuals for now (blocky panel, no art).
-## Shows what was cleared and what's next, then waits for ANY key/button/click.
-## GameState.level_index already points at the NEXT level (the end screen
-## advances it before coming here).
+## Between-levels breather. Shows the upcoming level's loading card
+## (assets/img/cards/level_<n>.png, 1-based campaign index) when the art
+## exists; falls back to the blocky panel otherwise. Waits for ANY
+## key/button/click. GameState.level_index already points at the NEXT level
+## (the end screen advances it before coming here).
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const INPUT_LOCK := 1.2  # players arrive here still hammering fire
+const CARD_DIR := "res://assets/img/cards"
 
 var _armed := false
 var _hint: Label
@@ -37,6 +39,63 @@ func _unhandled_input(event: InputEvent) -> void:
 		flow.to_level(gs.level_index)
 
 func _build_ui() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	var next_index: int = gs.level_index if gs else 0
+	var next_name: String = "?"
+	if flow and next_index < flow.CAMPAIGN.size():
+		next_name = flow.CAMPAIGN[next_index].name
+
+	var card := TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1])
+	if card:
+		_build_card(card, "NEXT STOP:  %s" % next_name.to_upper(), Color.WHITE)
+	else:
+		_build_panel(next_index, next_name)
+
+## Full-screen loading card: letterboxed art over black, caption strip pinned
+## to the bottom edge.
+func _build_card(card: Texture2D, caption: String, caption_color: Color) -> void:
+	var bg := ColorRect.new()
+	bg.color = Color.BLACK
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+
+	var art := TextureRect.new()
+	art.texture = card
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(art)
+
+	var strip := ColorRect.new()
+	strip.color = Color(PANEL_BG.r, PANEL_BG.g, PANEL_BG.b, 0.85)
+	strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	strip.offset_top = -84.0
+	add_child(strip)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 8)
+	strip.add_child(vbox)
+
+	var caption_lbl := Label.new()
+	caption_lbl.text = caption
+	caption_lbl.add_theme_font_size_override("font_size", 24)
+	caption_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption_lbl.modulate = caption_color
+	vbox.add_child(caption_lbl)
+
+	_hint = Label.new()
+	_hint.text = "..."
+	_hint.add_theme_font_size_override("font_size", 14)
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.modulate = Color(0.55, 0.58, 0.62)
+	vbox.add_child(_hint)
+
+## The original blocky panel — kept as the fallback when no card art exists.
+func _build_panel(next_index: int, next_name: String) -> void:
 	var bg := ColorRect.new()
 	bg.color = Color(0.02, 0.02, 0.03)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -62,13 +121,6 @@ func _build_ui() -> void:
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
-
-	var gs := get_node_or_null(^"/root/GameState")
-	var flow := get_node_or_null(^"/root/SceneFlow")
-	var next_index: int = gs.level_index if gs else 0
-	var next_name: String = "?"
-	if flow and next_index < flow.CAMPAIGN.size():
-		next_name = flow.CAMPAIGN[next_index].name
 
 	var title := Label.new()
 	title.text = "LEVEL %d CLEAR" % next_index  # 1-based: cleared = next_index
