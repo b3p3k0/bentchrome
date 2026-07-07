@@ -43,7 +43,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - **Rendering:** 2D sprites, GL Compatibility, nearest-neighbor filter; fake depth via a separate shadow sprite + height offset + per-level Y-sort.
 - **Screen layout:** fullscreen on a 1280×720 base viewport — a centered **720×720 play square** with opaque 280px gutters (`ui/hud.gd`): left = dash (HP/speed/MG heat/boost/weapon slots/keyguide), right = full-arena north-up minimap (`ui/radar.gd` — geometry duck-typed off collision layers; enemy blips range-limited to 1500px) + opponent roster with health bars. ESC pause menu in `ui/pause_menu.gd`; win/lose end screen in `ui/end_screen.gd`.
 - **Collision layers** (named in project.godot): 1 = ground (vehicles, dummies), 2 = wall (arena boundary), 3 = obstacle (blocks/cover — airborne cars and `pierces_cover` projectiles ignore it), 8 = terrain zones (road/grass/dirt/ice/water multipliers in `driving_controller.gd`).
-- **Destructibles:** any body with a `Health` child takes weapon fire and speed-scaled ram damage; `environment/destructible_block.gd` is the reusable obstacle flavor (layer 3, exported size/HP).
+- **Destructibles:** any body with a `Health` child takes weapon fire and speed-scaled ram damage; `environment/destructible_block.gd` is the reusable obstacle flavor (layer 3, exported size/HP; `deco = &"house"` paints a pitched roof). `environment/clutter.gd` is the 1-HP pop-through flavor (trash/brush/bush/drift palettes, scatter puff, size-gated off the radar).
 - **Performance:** 60 FPS locked on mid-range GPUs.
 - **Packaging:** AppImage for Linux.
 
@@ -64,7 +64,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 4. **Snowy Pass** (MED, 6 enemies, 1 station) — snow/ice switchbacks and **pit drop-offs** (`environment/pit_zone.gd`: grounded cars fall; ramp jumps clear them).
 5. **The Depot** (MED, boss) — **Lackey**: 1.5×-scale, roster-external (unselectable; `fixed_loadout` skips the car re-roll), straight-shot Breach Cannon, `rear_weakspot` 1.5× on shots arriving from behind.
 
-Interstitial (`ui/interstitial.gd`, stub visuals) between levels; player has **3 lives** per campaign (respawn at start with 2s shield; full-wipe restart). Design targets beyond these (Junkyard mini-boss, Central Park boss) remain future levels.
+Interstitial (`ui/interstitial.gd`) between levels — full-screen loading-card art (`assets/img/cards/level_<n>.png`, 1-based; blocky-panel fallback when absent) and a Lackey banner card before The Depot; title screen (`ui/title.gd`) is a START/STORY menu (STORY = story art + placeholder copy); player has **3 lives** per campaign (respawn at start with 2s shield; full-wipe restart). Design targets beyond these (Junkyard mini-boss, Central Park boss) remain future levels.
 
 ## Design references
 
