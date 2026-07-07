@@ -16,6 +16,7 @@ const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
+const ExplosionScene := preload("res://environment/explosion.tscn")
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -42,6 +43,7 @@ var current_terrain: StringName = &"road"
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
 var _ram_cd := 0.0        # cooldown between ram hits
+var _shake := 0.0         # camera shake energy (player only)
 var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 
 @onready var _controller: DrivingController = $DrivingController
@@ -85,8 +87,34 @@ func _ready() -> void:
 		_rack.selection_changed.connect(func(_i: int) -> void: _special.set_weapon(_rack.selected_def()))
 	if _health:
 		_health.died.connect(_on_died)
+		_health.damaged.connect(_on_damaged)
 	heading = rotation
 	rotation = 0.0
+
+## Hit feedback: brief white pulse (skipped for sub-1 DoT ticks, which would
+## strobe), plus camera shake when it's the player taking it.
+func _on_damaged(amount: float, _hp: float) -> void:
+	if amount < 1.0:
+		return
+	if _visual:
+		_visual.modulate = Color(2.2, 2.2, 2.2)
+		var tween := create_tween()
+		tween.tween_property(_visual, "modulate", Color.WHITE, 0.12)
+	if is_in_group(&"player"):
+		add_shake(minf(amount * 0.4, 8.0))
+
+func add_shake(amount: float) -> void:
+	_shake = minf(_shake + amount, 12.0)
+
+func _process(delta: float) -> void:
+	var camera := get_node_or_null(^"Camera2D") as Camera2D
+	if camera == null or not camera.enabled:
+		return
+	if _shake > 0.05:
+		_shake = maxf(_shake - 30.0 * delta, 0.0)
+		camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake))
+	elif camera.offset != Vector2.ZERO:
+		camera.offset = Vector2.ZERO
 
 ## Applies the current stats to the controller/health/visuals. Re-callable live
 ## (the dev dashboard's car switcher uses set_stats()).
@@ -168,11 +196,21 @@ func launch_from_ramp() -> void:
 	_set_airborne(true)
 
 func _on_died() -> void:
+	_spawn_explosion()
 	if is_in_group(&"player"):
 		set_physics_process(false)
 		print("[player] destroyed")
 	else:
 		queue_free()
+
+func _spawn_explosion() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:  # headless fixtures may not set one
+		return
+	var boom := ExplosionScene.instantiate()
+	boom.global_position = global_position
+	boom.tint = body_color
+	scene.add_child(boom)
 
 func get_speed() -> float:
 	return velocity.length()

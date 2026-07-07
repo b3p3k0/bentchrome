@@ -27,7 +27,17 @@ func _ready() -> void:
 	_health.max_hp = max_hp
 	_health.hp = max_hp
 	_health.damaged.connect(_on_damaged)
-	_health.died.connect(queue_free)
+	_health.died.connect(_explode_and_free)
 
 func _on_damaged(_amount: float, hp: float) -> void:
 	_vis.color = BASE_COLOR.lerp(WRECKED_COLOR, 1.0 - hp / max_hp)
+
+func _explode_and_free() -> void:
+	var scene := get_tree().current_scene
+	if scene:  # headless fixtures may not set one
+		var boom := preload("res://environment/explosion.tscn").instantiate()
+		boom.global_position = global_position
+		boom.tint = BASE_COLOR
+		boom.size_scale = 0.6
+		scene.add_child(boom)
+	queue_free()
