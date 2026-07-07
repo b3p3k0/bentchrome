@@ -291,6 +291,108 @@ polygon = PackedVector2Array(-128, -1728, 128, -1728, 128, 1728, -128, 1728)
 [node name="Col" type="CollisionShape2D" parent="Lake"]
 shape = SubResource("RectangleShape2D_strip")
 
+[node name="Driveways" type="Node2D" parent="."]
+
+[node name="DriveA1a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1392, -1448)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveA3a" type="Polygon2D" parent="Driveways"]
+position = Vector2(400, -1448)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveA1b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1040, -984)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveA3b" type="Polygon2D" parent="Driveways"]
+position = Vector2(752, -984)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB1b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1040, -680)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB2a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-496, -680)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB3a" type="Polygon2D" parent="Driveways"]
+position = Vector2(400, -680)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB1a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1392, -216)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB2b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-144, -216)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveB3b" type="Polygon2D" parent="Driveways"]
+position = Vector2(752, -216)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveC1a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1392, 88)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveC2a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-496, 88)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveC1b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1040, 552)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveC2b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-144, 552)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD1a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1392, 856)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD2b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-144, 856)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD3b" type="Polygon2D" parent="Driveways"]
+position = Vector2(752, 856)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD1b" type="Polygon2D" parent="Driveways"]
+position = Vector2(-1040, 1320)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD2a" type="Polygon2D" parent="Driveways"]
+position = Vector2(-496, 1320)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
+[node name="DriveD3a" type="Polygon2D" parent="Driveways"]
+position = Vector2(400, 1320)
+color = Color(0.28, 0.28, 0.31, 1)
+polygon = PackedVector2Array(-32, -28, 32, -28, 32, 28, -32, 28)
+
 [node name="Ramp" type="Area2D" parent="."]
 position = Vector2(-768, 320)
 collision_layer = 0
@@ -332,101 +434,121 @@ shape = SubResource("RectangleShape2D_gas")
 position = Vector2(-1392, -1344)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseA1b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1040, -1088)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseA3a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(400, -1344)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseA3b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(752, -1088)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB1a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1392, -320)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB1b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1040, -576)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB2a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-496, -576)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB2b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-144, -320)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB3a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(400, -576)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseB3b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(752, -320)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseC1a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1392, 192)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseC1b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1040, 448)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseC2a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-496, 192)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseC2b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-144, 448)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD1a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1392, 960)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD1b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1040, 1216)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD2a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-496, 1216)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD2b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-144, 960)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD3a" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(400, 1216)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="HouseD3b" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(752, 960)
 size = Vector2(176, 160)
 max_hp = 120.0
+deco = &"house"
 
 [node name="Pump1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(480, 512)
