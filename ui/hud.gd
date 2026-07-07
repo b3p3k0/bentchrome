@@ -186,8 +186,8 @@ func _build_dash() -> void:
 	var guide := _label(vbox, "WASD  drive
 SHIFT  boost
 Q/E/wheel  weapon
-LMB  fire selected
-RMB  machine gun
+LMB  machine gun
+RMB  fire selected
 ESC  menu", 13)
 	guide.modulate = DIM_TEXT
 

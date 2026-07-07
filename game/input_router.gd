@@ -26,8 +26,9 @@ func _ready() -> void:
 	_ensure_action(ACTION_MOVE_DOWN, [_key(KEY_S), _key(KEY_DOWN), _axis(JOY_AXIS_LEFT_Y, 1.0)])
 	_ensure_action(ACTION_MOVE_LEFT, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
 	_ensure_action(ACTION_MOVE_RIGHT, [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
-	_ensure_action(ACTION_FIRE_MG, [_mouse(MOUSE_BUTTON_RIGHT), _key(KEY_SPACE)])
-	_ensure_action(ACTION_FIRE_SELECTED, [_mouse(MOUSE_BUTTON_LEFT), _key(KEY_K)])
+	# LMB = primary (MG), RMB = selected — the shooter-standard, per playtesters.
+	_ensure_action(ACTION_FIRE_MG, [_mouse(MOUSE_BUTTON_LEFT), _key(KEY_SPACE)])
+	_ensure_action(ACTION_FIRE_SELECTED, [_mouse(MOUSE_BUTTON_RIGHT), _key(KEY_K)])
 	_ensure_action(ACTION_WEAPON_PREV, [_key(KEY_Q), _mouse(MOUSE_BUTTON_WHEEL_UP)])
 	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_E), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
 	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_B)])
