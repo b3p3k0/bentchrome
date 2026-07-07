@@ -6,7 +6,7 @@ extends RefCounted
 
 const ArenaScene := preload("res://levels/arena/arena.tscn")
 const ENEMIES := ["Enemy1", "Enemy2", "Enemy3", "Enemy4"]
-const FRAMES := 120           # 2 seconds
+const FRAMES := 180           # 3 seconds — a heavy needs time to U-turn off the line
 const MIN_DISPLACEMENT := 100.0
 
 var t
@@ -21,9 +21,14 @@ func test_all_enemies_move_at_round_start() -> void:
 	# Immunize everyone: armed free-for-all AI must not end the round mid-test
 	# (the end screen would pause the tree and stall the frame pump).
 	arena.get_node("Vehicle").get_node("Health").invulnerable = true
+	# Pin every enemy to the worst launcher (mass-8 truck, pure aggressor) —
+	# the arena re-rolls cars on boot and a lucky light-car draw would hide a
+	# camping regression. Same input-pinning rule as test_corner_escape.
 	var starts := {}
 	for name in ENEMIES:
 		var enemy = arena.get_node(name)
+		enemy.set_stats(load("res://data/vehicles/hammertoe.tres"))
+		enemy.get_node("Driver").mix = Vector3(1, 0, 0)
 		enemy.get_node("Health").invulnerable = true
 		starts[name] = enemy.global_position
 	for i in FRAMES:

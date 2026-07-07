@@ -29,9 +29,20 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK, CLEAR }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
+
+# BREAK: the spacing move. Closing under _near veers off at a committed angle
+# instead of retreating — an arcing strafing run that keeps momentum and
+# produces drive-by shots as the nose sweeps past. Low-HP flee stays EVADE.
+const BREAK_TIME := 2.5
+const BREAK_ANGLE := 2.27  # ~130° off the target bearing
+
+# Weave on long approaches: breaks the beeline, dodges straight-line missiles,
+# and de-syncs the pack (per-driver phase).
+const WEAVE_FREQ := 1.5
+const WEAVE_GAIN := 0.2
 
 # Stuck escape: pinned against a wall/block -> reverse out, then re-engage.
 const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
@@ -65,6 +76,10 @@ var _unstick_steer := 0.0  # committed at UNSTICK entry so the swing can't flip 
 var _clear_t := 0.0
 var _last_pin := Vector2.INF   # where this escape episode started
 var _escape_dir := Vector2.RIGHT  # committed world-space CLEAR direction
+var _break_t := 0.0
+var _break_side := 1.0   # committed at BREAK entry so the arc can't flip sides
+var _weave_t := 0.0
+var _weave_phase := 0.0
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -80,6 +95,7 @@ static func blend_params(m: Vector3) -> Dictionary:
 	return out
 
 func _ready() -> void:
+	_weave_phase = float(get_instance_id() % 628) / 100.0  # 0..2pi, stable per driver
 	var p := blend_params(mix)
 	_near = p["near"]
 	_far = p["far"]
@@ -159,10 +175,15 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 
 	if vehicle.get_hp_fraction() < _flee:
 		_mode = Mode.EVADE
-	elif dist > _far:
-		_mode = Mode.PURSUE
+	elif _mode == Mode.BREAK:
+		_break_t -= delta
+		if _break_t <= 0.0 or dist > _far:
+			_mode = Mode.PURSUE
 	elif dist < _near:
-		_mode = Mode.EVADE
+		_mode = Mode.BREAK
+		_break_t = BREAK_TIME
+		# Veer toward the clearer side (feelers), committed for the whole arc.
+		_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 
 	var intent: Dictionary
 	if _mode == Mode.EVADE:
@@ -178,18 +199,36 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"fire_selected": false,
 			"boost": vehicle.get_hp_fraction() < _flee,  # nitro the getaway
 		}
+	elif _mode == Mode.BREAK:
+		# The arc: veer off the (live) bearing at the committed angle — full
+		# throttle, guns free if the nose happens to sweep across the target.
+		var veer := wrapf(bearing + BREAK_ANGLE * _break_side - vehicle.heading, -PI, PI)
+		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
+		var los := _los_clear(vehicle, target)
+		intent = {
+			"throttle": 1.0,
+			"steer": clampf(veer * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE and los,
+			"fire_selected": false,
+			"boost": false,
+		}
 	else:
 		var approach := bearing
 		if _flank > 0.0 and dist > _near * 1.5:
 			approach += deg_to_rad(35.0 * _flank)
 		var diff := wrapf(approach - vehicle.heading, -PI, PI)
 		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
+		# Long approaches weave: harder to lead, and the pack de-syncs.
+		var weave := 0.0
+		if dist > _far:
+			_weave_t += delta
+			weave = sin(_weave_t * WEAVE_FREQ + _weave_phase) * WEAVE_GAIN
 		# Don't chew on buildings: hold fire without line of sight. The mounts'
 		# 3x AI cooldown_scale gates the rate; ammo/recharge gate the specials.
 		var los := _los_clear(vehicle, target)
 		intent = {
 			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
-			"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"steer": clampf(diff * 2.0 + weave + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE and los,
 			"fire_selected": absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
 			"boost": dist > 900.0 and absf(diff) < 0.5,  # burn nitro to close long gaps
