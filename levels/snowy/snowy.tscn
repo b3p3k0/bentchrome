@@ -230,11 +230,7 @@ shape = SubResource("RectangleShape2D_ice")
 
 [node name="CliffWest" parent="." instance=ExtResource("13_pit")]
 position = Vector2(-1600, 672)
-size = Vector2(256, 1088)
-
-[node name="CliffEast" parent="." instance=ExtResource("13_pit")]
-position = Vector2(1600, -672)
-size = Vector2(256, 1088)
+size = Vector2(256, 704)
 
 [node name="Chasm" parent="." instance=ExtResource("13_pit")]
 position = Vector2(-800, 0)
