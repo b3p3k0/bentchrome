@@ -29,7 +29,7 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 
@@ -43,6 +43,15 @@ const BREAK_ANGLE := 2.27  # ~130° off the target bearing
 # and de-syncs the pack (per-driver phase).
 const WEAVE_FREQ := 1.5
 const WEAVE_GAIN := 0.2
+
+# RELENT: pressure relief vs the PLAYER only — sustained close engagement, or
+# enough player HP lost while engaged (any source: co-attackers count, which
+# doubles as anti-gang-up), forces a wide no-fire break-off so the player can
+# regroup. Combat comes in waves instead of a death-hammer.
+const ENGAGE_LIMIT := 6.0    # seconds of in-range LoS pressure before backing off
+const RELENT_DAMAGE := 30.0  # ...or this much player HP lost while engaged
+const RELENT_TIME := 3.5
+const RELENT_ANGLE := 2.6    # ~150° — a real disengage, wider than BREAK
 
 # Stuck escape: pinned against a wall/block -> reverse out, then re-engage.
 const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
@@ -80,6 +89,10 @@ var _break_t := 0.0
 var _break_side := 1.0   # committed at BREAK entry so the arc can't flip sides
 var _weave_t := 0.0
 var _weave_phase := 0.0
+var _engage_t := 0.0     # pressure meter vs the player
+var _engage_hp := -1.0   # player HP when this engagement began (-1 = none)
+var _relent_t := 0.0
+var _relent_side := 1.0
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -186,8 +199,29 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 				"fire_selected": false,
 			}
 
+	# Pressure meter: only the player earns relent; AI-vs-AI is governed already.
+	if _mode != Mode.RELENT and target.is_in_group(&"player") \
+			and dist < FIRE_RANGE and _los_clear(vehicle, target):
+		if _engage_hp < 0.0:
+			_engage_hp = target.get_hp()
+		_engage_t += delta
+		if _engage_t > ENGAGE_LIMIT or (_engage_hp - target.get_hp()) >= RELENT_DAMAGE:
+			_mode = Mode.RELENT
+			_relent_t = RELENT_TIME
+			_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+			_engage_t = 0.0
+			_engage_hp = -1.0
+	elif _mode != Mode.RELENT:
+		_engage_t = maxf(_engage_t - delta, 0.0)  # pressure decays off-target
+		if _engage_t == 0.0:
+			_engage_hp = -1.0
+
 	if vehicle.get_hp_fraction() < _flee:
 		_mode = Mode.EVADE
+	elif _mode == Mode.RELENT:
+		_relent_t -= delta
+		if _relent_t <= 0.0 or dist > SCAN:
+			_mode = Mode.PURSUE
 	elif _mode == Mode.BREAK:
 		_break_t -= delta
 		if _break_t <= 0.0 or dist > _far:
@@ -212,6 +246,16 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"fire_mg": false,
 			"fire_selected": false,
 			"boost": vehicle.get_hp_fraction() < _flee,  # nitro the getaway
+		}
+	elif _mode == Mode.RELENT:
+		# Wide no-fire disengage: give the player room to breathe.
+		var veer := wrapf(bearing + RELENT_ANGLE * _relent_side - vehicle.heading, -PI, PI)
+		intent = {
+			"throttle": 1.0,
+			"steer": clampf(veer * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"fire_mg": false,
+			"fire_selected": false,
+			"boost": false,
 		}
 	elif _mode == Mode.BREAK:
 		# The arc: veer off the (live) bearing at the committed angle — full
