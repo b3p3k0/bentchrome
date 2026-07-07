@@ -117,7 +117,7 @@ func _build_opponents() -> void:
 
 func _build_radar() -> void:
 	var hdr := Label.new()
-	hdr.text = "RADAR"
+	hdr.text = "MAP"
 	hdr.add_theme_font_size_override("font_size", 14)
 	hdr.modulate = DIM_TEXT
 	hdr.position = Vector2(1280 - GUTTER + 16, 16)
