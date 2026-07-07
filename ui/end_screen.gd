@@ -10,12 +10,15 @@ const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 
+const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't click menus
+
 var _seen_enemies := false
 var _over := false
 var _title: Label
 var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
 var _restart_btn: Button
+var _buttons: Array = []
 
 func _ready() -> void:
 	layer = 70  # above the pause menu's 60
@@ -69,6 +72,16 @@ func _show(win: bool) -> void:
 		_trim_blocks[i].color = accent if i % 2 == 0 else accent.darkened(0.55)
 	get_tree().paused = true
 	visible = true
+	# Players are still hammering fire when the last car dies — held SPACE is
+	# also ui_accept and would instantly press the focused button. Buttons stay
+	# dead (and unfocused) for a beat; the timer runs through the pause.
+	for b in _buttons:
+		b.disabled = true
+	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_buttons, CONNECT_ONE_SHOT)
+
+func _arm_buttons() -> void:
+	for b in _buttons:
+		b.disabled = false
 	if _restart_btn:
 		_restart_btn.grab_focus()
 
@@ -164,4 +177,5 @@ func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	b.custom_minimum_size = Vector2(220, 0)
 	b.pressed.connect(on_pressed)
 	parent.add_child(b)
+	_buttons.append(b)
 	return b

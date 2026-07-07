@@ -6,12 +6,25 @@ extends CanvasLayer
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
+const INPUT_LOCK := 1.2  # players arrive here still hammering fire
+
+var _armed := false
+var _hint: Label
 
 func _ready() -> void:
 	layer = 60
 	_build_ui()
+	get_tree().create_timer(INPUT_LOCK).timeout.connect(_arm, CONNECT_ONE_SHOT)
+
+func _arm() -> void:
+	_armed = true
+	if _hint:
+		_hint.text = "press any key to roll out"
+		_hint.modulate = AMBER
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not _armed:
+		return
 	var pressed: bool = (event is InputEventKey and event.pressed) \
 		or (event is InputEventJoypadButton and event.pressed) \
 		or (event is InputEventMouseButton and event.pressed)
@@ -80,9 +93,9 @@ func _build_ui() -> void:
 	next_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(next_lbl)
 
-	var hint := Label.new()
-	hint.text = "press any key to roll out"
-	hint.add_theme_font_size_override("font_size", 14)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.modulate = Color(0.55, 0.58, 0.62)
-	vbox.add_child(hint)
+	_hint = Label.new()
+	_hint.text = "..."
+	_hint.add_theme_font_size_override("font_size", 14)
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.modulate = Color(0.55, 0.58, 0.62)
+	vbox.add_child(_hint)
