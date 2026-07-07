@@ -6,8 +6,34 @@ const DriverScript := preload("res://vehicles/drivers/enemy_driver.gd")
 
 var t
 
+## Minimal stand-in for targeting tests: position + hp fraction + groups.
+class FakeCar extends Node2D:
+	var hpf := 1.0
+	func get_hp_fraction() -> float:
+		return hpf
+
 func _init(runner) -> void:
 	t = runner
+
+## Mounts fake cars in the tree ("vehicles" group; optionally "player") and
+## returns [container, hunter]. Caller frees the container.
+func _targeting_rig() -> Array:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var hunter := FakeCar.new()
+	container.add_child(hunter)
+	hunter.add_to_group(&"vehicles")
+	return [container, hunter]
+
+func _car(container: Node, pos: Vector2, hpf: float, is_player := false) -> FakeCar:
+	var c := FakeCar.new()
+	container.add_child(c)
+	c.global_position = pos
+	c.hpf = hpf
+	c.add_to_group(&"vehicles")
+	if is_player:
+		c.add_to_group(&"player")
+	return c
 
 func test_blend_pure_archetypes() -> void:
 	var agg: Dictionary = DriverScript.blend_params(Vector3(1, 0, 0))
@@ -43,6 +69,29 @@ func test_stuck_resets_when_moving_or_idle() -> void:
 	d._update_stuck(10.0, true, 0.5)
 	t.check(not d._update_stuck(10.0, false, 0.35), "stuck: idle throttle resets the timer")
 	d.free()
+
+func test_mercy_skips_dying_ai_but_not_player() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var dying_ai := _car(rig[0], Vector2(100, 0), 0.1)
+	var healthy_ai := _car(rig[0], Vector2(600, 0), 1.0)
+	t.check(driver._select_target(rig[1]) == healthy_ai, "mercy: dying AI skipped for a farther healthy one")
+	t.check(driver._nearest_any(rig[1]) == healthy_ai, "mercy: hunt fallback skips the dying AI too")
+	dying_ai.add_to_group(&"player")  # now it's the player at 10% HP
+	t.check(driver._select_target(rig[1]) == dying_ai, "mercy: a dying PLAYER is always fair game")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_player_priority_breaks_near_ties() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var _ai := _car(rig[0], Vector2(500, 0), 1.0)
+	var player := _car(rig[0], Vector2(650, 0), 1.0, true)
+	t.check(driver._select_target(rig[1]) == player, "priority: player wins over a slightly nearer AI")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
 
 func test_unstick_intent_reverses_with_inverted_steer() -> void:
 	var d = DriverScript.new()

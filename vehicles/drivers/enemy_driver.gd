@@ -315,12 +315,12 @@ func _update_feelers(vehicle) -> void:
 		_avoid_bias += (1.0 - frac[1]) * (1.0 if frac[2] >= frac[0] else -1.0)
 
 ## Nearest combatant with no range limit — the HUNT fallback when the scan
-## radius is empty (big-map round starts).
+## radius is empty (big-map round starts). Honors the gentleman's agreement.
 func _nearest_any(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_d := INF
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		if v == vehicle or _protected(v):
 			continue
 		var d: float = vehicle.global_position.distance_to(v.global_position)
 		if d < best_d:
@@ -354,8 +354,12 @@ func _los_clear(vehicle, target: Node2D) -> bool:
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak),
 ## plus a grudge bonus for whoever hurt us last — retaliation cascades keep
-## the free-for-all churning.
+## the free-for-all churning. The player gets a small priority thumb on the
+## scale, and the gentleman's agreement holds: AI never targets another AI
+## below MERCY_HP — a dying rival's pink slip belongs to the player.
 const REVENGE_BONUS := 0.5
+const PLAYER_PRIORITY := 0.2
+const MERCY_HP := 0.25
 
 func _select_target(vehicle) -> Node2D:
 	var best: Node2D = null
@@ -364,7 +368,7 @@ func _select_target(vehicle) -> Node2D:
 	if grudge != null and not is_instance_valid(grudge):
 		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		if v == vehicle or _protected(v):
 			continue
 		var d: float = vehicle.global_position.distance_to(v.global_position)
 		if d > SCAN:
@@ -374,7 +378,17 @@ func _select_target(vehicle) -> Node2D:
 		var score := _w_near * near_term + _w_weak * (1.0 - hpf)
 		if v == grudge:
 			score += REVENGE_BONUS
+		if v.is_in_group(&"player"):
+			score += PLAYER_PRIORITY
 		if score > best_score:
 			best_score = score
 			best = v
 	return best
+
+## The gentleman's agreement: a fellow AI under MERCY_HP is off-limits.
+## The player is always fair game.
+func _protected(v: Node) -> bool:
+	if v.is_in_group(&"player"):
+		return false
+	var hpf: float = v.get_hp_fraction() if v.has_method(&"get_hp_fraction") else 1.0
+	return hpf < MERCY_HP
