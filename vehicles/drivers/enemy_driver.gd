@@ -29,7 +29,7 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 
@@ -52,6 +52,11 @@ const ENGAGE_LIMIT := 6.0    # seconds of in-range LoS pressure before backing o
 const RELENT_DAMAGE := 30.0  # ...or this much player HP lost while engaged
 const RELENT_TIME := 3.5
 const RELENT_ANGLE := 2.6    # ~150° — a real disengage, wider than BREAK
+
+# WADE: water runs at 45% speed and the AI has no terrain sense — a hunter that
+# drives into a lake bogs down forever. After WADE_TRIP seconds wet, commit to
+# steering back toward the last dry position (the way in is always a way out).
+const WADE_TRIP := 1.2
 
 # Stuck escape: pinned against a wall/block -> reverse out, then re-engage.
 const STUCK_SPEED := 40.0        # slower than this while trying to move = stuck
@@ -93,6 +98,8 @@ var _engage_t := 0.0     # pressure meter vs the player
 var _engage_hp := -1.0   # player HP when this engagement began (-1 = none)
 var _relent_t := 0.0
 var _relent_side := 1.0
+var _water_t := 0.0
+var _dry_pos := Vector2.INF  # last position on non-water ground
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -198,6 +205,30 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 				"fire_mg": false,
 				"fire_selected": false,
 			}
+
+	# Water sense: remember dry ground; bogged too long -> WADE back out the
+	# way we came (committed, like CLEAR — reactive steering just re-enters).
+	if vehicle.current_terrain == &"water":
+		_water_t += delta
+	else:
+		_water_t = 0.0
+		_dry_pos = vehicle.global_position
+		if _mode == Mode.WADE:
+			_mode = Mode.PURSUE
+	if _mode != Mode.WADE and _water_t > WADE_TRIP and _dry_pos != Vector2.INF:
+		_mode = Mode.WADE
+	if _mode == Mode.WADE:
+		if _update_stuck(real_vel.length(), true, delta):
+			_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
+			return _unstick_intent()
+		var out_diff := wrapf((_dry_pos - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
+		return {
+			"throttle": 1.0,
+			"steer": clampf(out_diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+			"fire_mg": false,
+			"fire_selected": false,
+			"boost": false,
+		}
 
 	# Pressure meter: only the player earns relent; AI-vs-AI is governed already.
 	if _mode != Mode.RELENT and target.is_in_group(&"player") \
