@@ -19,6 +19,7 @@ var _opponents_box: VBoxContainer
 
 var _hp_bar: ProgressBar
 var _hp_label: Label
+var _life_pips: Array = []
 var _speed_label: Label
 var _heat_bar: ProgressBar
 var _heat_label: Label
@@ -46,6 +47,10 @@ func _process(_delta: float) -> void:
 	var ctrl := _player.get_controller()
 	if ctrl:
 		_boost_bar.value = ctrl.boost_fuel
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs:
+		for i in _life_pips.size():
+			_life_pips[i].color = SELECTED if i < gs.lives else Color(0.2, 0.2, 0.24)
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
@@ -149,6 +154,17 @@ func _build_dash() -> void:
 	_hp_bar = _bar(vbox, Color(0.75, 0.2, 0.2))
 	_hp_bar.value = 100.0
 	_speed_label = _label(vbox, "SPEED", 20)
+	var lives_hdr := _label(vbox, "LIVES", 14)
+	lives_hdr.modulate = DIM_TEXT
+	var lives_row := HBoxContainer.new()
+	lives_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(lives_row)
+	for i in 3:
+		var pip := ColorRect.new()
+		pip.custom_minimum_size = Vector2(20, 12)
+		pip.color = SELECTED
+		_life_pips.append(pip)
+		lives_row.add_child(pip)
 	vbox.add_child(_spacer(8))
 	_heat_label = _label(vbox, "MG HEAT", 14)
 	_heat_bar = _bar(vbox, Color(0.95, 0.55, 0.15))

@@ -234,6 +234,33 @@ func apply_effect(spec: StatusEffectSpec) -> void:
 	if _status:
 		_status.apply(spec)
 
+## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
+## invuln blink-shield so spawn-camping hunters can't chain-kill.
+func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
+	global_position = at
+	heading = new_heading
+	velocity = Vector2.ZERO
+	height = 0.0
+	vz = 0.0
+	if _health:
+		_health.hp = _health.max_hp
+	set_physics_process(true)
+	if _visual:
+		_visual.scale = Vector2.ONE  # pit falls shrink it
+		_visual.modulate = Color.WHITE
+	if _shadow:
+		_shadow.scale = Vector2.ONE
+	if shield_seconds > 0.0 and _status:
+		var shield := StatusEffectSpec.new()
+		shield.kind = &"invuln"
+		shield.duration = shield_seconds
+		apply_effect(shield)
+		if _visual:
+			var tween := create_tween()
+			tween.set_loops(int(shield_seconds / 0.2))
+			tween.tween_property(_visual, "modulate:a", 0.35, 0.1)
+			tween.tween_property(_visual, "modulate:a", 1.0, 0.1)
+
 func take_ram_damage(amount: float, source: Node2D = null) -> void:
 	if source:
 		last_attacker = source

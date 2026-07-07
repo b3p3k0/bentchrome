@@ -1,6 +1,6 @@
 [gd_scene load_steps=33 format=3]
 
-[ext_resource type="Script" path="res://levels/arena/arena.gd" id="1_arena"]
+[ext_resource type="Script" path="res://levels/combat_level.gd" id="1_arena"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
 [ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
