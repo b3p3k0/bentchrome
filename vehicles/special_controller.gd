@@ -7,6 +7,8 @@ extends Node
 ## This is the durable extension point: a new unusual special is a new kind +
 ## its handler here, while ordinary specials stay pure data on a projectile kind.
 
+const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
+
 const BEAM_DURATION := 4.0        # seconds a zap stays latched
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
@@ -97,7 +99,7 @@ func _beam_tick(delta: float) -> void:
 		return
 	if _beam_target.has_method("take_ram_damage"):
 		# Damage authored as dps; AI-on-AI runs through the governor.
-		_beam_target.take_ram_damage(_def.damage * delta * Vehicle.combat_scale(vehicle, _beam_target), vehicle)
+		_beam_target.take_ram_damage(_def.damage * delta * Combat.scale(vehicle, _beam_target), vehicle)
 	if _beam_target.has_method("apply_effect"):
 		var slow := StatusEffectSpec.new()
 		slow.kind = &"slow"
@@ -220,7 +222,7 @@ func _flame_tick(delta: float) -> void:
 		var body: Node = hit["collider"]
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(_def.damage * delta * Vehicle.combat_scale(vehicle, body))
+				child.take_damage(_def.damage * delta * Combat.scale(vehicle, body))
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
 				break

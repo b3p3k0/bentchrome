@@ -7,6 +7,7 @@ extends Area2D
 ## time they whiff a pass they commit to a straight line. No U-turns.
 
 const HOMING_CONE := deg_to_rad(90.0)
+const Combat := preload("res://game/combat.gd")  # NEVER name Vehicle here — load cycle
 
 var velocity := Vector2.ZERO
 var damage := 2.0
@@ -55,7 +56,7 @@ func _on_body_entered(body: Node) -> void:
 		return
 	var health := _find_health(body)
 	if health:
-		health.take_damage(damage * Vehicle.combat_scale(shooter, body))
+		health.take_damage(damage * Combat.scale(shooter, body))
 		if "last_attacker" in body and shooter is Node2D:
 			body.last_attacker = shooter  # AI holds a grudge against the trigger
 		var status := _find_status(body)

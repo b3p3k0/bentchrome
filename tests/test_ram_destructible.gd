@@ -6,7 +6,7 @@ extends RefCounted
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const BlockScene := preload("res://environment/destructible_block.tscn")
-const VehicleScript := preload("res://vehicles/vehicle.gd")
+const CombatScript := preload("res://game/combat.gd")
 
 const IMPACT_FRAMES := 30
 
@@ -55,13 +55,13 @@ func test_combat_scale_truth_table() -> void:
 	var block = BlockScene.instantiate()
 	block.position = Vector2(900, 0)
 	container.add_child(block)
-	t.check_approx(VehicleScript.combat_scale(ai_a, ai_b), 0.35, "governor: AI-on-AI reduced damage")
-	t.check_approx(VehicleScript.combat_scale(player, ai_a), 1.0, "governor: player hits AI full")
-	t.check_approx(VehicleScript.combat_scale(ai_a, player), 1.0, "governor: AI hits player full")
-	t.check_approx(VehicleScript.combat_scale(ai_a, block), 1.0, "governor: scenery takes full damage")
+	t.check_approx(CombatScript.scale(ai_a, ai_b), 0.35, "governor: AI-on-AI reduced damage")
+	t.check_approx(CombatScript.scale(player, ai_a), 1.0, "governor: player hits AI full")
+	t.check_approx(CombatScript.scale(ai_a, player), 1.0, "governor: AI hits player full")
+	t.check_approx(CombatScript.scale(ai_a, block), 1.0, "governor: scenery takes full damage")
 	ai_b.get_node("Health").hp = 8.0  # under the 10% mercy line
-	t.check_approx(VehicleScript.combat_scale(ai_a, ai_b), 0.0, "governor: nearly-dead AI immune to fellow AI")
-	t.check_approx(VehicleScript.combat_scale(player, ai_b), 1.0, "governor: player can always finish the job")
+	t.check_approx(CombatScript.scale(ai_a, ai_b), 0.0, "governor: nearly-dead AI immune to fellow AI")
+	t.check_approx(CombatScript.scale(player, ai_b), 1.0, "governor: player can always finish the job")
 	t.root.remove_child(container)
 	container.free()
 

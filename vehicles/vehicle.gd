@@ -15,22 +15,7 @@ extends CharacterBody2D
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
-const AI_VS_AI_DAMAGE := 0.35  # governor: AI brawls are theater, kills are the player's
-const AI_MERCY_HP := 0.10      # below this an AI is immune to OTHER AI (never to the player)
-
-## Damage multiplier for a hit: AI-on-AI runs at reduced power so opponents
-## skirmish without wiping each other, and a nearly-dead AI is immune to
-## fellow AI entirely — they keep shooting (theater), it keeps not dying,
-## and the finishing blow stays the player's. Anything involving the player
-## (or non-vehicle scenery) is full strength.
-static func combat_scale(shooter: Node, victim: Node) -> float:
-	if not (shooter is Vehicle and victim is Vehicle):
-		return 1.0
-	if shooter.is_in_group(&"player") or victim.is_in_group(&"player"):
-		return 1.0
-	if victim.get_hp_fraction() < AI_MERCY_HP:
-		return 0.0
-	return AI_VS_AI_DAMAGE
+const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -234,7 +219,7 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
-				other.take_ram_damage(hit * combat_scale(self, other), self)
+				other.take_ram_damage(hit * Combat.scale(self, other), self)
 				_ram_cd = ram_cooldown
 				break
 		else:
