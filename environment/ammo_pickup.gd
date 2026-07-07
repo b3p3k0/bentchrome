@@ -14,6 +14,7 @@ const STYLE := {
 }
 
 func _ready() -> void:
+	add_to_group(&"pickups")  # AI scavenging scans this
 	body_entered.connect(_on_body_entered)
 	var style: Dictionary = STYLE.get(kind, STYLE["standard"])
 	var tag := get_node_or_null("Tag") as Label

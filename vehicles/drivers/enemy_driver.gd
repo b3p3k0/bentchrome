@@ -109,16 +109,29 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	# anywhere — parking is not a strategy in a free-for-all. A hunt target is
 	# always past _far (anything closer would have been engaged), so the normal
 	# pursue flow drives it and the range gates keep the guns quiet.
+	var engaged := true
 	var target := _select_target(vehicle)
 	if target == null:
+		engaged = false
 		target = _nearest_any(vehicle)
-	if target == null:
-		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 
 	# Re-arm after running a slot dry (the special recharges back in).
 	var rack = vehicle.get_rack() if vehicle.has_method(&"get_rack") else null
 	if rack and not rack.can_consume():
 		rack.select_first_armed()
+
+	# Still dry with nothing to fight nearby: shopping run — divert the hunt to
+	# the nearest live crate (driving over it re-arms via the normal pickup
+	# path). Combat always outranks shopping; so does a low-HP flee.
+	var scavenging := false
+	if not engaged and rack and not rack.can_consume() and vehicle.get_hp_fraction() >= _flee:
+		var crate := _nearest_crate(vehicle)
+		if crate:
+			target = crate
+			scavenging = true
+
+	if target == null:
+		return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
@@ -179,7 +192,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_break_t -= delta
 		if _break_t <= 0.0 or dist > _far:
 			_mode = Mode.PURSUE
-	elif dist < _near:
+	elif dist < _near and not scavenging:
+		# (A crate isn't a threat — drive straight over it, no spacing arc.)
 		_mode = Mode.BREAK
 		_break_t = BREAK_TIME
 		# Veer toward the clearer side (feelers), committed for the whole arc.
@@ -229,8 +243,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		intent = {
 			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
 			"steer": clampf(diff * 2.0 + weave + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
-			"fire_mg": absf(aim) < 0.35 and dist < FIRE_RANGE and los,
-			"fire_selected": absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
+			"fire_mg": not scavenging and absf(aim) < 0.35 and dist < FIRE_RANGE and los,
+			"fire_selected": not scavenging and absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
 			"boost": dist > 900.0 and absf(diff) < 0.5,  # burn nitro to close long gaps
 		}
 
@@ -312,6 +326,19 @@ func _nearest_any(vehicle) -> Node2D:
 		if d < best_d:
 			best_d = d
 			best = v
+	return best
+
+## Nearest collectible crate (skips ones waiting to respawn).
+func _nearest_crate(vehicle) -> Node2D:
+	var best: Node2D = null
+	var best_d := INF
+	for p in vehicle.get_tree().get_nodes_in_group(&"pickups"):
+		if not p.monitoring:
+			continue
+		var d: float = vehicle.global_position.distance_to(p.global_position)
+		if d < best_d:
+			best_d = d
+			best = p
 	return best
 
 ## True when no wall/block sits between the nose and the target (mask 6 —
