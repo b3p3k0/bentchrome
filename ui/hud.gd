@@ -54,6 +54,12 @@ func _process(_delta: float) -> void:
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
+			# Empty slots vanish (matching the wheel's skip); the special always
+			# shows — it recharges — and the selection is never hidden.
+			lbl.visible = i == WeaponRack.Slot.SPECIAL \
+				or _rack.ammo(i) > 0 or i == _rack.selected_index()
+			if not lbl.visible:
+				continue
 			var name_txt := "—"
 			match i:
 				WeaponRack.Slot.SPECIAL:
