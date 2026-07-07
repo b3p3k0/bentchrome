@@ -7,6 +7,7 @@ extends Control
 ## Boundary exists; the static rects are trivial to redraw every frame.
 
 const RANGE := 1500.0
+const MIN_BLIP := 48.0  # breakables smaller than this (clutter) stay off the map
 const BG := Color(0.03, 0.08, 0.05)
 const FRAME := Color(0.25, 0.5, 0.3)
 const BUILDING := Color(0.32, 0.32, 0.38)
@@ -103,6 +104,8 @@ func _scan() -> void:
 			if rect.size == Vector2.ZERO:
 				continue
 			if _has_health(node):
+				if rect.size.x < MIN_BLIP and rect.size.y < MIN_BLIP:
+					continue  # 1-HP clutter: too small to matter, keeps the map readable
 				_breakables.append({"ref": node, "rect": rect})
 			else:
 				_solids.append({"rect": rect})
