@@ -65,20 +65,21 @@ func test_combat_scale_truth_table() -> void:
 	t.root.remove_child(container)
 	container.free()
 
-func test_ram_never_kills_a_car() -> void:
+func test_ram_clamp_rules() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
-	var attacker = VehicleScene.instantiate()  # player faction — full ram damage
-	container.add_child(attacker)
-	attacker.velocity = Vector2(650, 0)
-	var victim = EnemyScene.instantiate()
-	victim.position = Vector2(150, 0)
-	container.add_child(victim)
-	victim.get_node("Health").hp = 3.0  # one clean ram would normally end this
-	for i in 30:
-		await t.physics_frame
-	var alive: bool = is_instance_valid(victim) and victim.get_node("Health").hp > 0.0
-	t.check(alive, "ram floor: a crash never lands the killing blow")
+	var player = VehicleScene.instantiate()
+	container.add_child(player)
+	var ai_a = EnemyScene.instantiate()
+	ai_a.position = Vector2(300, 0)
+	container.add_child(ai_a)
+	var ai_b = EnemyScene.instantiate()
+	ai_b.position = Vector2(600, 0)
+	container.add_child(ai_b)
+	ai_b.get_node("Health").hp = 12.0  # above the AI mercy line, one ram from dead
+	t.check_approx(VehicleScript.ram_clamp(50.0, player, ai_b), 50.0, "ram: player bumper finishes NPCs")
+	t.check_approx(VehicleScript.ram_clamp(50.0, ai_a, player), 50.0, "ram: NPC bumper finishes the player")
+	t.check_approx(VehicleScript.ram_clamp(50.0, ai_a, ai_b), 11.0, "ram: AI-on-AI crash leaves 1% on the table")
 	t.root.remove_child(container)
 	container.free()
 

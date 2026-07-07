@@ -312,10 +312,7 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
-				hit *= Combat.scale(self, other)
-				# Crashes never kill: clamp so the victim keeps >=1% — bumpers
-				# soften them up, guns finish them. (Blocks still die to rams.)
-				hit = minf(hit, maxf(other.get_hp() - 0.01 * other.get_max_hp(), 0.0))
+				hit = ram_clamp(hit * Combat.scale(self, other), self, other)
 				other.take_ram_damage(hit, self)
 				_ram_cd = ram_cooldown
 				break
@@ -342,6 +339,17 @@ func _apply_bounce(pre_vel: Vector2) -> void:
 	var other = col.get_collider()
 	if other is Vehicle and other != self:
 		other.velocity -= n * into * bounce_factor * 0.5
+
+## Rams involving the player are lethal BOTH ways (your bumper finishes NPCs,
+## theirs finishes you). AI-on-AI rams never land the killing blow (>=1% HP
+## floor) — the mercy governor checks HP before the hit, so rams just above
+## its line were still finishing cars. Obstacle crashes damage nobody anyway.
+static func ram_clamp(hit: float, attacker: Node, victim: Node) -> float:
+	if attacker.is_in_group(&"player") or victim.is_in_group(&"player"):
+		return hit
+	if victim.has_method(&"get_hp"):
+		return minf(hit, maxf(victim.get_hp() - 0.01 * victim.get_max_hp(), 0.0))
+	return hit
 
 func _find_health_child(body: Node) -> Health:
 	for child in body.get_children():
