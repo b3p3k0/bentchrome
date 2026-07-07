@@ -41,9 +41,10 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	# Enemies shoot now: an unkillable player keeps stray fire from ending the
 	# round (the end screen would pause the tree and stall the frame pump).
 	player.get_node("Health").invulnerable = true
-	# Park the other combatants out of scan range so nothing rams it free.
+	# Remove the other combatants entirely — the AI hunts map-wide now, so a
+	# "parked far away" car would charge back in and contaminate the budgets.
 	for name in ["Enemy2", "Enemy3", "Enemy4"]:
-		arena.get_node(name).global_position = Vector2(-1700.0, 1700.0)
+		arena.get_node(name).queue_free()
 
 	var unpinned_at := -1
 	var escaped_at := -1
