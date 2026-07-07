@@ -7,6 +7,7 @@ const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const BlockScene := preload("res://environment/destructible_block.tscn")
 const CombatScript := preload("res://game/combat.gd")
+const VehicleScript := preload("res://vehicles/vehicle.gd")
 
 const IMPACT_FRAMES := 30
 
