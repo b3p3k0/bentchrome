@@ -56,12 +56,14 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 
 ## Level progression
 
-1. **Arena (Small)** — tutorial, 1 enemy.
-2. **Freeway (Medium)** — 3 enemies, multi-tiered interchanges.
-3. **Suburbs (Medium)** — 5 enemies, flat destructible terrain.
-4. **Junkyard (Small+)** — mini-boss, debris hazards.
-5. **Downtown (Large)** — 7 enemies, landmark-rich city.
-6. **Central Park (Boss)** — final boss, continues Downtown topology.
+**Shipped campaign** (`SceneFlow.CAMPAIGN`, all hand-authored scenes sharing `levels/combat_level.gd` — lives loop, enemy re-roll, menus): size classes small/med/large = 1-3 / 4-6 / 6-8 enemies and 1 / 1-2 / 2-3 health stations.
+
+1. **Downtown** (MED, 4 enemies, 1 station) — the city arena: park, secrets, courtyard.
+2. **Freeway Loop** (LARGE 2176×5376, 6 enemies, 3 stations) — NS ring road, infield crossover, low-HP guardrails, overpass ramps.
+3. **Suburbs** (MED, 6 enemies, 2 stations) — smashable houses on grass blocks, school/gas-station anchors, lakeside east edge.
+4. **Snowy Pass** (MED, 6 enemies, 1 station) — snow/ice switchbacks and **pit drop-offs** (`environment/pit_zone.gd`: grounded cars fall; ramp jumps clear them).
+
+Interstitial (`ui/interstitial.gd`, stub visuals) between levels; player has **3 lives** per campaign (respawn at start with 2s shield; full-wipe restart). Design targets beyond these (Junkyard mini-boss, Central Park boss) remain future levels.
 
 ## Design references
 

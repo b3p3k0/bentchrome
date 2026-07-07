@@ -50,6 +50,17 @@ if echo "$ROSTER_OUT" | grep -qiE "$ERR_RE"; then
   echo "== smoke: FAIL (roster)"; exit 1
 fi
 
+# Campaign levels: boot each hand-authored scene cold (parse errors, broken
+# instances, and load cycles in level content all surface here).
+for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn; do
+  echo "== smoke: level ($LEVEL)"
+  LEVEL_BOOT="$("$GODOT" --headless --path "$PROJECT_DIR" "res://$LEVEL" --quit-after 10 2>&1)"
+  if echo "$LEVEL_BOOT" | grep -qiE "$ERR_RE" || ! echo "$LEVEL_BOOT" | grep -q '^\[boot\] level ready'; then
+    echo "$LEVEL_BOOT" | grep -iE "$ERR_RE" || true
+    echo "== smoke: FAIL ($LEVEL)"; exit 1
+  fi
+done
+
 echo "== smoke: custom level (fixture)"
 LEVEL_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://levels/custom_level.tscn --quit-after 10 -- --level=res://tests/fixtures/sample_level.json 2>&1)"
 echo "$LEVEL_OUT" | grep -E '^\[boot\]' || true
