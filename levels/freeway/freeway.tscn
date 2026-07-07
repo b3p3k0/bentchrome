@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=27 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -436,6 +437,46 @@ amount = 2
 position = Vector2(0, 2432)
 kind = "jump"
 amount = 1
+
+[node name="Brush1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-256, -1856)
+kind = &"brush"
+
+[node name="Brush2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(288, -1728)
+kind = &"brush"
+
+[node name="Brush3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-288, -768)
+kind = &"brush"
+
+[node name="Brush4" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(224, -384)
+kind = &"brush"
+
+[node name="Brush5" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-288, 448)
+kind = &"brush"
+
+[node name="Brush6" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(288, 704)
+kind = &"brush"
+
+[node name="Brush7" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-224, 1024)
+kind = &"brush"
+
+[node name="Brush8" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-320, 1856)
+kind = &"brush"
+
+[node name="Brush9" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-960, -1600)
+kind = &"brush"
+
+[node name="Brush10" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(960, -320)
+kind = &"brush"
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 2304)

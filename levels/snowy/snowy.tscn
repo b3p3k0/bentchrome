@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://environment/pit_zone.tscn" id="13_pit"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -382,6 +383,41 @@ amount = 1
 position = Vector2(960, 0)
 kind = "jump"
 amount = 1
+
+[node name="Drift1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-704, -1330)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(448, -1360)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1024, -1300)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift4" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(192, 48)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift5" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1088, -64)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift6" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-960, 1400)
+kind = &"drift"
+footprint = 48.0
+
+[node name="Drift7" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(960, 1408)
+kind = &"drift"
+footprint = 48.0
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-320, 1344)

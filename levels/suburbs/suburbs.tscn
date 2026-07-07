@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -636,6 +637,54 @@ amount = 1
 position = Vector2(-768, 704)
 kind = "mine"
 amount = 2
+
+[node name="Bush1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1216, -1344)
+kind = &"bush"
+
+[node name="Bush2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(688, -1216)
+kind = &"bush"
+
+[node name="Bush3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1104, -320)
+kind = &"bush"
+
+[node name="Bush4" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-320, -576)
+kind = &"bush"
+
+[node name="Bush5" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(576, -448)
+kind = &"bush"
+
+[node name="Bush6" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1216, 448)
+kind = &"bush"
+
+[node name="Bush7" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-320, 192)
+kind = &"bush"
+
+[node name="Bush8" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1216, 1088)
+kind = &"bush"
+
+[node name="Bush9" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-320, 1088)
+kind = &"bush"
+
+[node name="Bush10" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(576, 1088)
+kind = &"bush"
+
+[node name="Trash1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-640, -848)
+kind = &"trash"
+
+[node name="Trash2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(64, -64)
+kind = &"trash"
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-320, 1536)
