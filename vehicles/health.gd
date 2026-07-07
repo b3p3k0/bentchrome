@@ -20,3 +20,10 @@ func take_damage(amount: float) -> void:
 	damaged.emit(amount, hp)
 	if hp <= 0.0:
 		died.emit()
+
+## Unconditional death (pit falls) — cliffs don't care about invulnerability.
+func kill() -> void:
+	if hp <= 0.0:
+		return
+	hp = 0.0
+	died.emit()

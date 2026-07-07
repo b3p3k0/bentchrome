@@ -44,6 +44,7 @@ var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
 var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
+var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 
 @onready var _controller: DrivingController = $DrivingController
@@ -195,8 +196,29 @@ func launch_from_ramp() -> void:
 	vz = ramp_launch
 	_set_airborne(true)
 
+## Over the edge: kill physics and collisions, shrink into the void, then die
+## for real. The fall suppresses the explosion — you fell, you didn't pop.
+func fall_into_pit() -> void:
+	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
+		return
+	_falling = true
+	set_physics_process(false)
+	velocity = Vector2.ZERO
+	set_deferred("collision_layer", 0)
+	set_deferred("collision_mask", 0)
+	var tween := create_tween()
+	if _visual:
+		tween.tween_property(_visual, "scale", Vector2(0.05, 0.05), 0.7)
+	if _shadow:
+		tween.parallel().tween_property(_shadow, "scale", Vector2(0.05, 0.05), 0.7)
+	tween.tween_callback(func() -> void:
+		if _health:
+			_health.kill()
+		_falling = false)
+
 func _on_died() -> void:
-	_spawn_explosion()
+	if not _falling:
+		_spawn_explosion()
 	if is_in_group(&"player"):
 		set_physics_process(false)
 		print("[player] destroyed")
@@ -242,6 +264,9 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 	velocity = Vector2.ZERO
 	height = 0.0
 	vz = 0.0
+	_falling = false
+	set_deferred("collision_layer", LAYER_GROUND)
+	set_deferred("collision_mask", LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE)
 	if _health:
 		_health.hp = _health.max_hp
 	set_physics_process(true)

@@ -17,6 +17,7 @@ const SUITES := [
 	preload("res://tests/test_destructible_block.gd"),
 	preload("res://tests/test_ram_destructible.gd"),
 	preload("res://tests/test_health_station.gd"),
+	preload("res://tests/test_pit_zone.gd"),
 	preload("res://tests/test_corner_escape.gd"),
 	preload("res://tests/test_no_camping.gd"),
 ]

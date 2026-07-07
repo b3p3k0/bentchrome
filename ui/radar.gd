@@ -112,6 +112,10 @@ func _scan() -> void:
 			_terrain.append({"rect": _body_rect(node), "color": color})
 		elif node is Area2D and "cooldown_seconds" in node:
 			_stations.append(node.global_position)
+		elif node is Area2D and "is_pit" in node:
+			# Drop-offs paint as near-black voids so the edge reads on the map.
+			_terrain.append({"rect": Rect2(node.global_position - node.size * 0.5, node.size),
+				"color": Color(0.01, 0.01, 0.02, 0.95)})
 	if found_wall:
 		_bounds = Rect2(lo, hi - lo)
 		_scanned = true
