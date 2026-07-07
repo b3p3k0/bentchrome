@@ -25,6 +25,8 @@ func test_configure_defaults() -> void:
 	t.check(r.ammo(RackScript.Slot.STANDARD) == 2, "rack: 2 standard to start")
 	t.check(r.ammo(RackScript.Slot.HOMING) == 1, "rack: 1 homing to start")
 	t.check(r.ammo(RackScript.Slot.POWER) == 1, "rack: 1 power to start")
+	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mines start empty (pickup-fed)")
+	t.check(r.ammo(RackScript.Slot.JUMP_MINE) == 0, "rack: jump mines start empty")
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
 	r.free()
 
@@ -97,6 +99,15 @@ func test_refill_does_not_move_selection() -> void:
 	r.consume()  # special dry -> standard
 	r.add_ammo(RackScript.Slot.HOMING, 1)
 	t.check(r.selected_index() == RackScript.Slot.STANDARD, "refill: pickups don't move selection")
+	r.free()
+
+func test_mines_join_rotation_after_pickup() -> void:
+	var r = _rack()
+	r.select_prev()  # from SPECIAL: mines empty -> wraps to POWER
+	t.check(r.selected_index() == RackScript.Slot.POWER, "mines: empty slots invisible to the wheel")
+	t.check(r.add_ammo(RackScript.Slot.MINE, 2) == 2, "mines: crate fills the slot")
+	r.select_next()  # from POWER: mine now armed
+	t.check(r.selected_index() == RackScript.Slot.MINE, "mines: armed mine joins the rotation")
 	r.free()
 
 func test_select_first_armed() -> void:

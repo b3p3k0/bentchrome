@@ -6,7 +6,7 @@ extends Resource
 ## Specials that need systems we don't have yet (burn, slow, dash, channel,
 ## collision-trigger) are marked stub = true and fire nothing until built.
 
-enum Kind { PROJECTILE, BEAM, DASH, TRIGGER, FLAME }
+enum Kind { PROJECTILE, BEAM, DASH, TRIGGER, FLAME, DROP }
 
 @export var display_name: String = "Special"
 @export var kind := Kind.PROJECTILE     # dispatched by SpecialController

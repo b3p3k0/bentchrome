@@ -65,6 +65,10 @@ func _process(_delta: float) -> void:
 					name_txt = "Homing"
 				WeaponRack.Slot.POWER:
 					name_txt = "Power Missile"
+				WeaponRack.Slot.MINE:
+					name_txt = "Mine"
+				WeaponRack.Slot.JUMP_MINE:
+					name_txt = "Jump Mine"
 			var count := "x%d" % _rack.ammo(i)
 			if i == WeaponRack.Slot.SPECIAL and _rack.recharge_fraction() < 1.0:
 				count += "  %d%%" % int(_rack.recharge_fraction() * 100.0)
@@ -176,7 +180,7 @@ func _build_dash() -> void:
 
 	var weapons_hdr := _label(vbox, "WEAPONS  (Q/E)", 14)
 	weapons_hdr.modulate = DIM_TEXT
-	for i in 4:
+	for i in 6:
 		_slot_labels.append(_label(vbox, "", 15))
 
 	var fill := Control.new()

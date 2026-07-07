@@ -8,11 +8,13 @@ extends Node
 signal selection_changed(index: int)
 signal ammo_changed(index: int, ammo: int)
 
-enum Slot { SPECIAL, STANDARD, HOMING, POWER }
+enum Slot { SPECIAL, STANDARD, HOMING, POWER, MINE, JUMP_MINE }
 
 const STANDARD_DEF := preload("res://data/weapons/missile_standard.tres")
 const HOMING_DEF := preload("res://data/weapons/missile_homing.tres")
 const POWER_DEF := preload("res://data/weapons/missile_power.tres")
+const MINE_DEF := preload("res://data/weapons/mine_land.tres")
+const JUMP_MINE_DEF := preload("res://data/weapons/mine_jump.tres")
 
 @export var start_standard := 2
 @export var start_homing := 1
@@ -28,6 +30,8 @@ func configure(special_def: WeaponDef, special_cap: int, special_recharge_second
 		{"def": STANDARD_DEF, "ammo": start_standard, "cap": 6, "recharge": 0.0},
 		{"def": HOMING_DEF, "ammo": start_homing, "cap": 3, "recharge": 0.0},
 		{"def": POWER_DEF, "ammo": start_power, "cap": 2, "recharge": 0.0},
+		{"def": MINE_DEF, "ammo": 0, "cap": 4, "recharge": 0.0},       # pickup-fed only
+		{"def": JUMP_MINE_DEF, "ammo": 0, "cap": 3, "recharge": 0.0},  # pickup-fed only
 	]
 	_selected = Slot.SPECIAL
 	_recharge_t = 0.0

@@ -24,6 +24,8 @@ const FLAME_DURATION := 1.0       # seconds of column per ammo; hold to chain bu
 const FLAME_LENGTH := 300.0       # nose-forward reach
 const FLAME_WIDTH := 70.0         # column thickness
 
+const DROP_COOLDOWN := 0.5        # held button lays a trail, not a carpet
+
 var _def: WeaponDef = null
 var _beam_target: Node2D = null
 var _beam_t := 0.0
@@ -34,6 +36,7 @@ var _dash_dir := Vector2.RIGHT
 var _armed := false
 var _flame_t := 0.0
 var _flame_vis: Polygon2D = null
+var _drop_cd := 0.0
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -58,7 +61,27 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			return _trigger(pressed, origin, direction, shooter)
 		WeaponDef.Kind.FLAME:
 			return _flame(pressed)
+		WeaponDef.Kind.DROP:
+			return _drop(pressed, shooter)
 	return false
+
+## Mines: deploy off the REAR bumper. Internal cooldown so a held button lays
+## a trail, not a carpet. Ammo is consumed by the caller on true, as always.
+func _drop(pressed: bool, shooter: Node) -> bool:
+	if not pressed or _drop_cd > 0.0 or _def.projectile_scene == null:
+		return false
+	var vehicle := shooter as Node2D
+	var scene := get_tree().current_scene
+	if vehicle == null or scene == null:
+		return false
+	_drop_cd = DROP_COOLDOWN
+	var mine := _def.projectile_scene.instantiate()
+	var heading: float = vehicle.get("heading")
+	mine.global_position = vehicle.global_position - Vector2.RIGHT.rotated(heading) * 48.0
+	mine.damage = _def.damage
+	mine.dropper = shooter
+	scene.add_child(mine)
+	return true
 
 ## Taser: burst zap — latch the nearest vehicle in close range and shock it for
 ## BEAM_DURATION (light dps + slow), holding through turns. The latch breaks
@@ -85,6 +108,8 @@ func _physics_process(delta: float) -> void:
 		_dash_tick(delta)
 	if _flame_t > 0.0:
 		_flame_tick(delta)
+	if _drop_cd > 0.0:
+		_drop_cd -= delta
 
 func _beam_tick(delta: float) -> void:
 	var vehicle := get_parent() as Node2D

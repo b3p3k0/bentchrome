@@ -34,6 +34,8 @@ const PICKUP_COLORS := {
 	"standard": Color(0.25, 0.8, 0.35),
 	"homing": Color(0.25, 0.7, 0.9),
 	"power": Color(0.9, 0.45, 0.2),
+	"mine": Color(0.75, 0.25, 0.2),
+	"jump": Color(0.6, 0.4, 0.9),
 }
 
 const ENTRIES := [
@@ -102,6 +104,30 @@ const ENTRIES := [
 			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
 		],
 		"ghost": {"color": PICKUP_COLORS["power"], "half_size": Vector2(14, 14), "tag": "P"},
+	},
+	{
+		"id": "pickup_mine",
+		"list_key": "pickups",
+		"display": "Mine Crate",
+		"scene": "res://environment/ammo_pickup.tscn",
+		"preset": {"kind": "mine"},
+		"props": [
+			{"key": "amount", "display": "Mines", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 2.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
+		],
+		"ghost": {"color": PICKUP_COLORS["mine"], "half_size": Vector2(14, 14), "tag": "X"},
+	},
+	{
+		"id": "pickup_jump",
+		"list_key": "pickups",
+		"display": "Jump-Mine Crate",
+		"scene": "res://environment/ammo_pickup.tscn",
+		"preset": {"kind": "jump"},
+		"props": [
+			{"key": "amount", "display": "Mines", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 1.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
+		],
+		"ghost": {"color": PICKUP_COLORS["jump"], "half_size": Vector2(14, 14), "tag": "J"},
 	},
 	{
 		"id": "dummy",

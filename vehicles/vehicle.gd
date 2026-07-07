@@ -192,6 +192,13 @@ func _set_airborne(on: bool) -> void:
 	# (clear other cars and blocks — ramp jumps sail over cover).
 	set_deferred("collision_mask", LAYER_WALL if on else (LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE))
 
+## Smaller pop than a ramp (jump mines) — airborne physics from any height kick.
+func pop_airborne(vz_speed: float) -> void:
+	if height > 0.0:
+		return
+	vz = vz_speed
+	_set_airborne(true)
+
 func launch_from_ramp() -> void:
 	if height > 0.0 or velocity.length() < min_launch_speed:
 		return
