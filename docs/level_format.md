@@ -58,7 +58,7 @@ that band.
 | `blocks` | no | Solid cover. `pos` (center) + `size [w, h]`, each side 64–1024. |
 | `pickups` | no | Ammo crates. `kind`: `"standard"`, `"homing"`, or `"power"`; `amount` 1–9 (default 2); `respawn_seconds` 1–120 (default 20). |
 | `dummies` | no | Stationary practice targets. `max_hp` 1–999 (default 60). |
-| `terrain` | no | Surface patches. `type`: `"dirt"`, `"grass"`, `"ice"`, or `"water"`; `rect` values must be multiples of 128. Unpainted floor is road. |
+| `terrain` | no | Surface patches. `type`: `"dirt"`, `"grass"`, `"ice"`, `"snow"`, or `"water"`; `rect` values must be multiples of 128. Unpainted floor is road. |
 
 ## Validation rules
 

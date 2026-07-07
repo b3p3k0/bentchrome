@@ -30,7 +30,7 @@ godot --path . res://levels/custom_level.tscn -- --level=user://levels/mylevel.j
 | Pan | Middle-mouse drag, or hold Space + left drag |
 | Zoom | Mouse wheel (anchored on the cursor) |
 | Place entity | Click a palette tool, then click the canvas (repeats until ESC/right-click) |
-| Paint terrain | Dirt/Grass/Ice/Water tool, drag a rectangle (128px grid) |
+| Paint terrain | Dirt/Grass/Ice/Snow/Water tool, drag a rectangle (128px grid) |
 | Select / move | Select tool: click an entity, drag to move (64px snap) |
 | Delete | Select something, press Delete or Backspace |
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z or Ctrl+Y |

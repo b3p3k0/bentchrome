@@ -27,6 +27,7 @@ const TERRAIN_COLORS := {
 	"dirt": Color(0.5, 0.36, 0.2, 0.5),
 	"grass": Color(0.25, 0.5, 0.22, 0.5),
 	"ice": Color(0.6, 0.8, 0.95, 0.5),
+	"snow": Color(0.82, 0.85, 0.92, 0.55),
 	"water": Color(0.15, 0.3, 0.55, 0.6),
 }
 const PICKUP_COLORS := {
@@ -129,6 +130,15 @@ const ENTRIES := [
 		"preset": {"type": "grass"},
 		"props": [],
 		"ghost": {"color": TERRAIN_COLORS["grass"], "half_size": Vector2.ZERO, "tag": ""},
+	},
+	{
+		"id": "terrain_snow",
+		"list_key": "terrain",
+		"display": "Snow",
+		"builtin": "terrain",
+		"preset": {"type": "snow"},
+		"props": [],
+		"ghost": {"color": TERRAIN_COLORS["snow"], "half_size": Vector2.ZERO, "tag": ""},
 	},
 	{
 		"id": "terrain_ice",

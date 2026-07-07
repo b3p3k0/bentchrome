@@ -20,6 +20,7 @@ const TERRAIN_SPECKLE := {
 	"dirt": {"speckle": Color(0.32, 0.22, 0.12), "density": 0.3, "scale": 8.0, "shimmer": 0.0},
 	"water": {"speckle": Color(0.45, 0.65, 0.9), "density": 0.22, "scale": 14.0, "shimmer": 1.6},
 	"ice": {"speckle": Color(0.85, 0.95, 1.0), "density": 0.18, "scale": 12.0, "shimmer": 0.0},
+	"snow": {"speckle": Color(0.95, 0.97, 1.0), "density": 0.3, "scale": 9.0, "shimmer": 0.0},
 }
 static var _speckle_cache: Dictionary = {}
 const FLOOR_OVERSCAN := 512.0  # grid drawn past the walls, like the arena

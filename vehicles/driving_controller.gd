@@ -41,6 +41,7 @@ var handbraking := false
 const TERRAIN := {
 	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},
 	&"grass": {"accel": 0.9, "top": 0.9, "grip": 0.8},
+	&"snow": {"accel": 0.85, "top": 0.9, "grip": 0.45},
 	&"dirt": {"accel": 0.8, "top": 0.85, "grip": 0.6},
 	&"ice": {"accel": 0.9, "top": 1.0, "grip": 0.16},
 	&"water": {"accel": 0.4, "top": 0.45, "grip": 0.7},
