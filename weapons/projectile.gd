@@ -57,7 +57,9 @@ func _on_body_entered(body: Node) -> void:
 	var health := _find_health(body)
 	if health:
 		health.take_damage(damage * Combat.scale(shooter, body))
-		if "last_attacker" in body and shooter is Node2D:
+		# Validity first: the shooter can die while this shot is in flight, and
+		# stamping a freed instance into a typed property is a script error.
+		if is_instance_valid(shooter) and shooter is Node2D and "last_attacker" in body:
 			body.last_attacker = shooter  # AI holds a grudge against the trigger
 		var status := _find_status(body)
 		if status:

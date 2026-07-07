@@ -364,8 +364,10 @@ const PLAYER_PRIORITY := 0.2
 func _select_target(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_score := -INF
-	var grudge: Node2D = vehicle.get("last_attacker")
-	if grudge != null and not is_instance_valid(grudge):
+	# Untyped on purpose: a killed attacker is a freed instance, and assigning
+	# one to a typed Node2D local is itself a script error — validate first.
+	var grudge: Variant = vehicle.get("last_attacker")
+	if grudge == null or not is_instance_valid(grudge):
 		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
 		if v == vehicle:

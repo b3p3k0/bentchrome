@@ -9,6 +9,7 @@ var t
 ## Minimal stand-in for targeting tests: position + hp fraction + groups.
 class FakeCar extends Node2D:
 	var hpf := 1.0
+	var last_attacker: Node2D = null
 	func get_hp_fraction() -> float:
 		return hpf
 
@@ -79,6 +80,21 @@ func test_dying_ai_still_gets_targeted() -> void:
 	var _healthy_ai := _car(rig[0], Vector2(900, 0), 1.0)
 	t.check(driver._select_target(rig[1]) == dying_ai, "targeting: dying AI is still a target (w_weak even prefers it)")
 	t.check(driver._nearest_any(rig[1]) == dying_ai, "targeting: hunt fallback ignores hp")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_freed_grudge_is_ignored() -> void:
+	# A killed attacker leaves a freed instance in last_attacker; targeting
+	# must shrug it off (regression: typed assignment of a freed ref errors).
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var victim := _car(rig[0], Vector2(400, 0), 1.0)
+	var attacker := _car(rig[0], Vector2(800, 0), 1.0)
+	rig[1].last_attacker = attacker
+	rig[0].remove_child(attacker)
+	attacker.free()
+	t.check(driver._select_target(rig[1]) == victim, "grudge: freed attacker ignored, targeting continues")
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
