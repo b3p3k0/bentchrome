@@ -27,6 +27,7 @@ func _ready() -> void:
 	var dev := get_node_or_null(^"/root/Dev")
 	if dev and dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
+		add_child(load("res://ui/tuning_editor.tscn").instantiate())  # F2
 	_spawn_point = _player.global_position
 	_spawn_heading = _player.heading
 	# Level-start gets the same blink shield as a respawn — no spawn ambushes.
