@@ -7,7 +7,7 @@ extends Control
 
 const CarPaint := preload("res://vehicles/car_paint.gd")
 const TURNTABLE_POS := Vector2(1120, 150)
-const TURNTABLE_SCALE := 2.4
+const TURNTABLE_SCALE := 2.0  # paint self-scales by FLEET_SCALE; 2.0 holds the old footprint
 const TURNTABLE_SPIN := 0.8  # rad/s, quantized to the same 16 steps as gameplay
 
 const AMBER := Color(1.0, 0.85, 0.2)

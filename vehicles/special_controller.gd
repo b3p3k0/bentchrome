@@ -342,7 +342,12 @@ func _set_armed_fx(on: bool) -> void:
 	_armed_fx.lifetime = 0.7
 	_armed_fx.local_coords = false  # smoke hangs in the world as the truck moves
 	_armed_fx.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINTS
-	_armed_fx.emission_points = PackedVector2Array([Vector2(-7, -9), Vector2(-7, 9)])
+	# Hammertoe's painted stacks, at the fleet's visual scale (paint self-scales;
+	# these are Visual-local coords, so the scale is applied here by hand).
+	var fleet: float = preload("res://vehicles/car_paint.gd").FLEET_SCALE
+	_armed_fx.emission_points = PackedVector2Array([
+		Vector2(-7, -9) * fleet, Vector2(-7, 9) * fleet,
+	])
 	_armed_fx.direction = Vector2(-1, 0)
 	_armed_fx.spread = 25.0
 	_armed_fx.initial_velocity_min = 30.0
