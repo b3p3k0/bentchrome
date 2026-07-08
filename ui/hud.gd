@@ -185,7 +185,7 @@ func _build_dash() -> void:
 	_boost_bar.value = 100.0
 	vbox.add_child(_spacer(12))
 
-	var weapons_hdr := _label(vbox, "WEAPONS  (Q/E)", 14)
+	var weapons_hdr := _label(vbox, "WEAPONS  (wheel)", 14)
 	weapons_hdr.modulate = DIM_TEXT
 	for i in 6:
 		_slot_labels.append(_label(vbox, "", 15))
@@ -196,9 +196,11 @@ func _build_dash() -> void:
 
 	var guide := _label(vbox, "WASD  drive
 SHIFT  boost
-Q/E/wheel  weapon
+E  handbrake
+wheel / /  weapon
 LMB  machine gun
 RMB  fire selected
+CTRL  zoom
 ESC  menu", 13)
 	guide.modulate = DIM_TEXT
 
