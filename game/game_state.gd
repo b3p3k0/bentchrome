@@ -20,3 +20,9 @@ func reset_campaign() -> void:
 var pending_level_path: String = ""
 var playtest_return_to_editor: bool = false
 var editor_open_path: String = ""
+
+# Player settings (proto-settings surface — a future options menu exposes
+# these; they survive scene changes AND campaign resets, unlike run state).
+var zoom_combat := 0.62    # default camera zoom (cars readable)
+var zoom_overview := 0.42  # Ctrl-toggled pull-back (see more board)
+var overview := false      # the persisted zoom-toggle state

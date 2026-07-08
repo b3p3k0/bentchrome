@@ -108,6 +108,12 @@ func _ready() -> void:
 		_health.damaged.connect(_on_damaged)
 	heading = rotation
 	rotation = 0.0
+	# Player camera boots straight at the persisted zoom (no pull-in from the
+	# scene's authored value on every level start).
+	var boot_cam := get_node_or_null(^"Camera2D") as Camera2D
+	var boot_gs := get_node_or_null(^"/root/GameState")
+	if boot_cam and boot_cam.enabled and boot_gs:
+		boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview if boot_gs.overview else boot_gs.zoom_combat)
 
 ## Hit feedback: brief white pulse (skipped for sub-1 DoT ticks, which would
 ## strobe), plus camera shake when it's the player taking it.
@@ -133,6 +139,16 @@ func _process(delta: float) -> void:
 		camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake))
 	elif camera.offset != Vector2.ZERO:
 		camera.offset = Vector2.ZERO
+	# Zoom toggle: combat close-up vs overview pull-back. State + values live on
+	# GameState (proto-settings; persists across levels/respawns); the lerp makes
+	# it read as a camera move. Vector art keeps both ends pixel-crisp.
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null:
+		return
+	if Input.is_action_just_pressed(&"zoom_toggle"):
+		gs.overview = not gs.overview
+	var target: float = gs.zoom_overview if gs.overview else gs.zoom_combat
+	camera.zoom = camera.zoom.lerp(Vector2.ONE * target, minf(6.0 * delta, 1.0))
 
 ## Applies the current stats to the controller/health/visuals. Re-callable live
 ## (the dev dashboard's car switcher uses set_stats()).
