@@ -555,11 +555,13 @@ deco = &"house"
 position = Vector2(480, 512)
 size = Vector2(64, 64)
 max_hp = 40.0
+deco = &"pump"
 
 [node name="Pump2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(672, 512)
 size = Vector2(64, 64)
 max_hp = 40.0
+deco = &"pump"
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(-1664, -64)
@@ -685,6 +687,24 @@ kind = &"trash"
 [node name="Trash2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(64, -64)
 kind = &"trash"
+
+[node name="Barrel1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(528, 608)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="Barrel2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(624, 624)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="Barrel3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(688, 576)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-320, 1536)

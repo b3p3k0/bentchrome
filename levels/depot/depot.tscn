@@ -153,21 +153,25 @@ shape = SubResource("RectangleShape2D_container")
 position = Vector2(-1088, 448)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="Crate2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(1088, -448)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="Crate3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1088, -1088)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="Crate4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(1088, 1088)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, 1216)
@@ -247,6 +251,30 @@ amount = 2
 position = Vector2(1216, -1216)
 kind = "jump"
 amount = 1
+
+[node name="Barrel1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-640, -448)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="Barrel2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-544, -560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="Barrel3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(704, 448)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="Barrel4" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(592, 560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 1344)

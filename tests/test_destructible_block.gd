@@ -42,3 +42,25 @@ func test_block_dies_and_frees() -> void:
 	t.check(block.is_queued_for_deletion(), "lethal damage frees the block")
 	t.root.remove_child(block)
 	block.free()
+
+func test_barrel_blast_damages_neighbors() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container  # the death explosion spawns here
+	var barrel = BlockScene.instantiate()
+	barrel.deco = &"barrel"
+	barrel.size = Vector2(44, 44)
+	barrel.max_hp = 30.0
+	container.add_child(barrel)
+	var crate = BlockScene.instantiate()
+	crate.position = Vector2(80, 0)  # inside the 130px blast
+	container.add_child(crate)
+	await t.physics_frame  # physics server needs a step to see the bodies
+	var crate_health = crate.get_node("Health")
+	var before: float = crate_health.hp
+	barrel.get_node("Health").take_damage(999.0)
+	await t.physics_frame  # deferred blast flushes
+	t.check(crate_health.hp < before, "barrel: blast damages neighbors (%.0f -> %.0f)" % [before, crate_health.hp])
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()

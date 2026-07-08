@@ -363,31 +363,37 @@ shape = SubResource("RectangleShape2D_b128x128")
 position = Vector2(-1344, -320)
 size = Vector2(256, 128)
 max_hp = 100.0
+deco = &"barrier"
 
 [node name="AlleyDoor" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-256, 1088)
 size = Vector2(128, 640)
 max_hp = 160.0
+deco = &"barrier"
 
 [node name="Crate1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(128, 1088)
 size = Vector2(128, 128)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="Crate2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(256, 1088)
 size = Vector2(128, 128)
 max_hp = 60.0
+deco = &"crate"
 
 [node name="Kiosk1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(256, -448)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"kiosk"
 
 [node name="Kiosk2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-384, 192)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"kiosk"
 
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2

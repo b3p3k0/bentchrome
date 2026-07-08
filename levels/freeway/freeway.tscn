@@ -277,81 +277,97 @@ shape = SubResource("RectangleShape2D_pillar")
 position = Vector2(-464, -1856)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailW2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -1600)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailW3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -1344)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailW4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -448)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailW5" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, 576)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailW6" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, 1728)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1856)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1600)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1344)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 448)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE5" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, -576)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="RailE6" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, -1728)
 size = Vector2(32, 128)
 max_hp = 20.0
+deco = &"rail"
 
 [node name="Debris1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-832, -2368)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"junk"
 
 [node name="Debris2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(832, -1088)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"junk"
 
 [node name="Debris3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-832, 1088)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"junk"
 
 [node name="Debris4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(640, 2368)
 size = Vector2(96, 96)
 max_hp = 60.0
+deco = &"junk"
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, -2240)
