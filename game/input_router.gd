@@ -21,6 +21,7 @@ const ACTION_SELECT_PREV := &"select_prev"
 const ACTION_SELECT_NEXT := &"select_next"
 const ACTION_SELECT_CONFIRM := &"select_confirm"
 const ACTION_SELECT_INFO := &"select_more_info"
+const ACTION_ZOOM := &"zoom_toggle"
 
 func _ready() -> void:
 	_ensure_action(ACTION_MOVE_UP, [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
@@ -30,9 +31,14 @@ func _ready() -> void:
 	# LMB = primary (MG), RMB = selected — the shooter-standard, per playtesters.
 	_ensure_action(ACTION_FIRE_MG, [_mouse(MOUSE_BUTTON_LEFT), _key(KEY_SPACE)])
 	_ensure_action(ACTION_FIRE_SELECTED, [_mouse(MOUSE_BUTTON_RIGHT), _key(KEY_K)])
-	_ensure_action(ACTION_WEAPON_PREV, [_key(KEY_Q), _mouse(MOUSE_BUTTON_WHEEL_UP)])
-	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_E), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
-	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_B)])
+	# Mouse-first weapons: wheel cycles, "/" is the keyboard fallback (next-only
+	# — auto-skip tours all slots). Q is deliberately unbound: prime real estate
+	# reserved for future ideas. E moves to handbrake (WASD-adjacent drifting);
+	# Ctrl becomes the camera zoom toggle.
+	_ensure_action(ACTION_WEAPON_PREV, [_mouse(MOUSE_BUTTON_WHEEL_UP)])
+	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_SLASH), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
+	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_E), _joy_button(JOY_BUTTON_B)])
+	_ensure_action(ACTION_ZOOM, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_Y)])
 	_ensure_action(ACTION_BOOST, [_key(KEY_SHIFT), _joy_button(JOY_BUTTON_LEFT_SHOULDER)])
 	_ensure_action(ACTION_PAUSE, [_key(KEY_ESCAPE), _joy_button(JOY_BUTTON_START)])
 	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
