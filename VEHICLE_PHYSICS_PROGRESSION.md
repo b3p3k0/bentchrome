@@ -402,3 +402,15 @@ Console Output (when DEBUG_VEHICLE_TUNING = true):
 | Coast distance | < mid | ≥ 400px | > mid |
 
 Plus: 0.15s of braking still leaves >60% of top speed ("drastic, never instant"), and the handbrake stops slower than the pedal while lateral velocity survives per the grip factor. Retune freely — but keep these bands green or consciously move them.
+
+### Phase 4.1 (July 2026) — Straighten assist
+Post-corner "bad alignment" wander had two causes: residual lateral velocity decaying
+at the flat `lateral_grip` rate, and (since 16-step visual heading quantization) a
+continuous physics heading sitting between visual steps — the car LOOKS straight while
+tracking up to ~11° off. Fix: hands off steer+handbrake for `straighten_delay` (0.35s —
+the corner-exit slip breathes first), then lateral grip multiplies by
+`straighten_grip_factor` (3.0) and heading eases onto the nearest `TAU/HEADING_STEPS`
+angle at `straighten_snap_rate_deg` (80°/s). Gated on >30 px/s forward; any steer input
+or handbrake resets the grace. Guarded on `"HEADING_STEPS" in vehicle`, so smooth-mode
+(HEADING_STEPS = 0) self-disables the snap. Locked by two suite tests; the original
+feel bands are untouched (single-tick grip asserts sit inside the grace window).

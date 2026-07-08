@@ -25,6 +25,15 @@ extends Node
 @export var handbrake_deceleration := 400.0        # gentler than the S pedal
 @export_range(0.0, 1.0) var handbrake_grip_factor := 0.15  # rear end breaks loose
 
+@export_group("Straighten")
+## Post-corner recenter: the slip breathes for straighten_delay after steering
+## ends, then lateral grip multiplies up (kills the crab) and heading eases onto
+## the 16-step visual grid (sprite snaps to steps; a between-step heading LOOKS
+## straight while tracking off — the "bad alignment" feel).
+@export var straighten_delay := 0.35
+@export var straighten_grip_factor := 3.0
+@export var straighten_snap_rate_deg := 80.0
+
 @export_group("Mass")
 @export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
 
@@ -36,6 +45,7 @@ extends Node
 var boost_fuel := 100.0  # 0..100; no recharge — resets with the scene
 var boosting := false    # state flags for cosmetic FX (drive_fx.gd) — set each apply()
 var handbraking := false
+var _no_steer_t := 0.0   # time since the last steer/handbrake input
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 const TERRAIN := {
@@ -74,10 +84,25 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var fwd_speed: float = vehicle.velocity.dot(forward)
 	var speed: float = vehicle.velocity.length()
 
+	# Straighten assist: hands off the wheel long enough -> recenter. The slip
+	# gets its grace period first (corner exits still breathe), then the crab
+	# dies fast and the heading settles onto the visual grid.
+	if absf(steer) > 0.05 or handbrake:
+		_no_steer_t = 0.0
+	else:
+		_no_steer_t += delta
+	var straightening: bool = _no_steer_t >= straighten_delay and absf(fwd_speed) > 30.0
+	if straightening:
+		grip *= straighten_grip_factor
+
 	# Steering authority grows with speed (you must roll to turn).
 	var authority := clampf(speed / turn_authority_speed, min_turn_authority, 1.0)
 	var dir_sign := signf(fwd_speed) if absf(fwd_speed) > 5.0 else 1.0
 	vehicle.heading += deg_to_rad(turn_rate_deg) * scale * steer * authority * dir_sign * delta
+	if straightening and "HEADING_STEPS" in vehicle and vehicle.HEADING_STEPS > 0:
+		var step: float = TAU / vehicle.HEADING_STEPS
+		vehicle.heading = rotate_toward(vehicle.heading, snappedf(vehicle.heading, step),
+			deg_to_rad(straighten_snap_rate_deg) * delta)
 	forward = Vector2.RIGHT.rotated(vehicle.heading)
 
 	# Mass (1-10) shapes the dynamics: heavy = weak launch, long coast, soft

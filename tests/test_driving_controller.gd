@@ -18,6 +18,10 @@ class StubVehicle:
 	func get_speed_scale() -> float:
 		return 1.0
 
+## Stub with the visual heading grid — enables the straighten heading snap.
+class SteppedStub extends StubVehicle:
+	var HEADING_STEPS := 16
+
 func _init(runner) -> void:
 	t = runner
 
@@ -171,3 +175,53 @@ func test_boost_empty_tank_is_inert() -> void:
 	t.check(_fwd(stub) <= TOP + 1.0, "boost: empty tank means normal top speed (got %.0f)" % _fwd(stub))
 	t.check(mid.boost_fuel == 0.0, "boost: tank never goes negative")
 	mid.free()
+
+func test_straighten_assist_boosts_grip_after_delay() -> void:
+	# Unprimed single tick: base lateral decay.
+	var base = _ctrl(5.0, 207.0)
+	var fresh := StubVehicle.new()
+	fresh.velocity = Vector2(200.0, 300.0)  # forward + lateral (heading +X)
+	base.apply(fresh, {"throttle": 0.0, "steer": 0.0}, DT)
+	var base_decay := 300.0 - absf(fresh.velocity.y)
+	# Primed past the delay (hands off the wheel): boosted decay.
+	var assisted = _ctrl(5.0, 207.0)
+	var stub := StubVehicle.new()
+	stub.velocity = Vector2(200.0, 0.0)
+	for i in 30:  # 0.5s of no-steer forward travel arms the assist
+		assisted.apply(stub, {"throttle": 0.5, "steer": 0.0}, DT)
+	stub.velocity.y = 300.0
+	var fwd_before: float = stub.velocity.x
+	assisted.apply(stub, {"throttle": 0.0, "steer": 0.0}, DT)
+	var boosted_decay := 300.0 - absf(stub.velocity.y)
+	t.check(boosted_decay > base_decay * 2.0,
+		"straighten: primed lateral decay well above base (%.1f vs %.1f)" % [boosted_decay, base_decay])
+	t.check(fwd_before > 30.0, "straighten: fixture kept forward speed above the gate")
+	# Any steer input resets the grace period.
+	assisted.apply(stub, {"throttle": 0.0, "steer": 1.0}, DT)
+	stub.velocity = Vector2(200.0, 300.0)
+	assisted.apply(stub, {"throttle": 0.0, "steer": 0.0}, DT)
+	var reset_decay := 300.0 - absf(stub.velocity.y)
+	t.check(reset_decay < boosted_decay * 0.6,
+		"straighten: steering resets the assist (%.1f after reset)" % reset_decay)
+	base.free()
+	assisted.free()
+
+func test_straighten_snaps_heading_to_grid() -> void:
+	var c = _ctrl(5.0, 207.0)
+	var stub := SteppedStub.new()
+	stub.heading = 0.1  # between the 0 and TAU/16 (0.3927) steps
+	stub.velocity = Vector2.RIGHT.rotated(stub.heading) * 200.0
+	for i in 60:  # 1s hands-off: assist armed, heading eases to the grid
+		c.apply(stub, {"throttle": 0.5, "steer": 0.0}, DT)
+	t.check(absf(stub.heading) < 0.01,
+		"straighten: heading settles onto the 16-step grid (%.3f rad)" % stub.heading)
+	# A plain stub (no HEADING_STEPS) never snaps.
+	var c2 = _ctrl(5.0, 207.0)
+	var plain := StubVehicle.new()
+	plain.heading = 0.1
+	plain.velocity = Vector2.RIGHT.rotated(plain.heading) * 200.0
+	for i in 60:
+		c2.apply(plain, {"throttle": 0.5, "steer": 0.0}, DT)
+	t.check(absf(plain.heading - 0.1) < 0.001, "straighten: no grid on the vehicle, no snap")
+	c.free()
+	c2.free()
