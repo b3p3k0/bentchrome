@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_arena"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -14,6 +14,8 @@
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
+[ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
+[ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="23_wreck"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -563,6 +565,99 @@ kind = &"brush"
 [node name="Brush3" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-256, 256)
 kind = &"brush"
+
+[node name="StreetDeco" type="Node2D" parent="."]
+
+[node name="Signal1" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-920, -920)
+kind = &"traffic_light"
+
+[node name="Signal2" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(920, -920)
+kind = &"traffic_light"
+
+[node name="Neon1" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-500, -1014)
+kind = &"neon"
+
+[node name="Neon2" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(600, -1014)
+kind = &"neon"
+
+[node name="Neon3" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-1216, 758)
+kind = &"neon"
+
+[node name="Lamp1" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-620, -680)
+kind = &"street_light"
+
+[node name="Lamp2" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(620, -680)
+kind = &"street_light"
+
+[node name="Lamp3" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-620, 560)
+kind = &"street_light"
+
+[node name="Lamp4" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(620, 560)
+kind = &"street_light"
+
+[node name="Manhole1" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(-200, -832)
+kind = &"manhole"
+
+[node name="Manhole2" type="Node2D" parent="StreetDeco"]
+script = ExtResource("22_deco")
+position = Vector2(0, 704)
+kind = &"manhole"
+
+[node name="Hydrant1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-596, -200)
+kind = &"hydrant"
+
+[node name="Hydrant2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(598, 180)
+kind = &"hydrant"
+
+[node name="Sign1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-780, -960)
+kind = &"sign"
+
+[node name="Sign2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(880, -700)
+kind = &"sign"
+
+[node name="Cone1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1240, -240)
+kind = &"cone"
+
+[node name="Cone2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1180, -280)
+kind = &"cone"
+
+[node name="Cone3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(300, 640)
+kind = &"cone"
+
+[node name="Wreck1" parent="." instance=ExtResource("23_wreck")]
+position = Vector2(-1000, 1496)
+rotation = 0.0
+
+[node name="Wreck2" parent="." instance=ExtResource("23_wreck")]
+position = Vector2(1008, -400)
+rotation = 1.5708
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 576)
