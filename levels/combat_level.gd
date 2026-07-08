@@ -40,6 +40,11 @@ func _process(_delta: float) -> void:
 	if _player.get_hp() > 0.0:
 		return
 	var gs := get_node_or_null(^"/root/GameState")
+	if gs and gs.devgod:
+		# DEVGOD died anyway (pits still kill) — comp the life, just respawn.
+		_respawning = true
+		get_tree().create_timer(RESPAWN_DELAY).timeout.connect(_respawn, CONNECT_ONE_SHOT)
+		return
 	if gs == null or gs.lives <= 1:
 		if gs:
 			gs.lives = 0

@@ -48,3 +48,29 @@ func test_settings_round_trip() -> void:
 
 	for k in keep:
 		gs.set(k, keep[k])
+
+func test_devgod_health_blocks_damage_not_pits() -> void:
+	var h = preload("res://vehicles/health.gd").new()
+	t.root.add_child(h)
+	h.god = true
+	h.take_damage(999.0)
+	t.check(h.hp == h.max_hp, "devgod: damage bounces off")
+	h.kill()
+	t.check(h.hp == 0.0, "devgod: pits (kill) still work")
+	t.root.remove_child(h)
+	h.free()
+
+func test_devgod_rack_never_depletes() -> void:
+	var rack = preload("res://vehicles/weapon_rack.gd").new()
+	t.root.add_child(rack)
+	rack.configure(preload("res://data/weapons/missile_standard.tres"), 3, 0.0)
+	rack.god = true
+	rack.arm_all_once()
+	for i in rack._slots.size():
+		t.check(rack.ammo(i) == 1, "devgod: slot %d armed with exactly one" % i)
+	rack.consume()
+	rack.consume()
+	t.check(rack.ammo(rack.selected_index()) == 1, "devgod: firing never depletes")
+	t.check(rack.can_consume(), "devgod: always ready to fire")
+	t.root.remove_child(rack)
+	rack.free()

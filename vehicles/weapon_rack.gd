@@ -23,6 +23,7 @@ const JUMP_MINE_DEF := preload("res://data/weapons/mine_jump.tres")
 var _slots: Array = []  # each: {def: WeaponDef, ammo: int, cap: int, recharge: float}
 var _selected := 0
 var _recharge_t := 0.0
+var god := false  # DEVGOD: firing never depletes (cooldowns still gate rate)
 
 func configure(special_def: WeaponDef, special_cap: int, special_recharge_seconds: float) -> void:
 	_slots = [
@@ -90,6 +91,8 @@ func can_consume() -> bool:
 	return not _slots.is_empty() and _slots[_selected].ammo > 0
 
 func consume() -> void:
+	if god:
+		return  # DEVGOD: the shot flies, the shelf stays stocked
 	if not can_consume():
 		return
 	_slots[_selected].ammo -= 1
@@ -113,6 +116,13 @@ func select_first_armed() -> void:
 		if _slots[i].ammo > 0:
 			_select(i)
 			return
+
+## DEVGOD loadout: exactly one round in every slot (mines included) so each
+## weapon is testable; with consume() a no-op they never run dry.
+func arm_all_once() -> void:
+	for i in _slots.size():
+		_slots[i].ammo = 1
+		ammo_changed.emit(i, 1)
 
 ## Adds ammo to a slot (pickups). Returns how much was actually accepted.
 func add_ammo(index: int, amount: int) -> int:

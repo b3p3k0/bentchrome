@@ -8,13 +8,15 @@ signal died
 
 @export var max_hp := 100.0
 var hp: float
-var invulnerable := false  # set by StatusReceiver (invuln effect)
+var invulnerable := false  # set by StatusReceiver (invuln effect) — it re-syncs
+						    # this every tick, so permanent immunity lives in `god`
+var god := false           # DEVGOD: immune to damage; kill() still works (pits)
 
 func _ready() -> void:
 	hp = max_hp
 
 func take_damage(amount: float) -> void:
-	if invulnerable or hp <= 0.0:
+	if god or invulnerable or hp <= 0.0:
 		return
 	hp = maxf(hp - amount, 0.0)
 	damaged.emit(amount, hp)

@@ -20,6 +20,7 @@ var _opponents_box: VBoxContainer
 
 var _hp_bar: ProgressBar
 var _hp_label: Label
+var _god_label: Label
 var _life_pips: Array = []
 var _speed_label: Label
 var _heat_bar: ProgressBar
@@ -39,6 +40,9 @@ func _process(_delta: float) -> void:
 			return
 	_hp_bar.value = _player.get_hp_fraction() * 100.0
 	_hp_label.text = "HP %3.0f" % _player.get_hp()
+	if _god_label:
+		var gs := get_node_or_null(^"/root/GameState")
+		_god_label.visible = gs != null and gs.devgod
 	_speed_label.text = "SPEED %3.0f MPH" % (_player.get_speed() * MPH_PER_PXS)
 	var mg := _player.get_mg_mount()
 	if mg:
@@ -161,6 +165,9 @@ func _build_dash() -> void:
 	vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(vbox)
 
+	_god_label = _label(vbox, "DEVGOD", 14)
+	_god_label.modulate = Color(1.0, 0.35, 0.3)
+	_god_label.visible = false
 	_hp_label = _label(vbox, "HP", 20)
 	_hp_bar = _bar(vbox, Color(0.75, 0.2, 0.2))
 	_hp_bar.value = 100.0

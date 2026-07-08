@@ -108,6 +108,15 @@ func _ready() -> void:
 		_health.damaged.connect(_on_damaged)
 	heading = rotation
 	rotation = 0.0
+	# DEVGOD (settings): player-only — damage-immune, one of everything, firing
+	# never depletes. Pits still kill; the level's lives loop comps the life.
+	var god_gs := get_node_or_null(^"/root/GameState")
+	if faction == &"player" and god_gs and god_gs.devgod:
+		if _health:
+			_health.god = true
+		if _rack:
+			_rack.god = true
+			_rack.arm_all_once()
 	# Player camera boots straight at the persisted zoom (no pull-in from the
 	# scene's authored value on every level start).
 	var boot_cam := get_node_or_null(^"Camera2D") as Camera2D
