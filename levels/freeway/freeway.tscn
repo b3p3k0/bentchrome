@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -13,6 +13,7 @@
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -87,6 +88,18 @@ polygon = PackedVector2Array(-1088, -2688, 1088, -2688, 1088, 2688, -1088, 2688)
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("1_grid")
 extent = Vector2(1600, 3200)
+
+[node name="RoadMarks" type="Node2D" parent="."]
+
+[node name="LaneW" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-640, -2400, -640, 2400)
+style = &"dashed_white"
+
+[node name="LaneE" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(640, -2400, 640, 2400)
+style = &"dashed_white"
 
 [node name="ShoulderW" type="Area2D" parent="."]
 position = Vector2(-960, 0)
