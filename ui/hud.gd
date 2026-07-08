@@ -11,6 +11,7 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const SELECTED := Color(1.0, 0.85, 0.2)
 const ALIVE_TEXT := Color(0.8, 0.82, 0.86)   # soft white — pure white glares
 const DEAD_TEXT := Color(0.55, 0.14, 0.14)   # dark red for the wrecked
+const MPH_PER_PXS := 0.15  # display-only px/s -> mph (368 px/s reads ~55 mph)
 
 var _player: Vehicle
 var _rack: WeaponRack
@@ -38,7 +39,7 @@ func _process(_delta: float) -> void:
 			return
 	_hp_bar.value = _player.get_hp_fraction() * 100.0
 	_hp_label.text = "HP %3.0f" % _player.get_hp()
-	_speed_label.text = "SPEED %4.0f" % _player.get_speed()
+	_speed_label.text = "SPEED %3.0f MPH" % (_player.get_speed() * MPH_PER_PXS)
 	var mg := _player.get_mg_mount()
 	if mg:
 		_heat_bar.value = mg.heat_fraction() * 100.0
