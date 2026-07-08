@@ -103,6 +103,12 @@ func _physics_process(_delta: float) -> void:
 		_start_skid()
 	elif not skidding and not _skids.is_empty():
 		_end_skid()
+	# Skid audio tracks the MARKS, not the input — if rubber is going down,
+	# sound comes out (player only). loop_set is idempotent per frame.
+	if _vehicle.is_in_group(&"player"):
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		if audio:
+			audio.loop_set(&"skid", not _skids.is_empty())
 	if not _skids.is_empty():
 		var offs: Array = _skid_offsets()  # rear tire contacts (bike lays one line)
 		for i in mini(_skids.size(), offs.size()):

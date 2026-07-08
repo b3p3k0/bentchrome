@@ -48,6 +48,10 @@ func _physics_process(delta: float) -> void:
 
 func _trigger(body: CharacterBody2D) -> void:
 	var Combat := preload("res://game/combat.gd")
+	if body.is_in_group(&"player"):
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		if audio:
+			audio.play(&"hit_weapon")
 	var dev := deg_to_rad(randf_range(LAND_DEV_MIN, LAND_DEV_MAX))
 	if jump:
 		dev = deg_to_rad(randf_range(JUMP_DEV_MIN, JUMP_DEV_MAX))

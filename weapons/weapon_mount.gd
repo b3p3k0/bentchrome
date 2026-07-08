@@ -91,6 +91,10 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	for n in range(1, bursts):
 		get_tree().create_timer(burst_interval * n).timeout.connect(
 			_burst_wave.bind(origin, direction, shooter), CONNECT_ONE_SHOT)
+	if shooter is Node and shooter.is_in_group(&"player"):
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		if audio:
+			audio.play(&"mg_fire" if heat_per_shot > 0.0 else &"missile_fire")
 	return true
 
 ## Follow-up wave: launched off the shooter's CURRENT muzzle/heading (the car
@@ -125,6 +129,7 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 			dir = direction.rotated(deg_to_rad(randf_range(-spread_deg * 0.5, spread_deg * 0.5)))
 		var p := projectile_scene.instantiate() as Projectile
 		p.modulate = projectile_tint
+		p.hit_sfx = &"hit_mg" if heat_per_shot > 0.0 else &"hit_weapon"
 		if pierces_cover:
 			p.collision_mask &= ~4  # drop the obstacle bit — flies through cover
 		scene.add_child(p)

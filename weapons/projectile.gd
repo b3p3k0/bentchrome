@@ -19,6 +19,7 @@ var turn_rate := 0.0   # radians/sec; 0 = straight
 var target: Node2D = null
 var shooter: Node = null
 var on_hit_effects: Array = []
+var hit_sfx: StringName = &"hit_weapon"  # stamped by the mount (hit_mg for MG fire)
 var _homing := false
 var _age := 0.0
 var _vis: Node2D = null
@@ -63,6 +64,10 @@ func _on_body_entered(body: Node) -> void:
 		return
 	var health := _find_health(body)
 	if health:
+		if body.is_in_group(&"player"):
+			var audio := get_node_or_null(^"/root/AudioDirector")
+			if audio:
+				audio.play(hit_sfx)
 		var hit := damage * Combat.scale(shooter, body)
 		# Rear weak spot (bosses): a shot traveling roughly the way the victim
 		# faces arrived from behind — thin plating back there.

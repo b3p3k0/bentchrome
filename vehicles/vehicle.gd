@@ -247,8 +247,15 @@ func _physics_process(delta: float) -> void:
 		var wants_fire := pressed and not _fire_lock
 		if _rack:
 			wants_fire = wants_fire and _rack.can_consume()
+		# Def captured BEFORE the shot: consume() can auto-cycle the selection.
+		var firing_def: WeaponDef = _rack.selected_def() if _rack else null
 		if _special.activate(wants_fire, _muzzle.global_position, aim, self) and _rack:
 			_rack.consume()
+			# Mines announce the drop; projectile fire is voiced by the mount.
+			if is_in_group(&"player") and firing_def and firing_def.kind == WeaponDef.Kind.DROP:
+				var audio_m := get_node_or_null(^"/root/AudioDirector")
+				if audio_m:
+					audio_m.play(&"mine_drop")
 
 func _update_depth(delta: float) -> void:
 	if height > 0.0 or vz != 0.0:
@@ -318,10 +325,15 @@ func fall_into_pit() -> void:
 func _on_died() -> void:
 	if not _falling:
 		_spawn_explosion()
+	var audio_d := get_node_or_null(^"/root/AudioDirector")
 	if is_in_group(&"player"):
+		if audio_d:
+			audio_d.play(&"player_death")
 		set_physics_process(false)
 		print("[player] destroyed")
 	else:
+		if audio_d:
+			audio_d.play_at(&"npc_death", global_position)
 		queue_free()
 
 func _spawn_explosion() -> void:
@@ -364,6 +376,10 @@ func is_burning() -> bool:
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.
 func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
+	if is_in_group(&"player"):
+		var audio_s := get_node_or_null(^"/root/AudioDirector")
+		if audio_s:
+			audio_s.play(&"spawn")  # level start routes through here too — one hook
 	global_position = at
 	heading = new_heading
 	velocity = Vector2.ZERO
@@ -443,6 +459,13 @@ func _apply_bounce(pre_vel: Vector2) -> void:
 	var other = col.get_collider()
 	if other is Vehicle and other != self:
 		other.velocity -= n * into * bounce_factor * 0.5
+	# Crash audio rides the same impact moments the shake does; player-involved
+	# only (either seat). Sub-2x-threshold contact is grinding, not a crash.
+	if into >= bounce_min_speed * 2.0 \
+			and (is_in_group(&"player") or (other is Node and other.is_in_group(&"player"))):
+		var audio_c := get_node_or_null(^"/root/AudioDirector")
+		if audio_c:
+			audio_c.play(&"crash")
 
 ## Rams involving the player are lethal BOTH ways (your bumper finishes NPCs,
 ## theirs finishes you). AI-on-AI rams never land the killing blow (>=1% HP
