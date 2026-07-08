@@ -5,6 +5,8 @@ extends RefCounted
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const LandScene := preload("res://environment/mine_land.tscn")
 const JumpScene := preload("res://environment/mine_jump.tscn")
+const StubDriver := preload("res://tests/stub_driver.gd")
+const STANDARD_DEF := preload("res://data/weapons/missile_standard.tres")
 
 const ARM_FRAMES := 70  # past the 1s arm delay
 
@@ -46,3 +48,52 @@ func test_jump_mine_pops_airborne_no_damage() -> void:
 	t.check(health.hp >= health.max_hp, "jump mine: no damage")
 	t.check(f.car.height > 0.0 or f.car.vz > 0.0, "jump mine: victim popped airborne")
 	_done(f)
+
+## Regression: dropping the LAST mine auto-cycles the rack; the still-held
+## click must NOT fire the newly selected slot (release re-arms the trigger).
+func test_dry_slot_does_not_chain_fire_next_weapon() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container  # mine drops + missiles spawn here
+	var car = VehicleScene.instantiate()
+	var old_driver = car.get_node("Driver")
+	car.remove_child(old_driver)
+	old_driver.free()
+	var stub = StubDriver.new()
+	stub.name = "Driver"
+	car.add_child(stub)
+	container.add_child(car)
+
+	var rack = car.get_node("WeaponRack")
+	rack.configure(STANDARD_DEF, 3, 0.0)  # guaranteed PROJECTILE "special"
+	rack.add_ammo(WeaponRack.Slot.MINE, 1)
+	while rack.selected_index() != WeaponRack.Slot.MINE:
+		rack.select_next()
+	var special_before: int = rack.ammo(WeaponRack.Slot.SPECIAL)
+	stub.intent = {}  # one un-pressed frame clears the configure/select lock
+	await t.physics_frame
+
+	stub.intent = {"fire_selected": true}
+	for i in 5:
+		await t.physics_frame
+	var mines := 0
+	for c in container.get_children():
+		if "dropper" in c:
+			mines += 1
+	t.check(mines == 1, "held fire: exactly one mine dropped")
+	t.check(rack.selected_index() != WeaponRack.Slot.MINE, "dry mine slot auto-cycled")
+	t.check(rack.ammo(WeaponRack.Slot.SPECIAL) == special_before,
+		"fire lock: held click did NOT fire the next slot")
+
+	stub.intent = {}  # release...
+	await t.physics_frame
+	stub.intent = {"fire_selected": true}  # ...and a fresh press fires it
+	for i in 3:
+		await t.physics_frame
+	t.check(rack.ammo(WeaponRack.Slot.SPECIAL) == special_before - 1,
+		"fresh press fires the newly selected slot")
+
+	stub.intent = {}
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()

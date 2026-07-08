@@ -52,6 +52,9 @@ var vz: float = 0.0       # vertical velocity (px/s)
 var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
 var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
+var _fire_lock := false   # selection changed while fire held — release to re-arm
+						   # (a dry slot auto-cycles mid-click; without this the
+						   # same press instantly fires the next weapon)
 var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 
 @onready var _controller: DrivingController = $DrivingController
@@ -95,8 +98,11 @@ func _ready() -> void:
 		if secondary:
 			secondary.cooldown_scale = ai_cooldown_scale
 	if _rack and _special:
-		# Selection drives what the special/secondary path fires next.
-		_rack.selection_changed.connect(func(_i: int) -> void: _special.set_weapon(_rack.selected_def()))
+		# Selection drives what the special/secondary path fires next. The lock
+		# forces a trigger release before the newly selected slot can fire.
+		_rack.selection_changed.connect(func(_i: int) -> void:
+			_special.set_weapon(_rack.selected_def())
+			_fire_lock = true)
 	if _health:
 		_health.died.connect(_on_died)
 		_health.damaged.connect(_on_damaged)
@@ -207,7 +213,10 @@ func _physics_process(delta: float) -> void:
 		if intent.get("weapon_next", false):
 			_rack.select_next()
 	if _special and _muzzle:
-		var wants_fire: bool = intent.get("fire_selected", false)
+		var pressed: bool = intent.get("fire_selected", false)
+		if not pressed:
+			_fire_lock = false
+		var wants_fire := pressed and not _fire_lock
 		if _rack:
 			wants_fire = wants_fire and _rack.can_consume()
 		if _special.activate(wants_fire, _muzzle.global_position, aim, self) and _rack:
