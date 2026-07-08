@@ -15,6 +15,8 @@ extends CharacterBody2D
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
+const HEADING_STEPS := 16  # quantize the visual to N compass steps (retro
+							# directional-sprite feel); 0 = smooth rotation
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const ExplosionScene := preload("res://environment/explosion.tscn")
 
@@ -56,6 +58,7 @@ var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 @onready var _driver: Driver = $Driver
 @onready var _visual: Node2D = $Visual
 @onready var _shadow: Node2D = $Shadow
+@onready var _paint: Node2D = $Visual/Body
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
 @onready var _mg_mount: WeaponMount = $MachineGunMount
 @onready var _special: SpecialController = $SpecialController
@@ -78,14 +81,10 @@ func _ready() -> void:
 	if stats:
 		_apply_stats()
 	else:
-		($Visual/Body as Polygon2D).color = body_color
+		_paint.apply(&"", body_color, Color(1, 0.85, 0.2))
+		_sync_body_metrics()
 	if body_scale != 1.0:
 		_visual.scale = Vector2.ONE * body_scale
-		var col := get_node_or_null(^"CollisionShape2D") as CollisionShape2D
-		if col and col.shape is CircleShape2D:
-			var big: CircleShape2D = col.shape.duplicate()  # never resize the shared resource
-			big.radius *= body_scale
-			col.shape = big
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
 	if faction != &"player":
@@ -139,8 +138,8 @@ func _apply_stats() -> void:
 	for k in stats.handling_overrides:
 		_controller.set(k, stats.handling_overrides[k])
 	body_color = stats.primary_color
-	($Visual/Body as Polygon2D).color = body_color
-	($Visual/FrontBumper as Polygon2D).color = stats.accent_color
+	_paint.apply(stats.id, stats.primary_color, stats.accent_color)
+	_sync_body_metrics()
 	if _rack:
 		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds)
 	if stats.special and _special:
@@ -151,6 +150,29 @@ func set_stats(new_stats: VehicleStats) -> void:
 		return
 	stats = new_stats
 	_apply_stats()
+
+## Pushes the paint style's footprint into everything that must agree with it:
+## shadow silhouette, muzzle nose, collision radius. Radius is set absolutely
+## from the style (× body_scale) so repeated re-rolls never compound.
+func _sync_body_metrics() -> void:
+	if _paint == null or not _paint.has_method("metrics"):
+		return
+	var m: Dictionary = _paint.metrics()
+	if _shadow is Polygon2D:
+		(_shadow as Polygon2D).polygon = _paint.shadow_polygon()
+	if _muzzle:
+		_muzzle.position = Vector2(float(m.half_len) + 4.0, 0.0)
+	var col := get_node_or_null(^"CollisionShape2D") as CollisionShape2D
+	if col and col.shape is CircleShape2D:
+		var shape: CircleShape2D = col.shape.duplicate()  # never resize the shared resource
+		shape.radius = float(m.radius) * body_scale
+		col.shape = shape
+
+## Per-style footprint/contact metrics for FX (skids, flames, mounts).
+func body_metrics() -> Dictionary:
+	if _paint and _paint.has_method("metrics"):
+		return _paint.metrics()
+	return {}
 
 func get_controller() -> DrivingController:
 	return _controller
@@ -171,7 +193,10 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_apply_bounce(pre_slide_vel)
 	_update_ram(delta, pre_slide_vel.length())
-	_visual.rotation = heading
+	var visual_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
+	_visual.rotation = visual_heading
+	if _shadow:
+		_shadow.rotation = visual_heading
 	_update_depth(delta)
 	var aim := Vector2.RIGHT.rotated(heading)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):

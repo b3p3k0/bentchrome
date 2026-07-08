@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://vehicles/vehicle.gd" id="1_veh"]
 [ext_resource type="Script" path="res://vehicles/driving_controller.gd" id="2_ctl"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://vehicles/special_controller.gd" id="10_special"]
 [ext_resource type="Script" path="res://vehicles/weapon_rack.gd" id="11_rack"]
 [ext_resource type="Script" path="res://vehicles/drive_fx.gd" id="12_dfx"]
+[ext_resource type="Script" path="res://vehicles/car_paint.gd" id="13_paint"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_veh"]
 radius = 22.0
@@ -36,13 +37,8 @@ polygon = PackedVector2Array(-28, -20, 28, -20, 28, 20, -28, 20)
 
 [node name="Visual" type="Node2D" parent="."]
 
-[node name="Body" type="Polygon2D" parent="Visual"]
-color = Color(0.85, 0.2, 0.3, 1)
-polygon = PackedVector2Array(-26, -22, 26, -22, 26, 22, -26, 22)
-
-[node name="FrontBumper" type="Polygon2D" parent="Visual"]
-color = Color(1, 0.85, 0.2, 1)
-polygon = PackedVector2Array(20, -22, 26, -22, 26, 22, 20, 22)
+[node name="Body" type="Node2D" parent="Visual"]
+script = ExtResource("13_paint")
 
 [node name="Muzzle" type="Marker2D" parent="Visual"]
 position = Vector2(30, 0)
