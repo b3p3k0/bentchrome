@@ -3,7 +3,7 @@
 This document condenses the master design specs into quick-reference points we can reference while scoping tasks or writing prompts for Claude Code.
 
 ## Core Pillars
-- Speedy, destructive vehicular combat with free-angle arcade driving (inertia, drift, surface-sensitive handling; vehicles drawn as 16-frame directional sprites), ramps, pits, and multiple surface types that affect traction.
+- Speedy, destructive vehicular combat with free-angle arcade driving (inertia, drift, surface-sensitive handling; vehicles drawn as procedural per-car bodies quantized to 16 compass steps), ramps, pits, and multiple surface types that affect traction.
 - Distinct vehicle silhouettes and handling; each car has machine guns (infinite), a finite primary weapon, and an auto-recharging special.
 - Arena structure that rewards scavenging, environmental destruction, and short-term improvisation under pressure.
 
