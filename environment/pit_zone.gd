@@ -30,5 +30,28 @@ func _physics_process(_delta: float) -> void:
 			body.fall_into_pit()
 
 func _draw() -> void:
-	draw_rect(Rect2(-size * 0.5, size), VOID)
-	draw_rect(Rect2(-size * 0.5, size), RIM, false, 3.0)
+	var pts := _rounded_rect(size * 0.5, 32.0)
+	draw_colored_polygon(pts, VOID)
+	var closed := pts.duplicate()
+	closed.append(pts[0])
+	draw_polyline(closed, RIM, 3.0)
+
+## Soft-cornered rect: chamfer points + an inward shoulder per corner, matching
+## the terrain-zone treatment so hazards sit in the same visual language.
+func _rounded_rect(half: Vector2, r: float) -> PackedVector2Array:
+	r = minf(r, minf(half.x, half.y) * 0.6)
+	var corners := [
+		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),
+		Vector2(half.x, half.y), Vector2(-half.x, half.y),
+	]
+	var out := PackedVector2Array()
+	for i in corners.size():
+		var prev: Vector2 = corners[(i - 1 + corners.size()) % corners.size()]
+		var cur: Vector2 = corners[i]
+		var next: Vector2 = corners[(i + 1) % corners.size()]
+		var dir_prev := (prev - cur).normalized()
+		var dir_next := (next - cur).normalized()
+		out.append(cur + dir_prev * r)
+		out.append(cur + (dir_prev + dir_next) * r * 0.3)
+		out.append(cur + dir_next * r)
+	return out
