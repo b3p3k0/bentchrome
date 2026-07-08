@@ -3,8 +3,13 @@ extends Node2D
 ## the classic placeholder square) drawn in true-footprint local px; the style
 ## table also carries the physics-facing metrics (collision radius, skid
 ## contact points, steering wheels) so visuals and gameplay agree per car.
+## The whole fleet renders at FLEET_SCALE while collision radii stay 1:1 —
+## hitbox-smaller-than-visual is deliberate (near-misses read as skill, and
+## the corner-escape budgets are radius-coupled). Don't "fix" the split.
 ## NEVER references Vehicle (projectile-side circular-load rule): the parent
 ## is duck-typed where needed.
+
+const FLEET_SCALE := 1.25  # visual size of every car; collision radii stay 1:1
 
 const OUTLINE := Color(0.08, 0.08, 0.1)
 const NOSE_ACCENT := Color(1.0, 0.85, 0.2)  # dummy/fallback bumper strip
@@ -98,15 +103,39 @@ var _bar_phase := false
 var _steer := 0.0        # smoothed front-wheel pivot
 var _prev_heading := 0.0
 
+func _ready() -> void:
+	scale = Vector2.ONE * FLEET_SCALE  # visual child only — never the physics body
+
 func apply(id: StringName, primary_color: Color, accent_color: Color) -> void:
 	style_id = id if STYLES.has(id) else &"box"
 	primary = primary_color
 	accent = accent_color
+	scale = Vector2.ONE * FLEET_SCALE  # standalone uses (turntable) may apply pre-ready
 	set_process(_animated())
 	queue_redraw()
 
+## Style metrics at fleet scale for every cosmetic consumer (shadow, muzzle,
+## skids, flame anchors). `radius` is the exception: collision stays at the
+## authored 1:1 value — the hitbox is intentionally smaller than the visual.
+## Cached per style: drive_fx polls skid offsets every frame while skidding.
+var _metrics_cache: Dictionary = {}
+
 func metrics() -> Dictionary:
-	return STYLES[style_id]
+	if _metrics_cache.has(style_id):
+		return _metrics_cache[style_id]
+	var raw: Dictionary = STYLES[style_id]
+	var skids: Array = []
+	for p in raw.skid_points:
+		skids.append((p as Vector2) * FLEET_SCALE)
+	var m := {
+		"half_len": float(raw.half_len) * FLEET_SCALE,
+		"half_wid": float(raw.half_wid) * FLEET_SCALE,
+		"radius": float(raw.radius),  # collision — deliberately unscaled
+		"skid_points": skids,
+		"steer_wheels": raw.steer_wheels,  # paint-local; the node's own scale covers them
+	}
+	_metrics_cache[style_id] = m
+	return m
 
 ## Footprint rectangle for the drop shadow (applied by the vehicle).
 func shadow_polygon() -> PackedVector2Array:

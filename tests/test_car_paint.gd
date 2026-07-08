@@ -47,12 +47,15 @@ func test_vehicle_syncs_style_metrics() -> void:
 	t.root.add_child(v)
 	for id in ORDER:
 		v.set_stats(load("res://data/vehicles/%s.tres" % id))
-		var m: Dictionary = PaintScript.STYLES[id]
+		var raw: Dictionary = PaintScript.STYLES[id]
+		var m: Dictionary = v.body_metrics()  # fleet-scaled cosmetics, 1:1 radius
 		var col: CollisionShape2D = v.get_node("CollisionShape2D")
-		t.check(is_equal_approx(col.shape.radius, float(m.radius)),
-			"collision radius follows style: %s" % id)
+		t.check(is_equal_approx(col.shape.radius, float(raw.radius)),
+			"collision radius stays 1:1 (hitbox < visual): %s" % id)
+		t.check(is_equal_approx(float(m.half_len), float(raw.half_len) * PaintScript.FLEET_SCALE),
+			"cosmetic metrics carry the fleet scale: %s" % id)
 		var muzzle: Marker2D = v.get_node("Visual/Muzzle")
 		t.check(is_equal_approx(muzzle.position.x, float(m.half_len) + 4.0),
-			"muzzle rides the nose: %s" % id)
+			"muzzle rides the scaled nose: %s" % id)
 	t.root.remove_child(v)
 	v.free()
