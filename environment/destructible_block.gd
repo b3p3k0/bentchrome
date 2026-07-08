@@ -93,6 +93,8 @@ func _boom_tint() -> Color:
 			return ROOF_DARK
 		&"barrel", &"pump":
 			return Color(1.0, 0.45, 0.15)  # fuel fire
+		&"fence":
+			return Color(0.9, 0.88, 0.82)  # splinters fly white
 		_:
 			return BASE_COLOR
 
@@ -139,6 +141,8 @@ func _draw() -> void:
 			_draw_pump()
 		&"barrel":
 			_draw_barrel()
+		&"fence":
+			_draw_fence()
 
 func _draw_house() -> void:
 	var half := size * 0.5
@@ -249,6 +253,28 @@ func _draw_pump() -> void:
 	draw_line(Vector2(half.x * 0.35, 0), nozzle, _shade(HAZARD_DARK), 2.5)
 	draw_rect(Rect2(nozzle - Vector2(3, 3), Vector2(7, 6)), _shade(METAL_DARK))
 	draw_rect(Rect2(-half * 0.9, size * 0.9), _shade(BARREL_RIM), false, 2.0)
+
+## Picket fence (top-down strip): white slats across the run + a shaded rail
+## along it. 15 HP — mowing one down is a fender-tap, as intended.
+func _draw_fence() -> void:
+	var half := size * 0.5
+	var tall := size.y > size.x
+	var length := size.y if tall else size.x
+	var white := _shade(Color(0.92, 0.9, 0.85))
+	var rail := _shade(Color(0.68, 0.66, 0.6))
+	var picket := 8.0
+	var gap := 6.0
+	var n := int(length / (picket + gap))
+	for i in n:
+		var t := -length * 0.5 + i * (picket + gap) + gap * 0.5
+		if tall:
+			draw_rect(Rect2(-half.x, t, size.x, picket), white)
+		else:
+			draw_rect(Rect2(t, -half.y, picket, size.y), white)
+	if tall:
+		draw_rect(Rect2(-2.0, -half.y, 4.0, size.y), rail)
+	else:
+		draw_rect(Rect2(-half.x, -2.0, size.x, 4.0), rail)
 
 ## Fuel barrel (top-down drum): red disc, rim ring, cap, hazard diamond.
 func _draw_barrel() -> void:
