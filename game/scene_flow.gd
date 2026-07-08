@@ -7,6 +7,7 @@ const SELECT := "res://ui/car_select.tscn"
 const ARENA := "res://levels/arena/arena.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
 const INTERSTITIAL := "res://ui/interstitial.tscn"
+const SETTINGS := "res://ui/settings.tscn"
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the
 ## freeway, through the suburbs, into the mountains.
@@ -35,6 +36,9 @@ func to_level(index: int) -> void:
 
 func to_interstitial() -> void:
 	goto_scene(INTERSTITIAL)
+
+func to_settings() -> void:
+	goto_scene(SETTINGS)
 
 func to_custom_level(path: String) -> void:
 	GameState.pending_level_path = path

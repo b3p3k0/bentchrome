@@ -10,7 +10,9 @@ var _done := false
 var _index := 0
 var _story: Control
 
-@onready var _entries: Array[Label] = [$Menu/Start, $Menu/Story]
+const ENTRY_NAMES := ["START", "STORY", "SETTINGS"]
+
+@onready var _entries: Array[Label] = [$Menu/Start, $Menu/Story, $Menu/Settings]
 
 func _ready() -> void:
 	var bg := $Bg as TextureRect
@@ -30,13 +32,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			_story.queue_free()
 			_story = null
 		return
-	var nav: bool = event.is_action_pressed(&"select_prev") or event.is_action_pressed(&"select_next") \
-		or event.is_action_pressed(&"move_up") or event.is_action_pressed(&"move_down")
+	var up: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"select_prev")
+	var down: bool = event.is_action_pressed(&"move_down") or event.is_action_pressed(&"select_next")
 	var confirm: bool = event.is_action_pressed(&"select_confirm") \
 		or (event is InputEventMouseButton and event.pressed
 			and event.button_index == MOUSE_BUTTON_LEFT)
-	if nav:
-		_index = (_index + 1) % _entries.size()  # two entries: any nav key flips
+	if up:
+		_index = wrapi(_index - 1, 0, _entries.size())
+		_highlight()
+	elif down:
+		_index = wrapi(_index + 1, 0, _entries.size())
 		_highlight()
 	elif confirm:
 		_activate()
@@ -44,14 +49,18 @@ func _unhandled_input(event: InputEvent) -> void:
 func _highlight() -> void:
 	for i in _entries.size():
 		_entries[i].modulate = AMBER if i == _index else DIM_TEXT
-		_entries[i].text = ("[ %s ]" if i == _index else "%s") % ["START", "STORY"][i]
+		_entries[i].text = ("[ %s ]" if i == _index else "%s") % ENTRY_NAMES[i]
 
 func _activate() -> void:
-	if _index == 0:
-		_done = true
-		SceneFlow.to_select()
-	else:
-		_open_story()
+	match _index:
+		0:
+			_done = true
+			SceneFlow.to_select()
+		1:
+			_open_story()
+		2:
+			_done = true
+			SceneFlow.to_settings()
 
 func _open_story() -> void:
 	_story = Control.new()

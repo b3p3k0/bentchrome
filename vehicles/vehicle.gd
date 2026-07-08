@@ -128,6 +128,9 @@ func _on_damaged(amount: float, _hp: float) -> void:
 		add_shake(minf(amount * 0.4, 8.0))
 
 func add_shake(amount: float) -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs and not gs.screen_shake:
+		return  # accessibility toggle: steady camera
 	_shake = minf(_shake + amount, 12.0)
 
 func _process(delta: float) -> void:

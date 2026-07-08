@@ -17,7 +17,7 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 ## Getting Started & Controls
 
-The game starts with a splash screen offering Start 1P to enter character selection, or Story to view background lore. The story screen shows game background with 'Press any key to return'.
+The game starts with a splash screen offering Start 1P to enter character selection, Story to view background lore, or Settings. The story screen shows game background with 'Press any key to return'. Settings covers zoom depth, screen shake, a campaign start-level picker for practice runs, and the DEVGOD/developer toggles for playtesting — choices persist between sessions.
 
 ### Player Selection
 When you first boot up Bent Chrome, you'll land in the Player Selection screen where you can browse through 9 hardened drivers and their combat-ready rides. Each character has unique stats and backstory that affect their performance in the arena.
