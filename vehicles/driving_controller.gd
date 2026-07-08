@@ -48,7 +48,9 @@ var handbraking := false
 var _no_steer_t := 0.0   # time since the last steer/handbrake input
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
-const TERRAIN := {
+## static var (not const): const dictionaries are deep-frozen in Godot 4, and
+## the dev tuning deck mutates these values live. Same class-level access.
+static var TERRAIN := {
 	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},
 	&"grass": {"accel": 0.9, "top": 0.9, "grip": 0.8},
 	&"snow": {"accel": 0.85, "top": 0.9, "grip": 0.45},

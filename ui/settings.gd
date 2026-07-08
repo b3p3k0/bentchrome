@@ -81,6 +81,8 @@ func _sync_dev() -> void:
 	var dev := get_node_or_null(^"/root/Dev")
 	if dev:
 		dev.enabled = _gs.dev_mode
+		if _gs.dev_mode and dev.has_method("_ensure_tuning"):
+			dev._ensure_tuning()  # tuning deck boots the moment dev mode does
 
 func _bar(v: float, lo: float, hi: float) -> String:
 	var filled := int(round((v - lo) / (hi - lo) * 10.0))
