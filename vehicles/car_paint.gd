@@ -46,7 +46,35 @@ const STYLES := {
 		"skid_points": [Vector2(-19, -11), Vector2(-19, 11)],
 		"steer_wheels": [],
 	},
+	&"mrghastly": {
+		"half_len": 18.0, "half_wid": 7.0, "radius": 12.0,
+		"skid_points": [Vector2(-13, 0)],
+		"steer_wheels": [],
+	},
+	&"cricket": {
+		"half_len": 20.0, "half_wid": 16.0, "radius": 15.0,
+		"skid_points": [Vector2(-13, -13), Vector2(-13, 13)],
+		"steer_wheels": [],
+	},
+	&"razorback": {
+		# radius 21.5/22: kandykane held at the legacy 22 — the corner-escape
+		# budget (mass-7 truck, 80px pocket) blows at 23; razorback slots under.
+		"half_len": 28.0, "half_wid": 17.0, "radius": 21.5,
+		"skid_points": [Vector2(-17, -14), Vector2(-17, 14)],
+		"steer_wheels": [],
+	},
+	&"kandykane": {
+		"half_len": 29.0, "half_wid": 17.0, "radius": 22.0,
+		"skid_points": [Vector2(-22, -12), Vector2(-22, 12)],
+		"steer_wheels": [],
+	},
 }
+
+# Kandy Kane's polka dots — fixed pattern, same truck every boot.
+const KANDY_DOTS := [
+	Vector2(-24, -8), Vector2(-19, 6), Vector2(-12, -3), Vector2(-6, 9),
+	Vector2(-4, -10), Vector2(3, 2), Vector2(9, -7), Vector2(11, 9),
+]
 
 var style_id: StringName = &"box"
 var primary := Color(0.85, 0.2, 0.3)
@@ -93,6 +121,14 @@ func _draw() -> void:
 			_draw_bumper()
 		&"smoky":
 			_draw_smoky()
+		&"mrghastly":
+			_draw_mrghastly()
+		&"cricket":
+			_draw_cricket()
+		&"razorback":
+			_draw_razorback()
+		&"kandykane":
+			_draw_kandykane()
 		_:
 			_draw_box()
 
@@ -173,6 +209,84 @@ func _draw_bumper() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_rect(Rect2(-22, -2, 3, 4), CLOTH.darkened(0.2))       # roof seam button
 	_headlights(31, 11)
+	_outline(hull)
+
+# --- the specialists ---------------------------------------------------------
+
+## Mr. Ghastly: a hog and its rider — two wheels, tank, bars, helmet on top.
+func _draw_mrghastly() -> void:
+	_wheel(Vector2(-13, 0), Vector2(9, 5))
+	_wheel(Vector2(13, 0), Vector2(8, 4))
+	draw_line(Vector2(-16, -4), Vector2(-2, -3), CHROME, 1.5)   # exhaust pipes
+	draw_line(Vector2(-16, 4), Vector2(-2, 3), CHROME, 1.5)
+	draw_colored_polygon(PackedVector2Array([                    # frame + tank
+		Vector2(-10, -2.5), Vector2(2, -3.5), Vector2(9, -2.5),
+		Vector2(9, 2.5), Vector2(2, 3.5), Vector2(-10, 2.5),
+	]), primary)
+	draw_line(Vector2(8, -6), Vector2(8, 6), OUTLINE, 2.0)       # handlebars
+	draw_rect(Rect2(-8, -4.5, 8, 9), accent.darkened(0.45))      # rider shoulders
+	draw_circle(Vector2(-1, 0), 3.2, accent)                     # helmet
+	draw_circle(Vector2(-1, 0), 1.2, GLASS)                      # visor glint
+	draw_rect(Rect2(16, -1.5, 3, 3), NOSE_ACCENT)                # headlamp
+
+## Cricket: dirt-track midget — wheels way outside the tub, huge rear wing.
+func _draw_cricket() -> void:
+	_wheel(Vector2(-13, -13), Vector2(10, 7))
+	_wheel(Vector2(-13, 13), Vector2(10, 7))
+	_wheel(Vector2(13, -12), Vector2(8, 6))
+	_wheel(Vector2(13, 12), Vector2(8, 6))
+	draw_rect(Rect2(-20, -15, 4, 30), accent)                    # rear wing
+	draw_rect(Rect2(-21, -15, 6, 3), OUTLINE)                    # wing endplates
+	draw_rect(Rect2(-21, 12, 6, 3), OUTLINE)
+	var tub := PackedVector2Array([                              # narrow tub
+		Vector2(-15, -7), Vector2(8, -6), Vector2(18, -3), Vector2(20, 0),
+		Vector2(18, 3), Vector2(8, 6), Vector2(-15, 7),
+	])
+	draw_colored_polygon(tub, primary)
+	draw_rect(Rect2(-14, -5, 6, 10), primary.darkened(0.35))     # engine block
+	draw_circle(Vector2(-2, 0), 3.5, accent)                     # driver helmet
+	draw_circle(Vector2(9, 0), 3.0, CLOTH)                       # nose roundel
+	_outline(tub)
+
+## Razorback: the Humvee — slab hood, steep glass band, spare on the roof.
+func _draw_razorback() -> void:
+	_wheel(Vector2(-17, -16), Vector2(11, 5))
+	_wheel(Vector2(-17, 16), Vector2(11, 5))
+	_wheel(Vector2(17, -16), Vector2(11, 5))
+	_wheel(Vector2(17, 16), Vector2(11, 5))
+	var hull := _hull(28, 14, 3, 3)
+	draw_colored_polygon(hull, primary)
+	draw_colored_polygon(PackedVector2Array([                    # sloped back
+		Vector2(-28, -13), Vector2(-21, -13), Vector2(-21, 13), Vector2(-28, 13),
+	]), primary.darkened(0.35))
+	draw_rect(Rect2(-21, -13, 27, 26), primary.darkened(0.15))   # flat roof slab
+	draw_rect(Rect2(6, -13, 4, 26), GLASS)                       # steep windscreen
+	draw_line(Vector2(10, -14), Vector2(10, 14), OUTLINE, 1.5)   # hood seam
+	draw_circle(Vector2(-13, 0), 5.0, TIRE)                      # roof spare
+	draw_circle(Vector2(-13, 0), 1.8, primary.darkened(0.15))
+	draw_rect(Rect2(26, -8, 3, 16), TIRE)                        # brush bumper
+	_headlights(26, 14)
+	_outline(hull)
+
+## Kandy Kane: the ice-cream truck — cream box, polka dots, roof cone, window.
+func _draw_kandykane() -> void:
+	_wheel(Vector2(-18, -16), Vector2(10, 5))
+	_wheel(Vector2(-18, 16), Vector2(10, 5))
+	_wheel(Vector2(18, -16), Vector2(10, 5))
+	_wheel(Vector2(18, 16), Vector2(10, 5))
+	var hull := _hull(29, 15, 5, 2)
+	draw_colored_polygon(hull, CLOTH)                            # cream box body
+	for d in KANDY_DOTS:                                         # polka dots
+		draw_circle(d, 2.4, primary)
+	draw_rect(Rect2(16, -12, 5, 24), GLASS)                      # cab windshield
+	draw_rect(Rect2(21, -15, 8, 30), primary)                    # candy nose band
+	draw_rect(Rect2(-8, 11, 12, 4), GLASS)                       # serving window
+	draw_rect(Rect2(-9, 10, 14, 1.5), accent)                    # awning stripe
+	draw_colored_polygon(PackedVector2Array([                    # roof cone art
+		Vector2(-4, -6), Vector2(-4, 6), Vector2(8, 0),
+	]), Color(0.85, 0.65, 0.35))
+	draw_circle(Vector2(-6, 0), 4.0, accent)                     # the scoop
+	_headlights(29, 15)
 	_outline(hull)
 
 ## Smoky: pursuit SUV — boxy, white door livery, push bar, flashing light bar.
