@@ -69,6 +69,11 @@ const CLEAR_TIME := 2.2          # post-unstick commit: drive to open space
 								 # before target logic can steer back in
 const CLEAR_DIST := 450.0        # ...or until this far from the pin
 
+# HOP: the reverse-out failed twice at the same spot -> jump-mine-style hop
+# over the obstruction (Vehicle.escape_hop; airborne clears blocks and cars).
+# Cooldown keeps it an escape valve, not a pogo stick.
+const HOP_COOLDOWN := 6.0
+
 # SHUN: antler-lock breaker. Two AI wedged nose-to-nose can't kill each other
 # (mercy rules) and re-target "nearest" — each other — after every reverse-out.
 # A stuck trip with CLEAR feelers and a non-player vehicle in contact range is
@@ -110,6 +115,8 @@ var _water_t := 0.0
 var _dry_pos := Vector2.INF  # last position on non-water ground
 var _shun_target: Node2D = null  # antler-lock opponent to avoid re-targeting
 var _shun_t := 0.0
+var _pin_repeats := 0  # stuck trips at the same spot this episode-cluster
+var _hop_cd := 0.0
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -144,6 +151,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		if _shun_t <= 0.0 or not is_instance_valid(_shun_target):
 			_shun_target = null
 			_shun_t = 0.0
+	if _hop_cd > 0.0:
+		_hop_cd -= delta
 
 	var engaged := true
 	var target := _select_target(vehicle)
@@ -212,8 +221,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			_mode = Mode.PURSUE
 		else:
 			if _update_stuck(real_vel.length(), true, delta):
-				_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
-				return _unstick_intent()
+				return _on_stuck(vehicle, target, bearing)
 			var esc_diff := wrapf(_escape_dir.angle() - vehicle.heading, -PI, PI)
 			return {
 				"throttle": 1.0,
@@ -235,8 +243,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_mode = Mode.WADE
 	if _mode == Mode.WADE:
 		if _update_stuck(real_vel.length(), true, delta):
-			_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
-			return _unstick_intent()
+			return _on_stuck(vehicle, target, bearing)
 		var out_diff := wrapf((_dry_pos - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
 		return {
 			"throttle": 1.0,
@@ -342,8 +349,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
 		_classify_car_pin(target, dist)
-		_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
-		return _unstick_intent()
+		return _on_stuck(vehicle, target, bearing)
 	return intent
 
 ## Antler-lock detection at the stuck trip: feelers CLEAR (they never see cars)
@@ -359,6 +365,31 @@ func _classify_car_pin(target: Node2D, dist: float) -> void:
 		return
 	_shun_target = target
 	_shun_t = SHUN_TIME
+
+## A stuck trip landed: count repeat pins at the same spot. The first trip gets
+## the normal reverse-out; a SECOND failed episode at the same spot earns the
+## jump-mine-style hop — over the obstruction toward the fight (or backward if
+## nothing's targeted), landing already driving via CLEAR. Cooldown-gated.
+func _on_stuck(vehicle, target, bearing: float) -> Dictionary:
+	var pin: Vector2 = vehicle.global_position
+	var repeat: bool = _last_pin != Vector2.INF and _last_pin.distance_to(pin) <= CLEAR_DIST
+	_pin_repeats = _pin_repeats + 1 if repeat else 1
+	if _pin_repeats >= 2 and _hop_cd <= 0.0 and vehicle.has_method(&"escape_hop"):
+		var dir: Vector2
+		if target != null and is_instance_valid(target):
+			dir = (target.global_position - pin).normalized()
+		else:
+			dir = Vector2.RIGHT.rotated(vehicle.heading + PI)  # away from what we face
+		vehicle.escape_hop(dir)
+		_hop_cd = HOP_COOLDOWN
+		_pin_repeats = 0
+		_stuck_t = 0.0
+		_mode = Mode.CLEAR  # land already driving through
+		_clear_t = CLEAR_TIME
+		_escape_dir = dir
+		return {"throttle": 1.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
+	_enter_unstick(vehicle.heading, bearing, pin)
+	return _unstick_intent()
 
 ## Accumulates stuckness (trying to move but barely moving); trips once per
 ## STUCK_TRIP seconds of it.

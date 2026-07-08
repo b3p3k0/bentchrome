@@ -264,6 +264,19 @@ func pop_airborne(vz_speed: float) -> void:
 	vz = vz_speed
 	_set_airborne(true)
 
+## AI stuck-escape: a jump-mine-style hop — re-aim, launch, sail over whatever
+## we're wedged against (airborne already drops car+obstacle collision bits).
+## Reads as the established jump mechanic, not noclip. Driver-called, AI only.
+const ESCAPE_HOP_SPEED := 420.0
+const ESCAPE_HOP_VZ := 430.0
+
+func escape_hop(direction: Vector2) -> void:
+	if height > 0.0 or direction == Vector2.ZERO:
+		return
+	heading = direction.angle()
+	velocity = direction * ESCAPE_HOP_SPEED
+	pop_airborne(ESCAPE_HOP_VZ)
+
 func launch_from_ramp() -> void:
 	if height > 0.0 or velocity.length() < min_launch_speed:
 		return

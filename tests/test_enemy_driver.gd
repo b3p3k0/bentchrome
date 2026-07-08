@@ -10,8 +10,12 @@ var t
 class FakeCar extends Node2D:
 	var hpf := 1.0
 	var last_attacker: Node2D = null
+	var heading := 0.0
+	var hops: Array = []  # escape_hop directions received
 	func get_hp_fraction() -> float:
 		return hpf
+	func escape_hop(dir: Vector2) -> void:
+		hops.append(dir)
 
 func _init(runner) -> void:
 	t = runner
@@ -155,6 +159,35 @@ func test_shunned_target_skipped_with_fallback() -> void:
 	driver._shun_t = 0.0
 	t.check(driver._select_target(rig[1]) == elk, "shun: expired shun targets normally")
 	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_repeat_pin_earns_the_hop() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var stuck_car: FakeCar = rig[1]
+	var target := _car(rig[0], Vector2(300, 0), 1.0)
+	# First trip at this spot: normal reverse-out, no hop.
+	var intent: Dictionary = driver._on_stuck(stuck_car, target, 0.0)
+	t.check(stuck_car.hops.is_empty(), "hop: first pin reverses, no hop")
+	t.check_approx(intent["throttle"], -1.0, "hop: first pin is the normal unstick")
+	# Second trip at the same spot: hop over it, toward the fight.
+	intent = driver._on_stuck(stuck_car, target, 0.0)
+	t.check(stuck_car.hops.size() == 1, "hop: second same-spot pin hops")
+	t.check(stuck_car.hops[0].dot(Vector2.RIGHT) > 0.9, "hop: launched toward the target")
+	t.check_approx(intent["throttle"], 1.0, "hop: lands driving forward (CLEAR)")
+	t.check(driver._hop_cd > 0.0, "hop: cooldown armed")
+	# Third trip while cooling down: back to reversing, no pogo.
+	intent = driver._on_stuck(stuck_car, target, 0.0)
+	t.check(stuck_car.hops.size() == 1, "hop: cooldown blocks a pogo chain")
+	# A pin far away resets the repeat counter.
+	var driver2 = DriverScript.new()
+	driver2._on_stuck(stuck_car, target, 0.0)
+	stuck_car.global_position = Vector2(2000, 0)
+	driver2._on_stuck(stuck_car, target, 0.0)
+	t.check(stuck_car.hops.size() == 1, "hop: a distant pin starts a fresh count")
+	driver.free()
+	driver2.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
 
