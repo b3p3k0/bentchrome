@@ -19,6 +19,9 @@ var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
 var _restart_btn: Button
 var _buttons: Array = []
+var _hint: Label            # mid-campaign: "press any key to continue"
+var _campaign_next := -1    # armed continue target (next level index)
+var _continue_armed := false
 
 func _ready() -> void:
 	layer = 70  # above the pause menu's 60
@@ -41,29 +44,21 @@ func _process(_delta: float) -> void:
 	elif _seen_enemies and enemies.is_empty():
 		_show(true)
 
-## Mid-campaign win: advance the index and hand off to the interstitial
-## instead of the YOU WIN panel. Returns false off-campaign (custom levels)
-## and on the final level.
-func _campaign_advance() -> bool:
-	var gs := get_node_or_null(^"/root/GameState")
+## Index of the next campaign level after this scene, or -1 (off-campaign /
+## final level — those keep the full panel with buttons).
+func _campaign_next_index() -> int:
 	var flow := get_node_or_null(^"/root/SceneFlow")
-	if gs == null or flow == null:
-		return false
+	if get_node_or_null(^"/root/GameState") == null or flow == null:
+		return -1
 	var here: String = get_tree().current_scene.scene_file_path
-	var idx := -1
 	for i in flow.CAMPAIGN.size():
-		if flow.CAMPAIGN[i].scene == here:
-			idx = i
-	if idx < 0 or idx + 1 >= flow.CAMPAIGN.size():
-		return false
-	gs.level_index = idx + 1
-	flow.to_interstitial()
-	return true
+		if flow.CAMPAIGN[i].scene == here and i + 1 < flow.CAMPAIGN.size():
+			return i + 1
+	return -1
 
 func _show(win: bool) -> void:
 	_over = true
-	if win and _campaign_advance():
-		return
+	var next := _campaign_next_index() if win else -1
 	var accent := AMBER if win else RED
 	_title.text = "YOU WIN" if win else "YOU LOSE"
 	_title.modulate = accent
@@ -72,6 +67,15 @@ func _show(win: bool) -> void:
 		_trim_blocks[i].color = accent if i % 2 == 0 else accent.darkened(0.55)
 	get_tree().paused = true
 	visible = true
+	if next >= 0:
+		# Mid-campaign win: a beat of glory instead of a hard cut — any key
+		# (after the anti-spam lock) rolls the loading card, then the level.
+		_campaign_next = next
+		for b in _buttons:
+			b.visible = false
+		_hint.visible = true
+		get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_continue, CONNECT_ONE_SHOT)
+		return
 	# Players are still hammering fire when the last car dies — held SPACE is
 	# also ui_accept and would instantly press the focused button. Buttons stay
 	# dead (and unfocused) for a beat; the timer runs through the pause.
@@ -84,6 +88,28 @@ func _arm_buttons() -> void:
 		b.disabled = false
 	if _restart_btn:
 		_restart_btn.grab_focus()
+
+func _arm_continue() -> void:
+	_continue_armed = true
+	_hint.text = "press any key to continue"
+	_hint.modulate = AMBER
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _continue_armed:
+		return
+	var pressed: bool = (event is InputEventKey and event.pressed and not event.echo) \
+		or (event is InputEventJoypadButton and event.pressed) \
+		or (event is InputEventMouseButton and event.pressed)
+	if not pressed:
+		return
+	get_viewport().set_input_as_handled()
+	_continue_armed = false
+	get_tree().paused = false
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs and flow:
+		gs.level_index = _campaign_next
+		flow.to_interstitial()
 
 func _leave(action: Callable) -> void:
 	get_tree().paused = false  # paused survives scene changes — always release
@@ -134,6 +160,14 @@ func _build_ui() -> void:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)
 	vbox.add_child(spacer)
+
+	_hint = Label.new()
+	_hint.text = "..."
+	_hint.add_theme_font_size_override("font_size", 16)
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.modulate = Color(0.55, 0.58, 0.62)
+	_hint.visible = false
+	vbox.add_child(_hint)
 
 	_restart_btn = _button(vbox, "Restart", func() -> void:
 		_leave(func() -> void:
