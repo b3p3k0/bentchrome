@@ -19,6 +19,8 @@ enum Kind { PROJECTILE, BEAM, DASH, TRIGGER, FLAME, DROP }
 @export var acquisition_radius := 0.0   # homing lock range
 @export var spread_deg := 0.0           # fan width for multi-pellet salvos
 @export var pellets := 1
+@export var bursts := 1                 # sequential waves per shot (rocket volleys)
+@export var burst_interval := 0.12      # seconds between waves
 @export var projectile_scene: PackedScene
 @export var projectile_tint := Color.WHITE  # modulates the spawned projectile (WHITE = as authored)
 @export var pierces_cover := false      # projectile ignores obstacles (layer 3)

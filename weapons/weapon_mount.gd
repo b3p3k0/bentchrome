@@ -15,6 +15,8 @@ extends Node
 @export var acquisition_radius := 0.0
 @export var spread_deg := 0.0
 @export var pellets := 1
+@export var bursts := 1           # sequential waves per shot (rocket volleys)
+@export var burst_interval := 0.12
 @export var projectile_scene: PackedScene
 @export var projectile_tint := Color.WHITE  # modulates spawned shots (color-coded missiles)
 @export var pierces_cover := false      # spawned shots ignore the obstacle layer
@@ -48,6 +50,8 @@ func set_weapon(w: WeaponDef) -> void:
 	acquisition_radius = w.acquisition_radius
 	spread_deg = w.spread_deg
 	pellets = maxi(w.pellets, 1)
+	bursts = maxi(w.bursts, 1)
+	burst_interval = w.burst_interval
 	if w.projectile_scene:
 		projectile_scene = w.projectile_scene
 	projectile_tint = w.projectile_tint
@@ -73,6 +77,8 @@ func is_locked() -> bool:
 	return _locked
 
 ## Returns true when a shot actually left the mount (ammo is consumed on true).
+## Multi-burst weapons fire wave 1 now and schedule the rest — still ONE press,
+## ONE consume, ONE cooldown; the follow-up waves are part of the same shot.
 func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if _stub or _locked or _cooldown > 0.0 or projectile_scene == null:
 		return false
@@ -81,6 +87,32 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 		heat = minf(heat + heat_per_shot, heat_max)
 		if heat >= heat_max:
 			_locked = true
+	_fire_wave(origin, direction, shooter)
+	for n in range(1, bursts):
+		get_tree().create_timer(burst_interval * n).timeout.connect(
+			_burst_wave.bind(origin, direction, shooter), CONNECT_ONE_SHOT)
+	return true
+
+## Follow-up wave: launched off the shooter's CURRENT muzzle/heading (the car
+## kept moving), falling back to the launch snapshot. A dead shooter takes the
+## rest of the volley with them — no ghost rockets. Shooter is UNTYPED: the
+## bound argument may be a freed instance by the time the timer fires, and a
+## typed Node parameter errors on the conversion before the body can guard.
+func _burst_wave(origin: Vector2, direction: Vector2, shooter) -> void:
+	if not is_inside_tree() or shooter == null or not is_instance_valid(shooter):
+		return
+	if shooter is Node2D:
+		var muzzle := (shooter as Node2D).get_node_or_null(^"Visual/Muzzle")
+		var h: Variant = shooter.get("heading")
+		if muzzle is Node2D and h is float:
+			origin = (muzzle as Node2D).global_position
+			direction = Vector2.RIGHT.rotated(h)
+	_fire_wave(origin, direction, shooter)
+
+func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
 	var tgt: Node2D = null
 	if turn_rate_deg > 0.0 and acquisition_radius > 0.0:
 		tgt = Targeting.nearest_other(origin, shooter, acquisition_radius)
@@ -95,7 +127,6 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 		p.modulate = projectile_tint
 		if pierces_cover:
 			p.collision_mask &= ~4  # drop the obstacle bit — flies through cover
-		get_tree().current_scene.add_child(p)
+		scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects
-	return true

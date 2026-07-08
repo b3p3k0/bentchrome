@@ -9,6 +9,9 @@ extends Area2D
 const HOMING_CONE := deg_to_rad(90.0)
 const Combat := preload("res://game/combat.gd")  # NEVER name Vehicle here — load cycle
 
+@export var spin_deg := 0.0  # visual spin of the Vis child (thrown weapons);
+							  # the node itself keeps facing travel for homing
+
 var velocity := Vector2.ZERO
 var damage := 2.0
 var lifetime := 1.2
@@ -18,9 +21,11 @@ var shooter: Node = null
 var on_hit_effects: Array = []
 var _homing := false
 var _age := 0.0
+var _vis: Node2D = null
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	_vis = get_node_or_null(^"Vis")
 
 func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_lifetime: float, p_shooter: Node, p_turn_rate := 0.0, p_target: Node2D = null) -> void:
 	global_position = p_pos
@@ -46,6 +51,8 @@ func _physics_process(delta: float) -> void:
 				_homing = false   # whiffed the pass — commit to a straight line
 		else:
 			_homing = false       # target gone — fly straight
+	if spin_deg != 0.0 and _vis:
+		_vis.rotation += deg_to_rad(spin_deg) * delta
 	global_position += velocity * delta
 	_age += delta
 	if _age >= lifetime:
