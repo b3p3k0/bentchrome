@@ -51,12 +51,27 @@ func _ready() -> void:
 	var visual := _vehicle.get_node_or_null(^"Visual") if _vehicle else null
 	if visual:
 		_flame = Polygon2D.new()
-		_flame.polygon = PackedVector2Array([
-			Vector2(-26, -6), Vector2(-44, 0), Vector2(-26, 6),
-		])
 		_flame.color = Color(0.3, 0.7, 1.0, 0.9)  # nitro blue, matches the HUD bar
 		_flame.visible = false
 		visual.add_child(_flame)
+
+## Per-car body metrics, read lazily: the vehicle applies its paint style in
+## its own _ready (after this child's), and re-rolls can swap it live.
+func _skid_offsets() -> Array:
+	if _vehicle and _vehicle.has_method("body_metrics"):
+		var m: Dictionary = _vehicle.body_metrics()
+		if m.has("skid_points"):
+			return m.skid_points
+	return [Vector2(-20, -14), Vector2(-20, 14)]
+
+func _flame_poly() -> PackedVector2Array:
+	var tail := 26.0
+	if _vehicle and _vehicle.has_method("body_metrics"):
+		var m: Dictionary = _vehicle.body_metrics()
+		tail = float(m.get("half_len", tail))
+	return PackedVector2Array([
+		Vector2(-tail, -6), Vector2(-tail - 18, 0), Vector2(-tail, 6),
+	])
 
 func _physics_process(_delta: float) -> void:
 	if _vehicle == null or not _vehicle.has_method(&"get_controller"):
@@ -68,6 +83,8 @@ func _physics_process(_delta: float) -> void:
 	var grounded: bool = _vehicle.height == 0.0
 
 	if _flame:
+		if ctrl.boosting and not _flame.visible:
+			_flame.polygon = _flame_poly()  # anchor to the current body's tail
 		_flame.visible = ctrl.boosting
 		if ctrl.boosting:
 			_flame.scale = Vector2(randf_range(0.7, 1.4), randf_range(0.8, 1.1))
@@ -87,15 +104,15 @@ func _physics_process(_delta: float) -> void:
 	elif not skidding and not _skids.is_empty():
 		_end_skid()
 	if not _skids.is_empty():
-		var offs := [Vector2(-20, -14), Vector2(-20, 14)]  # rear wheels
-		for i in 2:
+		var offs: Array = _skid_offsets()  # rear tire contacts (bike lays one line)
+		for i in mini(_skids.size(), offs.size()):
 			_skids[i].add_point(_vehicle.global_position + offs[i].rotated(_vehicle.heading))
 
 func _start_skid() -> void:
 	var host := get_tree().current_scene
 	if host == null or get_tree().get_nodes_in_group(&"skidmarks").size() >= MAX_SKID_NODES:
 		return
-	for i in 2:
+	for i in _skid_offsets().size():
 		var line := Line2D.new()
 		line.width = SKID_WIDTH
 		line.default_color = SKID_COLOR

@@ -240,7 +240,7 @@ func _flame_tick(delta: float) -> void:
 	var forward := Vector2.RIGHT.rotated(heading)
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
-	params.transform = Transform2D(heading, vehicle.global_position + forward * (FLAME_LENGTH * 0.5 + 30.0))
+	params.transform = Transform2D(heading, vehicle.global_position + forward * (FLAME_LENGTH * 0.5 + _nose() + 4.0))
 	params.collision_mask = 5  # ground | obstacle
 	params.exclude = [vehicle.get_rid()]
 	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
@@ -258,19 +258,30 @@ func _flame_tick(delta: float) -> void:
 	if _flame_t <= 0.0:
 		_end_flame()
 
+## The shooter's body half-length — the flame roots at the real nose, whatever
+## the car's paint style says it is (fallback = the classic 26px square).
+func _nose() -> float:
+	var vehicle := get_parent()
+	if vehicle and vehicle.has_method("body_metrics"):
+		var m: Dictionary = vehicle.body_metrics()
+		return float(m.get("half_len", 26.0))
+	return 26.0
+
 ## A jagged, flickering column in the visual's local space (nose at +X).
 func _flame_shape() -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	var half := FLAME_WIDTH * 0.5
-	pts.append(Vector2(26.0, -6.0))
+	var nose := _nose()
+	var root := nose + 4.0
+	pts.append(Vector2(nose, -6.0))
 	for i in 4:  # ragged top edge, widening with distance
-		var x := lerpf(80.0, 30.0 + FLAME_LENGTH, float(i) / 3.0)
+		var x := lerpf(root + 50.0, root + FLAME_LENGTH, float(i) / 3.0)
 		pts.append(Vector2(x + randf_range(-12.0, 12.0), lerpf(-14.0, -half, float(i) / 3.0) + randf_range(-6.0, 6.0)))
-	pts.append(Vector2(30.0 + FLAME_LENGTH + randf_range(-8.0, 16.0), randf_range(-10.0, 10.0)))
+	pts.append(Vector2(root + FLAME_LENGTH + randf_range(-8.0, 16.0), randf_range(-10.0, 10.0)))
 	for i in 4:  # ragged bottom edge back toward the nose
-		var x := lerpf(30.0 + FLAME_LENGTH, 80.0, float(i) / 3.0)
+		var x := lerpf(root + FLAME_LENGTH, root + 50.0, float(i) / 3.0)
 		pts.append(Vector2(x + randf_range(-12.0, 12.0), lerpf(half, 14.0, float(i) / 3.0) + randf_range(-6.0, 6.0)))
-	pts.append(Vector2(26.0, 6.0))
+	pts.append(Vector2(nose, 6.0))
 	return pts
 
 func _end_flame() -> void:
