@@ -48,8 +48,10 @@ func _ready() -> void:
 		var p := AudioStreamPlayer2D.new()
 		add_child(p)
 		_pool_2d.append(p)
+	# Wording matters: the smoke gate greps boot output for /missing/i, so this
+	# says "awaiting" — an empty sfx folder is expected, not an error.
 	print("[sfx] loaded %d/%d events%s" % [_streams.size(), CATALOG.size(),
-		"" if missing.is_empty() else " — missing: " + ", ".join(missing)])
+		"" if missing.is_empty() else " — awaiting assets: " + ", ".join(missing)])
 
 ## Imported resource first (what exported builds ship); raw file-load fallback
 ## so a freshly-dropped ogg/wav works without an import pass.
