@@ -1,10 +1,18 @@
 extends Control
 ## Car-select carousel: browse the 9 cars (portrait + stats + special), confirm
-## to set the player's car (GameState) and enter the arena.
+## to set the player's car (GameState) and enter the arena. A turntable in the
+## corner spins the actual in-game body (same paint script the arena uses).
+
+const CarPaint := preload("res://vehicles/car_paint.gd")
+const TURNTABLE_POS := Vector2(1120, 150)
+const TURNTABLE_SCALE := 2.4
+const TURNTABLE_SPIN := 0.8  # rad/s, quantized to the same 16 steps as gameplay
 
 var _cars: Array = []
 var _index := 0
 var _done := false
+var _turntable: Node2D
+var _spin := 0.0
 
 @onready var _portrait: TextureRect = $Portrait
 @onready var _name: Label = $Footer/Margin/VBox/Name
@@ -17,6 +25,10 @@ func _ready() -> void:
 	if _cars.is_empty():
 		push_warning("car_select: no cars loaded")
 		return
+	_turntable = CarPaint.new()
+	_turntable.position = TURNTABLE_POS
+	_turntable.scale = Vector2.ONE * TURNTABLE_SCALE
+	add_child(_turntable)
 	for i in _cars.size():
 		if _cars[i].id == GameState.selected_vehicle_id:
 			_index = i
@@ -50,8 +62,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameState.reset_campaign()
 		SceneFlow.to_level(0)
 
+func _process(delta: float) -> void:
+	if _turntable == null:
+		return
+	_spin += TURNTABLE_SPIN * delta
+	_turntable.rotation = snappedf(_spin, TAU / 16)
+
 func _show() -> void:
 	var car: Variant = _cars[_index]
+	if _turntable:
+		_turntable.apply(car.id, car.primary_color, car.accent_color)
 	_portrait.texture = TextureLoader.load_texture("res://assets/img/bios/%s.png" % car.id)
 	_name.text = car.car_name
 	_driver.text = car.driver_name
