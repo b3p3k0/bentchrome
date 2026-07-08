@@ -109,6 +109,55 @@ func test_player_priority_breaks_near_ties() -> void:
 	t.root.remove_child(rig[0])
 	rig[0].free()
 
+func test_carpin_classification_sets_shun() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var elk := _car(rig[0], Vector2(80, 0), 1.0)
+	# Clear feelers + vehicle in contact range = car-pin -> shun.
+	driver._blocked = false
+	driver._classify_car_pin(elk, 80.0)
+	t.check(driver._shun_target == elk and driver._shun_t > 0.0, "carpin: contact deadlock shuns the elk")
+	# Wall-pin (blocked feelers) must NOT shun.
+	var driver2 = DriverScript.new()
+	driver2._blocked = true
+	driver2._classify_car_pin(elk, 80.0)
+	t.check(driver2._shun_target == null, "carpin: blocked feelers = wall pin, no shun")
+	# The player is exempt — boss shoving matches are gameplay.
+	var player := _car(rig[0], Vector2(60, 0), 1.0, true)
+	var driver3 = DriverScript.new()
+	driver3._classify_car_pin(player, 60.0)
+	t.check(driver3._shun_target == null, "carpin: player contact never shuns")
+	# Out of contact range: not a pin.
+	var driver4 = DriverScript.new()
+	driver4._classify_car_pin(elk, 400.0)
+	t.check(driver4._shun_target == null, "carpin: distant target is not a car-pin")
+	driver.free()
+	driver2.free()
+	driver3.free()
+	driver4.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_shunned_target_skipped_with_fallback() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var elk := _car(rig[0], Vector2(100, 0), 1.0)
+	var other := _car(rig[0], Vector2(900, 0), 1.0)
+	driver._shun_target = elk
+	driver._shun_t = 4.0
+	t.check(driver._select_target(rig[1]) == other, "shun: scored targeting skips the elk")
+	t.check(driver._nearest_any(rig[1]) == other, "shun: hunt fallback skips the elk")
+	# Elk is the ONLY combatant: shun yields to no-camping.
+	rig[0].remove_child(other)
+	other.free()
+	t.check(driver._nearest_any(rig[1]) == elk, "shun: only combatant left overrides the shun")
+	# Expiry restores normal targeting.
+	driver._shun_t = 0.0
+	t.check(driver._select_target(rig[1]) == elk, "shun: expired shun targets normally")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
 func test_unstick_intent_reverses_with_inverted_steer() -> void:
 	var d = DriverScript.new()
 	d._avoid_bias = 0.8  # blocked on the left -> escape steers right (pre-inversion)

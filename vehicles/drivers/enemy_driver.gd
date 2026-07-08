@@ -69,6 +69,13 @@ const CLEAR_TIME := 2.2          # post-unstick commit: drive to open space
 								 # before target logic can steer back in
 const CLEAR_DIST := 450.0        # ...or until this far from the pin
 
+# SHUN: antler-lock breaker. Two AI wedged nose-to-nose can't kill each other
+# (mercy rules) and re-target "nearest" — each other — after every reverse-out.
+# A stuck trip with CLEAR feelers and a non-player vehicle in contact range is
+# a car-pin: shun that opponent for a while so both elk find new fights.
+const SHUN_TIME := 4.0
+const CARPIN_RANGE := 130.0
+
 # Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
 const FEELER_MASK := 6
 const FEELER_BASE := 200.0        # feeler length at standstill
@@ -101,6 +108,8 @@ var _relent_t := 0.0
 var _relent_side := 1.0
 var _water_t := 0.0
 var _dry_pos := Vector2.INF  # last position on non-water ground
+var _shun_target: Node2D = null  # antler-lock opponent to avoid re-targeting
+var _shun_t := 0.0
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -130,6 +139,12 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	# anywhere — parking is not a strategy in a free-for-all. A hunt target is
 	# always past _far (anything closer would have been engaged), so the normal
 	# pursue flow drives it and the range gates keep the guns quiet.
+	if _shun_t > 0.0:
+		_shun_t -= delta
+		if _shun_t <= 0.0 or not is_instance_valid(_shun_target):
+			_shun_target = null
+			_shun_t = 0.0
+
 	var engaged := true
 	var target := _select_target(vehicle)
 	if target == null:
@@ -326,9 +341,24 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		}
 
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
+		_classify_car_pin(target, dist)
 		_enter_unstick(vehicle.heading, bearing, vehicle.global_position)
 		return _unstick_intent()
 	return intent
+
+## Antler-lock detection at the stuck trip: feelers CLEAR (they never see cars)
+## plus a non-player vehicle in contact range = two cars pushing. Shun the elk
+## so the post-escape re-target picks a different fight. The player is exempt —
+## nose-to-nose shoving matches with the boss are gameplay, not a deadlock.
+func _classify_car_pin(target: Node2D, dist: float) -> void:
+	if _blocked or target == null or not is_instance_valid(target):
+		return
+	if dist > CARPIN_RANGE:
+		return
+	if not target.is_in_group(&"vehicles") or target.is_in_group(&"player"):
+		return
+	_shun_target = target
+	_shun_t = SHUN_TIME
 
 ## Accumulates stuckness (trying to move but barely moving); trips once per
 ## STUCK_TRIP seconds of it.
@@ -399,10 +429,14 @@ func _nearest_any(vehicle) -> Node2D:
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
 		if v == vehicle:
 			continue
+		if v == _shun_target and _shun_t > 0.0:
+			continue
 		var d: float = vehicle.global_position.distance_to(v.global_position)
 		if d < best_d:
 			best_d = d
 			best = v
+	if best == null and _shun_t > 0.0 and is_instance_valid(_shun_target):
+		return _shun_target  # only combatant left — parking is never a strategy
 	return best
 
 ## Nearest collectible crate (skips ones waiting to respawn).
@@ -448,6 +482,8 @@ func _select_target(vehicle) -> Node2D:
 		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
 		if v == vehicle:
+			continue
+		if v == _shun_target and _shun_t > 0.0:
 			continue
 		var d: float = vehicle.global_position.distance_to(v.global_position)
 		if d > SCAN:
