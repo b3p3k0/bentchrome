@@ -19,8 +19,15 @@ func test_all_enemies_move_at_round_start() -> void:
 	t.root.add_child(arena)
 	t.current_scene = arena  # weapon mounts spawn projectiles into current_scene
 	# Immunize everyone: armed free-for-all AI must not end the round mid-test
-	# (the end screen would pause the tree and stall the frame pump).
+	# (the end screen would pause the tree and stall the frame pump). The player
+	# is shielded via a LONG invuln effect, not just the Health flag — the
+	# level-start blink shield expires mid-test and its status tick would sync
+	# the bare flag back to false.
 	arena.get_node("Vehicle").get_node("Health").invulnerable = true
+	var forever := StatusEffectSpec.new()
+	forever.kind = &"invuln"
+	forever.duration = 9999.0
+	arena.get_node("Vehicle").apply_effect(forever)
 	# Pin every enemy to the worst launcher (mass-8 truck, pure aggressor) —
 	# the arena re-rolls cars on boot and a lucky light-car draw would hide a
 	# camping regression. Same input-pinning rule as test_corner_escape.

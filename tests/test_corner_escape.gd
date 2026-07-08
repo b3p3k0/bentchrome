@@ -40,7 +40,13 @@ func test_pinned_enemy_escapes_top_right_corner() -> void:
 	health.invulnerable = true
 	# Enemies shoot now: an unkillable player keeps stray fire from ending the
 	# round (the end screen would pause the tree and stall the frame pump).
+	# Long invuln EFFECT, not just the flag — the level-start blink shield
+	# expires mid-test and its status tick would sync the bare flag to false.
 	player.get_node("Health").invulnerable = true
+	var forever := StatusEffectSpec.new()
+	forever.kind = &"invuln"
+	forever.duration = 9999.0
+	player.apply_effect(forever)
 	# Remove the other combatants entirely — the AI hunts map-wide now, so a
 	# "parked far away" car would charge back in and contaminate the budgets.
 	for name in ["Enemy2", "Enemy3", "Enemy4"]:

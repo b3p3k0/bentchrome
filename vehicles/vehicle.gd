@@ -333,6 +333,8 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 	set_deferred("collision_mask", LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE)
 	if _health:
 		_health.hp = _health.max_hp
+	if _status:
+		_status.clear()  # death doesn't carry its fire into the next life
 	set_physics_process(true)
 	if _visual:
 		_visual.scale = Vector2.ONE * body_scale  # pit falls shrink it

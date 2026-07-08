@@ -35,6 +35,19 @@ func _spec(kind: StringName, duration: float, magnitude := 1.0) -> StatusEffectS
 	s.magnitude = magnitude
 	return s
 
+## Regression: an active burn must not follow the player into their next life.
+func test_respawn_clears_effects() -> void:
+	var car = preload("res://vehicles/vehicle.tscn").instantiate()
+	t.root.add_child(car)
+	car.apply_effect(_spec(&"burn", 10.0, 4.0))
+	t.check(car.is_burning(), "respawn-clear: burn active before death")
+	car.respawn(Vector2.ZERO, 0.0, 2.0)
+	t.check(not car.is_burning(), "respawn-clear: burn gone after respawn")
+	t.check(car.get_node("Health").invulnerable or car.get_node("Status").has_effect(&"invuln"),
+		"respawn-clear: fresh shield survives the clear")
+	t.root.remove_child(car)
+	car.free()
+
 func test_fixture_ready() -> void:
 	var f := _fixture()
 	t.check_approx(f.health.hp, 100.0, "fixture: hp initialized by _ready")
