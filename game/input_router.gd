@@ -20,6 +20,7 @@ const ACTION_PAUSE := &"pause"
 const ACTION_SELECT_PREV := &"select_prev"
 const ACTION_SELECT_NEXT := &"select_next"
 const ACTION_SELECT_CONFIRM := &"select_confirm"
+const ACTION_SELECT_INFO := &"select_more_info"
 
 func _ready() -> void:
 	_ensure_action(ACTION_MOVE_UP, [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
@@ -37,6 +38,8 @@ func _ready() -> void:
 	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
 	_ensure_action(ACTION_SELECT_NEXT, [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
 	_ensure_action(ACTION_SELECT_CONFIRM, [_key(KEY_ENTER), _key(KEY_SPACE), _joy_button(JOY_BUTTON_A)])
+	# Driver bio on car select — W / west face button, matching README + legacy.
+	_ensure_action(ACTION_SELECT_INFO, [_key(KEY_W), _joy_button(JOY_BUTTON_X)])
 
 func _ensure_action(action: StringName, events: Array) -> void:
 	if not InputMap.has_action(action):
