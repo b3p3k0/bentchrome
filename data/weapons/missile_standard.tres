@@ -13,4 +13,5 @@ projectile_lifetime = 4.0
 turn_rate_deg = 165.0
 acquisition_radius = 1200.0
 projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(1, 0.55, 0.18, 1)
 note = "The workhorse: medium damage, moderate homing. Pickup-fed, shared by every car."

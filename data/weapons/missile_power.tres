@@ -11,4 +11,5 @@ damage = 45.0
 projectile_speed = 1400.0
 projectile_lifetime = 2.5
 projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(1, 0.25, 0.2, 1)
 note = "Straight-line heavy hitter: no tracking, big payload. Pickup-fed."
