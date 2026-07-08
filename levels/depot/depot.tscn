@@ -284,9 +284,9 @@ position = Vector2(0, -1216)
 stats = ExtResource("14_boss")
 ai_cooldown_scale = 1.5
 fixed_loadout = true
-rear_weakspot = 1.5
+rear_weakspot = 1.75
 body_scale = 1.5
-hp_scale = 2.0
+hp_scale = 1.7
 
 [node name="Driver" parent="Enemy1" index="1"]
 mix = Vector3(1, 0, 0)

@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 display_name = "Breach Cannon"
 cooldown = 1.4
-damage = 55.0
+damage = 45.0
 projectile_speed = 1350.0
 projectile_lifetime = 3.0
 projectile_scene = ExtResource("2_proj")

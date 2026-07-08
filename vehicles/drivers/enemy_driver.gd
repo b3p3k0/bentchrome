@@ -54,6 +54,15 @@ const RELENT_DAMAGE := 30.0  # ...or this much player HP lost while engaged
 const RELENT_TIME := 3.5
 const RELENT_ANGLE := 2.6    # ~150° — a real disengage, wider than BREAK
 
+# BOSS pressure valve: relentless drivers don't RELENT like mooks, but they DO
+# break off — hit the player hard, then boost away for a beat (showing the rear
+# weakspot at speed). The breather scales with dominance: a healthy player gets
+# barely any mercy ("smack tf outta them"); a dying one gets room to breathe.
+const BOSS_HIT_BUDGET := 70.0   # damage dealt to the player before breaking off
+const BOSS_ENGAGE_LIMIT := 9.0  # can't orbit forever even whiffing
+const BOSS_BREAK_MIN := 1.2     # breather when the player is dominating
+const BOSS_BREAK_MAX := 4.5     # breather when the player is on the ropes
+
 # WADE: water runs at 45% speed and the AI has no terrain sense — a hunter that
 # drives into a lake bogs down forever. After WADE_TRIP seconds wet, commit to
 # steering back toward the last dry position (the way in is always a way out).
@@ -253,14 +262,19 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"boost": false,
 		}
 
-	# Pressure meter: only the player earns relent; AI-vs-AI is governed already.
-	# Bosses don't take breathers.
-	if not relentless and _mode != Mode.RELENT and target.is_in_group(&"player") \
+	# Pressure meter: only the player earns relief; AI-vs-AI is governed already.
+	# Mooks RELENT (no-fire breather); bosses run the boss valve — heavier hit
+	# budget, dominance-scaled breather, boosted disengage.
+	if _mode != Mode.RELENT and target.is_in_group(&"player") \
 			and dist < FIRE_RANGE and _los_clear(vehicle, target):
 		if _engage_hp < 0.0:
 			_engage_hp = target.get_hp()
 		_engage_t += delta
-		if _engage_t > ENGAGE_LIMIT or (_engage_hp - target.get_hp()) >= RELENT_DAMAGE:
+		var dealt: float = _engage_hp - target.get_hp()
+		if relentless:
+			if dealt >= BOSS_HIT_BUDGET or _engage_t > BOSS_ENGAGE_LIMIT:
+				_enter_boss_break(vehicle, target)
+		elif _engage_t > ENGAGE_LIMIT or dealt >= RELENT_DAMAGE:
 			_mode = Mode.RELENT
 			_relent_t = RELENT_TIME
 			_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
@@ -303,14 +317,15 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"boost": vehicle.get_hp_fraction() < _flee,  # nitro the getaway
 		}
 	elif _mode == Mode.RELENT:
-		# Wide no-fire disengage: give the player room to breathe.
+		# Wide no-fire disengage: give the player room to breathe. Bosses BOOST
+		# the exit — dramatic, fast, and the rear weakspot crosses your guns.
 		var veer := wrapf(bearing + RELENT_ANGLE * _relent_side - vehicle.heading, -PI, PI)
 		intent = {
 			"throttle": 1.0,
 			"steer": clampf(veer * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": false,
 			"fire_selected": false,
-			"boost": false,
+			"boost": relentless,
 		}
 	elif _mode == Mode.BREAK:
 		# The arc: veer off the (live) bearing at the committed angle — full
@@ -351,6 +366,19 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_classify_car_pin(target, dist)
 		return _on_stuck(vehicle, target, bearing)
 	return intent
+
+## Dominance-scaled boss breather: +1 (player untouched, boss dying) = barely
+## any mercy; -1 (player dying, boss healthy) = a real window to regroup.
+func _boss_break_time(vehicle, target) -> float:
+	var dominance: float = target.get_hp_fraction() - vehicle.get_hp_fraction()
+	return lerpf(BOSS_BREAK_MAX, BOSS_BREAK_MIN, clampf((dominance + 1.0) * 0.5, 0.0, 1.0))
+
+func _enter_boss_break(vehicle, target) -> void:
+	_mode = Mode.RELENT
+	_relent_t = _boss_break_time(vehicle, target)
+	_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+	_engage_t = 0.0
+	_engage_hp = -1.0
 
 ## Antler-lock detection at the stuck trip: feelers CLEAR (they never see cars)
 ## plus a non-player vehicle in contact range = two cars pushing. Shun the elk

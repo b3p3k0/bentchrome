@@ -14,6 +14,8 @@ class FakeCar extends Node2D:
 	var hops: Array = []  # escape_hop directions received
 	func get_hp_fraction() -> float:
 		return hpf
+	func get_hp() -> float:
+		return hpf * 100.0
 	func escape_hop(dir: Vector2) -> void:
 		hops.append(dir)
 
@@ -190,6 +192,36 @@ func test_repeat_pin_earns_the_hop() -> void:
 	driver2.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
+
+func test_boss_break_scales_with_dominance() -> void:
+	var driver = DriverScript.new()
+	driver.relentless = true
+	var boss := FakeCar.new()
+	var player := FakeCar.new()
+	# Full dominance (player untouched, boss on fumes): minimum mercy.
+	boss.hpf = 0.0
+	player.hpf = 1.0
+	var pressed: float = driver._boss_break_time(boss, player)
+	t.check(is_equal_approx(pressed, DriverScript.BOSS_BREAK_MIN),
+		"boss valve: dominant player gets the min breather (%.2f)" % pressed)
+	# Fully outmatched (player on fumes, boss untouched): maximum window.
+	boss.hpf = 1.0
+	player.hpf = 0.0
+	var mercy: float = driver._boss_break_time(boss, player)
+	t.check(is_equal_approx(mercy, DriverScript.BOSS_BREAK_MAX),
+		"boss valve: losing player gets the max breather (%.2f)" % mercy)
+	# Even fight: in between.
+	boss.hpf = 0.6
+	player.hpf = 0.6
+	var mid: float = driver._boss_break_time(boss, player)
+	t.check(mid > pressed and mid < mercy, "boss valve: even fight lands between")
+	# Entering the break arms RELENT with the scaled timer.
+	driver._enter_boss_break(boss, player)
+	t.check(driver._mode == DriverScript.Mode.RELENT, "boss valve: break-off uses RELENT drive")
+	t.check(driver._relent_t > 0.0, "boss valve: breather timer armed")
+	boss.free()
+	player.free()
+	driver.free()
 
 func test_unstick_intent_reverses_with_inverted_steer() -> void:
 	var d = DriverScript.new()

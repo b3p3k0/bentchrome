@@ -27,7 +27,10 @@ func _ensure_tuning() -> void:
 	if tuning != null:
 		return
 	tuning = TuningDeck.new()
-	tuning.load_and_apply()
+	# Same hermetic rule as settings: live tuning overrides never leak into
+	# headless gate runs (they mutate shared weapon resources process-wide).
+	if DisplayServer.get_name() != "headless":
+		tuning.load_and_apply()
 	get_tree().node_added.connect(_on_node_added)
 	for v in get_tree().get_nodes_in_group(&"vehicles"):
 		_apply_vehicle_overrides(v)

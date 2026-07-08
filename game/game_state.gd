@@ -36,7 +36,11 @@ const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
 	"dev_mode", "start_level_index", "screen_shake"]
 
 func _ready() -> void:
-	load_settings()
+	# Headless runs (test/smoke gates) stay hermetic: Kevin's real settings —
+	# devgod especially — must never leak into fixtures. Explicit
+	# load_settings(path) calls in tests still work.
+	if DisplayServer.get_name() != "headless":
+		load_settings()
 
 ## Settings only — run state (lives, level_index, score) never touches disk.
 func save_settings(path := SETTINGS_PATH) -> void:
