@@ -19,5 +19,5 @@ mass = 6
 primary_color = Color(1, 0.23921569, 0.65882355, 1)
 accent_color = Color(1, 0.83137256, 0.9411765, 1)
 special = ExtResource("2_52mi2")
-special_ammo_cap = 24
-special_recharge_seconds = 0.6
+special_ammo_cap = 2
+special_recharge_seconds = 15.0

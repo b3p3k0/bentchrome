@@ -18,8 +18,8 @@
         "accent": "#ffd4f0"
       },
       "portrait": "res://assets/img/bios/bumper.png",
-      "special_ammo_cap": 24,
-      "special_recharge_seconds": 0.6,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 15.0,
       "mass": 6
     },
     {
