@@ -49,12 +49,12 @@ const STYLES := {
 	&"mrghastly": {
 		"half_len": 18.0, "half_wid": 7.0, "radius": 12.0,
 		"skid_points": [Vector2(-13, 0)],
-		"steer_wheels": [],
+		"steer_wheels": [Vector2(13, 0)],
 	},
 	&"cricket": {
 		"half_len": 20.0, "half_wid": 16.0, "radius": 15.0,
 		"skid_points": [Vector2(-13, -13), Vector2(-13, 13)],
-		"steer_wheels": [],
+		"steer_wheels": [Vector2(13, -12), Vector2(13, 12)],
 	},
 	&"razorback": {
 		# radius 21.5/22: kandykane held at the legacy 22 — the corner-escape
@@ -68,6 +68,16 @@ const STYLES := {
 		"skid_points": [Vector2(-22, -12), Vector2(-22, 12)],
 		"steer_wheels": [],
 	},
+	&"hammertoe": {
+		"half_len": 30.0, "half_wid": 23.0, "radius": 26.0,
+		"skid_points": [Vector2(-17, -17), Vector2(-17, 17)],
+		"steer_wheels": [Vector2(17, -17), Vector2(17, 17)],
+	},
+	&"lackey": {
+		"half_len": 32.0, "half_wid": 20.0, "radius": 24.0,  # ×1.5 body_scale in the depot
+		"skid_points": [Vector2(-24, -18), Vector2(-24, 18)],
+		"steer_wheels": [Vector2(24, -18), Vector2(24, 18)],
+	},
 }
 
 # Kandy Kane's polka dots — fixed pattern, same truck every boot.
@@ -76,11 +86,17 @@ const KANDY_DOTS := [
 	Vector2(-4, -10), Vector2(3, 2), Vector2(9, -7), Vector2(11, 9),
 ]
 
+const STEER_MAX := 0.45     # visual front-wheel deflection (rad)
+const STEER_GAIN := 0.25    # heading rate -> wheel angle
+const STEER_SMOOTH := 10.0
+
 var style_id: StringName = &"box"
 var primary := Color(0.85, 0.2, 0.3)
 var accent := Color(1, 1, 1)
 var _bar_t := 0.0        # smoky light-bar timer
 var _bar_phase := false
+var _steer := 0.0        # smoothed front-wheel pivot
+var _prev_heading := 0.0
 
 func apply(id: StringName, primary_color: Color, accent_color: Color) -> void:
 	style_id = id if STYLES.has(id) else &"box"
@@ -102,14 +118,38 @@ func shadow_polygon() -> PackedVector2Array:
 	])
 
 func _animated() -> bool:
-	return style_id == &"smoky"
+	if style_id == &"smoky":
+		return true
+	return not (metrics().steer_wheels as Array).is_empty()
 
 func _process(delta: float) -> void:
-	_bar_t += delta
-	if _bar_t >= BAR_PERIOD:
-		_bar_t = 0.0
-		_bar_phase = not _bar_phase
+	if style_id == &"smoky":
+		_bar_t += delta
+		if _bar_t >= BAR_PERIOD:
+			_bar_t = 0.0
+			_bar_phase = not _bar_phase
+			queue_redraw()
+		return
+	_update_steer(delta)
+
+## Visual front-wheel pivot: derived from the grandparent's heading rate
+## (duck-typed — on a Vehicle that's the car turning; on a UI turntable there
+## is no heading and the wheels stay straight).
+func _update_steer(delta: float) -> void:
+	var visual := get_parent()
+	var owner_node: Node = visual.get_parent() if visual else null
+	var h: Variant = owner_node.get("heading") if owner_node else null
+	if not (h is float):
+		return
+	var rate := angle_difference(_prev_heading, h) / maxf(delta, 0.0001)
+	_prev_heading = h
+	var target := clampf(rate * STEER_GAIN, -STEER_MAX, STEER_MAX)
+	var next := lerpf(_steer, target, minf(delta * STEER_SMOOTH, 1.0))
+	if absf(next - _steer) > 0.004:
+		_steer = next
 		queue_redraw()
+	else:
+		_steer = next
 
 func _draw() -> void:
 	match style_id:
@@ -129,6 +169,10 @@ func _draw() -> void:
 			_draw_razorback()
 		&"kandykane":
 			_draw_kandykane()
+		&"hammertoe":
+			_draw_hammertoe()
+		&"lackey":
+			_draw_lackey()
 		_:
 			_draw_box()
 
@@ -216,7 +260,7 @@ func _draw_bumper() -> void:
 ## Mr. Ghastly: a hog and its rider — two wheels, tank, bars, helmet on top.
 func _draw_mrghastly() -> void:
 	_wheel(Vector2(-13, 0), Vector2(9, 5))
-	_wheel(Vector2(13, 0), Vector2(8, 4))
+	_wheel(Vector2(13, 0), Vector2(8, 4), _steer)
 	draw_line(Vector2(-16, -4), Vector2(-2, -3), CHROME, 1.5)   # exhaust pipes
 	draw_line(Vector2(-16, 4), Vector2(-2, 3), CHROME, 1.5)
 	draw_colored_polygon(PackedVector2Array([                    # frame + tank
@@ -233,8 +277,8 @@ func _draw_mrghastly() -> void:
 func _draw_cricket() -> void:
 	_wheel(Vector2(-13, -13), Vector2(10, 7))
 	_wheel(Vector2(-13, 13), Vector2(10, 7))
-	_wheel(Vector2(13, -12), Vector2(8, 6))
-	_wheel(Vector2(13, 12), Vector2(8, 6))
+	_wheel(Vector2(13, -12), Vector2(8, 6), _steer)
+	_wheel(Vector2(13, 12), Vector2(8, 6), _steer)
 	draw_rect(Rect2(-20, -15, 4, 30), accent)                    # rear wing
 	draw_rect(Rect2(-21, -15, 6, 3), OUTLINE)                    # wing endplates
 	draw_rect(Rect2(-21, 12, 6, 3), OUTLINE)
@@ -287,6 +331,51 @@ func _draw_kandykane() -> void:
 	]), Color(0.85, 0.65, 0.35))
 	draw_circle(Vector2(-6, 0), 4.0, accent)                     # the scoop
 	_headlights(29, 15)
+	_outline(hull)
+
+# --- the big boys ------------------------------------------------------------
+
+## Hammertoe: monster truck — wheels the size of the cab, open bed, blower.
+func _draw_hammertoe() -> void:
+	_wheel(Vector2(-17, -17), Vector2(16, 12))
+	_wheel(Vector2(-17, 17), Vector2(16, 12))
+	_wheel(Vector2(17, -17), Vector2(16, 12), _steer)
+	_wheel(Vector2(17, 17), Vector2(16, 12), _steer)
+	var hull := _hull(24, 12, 5, 3)
+	draw_colored_polygon(hull, primary)
+	draw_rect(Rect2(-22, -10, 16, 20), Color(0.15, 0.15, 0.18))  # open bed
+	draw_line(Vector2(-19, -10), Vector2(-19, 10), accent, 1.5)  # bed crossbars
+	draw_line(Vector2(-14, -10), Vector2(-14, 10), accent, 1.5)
+	draw_rect(Rect2(-6, -11, 4, 22), primary.darkened(0.3))      # cab back wall
+	draw_rect(Rect2(2, -10, 6, 20), GLASS)                       # windshield
+	draw_rect(Rect2(-2, -9, 4, 18), primary.darkened(0.15))      # cab roof
+	draw_rect(Rect2(12, -5, 8, 10), TIRE)                        # hood blower
+	draw_circle(Vector2(16, -2.5), 1.6, CHROME)
+	draw_circle(Vector2(16, 2.5), 1.6, CHROME)
+	draw_circle(Vector2(-7, -9), 1.8, CHROME)                    # exhaust stacks
+	draw_circle(Vector2(-7, 9), 1.8, CHROME)
+	_headlights(24, 12)
+	_outline(hull)
+
+## Lackey: the eight-wheel Stryker — angled hull, deck hatches, breach cannon.
+func _draw_lackey() -> void:
+	for x in [-24.0, -8.0, 8.0, 24.0]:
+		var pivot := _steer if x == 24.0 else 0.0
+		_wheel(Vector2(x, -18), Vector2(12, 6), pivot)
+		_wheel(Vector2(x, 18), Vector2(12, 6), pivot)
+	var hull := _hull(32, 15, 10, 6)
+	draw_colored_polygon(hull, primary)
+	draw_colored_polygon(PackedVector2Array([                    # sloped glacis nose
+		Vector2(22, -13), Vector2(32, -5), Vector2(32, 5), Vector2(22, 13),
+	]), primary.darkened(0.3))
+	draw_rect(Rect2(-26, -11, 44, 22), primary.darkened(0.12))   # top deck
+	draw_line(Vector2(-26, -15), Vector2(20, -15), accent.darkened(0.2), 1.5)  # side skirts
+	draw_line(Vector2(-26, 15), Vector2(20, 15), accent.darkened(0.2), 1.5)
+	draw_circle(Vector2(-16, -5), 3.5, primary.darkened(0.4))    # crew hatches
+	draw_circle(Vector2(-16, 6), 3.5, primary.darkened(0.4))
+	draw_circle(Vector2(2, 0), 5.0, primary.darkened(0.45))      # cannon ring
+	draw_rect(Rect2(2, -1.5, 24, 3), TIRE)                       # breach cannon
+	draw_rect(Rect2(24, -2.5, 4, 5), TIRE)                       # muzzle brake
 	_outline(hull)
 
 ## Smoky: pursuit SUV — boxy, white door livery, push bar, flashing light bar.
