@@ -38,6 +38,12 @@ func test_molotov_def() -> void:
 	t.check(fx != null and fx.kind == &"burn", "molotov: burn on hit")
 	t.check_approx(fx.duration, 15.0, "molotov: lore 15s burn")
 
+func test_red_glare_def() -> void:
+	var d := _def("res://data/weapons/red_glare.tres")
+	t.check(not d.stub and d.kind == 0, "red glare: live projectile volley")
+	t.check(d.pellets == 4 and d.bursts == 3, "red glare: 3 waves x 4 rockets")
+	t.check_approx(d.spread_deg, 10.0, "red glare: shotgun-choke cone")
+
 func test_taser_def() -> void:
 	var d := _def("res://data/weapons/taser.tres")
 	t.check(not d.stub and d.kind == 1, "taser: live BEAM")
