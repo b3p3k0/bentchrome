@@ -41,6 +41,26 @@ func test_clutter_pops_on_one_hit() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_street_kinds_and_hydrant_spout() -> void:
+	var kinds: Dictionary = load("res://environment/clutter.gd").KINDS
+	for k in [&"mailbox", &"sign", &"cone", &"bike", &"hydrant"]:
+		t.check(kinds.has(k), "clutter: %s kind exists" % k)
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var hydrant = ClutterScene.instantiate()
+	hydrant.kind = &"hydrant"
+	container.add_child(hydrant)
+	hydrant.get_node("Health").take_damage(1.0)
+	var emitters := 0
+	for c in container.get_children():
+		if c is CPUParticles2D:
+			emitters += 1
+	t.check(emitters == 2, "hydrant: pop leaves puff + water spout (got %d)" % emitters)
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func test_radar_gate_math() -> void:
 	# Mirrors ui/radar.gd's MIN_BLIP skip: clutter-sized rects drop, houses stay.
 	var radar_src = load("res://ui/radar.gd")
