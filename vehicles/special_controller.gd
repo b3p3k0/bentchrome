@@ -26,6 +26,8 @@ const FLAME_WIDTH := 70.0         # column thickness
 
 const DROP_COOLDOWN := 0.5        # held button lays a trail, not a carpet
 
+const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
+
 var _def: WeaponDef = null
 var _beam_target: Node2D = null
 var _beam_t := 0.0
@@ -34,6 +36,8 @@ var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
 var _armed := false
+var _armed_t := 0.0               # Toe Jam use-it-or-lose-it countdown
+var _armed_fx: CPUParticles2D = null
 var _flame_t := 0.0
 var _flame_vis: Polygon2D = null
 var _drop_cd := 0.0
@@ -110,6 +114,10 @@ func _physics_process(delta: float) -> void:
 		_flame_tick(delta)
 	if _drop_cd > 0.0:
 		_drop_cd -= delta
+	if _armed and _armed_t > 0.0:
+		_armed_t -= delta
+		if _armed_t <= 0.0:
+			_disarm_expired()
 
 func _beam_tick(delta: float) -> void:
 	var vehicle := get_parent() as Node2D
@@ -291,13 +299,15 @@ func _end_flame() -> void:
 		_flame_vis = null
 
 ## Toe Jam: arm a charge that replaces the next landed ram's speed-scaled
-## damage with one heavy flat hit (def.damage). Held until it connects; the
-## front bumper glows while armed.
+## damage with one heavy flat hit (def.damage). Smash something within
+## TRIGGER_WINDOW or the charge is lost — missed opportunity, too bad, so sad.
+## The exhaust stacks belch smoke while armed.
 func _trigger(pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
 	if not pressed or _armed:
 		return false
 	_armed = true
-	_set_bumper_glow(true)
+	_armed_t = TRIGGER_WINDOW
+	_set_armed_fx(true)
 	return true
 
 ## Called by Vehicle._update_ram on a landed ram. Pays out the charged damage
@@ -306,13 +316,39 @@ func take_armed_hit() -> float:
 	if not _armed:
 		return 0.0
 	_armed = false
-	_set_bumper_glow(false)
+	_armed_t = 0.0
+	_set_armed_fx(false)
 	return _def.damage if _def else 0.0
 
-func _set_bumper_glow(on: bool) -> void:
-	var parent := get_parent()
-	if parent == null:
+func _disarm_expired() -> void:
+	_armed = false
+	_set_armed_fx(false)  # the charge stays spent — window's closed
+
+## Armed indicator: dark exhaust smoke off the stacks. Positions match
+## hammertoe's painted stacks (his signature special); on any other hull it
+## still reads as "engine's angry".
+func _set_armed_fx(on: bool) -> void:
+	if not on:
+		if _armed_fx:
+			_armed_fx.queue_free()
+			_armed_fx = null
 		return
-	var bumper := parent.get_node_or_null("Visual/FrontBumper") as CanvasItem
-	if bumper:
-		bumper.modulate = Color(2.2, 1.6, 0.6) if on else Color.WHITE
+	var parent := get_parent()
+	var visual := parent.get_node_or_null("Visual") if parent else null
+	if visual == null:
+		return
+	_armed_fx = CPUParticles2D.new()
+	_armed_fx.amount = 22
+	_armed_fx.lifetime = 0.7
+	_armed_fx.local_coords = false  # smoke hangs in the world as the truck moves
+	_armed_fx.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINTS
+	_armed_fx.emission_points = PackedVector2Array([Vector2(-7, -9), Vector2(-7, 9)])
+	_armed_fx.direction = Vector2(-1, 0)
+	_armed_fx.spread = 25.0
+	_armed_fx.initial_velocity_min = 30.0
+	_armed_fx.initial_velocity_max = 70.0
+	_armed_fx.scale_amount_min = 2.0
+	_armed_fx.scale_amount_max = 4.5
+	_armed_fx.gravity = Vector2.ZERO
+	_armed_fx.color = Color(0.18, 0.17, 0.16, 0.8)
+	visual.add_child(_armed_fx)

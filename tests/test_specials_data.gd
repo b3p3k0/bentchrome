@@ -66,3 +66,20 @@ func test_trigger_arms_once_and_pays_once() -> void:
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter), "trigger: re-arms after payout")
 	shooter.free()
 	sc.free()
+
+func test_trigger_window_expires_unspent() -> void:
+	var sc = ControllerScript.new()
+	var def = DefScript.new()
+	def.kind = 3  # TRIGGER
+	def.damage = 60.0
+	sc.set_weapon(def)
+	var shooter := Node2D.new()
+	sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter)
+	sc._physics_process(ControllerScript.TRIGGER_WINDOW * 0.5)
+	t.check_approx(sc.take_armed_hit(), 60.0, "trigger window: still armed mid-window")
+	sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter)
+	sc._physics_process(ControllerScript.TRIGGER_WINDOW + 0.5)
+	t.check_approx(sc.take_armed_hit(), 0.0, "trigger window: expired charge pays nothing")
+	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter), "trigger window: can re-arm after expiry")
+	shooter.free()
+	sc.free()
