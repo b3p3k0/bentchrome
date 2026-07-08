@@ -47,7 +47,7 @@ func test_red_glare_def() -> void:
 func test_taser_def() -> void:
 	var d := _def("res://data/weapons/taser.tres")
 	t.check(not d.stub and d.kind == 1, "taser: live BEAM")
-	t.check_approx(d.acquisition_radius, 200.0, "taser: ~3 car-length range")
+	t.check_approx(d.acquisition_radius, 400.0, "taser: doubled reach (break at 800 via hold factor)")
 
 func test_leap_def() -> void:
 	var d := _def("res://data/weapons/leap.tres")
