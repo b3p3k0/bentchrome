@@ -77,7 +77,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_done = true
 		GameState.selected_vehicle_id = _cars[_index].id
 		GameState.reset_campaign()
-		SceneFlow.to_level(0)
+		# Settings' START LEVEL picker: launch into the chosen campaign stop.
+		SceneFlow.to_level(GameState.start_level_index)
 
 func _toggle_bio() -> void:
 	if _bio == null:
