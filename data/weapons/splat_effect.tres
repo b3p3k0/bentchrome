@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="WeaponDef" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
-[ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="2_proj"]
+[ext_resource type="PackedScene" path="res://weapons/harpoon.tscn" id="2_proj"]
 [ext_resource type="Script" path="res://resources/status_effect.gd" id="3_fx"]
 
 [sub_resource type="Resource" id="Res_splat_slow"]

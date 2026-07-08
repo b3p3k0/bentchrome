@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://weapons/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_harpoon"]
+radius = 5.0
+
+[node name="Harpoon" type="Area2D"]
+collision_layer = 0
+collision_mask = 7
+script = ExtResource("1_proj")
+
+[node name="Vis" type="Node2D" parent="."]
+
+[node name="Shaft" type="Polygon2D" parent="Vis"]
+color = Color(0.3, 0.3, 0.33, 1)
+polygon = PackedVector2Array(-15, -1.5, 10, -1.5, 10, 1.5, -15, 1.5)
+
+[node name="Head" type="Polygon2D" parent="Vis"]
+color = Color(0.42, 0.43, 0.47, 1)
+polygon = PackedVector2Array(18, 0, 8, -5, 11, 0, 8, 5)
+
+[node name="BandA" type="Polygon2D" parent="Vis"]
+color = Color(0.48, 0.46, 0.42, 1)
+polygon = PackedVector2Array(-9, -2.2, -7, -2.2, -7, 2.2, -9, 2.2)
+
+[node name="BandB" type="Polygon2D" parent="Vis"]
+color = Color(0.48, 0.46, 0.42, 1)
+polygon = PackedVector2Array(0, -2.2, 2, -2.2, 2, 2.2, 0, 2.2)
+
+[node name="TailRing" type="Polygon2D" parent="Vis"]
+color = Color(0.2, 0.2, 0.23, 1)
+polygon = PackedVector2Array(-17, -2.5, -14, -2.5, -14, 2.5, -17, 2.5)
+
+[node name="Col" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_harpoon")

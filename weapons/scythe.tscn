@@ -1,0 +1,41 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://weapons/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_scythe"]
+radius = 6.0
+
+[node name="Scythe" type="Area2D"]
+collision_layer = 0
+collision_mask = 7
+script = ExtResource("1_proj")
+spin_deg = 400.0
+
+[node name="Trail" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, -3.5, 0, 3.5, -24, 1.5, -32, 0, -24, -1.5)
+vertex_colors = PackedColorArray(0.85, 0.15, 0.1, 0.55, 0.85, 0.15, 0.1, 0.55, 0.7, 0.1, 0.08, 0.12, 0.6, 0.08, 0.06, 0.02, 0.7, 0.1, 0.08, 0.12)
+
+[node name="Aura" type="Polygon2D" parent="."]
+color = Color(0.8, 0.1, 0.1, 0.22)
+polygon = PackedVector2Array(12, 0, 8.5, 8.5, 0, 12, -8.5, 8.5, -12, 0, -8.5, -8.5, 0, -12, 8.5, -8.5)
+
+[node name="Vis" type="Node2D" parent="."]
+
+[node name="Snath" type="Polygon2D" parent="Vis"]
+color = Color(0.26, 0.18, 0.12, 1)
+polygon = PackedVector2Array(-1.2, -4, 1.2, -4, 1.2, 12, -1.2, 12)
+
+[node name="Grip" type="Polygon2D" parent="Vis"]
+color = Color(0.4, 0.3, 0.2, 1)
+polygon = PackedVector2Array(-1.8, 5, 1.8, 5, 1.8, 7, -1.8, 7)
+
+[node name="Blade" type="Polygon2D" parent="Vis"]
+color = Color(0.86, 0.88, 0.82, 1)
+polygon = PackedVector2Array(0, -4, 6, -7, 11, -6, 14, -2, 12, -2.5, 8, -3.5, 3, -3, 0, -2)
+
+[node name="BladeEdge" type="Polygon2D" parent="Vis"]
+color = Color(0.65, 0.7, 0.72, 1)
+polygon = PackedVector2Array(11, -6, 14, -2, 12.5, -2.2, 10.5, -5)
+
+[node name="Col" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_scythe")

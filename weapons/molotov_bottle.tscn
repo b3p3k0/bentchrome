@@ -1,0 +1,49 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://weapons/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_molotov"]
+radius = 5.0
+
+[node name="MolotovBottle" type="Area2D"]
+collision_layer = 0
+collision_mask = 7
+script = ExtResource("1_proj")
+spin_deg = 540.0
+
+[node name="Fire" type="CPUParticles2D" parent="."]
+amount = 14
+lifetime = 0.35
+local_coords = false
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 10.0
+initial_velocity_max = 35.0
+scale_amount_min = 2.0
+scale_amount_max = 3.5
+color = Color(1, 0.55, 0.12, 0.85)
+
+[node name="Vis" type="Node2D" parent="."]
+
+[node name="Bottle" type="Polygon2D" parent="Vis"]
+color = Color(0.14, 0.42, 0.2, 0.95)
+polygon = PackedVector2Array(-8, -2, -6, -4, 3, -4, 5, -2, 5, 2, 3, 4, -6, 4, -8, 2)
+
+[node name="Neck" type="Polygon2D" parent="Vis"]
+color = Color(0.14, 0.42, 0.2, 0.95)
+polygon = PackedVector2Array(5, -1.5, 10, -1.5, 10, 1.5, 5, 1.5)
+
+[node name="Rag" type="Polygon2D" parent="Vis"]
+color = Color(0.85, 0.8, 0.68, 1)
+polygon = PackedVector2Array(9, -2, 13, -1.5, 13, 1.5, 9, 2)
+
+[node name="Flame" type="Polygon2D" parent="Vis"]
+color = Color(1, 0.62, 0.15, 0.9)
+polygon = PackedVector2Array(12, -3, 17, -1, 20, 0, 17, 1.5, 12, 3, 14, 0)
+
+[node name="FlameCore" type="Polygon2D" parent="Vis"]
+color = Color(1, 0.9, 0.45, 0.9)
+polygon = PackedVector2Array(12, -1.5, 16, 0, 12, 1.5, 13.5, 0)
+
+[node name="Col" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_molotov")
