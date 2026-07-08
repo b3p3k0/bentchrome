@@ -9,7 +9,13 @@
       "Bash(tools/test.sh *)",
       "Bash(./tools/test.sh)",
       "Bash(./tools/test.sh *)",
-      "Bash(~/.local/bin/godot --headless *)"
+      "Bash(~/.local/bin/godot --headless *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git diff)",
+      "Bash(git diff *)"
     ]
   }
 }
