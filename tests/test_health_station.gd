@@ -68,3 +68,32 @@ func test_station_lifecycle() -> void:
 
 	t.root.remove_child(container)
 	container.free()
+
+## One heal locks out EVERY station on the level for the full cooldown.
+func test_any_heal_locks_all_stations() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var near = StationScene.instantiate()
+	container.add_child(near)
+	var far = StationScene.instantiate()
+	far.position = Vector2(2000, 0)  # nowhere near the player
+	container.add_child(far)
+	var player := _car(container, &"player", 40.0)
+	await t.physics_frame
+	await t.physics_frame
+
+	t.check(player.get_node("Health").hp == 100.0, "lockout: near station healed")
+	t.check(near.uses == 1 and far.uses == 2, "lockout: only the healer burned a use")
+	# drive to the far station immediately — it must refuse
+	player.global_position = Vector2(2000, 0)
+	player.get_node("Health").hp = 10.0
+	await t.physics_frame
+	await t.physics_frame
+	t.check(player.get_node("Health").hp == 10.0, "lockout: far station offline after any heal")
+	far.tick(far.cooldown_seconds)  # fast-forward its cooldown
+	await t.physics_frame
+	await t.physics_frame
+	t.check(player.get_node("Health").hp == 100.0, "lockout: far station recovers after cooldown")
+
+	t.root.remove_child(container)
+	container.free()
