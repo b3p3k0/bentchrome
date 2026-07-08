@@ -43,7 +43,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 - **Rendering:** 2D sprites, GL Compatibility, nearest-neighbor filter; fake depth via a separate shadow sprite + height offset + per-level Y-sort.
 - **Screen layout:** fullscreen on a 1280×720 base viewport — a centered **720×720 play square** with opaque 280px gutters (`ui/hud.gd`): left = dash (HP/speed/MG heat/boost/weapon slots/keyguide), right = full-arena north-up minimap (`ui/radar.gd` — geometry duck-typed off collision layers; enemy blips range-limited to 1500px) + opponent roster with health bars. ESC pause menu in `ui/pause_menu.gd`; win/lose end screen in `ui/end_screen.gd`.
 - **Collision layers** (named in project.godot): 1 = ground (vehicles, dummies), 2 = wall (arena boundary), 3 = obstacle (blocks/cover — airborne cars and `pierces_cover` projectiles ignore it), 8 = terrain zones (road/grass/dirt/ice/water multipliers in `driving_controller.gd`).
-- **Destructibles:** any body with a `Health` child takes weapon fire and speed-scaled ram damage; `environment/destructible_block.gd` is the reusable obstacle flavor (layer 3, exported size/HP; `deco = &"house"` paints a pitched roof). `environment/clutter.gd` is the 1-HP pop-through flavor (trash/brush/bush/drift palettes, scatter puff, size-gated off the radar).
+- **Destructibles:** any body with a `Health` child takes weapon fire and speed-scaled ram damage; `environment/destructible_block.gd` is the reusable obstacle flavor (layer 3, exported size/HP; `deco` picks the paint — house roof / crate / kiosk / barrier / guardrail / junk / gas pump / **fuel barrel**, and barrels detonate: 130px blast, 25 flat damage to anything Health-bearing, chains included). `environment/clutter.gd` is the 1-HP pop-through flavor (trash/brush/bush/drift palettes, scatter puff, size-gated off the radar).
 - **Performance:** 60 FPS locked on mid-range GPUs.
 - **Packaging:** AppImage for Linux.
 
@@ -56,7 +56,7 @@ This file guides Claude Code (claude.ai/code) when working in this repository.
 
 ## Level progression
 
-**Shipped campaign** (`SceneFlow.CAMPAIGN`, all hand-authored scenes sharing `levels/combat_level.gd` — lives loop, enemy re-roll, menus): size classes small/med/large = 1-3 / 4-6 / 6-8 enemies and 1 / 1-2 / 2-3 health stations.
+**Shipped campaign** (`SceneFlow.CAMPAIGN`, all hand-authored scenes sharing `levels/combat_level.gd` — lives loop, level-start blink shield, enemy re-roll, menus): size classes small/med/large = 1-3 / 4-6 / 6-8 enemies and 1 / 1-2 / 2-3 health stations (any heal locks ALL of a level's stations into the 45s cooldown).
 
 1. **Downtown** (MED, 4 enemies, 1 station) — the city arena: park, secrets, courtyard.
 2. **Freeway Loop** (LARGE 2176×5376, 6 enemies, 3 stations) — NS ring road, infield crossover, low-HP guardrails, overpass ramps.

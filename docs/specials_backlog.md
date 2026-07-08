@@ -15,10 +15,10 @@ the weapon `.tres` (see `data/weapons/splat_effect.tres` for the pattern).
 | Ghost | Phantom Phire | PROJECTILE | Map-wide aggressive homing; pierces cover (`pierces_cover`). |
 | Kandy Kane | Molotov Cocktail | PROJECTILE | Impact burst + 15s burn (3 dps). |
 | Splat Cat | Splat Effect | PROJECTILE | Paint glob; victim at half speed for 3s. Cap 2 / 6s. |
-| Bumper | Blunt Blaze | FLAME | Nose-anchored flame column (~300px, 1s per ammo, 30 dps); bathed targets ignite 10s (4 dps). Hold to chain bursts — recharge keeps the torch lit. |
+| Bumper | Blunt Blaze | FLAME | Nose-anchored flame column (~300px, one fixed 5s burst per press, 30 dps); bathed targets ignite 10s (4 dps). Cap 2 / 15s — a committed play, not a hose. |
 | Smoky | Taser | BEAM | Latches nearest car ≤200px, 4s zap (12 dps + slow); breaks on line-of-sight block or far escape. Cap 3 / 8s. |
 | Cricket | Leap | DASH | Lock-on body-check ≤700px at 1400 px/s over obstacles; connect = ram damage + victim slow + 2s invuln. Cap 1 / 10s. |
-| Hammertoe | Toe Jam | TRIGGER | Armed charge (bumper glows) held until the next landed ram: flat 60 replaces crash damage. Cap 1 / 8s. |
+| Hammertoe | Toe Jam | TRIGGER | Armed charge (exhaust stacks smoke) — smash something within 5s or the charge is lost unspent: flat 60 replaces crash damage on a landed ram. Cap 1 / 8s. |
 
 ## Follow-ups (not scheduled)
 - AI never fires specials — archetype-driven usage is its own card.
