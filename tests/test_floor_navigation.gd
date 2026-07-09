@@ -101,6 +101,19 @@ func test_two_phase_run_and_jump_boost() -> void:
 	d.free()
 	_done(rig)
 
+func test_grade_connector_commits_without_boost() -> void:
+	var rig := _rig()
+	var _grade := _connector(rig.container, Vector2(200, 0), 2, 3, &"grade")
+	var d = DriverScript.new()
+	d._enter_navigate(rig.hunter, rig.target, 2, 3)
+	rig.hunter.global_position = Vector2(-25, 5)  # at the entry lead point
+	var intent: Dictionary = d._navigate_intent(rig.hunter, rig.target, 2, true, Vector2(100, 0), 0.016)
+	t.check(d._nav_phase == 1, "nav: grade entry reached, committed")
+	t.check(not intent["boost"], "nav: grade ramps never boost (can't whiff a slope)")
+	t.check_approx(intent["throttle"], 1.0, "nav: grade commit is still full throttle")
+	d.free()
+	_done(rig)
+
 func test_exit_on_timeout_and_floor_change() -> void:
 	var rig := _rig()
 	var _ramp := _connector(rig.container, Vector2(200, 0), 2, 3)
