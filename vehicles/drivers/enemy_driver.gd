@@ -90,8 +90,11 @@ const HOP_COOLDOWN := 6.0
 const SHUN_TIME := 4.0
 const CARPIN_RANGE := 130.0
 
-# Obstacle feelers: walls + blocks only (mask 2|4) — car contact is gameplay.
-const FEELER_MASK := 6
+# Obstacle feelers: walls + blocks + hazard curbs (64 — the AI-only rails
+# along pit/deep-water rims); car contact is gameplay. Line-of-sight keeps
+# the classic walls+blocks pair: a curb must never block a SHOT.
+const FEELER_MASK := 2 | 4 | 64
+const LOS_MASK := 2 | 4
 const FEELER_BASE := 200.0        # feeler length at standstill
 const FEELER_SPEED_FACTOR := 0.25 # extra length per px/s of speed
 const FEELER_ANGLE := deg_to_rad(35.0)
@@ -511,14 +514,15 @@ func _nearest_crate(vehicle) -> Node2D:
 			best = p
 	return best
 
-## True when no wall/block sits between the nose and the target (mask 6 —
-## other cars don't block; collateral fire is free-for-all gameplay).
+## True when no wall/block sits between the nose and the target (LOS_MASK —
+## other cars don't block; collateral fire is free-for-all gameplay, and the
+## AI-only hazard curbs never stop a shot).
 func _los_clear(vehicle, target: Node2D) -> bool:
 	if not (vehicle is CollisionObject2D and target is CollisionObject2D):
 		return false
 	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
 	var query := PhysicsRayQueryParameters2D.create(
-		vehicle.global_position, target.global_position, FEELER_MASK)
+		vehicle.global_position, target.global_position, LOS_MASK)
 	query.exclude = [(vehicle as CollisionObject2D).get_rid(), (target as CollisionObject2D).get_rid()]
 	return space.intersect_ray(query).is_empty()
 

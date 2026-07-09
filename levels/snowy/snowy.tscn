@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
 [ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
+[ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="23_curb"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -260,6 +261,34 @@ size = Vector2(256, 704)
 [node name="Chasm" parent="." instance=ExtResource("13_pit")]
 position = Vector2(-800, 0)
 size = Vector2(384, 256)
+
+[node name="CurbCliffE" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-1458, 672)
+size = Vector2(24, 752)
+
+[node name="CurbCliffN" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-1600, 306)
+size = Vector2(300, 24)
+
+[node name="CurbCliffS" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-1600, 1038)
+size = Vector2(300, 24)
+
+[node name="CurbChasmN" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-800, -142)
+size = Vector2(432, 24)
+
+[node name="CurbChasmS" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-800, 142)
+size = Vector2(432, 24)
+
+[node name="CurbChasmE" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-594, 0)
+size = Vector2(24, 260)
+
+[node name="CurbChasmW" parent="." instance=ExtResource("23_curb")]
+position = Vector2(-1006, 0)
+size = Vector2(24, 260)
 
 [node name="Ramp" type="Area2D" parent="."]
 position = Vector2(-480, 0)
