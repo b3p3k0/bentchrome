@@ -509,6 +509,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(192, 240)
+surface_color = Color(0.78, 0.81, 0.88, 1)
 
 [node name="RampSouth" type="Node2D" parent="."]
 position = Vector2(896, -448)
@@ -516,6 +517,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(192, 240)
+surface_color = Color(0.78, 0.81, 0.88, 1)
 
 [node name="ConWestGradeUp" type="Node2D" parent="."]
 position = Vector2(448, -896)

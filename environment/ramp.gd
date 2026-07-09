@@ -27,6 +27,9 @@ const RAIL_W := 12.0
 @export var low_floor := 2
 @export var high_floor := 3
 @export var size := Vector2(192, 448)  # width x length (length along local y)
+@export var surface_color := Color(0.16, 0.16, 0.19)  # OPAQUE built surface
+	# (asphalt default; author snow/dirt tones to match the hill's terrain —
+	# the TerrainZone underneath still owns the grip)
 
 func _ready() -> void:
 	for cfg in [{"floor": high_floor, "y": -size.y * 0.25}, {"floor": low_floor, "y": size.y * 0.25}]:
@@ -52,6 +55,8 @@ func _ready() -> void:
 
 func _draw() -> void:
 	var half := size * 0.5
+	# The slope is a built structure — fully opaque, never tinted street.
+	draw_rect(Rect2(-half, size), surface_color)
 	var step_h := size.y / SHADE_STEPS
 	for i in SHADE_STEPS:
 		var t := float(i) / float(SHADE_STEPS - 1)  # 0 = high end, 1 = low end

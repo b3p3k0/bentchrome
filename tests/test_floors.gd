@@ -203,6 +203,21 @@ func test_ramp_node_builds_the_recipe() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_floor_lift_reads_elevation() -> void:
+	var f := _fixture([
+		{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)},
+		{"floor": 2, "pos": Vector2(900, 0), "size": Vector2(600, 600)},
+	])
+	await _settle(30)  # adoption + the lift tween
+	var vis: Node2D = f.car.get_node("Visual")
+	t.check(absf(vis.position.y + 32.0) < 1.0,
+		"lift: roof car body rides 32px up (y=%.1f)" % vis.position.y)
+	f.car.global_position = Vector2(900, 0)  # one-floor drop back to baseline
+	await _settle(90)
+	t.check(absf(vis.position.y) < 1.0,
+		"lift: floor-2 car sits at street level (y=%.1f)" % vis.position.y)
+	_done(f)
+
 func test_overhead_structures_fade_for_underpassers() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)

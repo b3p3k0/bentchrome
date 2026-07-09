@@ -25,6 +25,9 @@ const LAYER_OBSTACLE := 4
 const HEADING_STEPS := 16  # quantize the visual to N compass steps (retro
 							# directional-sprite feel); 0 = smooth rotation
 const FLOOR_SCALE_TWEEN := 0.25  # size-cue tween on floor change (visuals only)
+const FLOOR_LIFT := 32.0  # px of visual lift per floor above the baseline (2) —
+						  # the jump-cue held: body up, shadow grounded, so an
+						  # elevated car reads elevated even overlapping a low one
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const ExplosionScene := preload("res://environment/explosion.tscn")
@@ -65,6 +68,7 @@ var vz: float = 0.0       # vertical velocity (px/s)
 var floor_index := -1     # terrace we drive on; -1 = legacy single-plane level
 var _takeoff_floor := -1  # floor at the moment we went airborne (fall bookkeeping)
 var _floor_tween: Tween = null
+var _floor_lift := 0.0    # visual elevation for upper terraces (see FLOOR_LIFT)
 var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never radii
 	set(v):
 		_floor_vis = v
@@ -291,11 +295,12 @@ func _update_depth(delta: float) -> void:
 			vz = 0.0
 			_resolve_landing_floor()
 			_set_airborne(false)
-	_visual.position.y = -height
+	var lift := height + _floor_lift  # jump arc + held terrace elevation
+	_visual.position.y = -lift
 	if _shadow:
-		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
+		var s := clampf(1.0 - lift * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
 		_shadow.scale = Vector2(s, s)
-		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
+		_shadow.modulate.a = clampf(1.0 - lift * 0.0016, 0.4, 1.0)
 
 ## Grounded floor bookkeeping. Adopting happens on first zone contact; driving
 ## past a lower zone's edge is a ledge hop down (floor resolves at touchdown).
@@ -336,10 +341,13 @@ func _adopt_floor(f: int) -> void:
 	_apply_ground_collision()
 	_update_draw_order(height > 0.0)
 	var target: float = float(Floors.VISUAL_SCALE.get(f, 1.0))
+	var lift_target := FLOOR_LIFT * maxf(0.0, float(f) - 2.0)
 	if _floor_tween:
 		_floor_tween.kill()
 	_floor_tween = create_tween()
+	_floor_tween.set_parallel(true)
 	_floor_tween.tween_property(self, "_floor_vis", target, FLOOR_SCALE_TWEEN)
+	_floor_tween.tween_property(self, "_floor_lift", lift_target, FLOOR_SCALE_TWEEN)
 
 ## Draw order carries the depth read: airborne cars and top-terrace cars draw
 ## ABOVE overhead paint (bridges and crane booms live at z 1); everyone else
@@ -517,6 +525,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 	if _floor_tween:
 		_floor_tween.kill()
 	_floor_vis = 1.0
+	_floor_lift = 0.0
 	_apply_ground_collision()
 	_update_draw_order(false)
 	if _health:
