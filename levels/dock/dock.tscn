@@ -88,10 +88,10 @@ size = Vector2(24, 2912)
 size = Vector2(1312, 512)
 
 [sub_resource type="RectangleShape2D" id="R_ramp_h"]
-size = Vector2(256, 160)
+size = Vector2(224, 224)
 
 [sub_resource type="RectangleShape2D" id="R_ramp_v"]
-size = Vector2(160, 256)
+size = Vector2(224, 224)
 
 [node name="Dock" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -436,7 +436,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampLowN"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampLowN"]
 shape = SubResource("R_ramp_v")
@@ -449,7 +449,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampLowS"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampLowS"]
 shape = SubResource("R_ramp_v")
@@ -462,7 +462,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampW1"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampW1"]
 shape = SubResource("R_ramp_v")
@@ -475,7 +475,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampW2"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-128, -80, 128, -80, 128, 80, -128, 80)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampW2"]
 shape = SubResource("R_ramp_h")
@@ -488,7 +488,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampW3"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-128, -80, 128, -80, 128, 80, -128, 80)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampW3"]
 shape = SubResource("R_ramp_h")
@@ -501,7 +501,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampW5"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampW5"]
 shape = SubResource("R_ramp_v")
@@ -514,7 +514,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampW6"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampW6"]
 shape = SubResource("R_ramp_v")
@@ -527,7 +527,7 @@ script = ExtResource("4_ramp")
 
 [node name="Vis" type="Polygon2D" parent="RampShip"]
 color = Color(0.9, 0.55, 0.15, 0.85)
-polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="RampShip"]
 shape = SubResource("R_ramp_v")
