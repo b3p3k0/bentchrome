@@ -1061,9 +1061,6 @@ floor_index = 1
 position = Vector2(-2144, -1216)
 
 [node name="HealthStation2" parent="." instance=ExtResource("10_heal")]
-position = Vector2(100, -550)
-
-[node name="HealthStation3" parent="." instance=ExtResource("10_heal")]
 position = Vector2(2200, 960)
 
 [node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]

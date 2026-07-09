@@ -37,7 +37,7 @@ func test_dock_structure() -> void:
 			enemies.append(child)
 
 	t.check(enemies.size() == 7, "dock: LARGE class carries 7 enemies (got %d)" % enemies.size())
-	t.check(stations == 3, "dock: LARGE class carries 3 stations (got %d)" % stations)
+	t.check(stations == 2, "dock: two stations only — this size earns its scarcity (got %d)" % stations)
 	t.check(zones.size() >= 10, "dock: floor tags cover the terraces (got %d zones)" % zones.size())
 
 	# Every spawn's start_floor has a matching tag zone under it (highest wins,
