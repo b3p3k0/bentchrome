@@ -33,12 +33,13 @@ func _ready() -> void:
 	_ensure_action(ACTION_FIRE_SELECTED, [_mouse(MOUSE_BUTTON_RIGHT), _key(KEY_K)])
 	# Mouse-first weapons: wheel cycles, "/" is the keyboard fallback (next-only
 	# — auto-skip tours all slots). Q is deliberately unbound: prime real estate
-	# reserved for future ideas. E moves to handbrake (WASD-adjacent drifting);
-	# Ctrl becomes the camera zoom toggle.
+	# reserved for future ideas. Handbrake lives on LCtrl (pinky-reachable while
+	# steering — the July 2026 playtest retired E); zoom toggles on G, convenient
+	# but out of the way (players rarely toggle it). E is now unbound/free.
 	_ensure_action(ACTION_WEAPON_PREV, [_mouse(MOUSE_BUTTON_WHEEL_UP)])
 	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_SLASH), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
-	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_E), _joy_button(JOY_BUTTON_B)])
-	_ensure_action(ACTION_ZOOM, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_Y)])
+	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_B)])
+	_ensure_action(ACTION_ZOOM, [_key(KEY_G), _joy_button(JOY_BUTTON_Y)])
 	_ensure_action(ACTION_BOOST, [_key(KEY_SHIFT), _joy_button(JOY_BUTTON_LEFT_SHOULDER)])
 	_ensure_action(ACTION_PAUSE, [_key(KEY_ESCAPE), _joy_button(JOY_BUTTON_START)])
 	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
