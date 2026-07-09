@@ -106,6 +106,22 @@ func test_size_cue_never_touches_the_radius() -> void:
 	t.check(is_equal_approx(radius_before, radius_after), "floors: collision radius untouched by the cue")
 	_done(f)
 
+func test_draw_order_tracks_floor_and_air() -> void:
+	var f := _fixture([
+		{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)},
+		{"floor": 1, "pos": Vector2(900, 0), "size": Vector2(600, 600)},
+	])
+	await _settle(3)
+	t.check(f.car.z_index == 2, "floors: roof car draws above overhead paint (z 2)")
+	f.car.global_position = Vector2(900, 0)
+	await _settle(3)
+	t.check(f.car.z_index == 2, "floors: mid-drop stays above (airborne z 2)")
+	await _settle(90)
+	t.check(f.car.z_index == 0, "floors: landed low car returns to z 0")
+	f.car.respawn(Vector2(900, 0), 0.0, 0.0)
+	t.check(f.car.z_index == 0, "floors: respawn resets draw order")
+	_done(f)
+
 func test_respawn_resets_to_legacy_then_readopts() -> void:
 	var f := _fixture([{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)}])
 	await _settle(30)

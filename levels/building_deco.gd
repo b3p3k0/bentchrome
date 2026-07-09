@@ -7,7 +7,8 @@ extends StaticBody2D
 ## No collision or gameplay here — pure paint.
 
 const SHADOW := Color(0.0, 0.0, 0.0, 0.32)
-const SHADOW_OFFSET := Vector2(10, 14)
+const FACE := Color(0.2, 0.2, 0.25)        # south wall face (fake height)
+const FACE_SEAM := Color(0.13, 0.13, 0.17)
 const ROOF := Color(0.28, 0.28, 0.34)
 const GRAVEL_DARK := Color(0.24, 0.24, 0.29)
 const GRAVEL_LIGHT := Color(0.33, 0.33, 0.39)
@@ -22,6 +23,9 @@ const PARAPET_LIP := Color(0.18, 0.18, 0.22, 0.7)
 const MIN_FURNITURE_DIM := 192.0  # smaller slabs (statue, court walls) stay bare
 
 @export var furniture := true  # false = bare gravel + parapet (driveable roofs)
+@export var wall_face := 0.0   # px of south facade painted below the footprint
+							   # (fake storeys — tall buildings loom over the lane)
+@export var shadow_offset := Vector2(10, 14)  # taller buildings cast longer
 
 var _size := Vector2.ZERO
 var _rng_seed := 0
@@ -41,7 +45,7 @@ func _draw() -> void:
 	if _size == Vector2.ZERO:
 		return
 	var half := _size * 0.5
-	draw_rect(Rect2(-half + SHADOW_OFFSET, _size), SHADOW)
+	draw_rect(Rect2(-half + shadow_offset, _size), SHADOW)
 	draw_rect(Rect2(-half, _size), ROOF)
 
 	var rng := RandomNumberGenerator.new()
@@ -79,3 +83,16 @@ func _draw() -> void:
 	# Parapet: bright outer edge + dark inner lip = raised roof rim.
 	draw_rect(Rect2(-half, _size), PARAPET, false, 3.0)
 	draw_rect(Rect2(-half + Vector2(6, 6), _size - Vector2(12, 12)), PARAPET_LIP, false, 2.0)
+
+	# South wall face: paneled facade painted past the footprint onto the lane
+	# below — the classic top-down "this thing has storeys" cheat. Cars draw
+	# over it, so they read as driving up to the wall's base.
+	if wall_face > 0.0:
+		var face_rect := Rect2(Vector2(-half.x, half.y), Vector2(_size.x, wall_face))
+		draw_rect(face_rect, FACE)
+		var panels := maxi(int(_size.x / 96.0), 2)
+		for i in range(1, panels):
+			var x := -half.x + _size.x * i / panels
+			draw_line(Vector2(x, half.y + 2.0), Vector2(x, half.y + wall_face - 2.0), FACE_SEAM, 1.5)
+		draw_line(Vector2(-half.x, half.y + wall_face), Vector2(half.x, half.y + wall_face),
+			FACE_SEAM, 2.5)

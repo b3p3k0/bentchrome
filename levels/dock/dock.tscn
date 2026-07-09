@@ -286,6 +286,19 @@ size = Vector2(1312, 160)
 position = Vector2(2496, 1456)
 size = Vector2(128, 672)
 
+[node name="RetainingShadow" type="Node2D" parent="."]
+position = Vector2(-1420, -336)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2912, 90)
+
+[node name="QuayShadow" type="Node2D" parent="."]
+position = Vector2(-144, 1120)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2528, 70)
+
 [node name="PierDecoA" type="Node2D" parent="."]
 position = Vector2(-960, 1392)
 script = ExtResource("28_ddeco")
@@ -330,6 +343,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse1"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -344,6 +359,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse2"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -358,6 +375,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse3"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -372,6 +391,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse4"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -386,6 +407,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse5"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -400,6 +423,8 @@ collision_layer = 28
 collision_mask = 0
 script = ExtResource("12_deco")
 furniture = false
+wall_face = 32.0
+shadow_offset = Vector2(18, 26)
 
 [node name="Vis" type="Polygon2D" parent="Warehouse6"]
 color = Color(0.3, 0.3, 0.36, 1)

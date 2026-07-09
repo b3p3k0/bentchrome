@@ -331,11 +331,18 @@ func _resolve_landing_floor() -> void:
 func _adopt_floor(f: int) -> void:
 	floor_index = f
 	_apply_ground_collision()
+	_update_draw_order(height > 0.0)
 	var target: float = float(Floors.VISUAL_SCALE.get(f, 1.0))
 	if _floor_tween:
 		_floor_tween.kill()
 	_floor_tween = create_tween()
 	_floor_tween.tween_property(self, "_floor_vis", target, FLOOR_SCALE_TWEEN)
+
+## Draw order carries the depth read: airborne cars and top-terrace cars draw
+## ABOVE overhead paint (bridges and crane booms live at z 1); everyone else
+## stays at the classic z 0 under it. Legacy levels never leave 0.
+func _update_draw_order(airborne: bool) -> void:
+	z_index = 2 if (airborne or floor_index >= 3) else 0
 
 ## The single authority for grounded collision values (legacy -1 = the classic
 ## 1 / ground|wall|obstacle). SpecialController's dash-end restore duck-types
@@ -356,6 +363,7 @@ func _set_airborne(on: bool) -> void:
 		set_deferred("collision_mask", LAYER_WALL)
 	else:
 		_apply_ground_collision()
+	_update_draw_order(on)
 
 ## Smaller pop than a ramp (jump mines) — airborne physics from any height kick.
 func pop_airborne(vz_speed: float) -> void:
@@ -505,6 +513,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 		_floor_tween.kill()
 	_floor_vis = 1.0
 	_apply_ground_collision()
+	_update_draw_order(false)
 	if _health:
 		_health.hp = _health.max_hp
 	if _status:

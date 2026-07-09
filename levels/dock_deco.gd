@@ -10,6 +10,10 @@ extends Node2D
 ##   pier_surface: a concrete pier finger — expansion seams, edge fenders,
 ##                 tie cleats. Attach the -y end to the quay: foam is drawn
 ##                 on the other three edges only.
+##   ledge_shadow: a soft dark falloff band marking an upper->lower boundary
+##                 (quay over water, retaining wall over the lowland). Local
+##                 +y is the LOW side — rotate the node to face any drop.
+##                 size.x = run length, size.y = falloff reach.
 
 const HULL := Color(0.34, 0.21, 0.18)       # rusted plating
 const HULL_DARK := Color(0.22, 0.13, 0.11)
@@ -38,8 +42,18 @@ func _draw() -> void:
 			_draw_ship()
 		&"crane":
 			_draw_crane()
+		&"ledge_shadow":
+			_draw_ledge_shadow()
 		_:
 			_draw_pier()
+
+func _draw_ledge_shadow() -> void:
+	var steps := 6
+	var step_h := size.y / steps
+	for i in steps:
+		var a := 0.26 * (1.0 - float(i) / float(steps))
+		draw_rect(Rect2(Vector2(-size.x * 0.5, i * step_h),
+			Vector2(size.x, step_h + 1.0)), Color(0.0, 0.0, 0.0, a))
 
 func _draw_ship() -> void:
 	var half := size * 0.5
@@ -75,6 +89,9 @@ func _draw_ship() -> void:
 	# Stern superstructure block: the bridge lives at -x.
 	draw_rect(Rect2(-half.x + inset + 4, -half.y * 0.55, 52, size.y * 0.55), HULL_DARK)
 	draw_rect(Rect2(-half.x + inset + 10, -half.y * 0.38, 40, size.y * 0.28), DECK_LINE)
+	# Below-deck south face + water shadow: the hull side has height.
+	draw_rect(Rect2(-half.x + 4, half.y - 24, (body_r + half.x) - 8, 20), HULL_DARK)
+	draw_rect(Rect2(-half.x + 8, half.y, size.x * 0.86, 26), Color(0.0, 0.0, 0.0, 0.24))
 
 func _draw_crane() -> void:
 	var half := size * 0.5
