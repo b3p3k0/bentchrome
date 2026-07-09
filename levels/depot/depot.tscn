@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
-[ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
+[ext_resource type="Script" path="res://environment/jump_pad.gd" id="4_ramp"]
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
@@ -88,17 +88,17 @@ polygon = PackedVector2Array(-384, -256, 384, -256, 384, 256, -384, 256)
 [node name="Col" type="CollisionShape2D" parent="YardSE"]
 shape = SubResource("RectangleShape2D_yard")
 
-[node name="Ramp" type="Area2D" parent="."]
+[node name="Jump" type="Area2D" parent="."]
 position = Vector2(896, -896)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 
-[node name="Vis" type="Polygon2D" parent="Ramp"]
+[node name="Vis" type="Polygon2D" parent="Jump"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="Ramp"]
+[node name="Col" type="CollisionShape2D" parent="Jump"]
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Container1" type="StaticBody2D" parent="."]

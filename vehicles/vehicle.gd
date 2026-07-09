@@ -10,7 +10,7 @@ extends CharacterBody2D
 ##
 ## Collision layers: 1 = ground (vehicles, dummies), 2 = walls/barriers,
 ## 4 = obstacles (blocks/cover). While airborne the car keeps only the wall bit,
-## so ramp jumps clear obstacles but can't leave the arena.
+## so jump-pad launches clear obstacles but can't leave the arena.
 ##
 ## Multi-floor levels (terraced: floors.gd) tag regions with FloorZones; the
 ## FloorSensor reads them and the car carries floor_index (-1 = legacy level,
@@ -43,7 +43,7 @@ const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
-@export var ramp_launch := 760.0
+@export var jump_launch := 760.0
 @export var min_launch_speed := 120.0
 @export var fall_damage_frac := 0.25  # of max HP, landing 2+ floors below takeoff
 @export var start_floor := -1  # authored spawn terrace — a roof spawn must never
@@ -356,7 +356,7 @@ func _apply_ground_collision() -> void:
 
 func _set_airborne(on: bool) -> void:
 	# Airborne: keep the wall bit (stay in the arena), drop ground + obstacles
-	# (clear other cars and blocks — ramp jumps sail over cover). Every launch
+	# (clear other cars and blocks — jump launches sail over cover). Every launch
 	# stamps the takeoff floor so landings can bill the fall.
 	if on:
 		_takeoff_floor = floor_index
@@ -365,7 +365,7 @@ func _set_airborne(on: bool) -> void:
 		_apply_ground_collision()
 	_update_draw_order(on)
 
-## Smaller pop than a ramp (jump mines) — airborne physics from any height kick.
+## Smaller pop than a jump pad (jump mines) — airborne physics from any height kick.
 func pop_airborne(vz_speed: float) -> void:
 	if height > 0.0:
 		return
@@ -385,10 +385,12 @@ func escape_hop(direction: Vector2) -> void:
 	velocity = direction * ESCAPE_HOP_SPEED
 	pop_airborne(ESCAPE_HOP_VZ)
 
-func launch_from_ramp() -> void:
+## Jump pads call this; needs speed and ground. (Driveable RAMPS never launch —
+## they grade the floor over via ramp-flagged FloorZones.)
+func launch_from_jump() -> void:
 	if height > 0.0 or velocity.length() < min_launch_speed:
 		return
-	vz = ramp_launch
+	vz = jump_launch
 	_set_airborne(true)
 
 ## Over the edge: kill physics and collisions, shrink into the void, then die

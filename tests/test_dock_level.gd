@@ -85,30 +85,30 @@ func test_dock_structure() -> void:
 				touches += 1
 		t.check(touches >= 2, "dock: %s connects two roof surfaces (touches %d)" % [bname, touches])
 
-	# Props keep their distance: no container inside another, and every ramp
-	# belongs to exactly one terrace and stands clear of solid scenery.
+	# Props keep their distance: no container inside another, and every jump
+	# pad belongs to exactly one terrace and stands clear of solid scenery.
 	var boxes: Array = []
-	var ramp_solids: Array = []
-	var ramps: Array = []
+	var pad_solids: Array = []
+	var pads: Array = []
 	for child in dock.get_children():
 		var n := String(child.name)
 		if n.begins_with("Container"):
 			boxes.append(child)
-			ramp_solids.append(child)
+			pad_solids.append(child)
 		elif n.begins_with("Warehouse") or n.begins_with("Rail") or n == "RetainingWall":
-			ramp_solids.append(child)
+			pad_solids.append(child)
 		elif child is Area2D and child.get_script() != null \
-				and (child.get_script() as Script).resource_path.ends_with("ramp.gd"):
-			ramps.append(child)
+				and (child.get_script() as Script).resource_path.ends_with("jump_pad.gd"):
+			pads.append(child)
 	for i in boxes.size():
 		for j in range(i + 1, boxes.size()):
 			t.check(not _body_rect(boxes[i]).intersects(_body_rect(boxes[j])),
 				"dock: %s and %s don't overlap" % [boxes[i].name, boxes[j].name])
-	t.check(ramps.size() == 8, "dock: eight ramps found (got %d)" % ramps.size())
-	for r in ramps:
+	t.check(pads.size() == 8, "dock: eight jump pads found (got %d)" % pads.size())
+	for r in pads:
 		t.check(int(r.get("floor_index")) >= 1, "dock: %s belongs to one terrace" % r.name)
 		var rr := _body_rect(r)
-		for solid in ramp_solids:
+		for solid in pad_solids:
 			t.check(not rr.intersects(_body_rect(solid)),
 				"dock: %s stands clear of %s" % [r.name, solid.name])
 

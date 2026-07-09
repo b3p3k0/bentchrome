@@ -1,15 +1,17 @@
-class_name Ramp
+class_name JumpPad
 extends Area2D
-## Launches a vehicle that drives over it into the air (fake depth).
+## The square launch pad: fires a vehicle that drives over it into the air
+## (fake depth). Formerly called "ramp" — that name now belongs to the
+## DRIVEABLE floor transitions (environment/ramp.gd); pads JUMP, ramps CLIMB.
 ## Paint: reads size from the Col rect (building_deco pattern), hides the flat
 ## orange Vis, and draws a truncated 4-sided pyramid — trapezoid faces rising
 ## to a caution-striped plateau, hazard-striped border around the FULL
-## perimeter. Ramps launch in whatever direction you're moving, so the paint
+## perimeter. Pads launch in whatever direction you're moving, so the paint
 ## is deliberately omnidirectional (authored square); the striped top reads
 ## "launcher marker", not a parkable platform.
-## On multi-floor levels a ramp BELONGS to one terrace (floor_index) — a roof
-## car crossing above a street ramp's footprint never triggers it. Author
-## ramps clear of building footprints regardless; the gate is the backstop.
+## On multi-floor levels a pad BELONGS to one terrace (floor_index) — a roof
+## car crossing above a street pad's footprint never triggers it. Author
+## pads clear of building footprints regardless; the gate is the backstop.
 
 const FACE_LIT := Color(1.0, 0.72, 0.25)   # north face — sun from the top
 const FACE_MID := Color(0.85, 0.55, 0.16)  # east/west faces
@@ -40,7 +42,7 @@ func _ready() -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if body is Vehicle and Floors.same_floor(self, body):
-		body.launch_from_ramp()
+		body.launch_from_jump()
 
 func _draw() -> void:
 	if _size == Vector2.ZERO:

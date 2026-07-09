@@ -45,7 +45,7 @@ func _rig() -> Dictionary:
 	container.add_child(target)
 	return {"container": container, "hunter": hunter, "target": target}
 
-func _connector(container: Node, pos: Vector2, from: int, to: int, kind := &"ramp") -> Node2D:
+func _connector(container: Node, pos: Vector2, from: int, to: int, kind := &"jump") -> Node2D:
 	var c = ConnectorScript.new()
 	c.from_floor = from
 	c.to_floor = to
@@ -80,9 +80,9 @@ func test_no_route_stays_in_pursue() -> void:
 	d.free()
 	_done(rig)
 
-func test_two_phase_run_and_ramp_boost() -> void:
+func test_two_phase_run_and_jump_boost() -> void:
 	var rig := _rig()
-	var _ramp := _connector(rig.container, Vector2(200, 0), 2, 3)  # approach +x
+	var _pad := _connector(rig.container, Vector2(200, 0), 2, 3)  # approach +x
 	var d = DriverScript.new()
 	d._enter_navigate(rig.hunter, rig.target, 2, 3)
 	# Far from the entry lead point (-20, 0): approach phase, no boost.
@@ -96,7 +96,7 @@ func test_two_phase_run_and_ramp_boost() -> void:
 	rig.hunter.global_position = Vector2(-25, 5)
 	intent = d._navigate_intent(rig.hunter, rig.target, 2, true, Vector2(100, 0), 0.016)
 	t.check(d._nav_phase == 1, "nav: entry reached, committed")
-	t.check(intent["boost"], "nav: ramp commit boosts (launch needs speed)")
+	t.check(intent["boost"], "nav: jump-pad commit boosts (launch needs speed)")
 	t.check_approx(intent["throttle"], 1.0, "nav: commit is full throttle")
 	d.free()
 	_done(rig)

@@ -36,7 +36,7 @@ const FIRE_RANGE := 1000.0
 const Floors := preload("res://game/floors.gd")  # terraced-floor math
 
 # NAVIGATE (floor levels only): a cross-floor target needs a connector — an
-# authored FloorConnector marking a ramp up or a drop edge down. Committed
+# authored FloorConnector marking a jump pad up or a drop edge down. Committed
 # two-phase waypoint run (the CLEAR pattern — decide once, drive it): APPROACH
 # the entry point, then COMMIT full-throttle through the exit; never re-picked
 # per frame. Ambusher/opportunist mixes holding an armed tracking secondary
@@ -467,7 +467,7 @@ func _enter_navigate(vehicle, target, vfloor: int, tfloor: int) -> bool:
 	return true
 
 ## The committed run: approach the entry lead point, then full-throttle
-## through the exit lead (boosting on ramps — launching needs >=120). Exits
+## through the exit lead (boosting on jump pads — launching needs >=120). Exits
 ## on any floor change, timeout, target floor match, or a flee trip; stuck
 ## machinery stays live underneath (UNSTICK/hop own their reversing).
 func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vector2, delta: float) -> Dictionary:
@@ -490,8 +490,8 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 	if _update_stuck(real_vel.length(), true, delta):
 		return _on_stuck(vehicle, target, (waypoint - vehicle.global_position).angle())
 	var diff := wrapf((waypoint - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
-	# COMMIT flies blind: every ramp points at a wall (that's what makes it a
-	# ramp up), so feeler avoidance would steer us off our own runway. The
+	# COMMIT flies blind: every jump pad points at a wall (that's what makes
+	# it a way up), so feeler avoidance would steer us off our own runway. The
 	# stuck trip above still owns genuine wedges.
 	var bias := 0.0 if _nav_phase == 1 else _avoid_bias * AVOID_GAIN
 	return {
@@ -499,7 +499,7 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 		"steer": clampf(diff * 2.0 + bias, -1.0, 1.0),
 		"fire_mg": false,
 		"fire_selected": false,
-		"boost": _nav_phase == 1 and c.get("kind") == &"ramp",
+		"boost": _nav_phase == 1 and c.get("kind") == &"jump",
 	}
 
 ## The selected secondary tracks (homing) — the only thing allowed to fire

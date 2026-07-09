@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
-[ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
+[ext_resource type="Script" path="res://environment/jump_pad.gd" id="4_ramp"]
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
 [ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
@@ -590,116 +590,116 @@ collision_mask = 0
 [node name="Col" type="CollisionShape2D" parent="ShipHull"]
 shape = SubResource("R_hull")
 
-[node name="RampLowN" type="Area2D" parent="."]
+[node name="JumpLowN" type="Area2D" parent="."]
 position = Vector2(-1544, -512)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 1
 
-[node name="Vis" type="Polygon2D" parent="RampLowN"]
+[node name="Vis" type="Polygon2D" parent="JumpLowN"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampLowN"]
+[node name="Col" type="CollisionShape2D" parent="JumpLowN"]
 shape = SubResource("R_ramp_v")
 
-[node name="RampLowS" type="Area2D" parent="."]
+[node name="JumpLowS" type="Area2D" parent="."]
 position = Vector2(-1544, 640)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 1
 
-[node name="Vis" type="Polygon2D" parent="RampLowS"]
+[node name="Vis" type="Polygon2D" parent="JumpLowS"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampLowS"]
+[node name="Col" type="CollisionShape2D" parent="JumpLowS"]
 shape = SubResource("R_ramp_v")
 
-[node name="RampW1" type="Area2D" parent="."]
+[node name="JumpW1" type="Area2D" parent="."]
 position = Vector2(-1144, -1120)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampW1"]
+[node name="Vis" type="Polygon2D" parent="JumpW1"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampW1"]
+[node name="Col" type="CollisionShape2D" parent="JumpW1"]
 shape = SubResource("R_ramp_v")
 
-[node name="RampW2" type="Area2D" parent="."]
+[node name="JumpW2" type="Area2D" parent="."]
 position = Vector2(640, -712)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampW2"]
+[node name="Vis" type="Polygon2D" parent="JumpW2"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampW2"]
+[node name="Col" type="CollisionShape2D" parent="JumpW2"]
 shape = SubResource("R_ramp_h")
 
-[node name="RampW3" type="Area2D" parent="."]
+[node name="JumpW3" type="Area2D" parent="."]
 position = Vector2(1856, -1528)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampW3"]
+[node name="Vis" type="Polygon2D" parent="JumpW3"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampW3"]
+[node name="Col" type="CollisionShape2D" parent="JumpW3"]
 shape = SubResource("R_ramp_h")
 
-[node name="RampW5" type="Area2D" parent="."]
+[node name="JumpW5" type="Area2D" parent="."]
 position = Vector2(1144, 140)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampW5"]
+[node name="Vis" type="Polygon2D" parent="JumpW5"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampW5"]
+[node name="Col" type="CollisionShape2D" parent="JumpW5"]
 shape = SubResource("R_ramp_v")
 
-[node name="RampW6" type="Area2D" parent="."]
+[node name="JumpW6" type="Area2D" parent="."]
 position = Vector2(1288, 560)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampW6"]
+[node name="Vis" type="Polygon2D" parent="JumpW6"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampW6"]
+[node name="Col" type="CollisionShape2D" parent="JumpW6"]
 shape = SubResource("R_ramp_v")
 
-[node name="RampShip" type="Area2D" parent="."]
+[node name="JumpShip" type="Area2D" parent="."]
 position = Vector2(552, 1310)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
 floor_index = 2
 
-[node name="Vis" type="Polygon2D" parent="RampShip"]
+[node name="Vis" type="Polygon2D" parent="JumpShip"]
 color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
-[node name="Col" type="CollisionShape2D" parent="RampShip"]
+[node name="Col" type="CollisionShape2D" parent="JumpShip"]
 shape = SubResource("R_ramp_v")
 
 [node name="CurbQuay1" parent="." instance=ExtResource("26_curb")]
@@ -1126,7 +1126,7 @@ script = ExtResource("27_conn")
 from_floor = 1
 to_floor = 2
 approach_dir = Vector2(1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConLowUpS" type="Node2D" parent="."]
 position = Vector2(-1544, 640)
@@ -1134,7 +1134,7 @@ script = ExtResource("27_conn")
 from_floor = 1
 to_floor = 2
 approach_dir = Vector2(1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConPlateDownN" type="Node2D" parent="."]
 position = Vector2(-1368, -896)
@@ -1158,7 +1158,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConW2Up" type="Node2D" parent="."]
 position = Vector2(640, -712)
@@ -1166,7 +1166,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(0, -1)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConW3Up" type="Node2D" parent="."]
 position = Vector2(1856, -1528)
@@ -1174,7 +1174,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(0, 1)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConW5Up" type="Node2D" parent="."]
 position = Vector2(1144, 140)
@@ -1182,7 +1182,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(-1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConW6Up" type="Node2D" parent="."]
 position = Vector2(1288, 560)
@@ -1190,7 +1190,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConShipUp" type="Node2D" parent="."]
 position = Vector2(552, 1310)
@@ -1198,7 +1198,7 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
 approach_dir = Vector2(1, 0)
-kind = &"ramp"
+kind = &"jump"
 
 [node name="ConW1Down" type="Node2D" parent="."]
 position = Vector2(-640, -872)
