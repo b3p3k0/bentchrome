@@ -10,13 +10,14 @@ const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the
-## freeway, through the suburbs, into the mountains.
+## freeway, through the suburbs, into the mountains, and down to the harbor.
 const CAMPAIGN := [
 	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown"},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop"},
 	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs"},
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass"},
 	{"scene": "res://levels/depot/depot.tscn", "name": "The Depot"},
+	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks"},
 ]
 
 func to_title() -> void:

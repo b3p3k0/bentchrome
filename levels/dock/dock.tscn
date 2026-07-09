@@ -1,0 +1,1060 @@
+[gd_scene load_steps=37 format=3]
+
+[ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="4_ramp"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
+[ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
+[ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="23_wreck"]
+[ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="24_fzone"]
+[ext_resource type="PackedScene" path="res://environment/deep_water_zone.tscn" id="25_dwater"]
+[ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="26_curb"]
+[ext_resource type="Script" path="res://environment/floor_connector.gd" id="27_conn"]
+[ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
+
+[sub_resource type="ShaderMaterial" id="SM_asphalt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.12, 0.12, 0.14, 1)
+shader_parameter/speckle_color = Color(0.07, 0.07, 0.09, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_dirt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.5, 0.36, 0.2, 0.5)
+shader_parameter/speckle_color = Color(0.32, 0.22, 0.12, 1)
+shader_parameter/density = 0.3
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 8.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_grass"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.25, 0.5, 0.22, 0.5)
+shader_parameter/speckle_color = Color(0.14, 0.36, 0.11, 1)
+shader_parameter/density = 0.35
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 10.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_water"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.15, 0.3, 0.55, 0.6)
+shader_parameter/speckle_color = Color(0.45, 0.65, 0.9, 1)
+shader_parameter/density = 0.22
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 14.0
+shader_parameter/shimmer = 1.6
+
+[sub_resource type="RectangleShape2D" id="R_wall_h"]
+size = Vector2(5200, 40)
+
+[sub_resource type="RectangleShape2D" id="R_wall_v"]
+size = Vector2(40, 3664)
+
+[sub_resource type="RectangleShape2D" id="R_dirt"]
+size = Vector2(1152, 2848)
+
+[sub_resource type="RectangleShape2D" id="R_grass"]
+size = Vector2(400, 300)
+
+[sub_resource type="RectangleShape2D" id="R_beach"]
+size = Vector2(1152, 256)
+
+[sub_resource type="RectangleShape2D" id="R_wh_a"]
+size = Vector2(768, 576)
+
+[sub_resource type="RectangleShape2D" id="R_wh_b"]
+size = Vector2(896, 640)
+
+[sub_resource type="RectangleShape2D" id="R_wh_c"]
+size = Vector2(896, 512)
+
+[sub_resource type="RectangleShape2D" id="R_ret_wall"]
+size = Vector2(24, 2912)
+
+[sub_resource type="RectangleShape2D" id="R_hull"]
+size = Vector2(1312, 512)
+
+[sub_resource type="RectangleShape2D" id="R_ramp_h"]
+size = Vector2(256, 160)
+
+[sub_resource type="RectangleShape2D" id="R_ramp_v"]
+size = Vector2(160, 256)
+
+[node name="Dock" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Asphalt" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-2560, -1792, 2560, -1792, 2560, 1792, -2560, 1792)
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("1_grid")
+extent = Vector2(2560, 1792)
+
+[node name="RoadMarks" type="Node2D" parent="."]
+
+[node name="QuayLine" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1400, 1096, 1110, 1096)
+style = &"dashed_yellow"
+
+[node name="CenterLane" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(0, -1700, 0, 1040)
+style = &"dashed_white"
+
+[node name="NorthLane" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1350, -1600, 2350, -1600)
+style = &"dashed_white"
+
+[node name="LowlandDirt" type="Area2D" parent="."]
+position = Vector2(-1984, -368)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"dirt"
+
+[node name="Vis" type="Polygon2D" parent="LowlandDirt"]
+material = SubResource("SM_dirt")
+color = Color(0.5, 0.36, 0.2, 0.5)
+polygon = PackedVector2Array(-576, -1424, 576, -1424, 576, 1424, -576, 1424)
+
+[node name="Col" type="CollisionShape2D" parent="LowlandDirt"]
+shape = SubResource("R_dirt")
+
+[node name="GrassN" type="Area2D" parent="."]
+position = Vector2(-2100, -900)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="GrassN"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-200, -150, 200, -150, 200, 150, -200, 150)
+
+[node name="Col" type="CollisionShape2D" parent="GrassN"]
+shape = SubResource("R_grass")
+
+[node name="GrassS" type="Area2D" parent="."]
+position = Vector2(-1750, 200)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="GrassS"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-200, -150, 200, -150, 200, 150, -200, 150)
+
+[node name="Col" type="CollisionShape2D" parent="GrassS"]
+shape = SubResource("R_grass")
+
+[node name="Beach" type="Area2D" parent="."]
+position = Vector2(-1984, 1184)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+
+[node name="Vis" type="Polygon2D" parent="Beach"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-576, -128, 576, -128, 576, 128, -576, 128)
+
+[node name="Col" type="CollisionShape2D" parent="Beach"]
+shape = SubResource("R_beach")
+
+[node name="FZLowland" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-1984, 0)
+floor_index = 1
+size = Vector2(1152, 3584)
+
+[node name="FZSouthWater" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(576, 1456)
+floor_index = 1
+size = Vector2(3968, 672)
+
+[node name="FZPlate" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(576, -336)
+floor_index = 2
+size = Vector2(3968, 2912)
+
+[node name="FZPierA" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-960, 1392)
+floor_index = 2
+size = Vector2(256, 544)
+
+[node name="FZPierB" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-128, 1392)
+floor_index = 2
+size = Vector2(256, 544)
+
+[node name="FZPierC" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(800, 1310)
+floor_index = 2
+size = Vector2(448, 380)
+
+[node name="FZRoofW1" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-640, -1120)
+floor_index = 3
+size = Vector2(768, 576)
+
+[node name="FZRoofW2" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(640, -1120)
+floor_index = 3
+size = Vector2(768, 576)
+
+[node name="FZRoofW3" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(1856, -1088)
+floor_index = 3
+size = Vector2(896, 640)
+
+[node name="FZRoofW4" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-640, 32)
+floor_index = 3
+size = Vector2(768, 576)
+
+[node name="FZRoofW5" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(640, 160)
+floor_index = 3
+size = Vector2(768, 576)
+
+[node name="FZRoofW6" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(1856, 512)
+floor_index = 3
+size = Vector2(896, 512)
+
+[node name="FZDeck" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(1776, 1375)
+floor_index = 3
+size = Vector2(1240, 450)
+
+[node name="DWLowland" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(-1984, 1552)
+size = Vector2(1152, 480)
+
+[node name="DWQuay1" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(-1248, 1456)
+size = Vector2(320, 672)
+
+[node name="DWQuay2" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(-544, 1456)
+size = Vector2(576, 672)
+
+[node name="DWQuay3" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(288, 1456)
+size = Vector2(576, 672)
+
+[node name="DWGap" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(1072, 1456)
+size = Vector2(96, 672)
+
+[node name="DWPierA" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(-960, 1728)
+size = Vector2(256, 128)
+
+[node name="DWPierB" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(-128, 1728)
+size = Vector2(256, 128)
+
+[node name="DWPierC" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(800, 1646)
+size = Vector2(448, 292)
+
+[node name="DWShipS" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(1776, 1712)
+size = Vector2(1312, 160)
+
+[node name="DWShipE" parent="." instance=ExtResource("25_dwater")]
+position = Vector2(2496, 1456)
+size = Vector2(128, 672)
+
+[node name="PierDecoA" type="Node2D" parent="."]
+position = Vector2(-960, 1392)
+script = ExtResource("28_ddeco")
+kind = &"pier_surface"
+size = Vector2(256, 544)
+
+[node name="PierDecoB" type="Node2D" parent="."]
+position = Vector2(-128, 1392)
+script = ExtResource("28_ddeco")
+kind = &"pier_surface"
+size = Vector2(256, 544)
+
+[node name="PierDecoC" type="Node2D" parent="."]
+position = Vector2(800, 1310)
+script = ExtResource("28_ddeco")
+kind = &"pier_surface"
+size = Vector2(448, 380)
+
+[node name="ShipDeco" type="Node2D" parent="."]
+position = Vector2(1776, 1376)
+script = ExtResource("28_ddeco")
+kind = &"ship_hull"
+size = Vector2(1312, 512)
+
+[node name="CraneQuay" type="Node2D" parent="."]
+position = Vector2(-350, 1010)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"crane"
+size = Vector2(400, 220)
+
+[node name="CraneBerth" type="Node2D" parent="."]
+position = Vector2(1150, 990)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"crane"
+size = Vector2(360, 200)
+
+[node name="Warehouse1" type="StaticBody2D" parent="."]
+position = Vector2(-640, -1120)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse1"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-384, -288, 384, -288, 384, 288, -384, 288)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse1"]
+shape = SubResource("R_wh_a")
+
+[node name="Warehouse2" type="StaticBody2D" parent="."]
+position = Vector2(640, -1120)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse2"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-384, -288, 384, -288, 384, 288, -384, 288)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse2"]
+shape = SubResource("R_wh_a")
+
+[node name="Warehouse3" type="StaticBody2D" parent="."]
+position = Vector2(1856, -1088)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse3"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-448, -320, 448, -320, 448, 320, -448, 320)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse3"]
+shape = SubResource("R_wh_b")
+
+[node name="Warehouse4" type="StaticBody2D" parent="."]
+position = Vector2(-640, 32)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse4"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-384, -288, 384, -288, 384, 288, -384, 288)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse4"]
+shape = SubResource("R_wh_a")
+
+[node name="Warehouse5" type="StaticBody2D" parent="."]
+position = Vector2(640, 160)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse5"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-384, -288, 384, -288, 384, 288, -384, 288)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse5"]
+shape = SubResource("R_wh_a")
+
+[node name="Warehouse6" type="StaticBody2D" parent="."]
+position = Vector2(1856, 512)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("12_deco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="Warehouse6"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-448, -256, 448, -256, 448, 256, -448, 256)
+
+[node name="Col" type="CollisionShape2D" parent="Warehouse6"]
+shape = SubResource("R_wh_c")
+
+[node name="RetainingWall" type="StaticBody2D" parent="."]
+position = Vector2(-1408, -336)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RetainingWall"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-12, -1456, 12, -1456, 12, 1456, -12, 1456)
+
+[node name="Col" type="CollisionShape2D" parent="RetainingWall"]
+shape = SubResource("R_ret_wall")
+
+[node name="ShipHull" type="StaticBody2D" parent="."]
+position = Vector2(1776, 1376)
+collision_layer = 28
+collision_mask = 0
+
+[node name="Col" type="CollisionShape2D" parent="ShipHull"]
+shape = SubResource("R_hull")
+
+[node name="RampLowN" type="Area2D" parent="."]
+position = Vector2(-1520, -512)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampLowN"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampLowN"]
+shape = SubResource("R_ramp_v")
+
+[node name="RampLowS" type="Area2D" parent="."]
+position = Vector2(-1520, 640)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampLowS"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampLowS"]
+shape = SubResource("R_ramp_v")
+
+[node name="RampW1" type="Area2D" parent="."]
+position = Vector2(-1088, -1120)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampW1"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampW1"]
+shape = SubResource("R_ramp_v")
+
+[node name="RampW2" type="Area2D" parent="."]
+position = Vector2(640, -768)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampW2"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-128, -80, 128, -80, 128, 80, -128, 80)
+
+[node name="Col" type="CollisionShape2D" parent="RampW2"]
+shape = SubResource("R_ramp_h")
+
+[node name="RampW3" type="Area2D" parent="."]
+position = Vector2(1856, -1472)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampW3"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-128, -80, 128, -80, 128, 80, -128, 80)
+
+[node name="Col" type="CollisionShape2D" parent="RampW3"]
+shape = SubResource("R_ramp_h")
+
+[node name="RampW5" type="Area2D" parent="."]
+position = Vector2(1088, 160)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampW5"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampW5"]
+shape = SubResource("R_ramp_v")
+
+[node name="RampW6" type="Area2D" parent="."]
+position = Vector2(1344, 512)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampW6"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampW6"]
+shape = SubResource("R_ramp_v")
+
+[node name="RampShip" type="Area2D" parent="."]
+position = Vector2(880, 1310)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+
+[node name="Vis" type="Polygon2D" parent="RampShip"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-80, -128, 80, -128, 80, 128, -80, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RampShip"]
+shape = SubResource("R_ramp_v")
+
+[node name="CurbQuay1" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-1248, 1132)
+size = Vector2(320, 20)
+
+[node name="CurbQuay2" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-544, 1132)
+size = Vector2(576, 20)
+
+[node name="CurbQuay3" parent="." instance=ExtResource("26_curb")]
+position = Vector2(288, 1132)
+size = Vector2(576, 20)
+
+[node name="CurbQuayGap" parent="." instance=ExtResource("26_curb")]
+position = Vector2(1072, 1132)
+size = Vector2(96, 20)
+
+[node name="CurbPierAW" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-1100, 1400)
+size = Vector2(20, 550)
+
+[node name="CurbPierAE" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-820, 1400)
+size = Vector2(20, 550)
+
+[node name="CurbPierAS" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-960, 1676)
+size = Vector2(280, 20)
+
+[node name="CurbPierBW" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-268, 1400)
+size = Vector2(20, 550)
+
+[node name="CurbPierBE" parent="." instance=ExtResource("26_curb")]
+position = Vector2(12, 1400)
+size = Vector2(20, 550)
+
+[node name="CurbPierBS" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-128, 1676)
+size = Vector2(280, 20)
+
+[node name="CurbPierCW" parent="." instance=ExtResource("26_curb")]
+position = Vector2(564, 1320)
+size = Vector2(20, 400)
+
+[node name="CurbPierCS" parent="." instance=ExtResource("26_curb")]
+position = Vector2(800, 1512)
+size = Vector2(470, 20)
+
+[node name="CurbPierCE" parent="." instance=ExtResource("26_curb")]
+position = Vector2(1036, 1480)
+size = Vector2(20, 70)
+
+[node name="CurbDeckW" parent="." instance=ExtResource("26_curb")]
+position = Vector2(1146, 1375)
+size = Vector2(20, 420)
+
+[node name="CurbShore" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-1984, 1324)
+size = Vector2(1152, 20)
+
+[node name="RailDeck1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1250, 1612)
+size = Vector2(192, 16)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeck2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1500, 1612)
+size = Vector2(192, 16)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeck3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1750, 1612)
+size = Vector2(192, 16)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeck4" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2000, 1612)
+size = Vector2(192, 16)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeck5" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2250, 1612)
+size = Vector2(192, 16)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeckE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2408, 1280)
+size = Vector2(16, 160)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="RailDeckE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2408, 1480)
+size = Vector2(16, 160)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 3
+
+[node name="ContainerA1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-650, 570)
+size = Vector2(256, 96)
+max_hp = 70.0
+deco = &"container"
+floor_index = 2
+
+[node name="ContainerA2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-480, 690)
+size = Vector2(224, 88)
+max_hp = 70.0
+deco = &"container"
+floor_index = 2
+
+[node name="ContainerB1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(350, 950)
+size = Vector2(256, 96)
+max_hp = 70.0
+deco = &"container"
+floor_index = 2
+
+[node name="ContainerC1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1250, -480)
+size = Vector2(256, 96)
+max_hp = 70.0
+deco = &"container"
+floor_index = 2
+
+[node name="ContainerDeck1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1500, 1300)
+size = Vector2(224, 80)
+max_hp = 70.0
+deco = &"container"
+floor_index = 3
+
+[node name="ContainerDeck2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2250, 1250)
+size = Vector2(224, 80)
+max_hp = 70.0
+deco = &"container"
+floor_index = 3
+
+[node name="Barrel1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-212, -870)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+floor_index = 2
+
+[node name="Barrel2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1360, -720)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+floor_index = 2
+
+[node name="Barrel3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(204, 490)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+floor_index = 2
+
+[node name="Junk1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1700, 480)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"junk"
+floor_index = 1
+
+[node name="Bollard1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1300, 1060)
+kind = &"bollard"
+floor_index = 2
+
+[node name="Bollard2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-700, 1060)
+kind = &"bollard"
+floor_index = 2
+
+[node name="Bollard3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-100, 1060)
+kind = &"bollard"
+floor_index = 2
+
+[node name="Bollard4" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(500, 1060)
+kind = &"bollard"
+floor_index = 2
+
+[node name="Pallet1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-450, 980)
+kind = &"pallet"
+floor_index = 2
+
+[node name="Pallet2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(250, 980)
+kind = &"pallet"
+floor_index = 2
+
+[node name="Pallet3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1250, 40)
+kind = &"pallet"
+floor_index = 2
+
+[node name="Cone1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1250, -520)
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(300, -600)
+kind = &"cone"
+floor_index = 2
+
+[node name="Sign1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1330, -1500)
+kind = &"sign"
+floor_index = 2
+
+[node name="Brush1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-2350, -350)
+kind = &"brush"
+floor_index = 1
+
+[node name="Brush2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1600, -1200)
+kind = &"brush"
+floor_index = 1
+
+[node name="Brush3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-2400, 700)
+kind = &"brush"
+floor_index = 1
+
+[node name="Trash1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1900, 1000)
+kind = &"trash"
+floor_index = 1
+
+[node name="Wreck1" parent="." instance=ExtResource("23_wreck")]
+position = Vector2(-1800, -700)
+rotation = 0.3
+floor_index = 1
+
+[node name="Wreck2" parent="." instance=ExtResource("23_wreck")]
+position = Vector2(-2100, 800)
+rotation = -0.2
+floor_index = 1
+
+[node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
+position = Vector2(-2144, -1216)
+
+[node name="HealthStation2" parent="." instance=ExtResource("10_heal")]
+position = Vector2(100, -550)
+
+[node name="HealthStation3" parent="." instance=ExtResource("10_heal")]
+position = Vector2(2200, 960)
+
+[node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-400, -400)
+
+[node name="AmmoStandard2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1216, -200)
+
+[node name="AmmoStandardDeck" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(2250, 1500)
+
+[node name="AmmoHoming1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-128, 1580)
+kind = "homing"
+amount = 1
+
+[node name="AmmoHoming2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-640, -1120)
+kind = "homing"
+amount = 1
+
+[node name="AmmoPower1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(640, -1120)
+kind = "power"
+amount = 1
+
+[node name="AmmoPower2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1856, 512)
+kind = "power"
+amount = 1
+
+[node name="AmmoPowerDeck" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1776, 1300)
+kind = "power"
+amount = 1
+
+[node name="AmmoMine1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1856, -1088)
+kind = "mine"
+amount = 2
+
+[node name="AmmoMinePier" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-960, 1560)
+kind = "mine"
+amount = 1
+
+[node name="AmmoJump1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(640, 160)
+kind = "jump"
+amount = 1
+
+[node name="ConLowUpN" type="Node2D" parent="."]
+position = Vector2(-1520, -512)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"ramp"
+
+[node name="ConLowUpS" type="Node2D" parent="."]
+position = Vector2(-1520, 640)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"ramp"
+
+[node name="ConPlateDownN" type="Node2D" parent="."]
+position = Vector2(-1368, -896)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(-1, 0)
+kind = &"edge"
+
+[node name="ConPlateDownS" type="Node2D" parent="."]
+position = Vector2(-1368, 384)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(-1, 0)
+kind = &"edge"
+
+[node name="ConW1Up" type="Node2D" parent="."]
+position = Vector2(-1088, -1120)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(1, 0)
+kind = &"ramp"
+
+[node name="ConW2Up" type="Node2D" parent="."]
+position = Vector2(640, -768)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, -1)
+kind = &"ramp"
+
+[node name="ConW3Up" type="Node2D" parent="."]
+position = Vector2(1856, -1472)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, 1)
+kind = &"ramp"
+
+[node name="ConW5Up" type="Node2D" parent="."]
+position = Vector2(1088, 160)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(-1, 0)
+kind = &"ramp"
+
+[node name="ConW6Up" type="Node2D" parent="."]
+position = Vector2(1344, 512)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(1, 0)
+kind = &"ramp"
+
+[node name="ConShipUp" type="Node2D" parent="."]
+position = Vector2(880, 1310)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(1, 0)
+kind = &"ramp"
+
+[node name="ConW1Down" type="Node2D" parent="."]
+position = Vector2(-296, -1120)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"edge"
+
+[node name="ConW2Down" type="Node2D" parent="."]
+position = Vector2(296, -1120)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"edge"
+
+[node name="ConW3Down" type="Node2D" parent="."]
+position = Vector2(1856, -808)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, 1)
+kind = &"edge"
+
+[node name="ConW4Down" type="Node2D" parent="."]
+position = Vector2(-296, 32)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"edge"
+
+[node name="ConW5Down" type="Node2D" parent="."]
+position = Vector2(984, 160)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"edge"
+
+[node name="ConW6Down" type="Node2D" parent="."]
+position = Vector2(1448, 512)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"edge"
+
+[node name="ConShipDown" type="Node2D" parent="."]
+position = Vector2(1700, 1180)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, -1)
+kind = &"edge"
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="TopVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, -1812)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-2600, -20, 2600, -20, 2600, 20, -2600, 20)
+
+[node name="TopCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -1812)
+shape = SubResource("R_wall_h")
+
+[node name="BottomVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, 1812)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-2600, -20, 2600, -20, 2600, 20, -2600, 20)
+
+[node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 1812)
+shape = SubResource("R_wall_h")
+
+[node name="LeftVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-2580, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+
+[node name="LeftCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-2580, 0)
+shape = SubResource("R_wall_v")
+
+[node name="RightVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(2580, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+
+[node name="RightCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(2580, 0)
+shape = SubResource("R_wall_v")
+
+[node name="Vehicle" parent="." instance=ExtResource("2_veh")]
+position = Vector2(-1150, -200)
+start_floor = 2
+
+[node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(-2200, 200)
+start_floor = 1
+
+[node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(-600, -1550)
+start_floor = 2
+
+[node name="Enemy3" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(640, -1100)
+start_floor = 3
+
+[node name="Enemy4" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(1216, -1050)
+start_floor = 2
+
+[node name="Enemy5" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(600, 700)
+start_floor = 2
+
+[node name="Enemy6" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(1900, 1400)
+start_floor = 3
+
+[node name="Enemy7" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(-960, 1250)
+start_floor = 2
+
+[node name="HUD" parent="." instance=ExtResource("7_hud")]

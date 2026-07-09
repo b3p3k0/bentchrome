@@ -490,9 +490,13 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 	if _update_stuck(real_vel.length(), true, delta):
 		return _on_stuck(vehicle, target, (waypoint - vehicle.global_position).angle())
 	var diff := wrapf((waypoint - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
+	# COMMIT flies blind: every ramp points at a wall (that's what makes it a
+	# ramp up), so feeler avoidance would steer us off our own runway. The
+	# stuck trip above still owns genuine wedges.
+	var bias := 0.0 if _nav_phase == 1 else _avoid_bias * AVOID_GAIN
 	return {
 		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
-		"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+		"steer": clampf(diff * 2.0 + bias, -1.0, 1.0),
 		"fire_mg": false,
 		"fire_selected": false,
 		"boost": _nav_phase == 1 and c.get("kind") == &"ramp",

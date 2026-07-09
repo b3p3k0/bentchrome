@@ -46,6 +46,8 @@ const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 @export var ramp_launch := 760.0
 @export var min_launch_speed := 120.0
 @export var fall_damage_frac := 0.25  # of max HP, landing 2+ floors below takeoff
+@export var start_floor := -1  # authored spawn terrace — a roof spawn must never
+							   # boot with the legacy mask inside its warehouse
 
 @export_group("Ram")
 @export var ram_damage_scale := 0.06
@@ -110,6 +112,8 @@ func _ready() -> void:
 		_visual.scale = Vector2.ONE * body_scale
 	add_to_group(faction)        # "player" or "enemies" — identity
 	add_to_group(&"vehicles")    # every combatant, for free-for-all targeting
+	if start_floor >= 1:
+		_adopt_floor(start_floor)  # deferred masks land before the first physics tick
 	if faction != &"player":
 		# Same loadout as the player, a third of the trigger speed.
 		if _mg_mount:

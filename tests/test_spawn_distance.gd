@@ -11,6 +11,7 @@ const CAMPAIGN := [
 	"res://levels/suburbs/suburbs.tscn",
 	"res://levels/snowy/snowy.tscn",
 	"res://levels/depot/depot.tscn",
+	"res://levels/dock/dock.tscn",
 ]
 
 var t
