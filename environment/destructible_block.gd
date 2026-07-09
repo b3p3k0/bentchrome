@@ -39,9 +39,12 @@ const BARREL_RIM := Color(0.45, 0.09, 0.08)
 const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
 
+const Floors := preload("res://game/floors.gd")  # terraced-floor gates
+
 @export var size := Vector2(96, 96)
 @export var max_hp := 80.0
 @export var deco: StringName = &""  # paint style; "" = plain slab
+@export var floor_index := -1       # ≥1 joins that terrace's collision world
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
 
@@ -49,6 +52,8 @@ var _wreck := 0.0  # 0..1 battle damage, darkens the paint
 @onready var _vis: Polygon2D = $Vis
 
 func _ready() -> void:
+	if floor_index >= 1:
+		collision_layer |= Floors.floor_bit(floor_index)  # keeps bit 4 for the radar
 	var half := size * 0.5
 	_vis.polygon = PackedVector2Array([
 		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),
@@ -110,6 +115,8 @@ func _barrel_blast() -> void:
 	params.exclude = [get_rid()]
 	for hit in get_world_2d().direct_space_state.intersect_shape(params):
 		var body: Node = hit["collider"]
+		if not Floors.same_floor(self, body):
+			continue  # a dock-level fireball doesn't cook the roof
 		for child in body.get_children():
 			if child is Health:
 				child.take_damage(BLAST_DAMAGE)

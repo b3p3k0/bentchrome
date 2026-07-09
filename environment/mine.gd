@@ -6,6 +6,8 @@ extends Area2D
 ##   jump = true:  no damage — pops the car airborne and re-vectors it hard
 ##                 (±45-80°). Disruption, not a catapult.
 
+const Floors := preload("res://game/floors.gd")  # dependency-free floor gate
+
 const ARM_DELAY := 1.0
 const DROPPER_GRACE := 2.0
 const LAND_DEV_MIN := 5.0
@@ -18,6 +20,7 @@ const JUMP_VZ := 450.0
 
 var damage := 20.0
 var dropper: Node = null
+var floor_index := -1  # stamped at drop; the mine only arms for its own terrace
 
 var _age := 0.0
 
@@ -41,6 +44,8 @@ func _physics_process(delta: float) -> void:
 			continue
 		if body.get("height") != 0.0:  # airborne cars sail over
 			continue
+		if not Floors.same_floor(self, body):
+			continue  # a dock mine doesn't hear roof wheels
 		if not (body is CharacterBody2D):
 			continue
 		_trigger(body)

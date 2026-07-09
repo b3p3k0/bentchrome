@@ -6,6 +6,8 @@ extends Node
 ## from a car's VehicleStats (secondaries/specials). A stub weapon fires nothing.
 ## on_hit_effects (from the WeaponDef) ride along on each projectile.
 
+const Floors := preload("res://game/floors.gd")  # floor-mask stamping (dependency-free)
+
 @export var weapon: WeaponDef           # if set, overrides the fields below
 @export var fire_rate := 12.0
 @export var damage := 2.0
@@ -117,8 +119,10 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	var scene := get_tree().current_scene
 	if scene == null:
 		return
+	var tracking := turn_rate_deg > 0.0 and acquisition_radius > 0.0
+	var shooter_floor := Floors.floor_of(shooter)
 	var tgt: Node2D = null
-	if turn_rate_deg > 0.0 and acquisition_radius > 0.0:
+	if tracking:
 		tgt = Targeting.nearest_other(origin, shooter, acquisition_radius)
 	for i in pellets:
 		var dir := direction
@@ -132,6 +136,12 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 		p.hit_sfx = &"hit_mg" if heat_per_shot > 0.0 else &"hit_weapon"
 		if pierces_cover:
 			p.collision_mask &= ~4  # drop the obstacle bit — flies through cover
+		if shooter_floor >= 1:
+			# Floor levels: straight shots live entirely on the shooter's floor
+			# (own-floor cover blocks, cross-floor cars are never even signaled);
+			# tracking shots arc over floor statics and may hit any floor. This
+			# override subsumes pierces_cover — every piercing weapon tracks.
+			p.collision_mask = Floors.projectile_mask(shooter_floor, tracking)
 		scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects

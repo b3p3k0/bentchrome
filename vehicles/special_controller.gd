@@ -8,6 +8,7 @@ extends Node
 ## its handler here, while ordinary specials stay pure data on a projectile kind.
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
+const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
 
 const BEAM_DURATION := 4.0        # seconds a zap stays latched
 const BEAM_SLOW := 0.5            # handling cripple while zapped
@@ -88,6 +89,8 @@ func _drop(pressed: bool, shooter: Node) -> bool:
 	mine.global_position = vehicle.global_position - Vector2.RIGHT.rotated(heading) * 48.0
 	mine.damage = _def.damage
 	mine.dropper = shooter
+	if "floor_index" in mine:
+		mine.floor_index = Floors.floor_of(shooter)  # armed for the dropper's terrace
 	scene.add_child(mine)
 	return true
 
@@ -98,7 +101,7 @@ func _drop(pressed: bool, shooter: Node) -> bool:
 func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node) -> bool:
 	if not pressed or _beam_t > 0.0 or _def == null:
 		return false
-	var tgt := Targeting.nearest_other(origin, shooter, _def.acquisition_radius)
+	var tgt := Targeting.nearest_other(origin, shooter, _def.acquisition_radius, shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
 	_beam_target = tgt
@@ -165,8 +168,10 @@ func _beam_tick(delta: float) -> void:
 	var muzzle := vehicle.get_node_or_null("Visual/Muzzle") as Node2D
 	var origin: Vector2 = muzzle.global_position if muzzle else vehicle.global_position
 	var dist := origin.distance_to(_beam_target.global_position)
-	if dist > _def.acquisition_radius * BEAM_HOLD_FACTOR or not _los_clear(origin, _beam_target, vehicle):
-		_end_beam()
+	if dist > _def.acquisition_radius * BEAM_HOLD_FACTOR \
+			or not Floors.same_floor(vehicle, _beam_target) \
+			or not _los_clear(origin, _beam_target, vehicle):
+		_end_beam()  # a roof-drop snaps the taser, same as breaking LoS
 		return
 	if _beam_target.has_method("take_ram_damage"):
 		# Damage authored as dps; AI-on-AI runs through the governor.
@@ -206,7 +211,9 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 	var target_body := target as CollisionObject2D
 	if body == null or target_body == null:
 		return false
-	var query := PhysicsRayQueryParameters2D.create(from, target.global_position, 7)  # ground|wall|obstacle
+	# Legacy = ground|wall|obstacle (7); floor mode = walls + own-floor statics.
+	var query := PhysicsRayQueryParameters2D.create(
+		from, target.global_position, Floors.los_mask(Floors.floor_of(shooter)))
 	query.exclude = [body.get_rid(), target_body.get_rid()]
 	return body.get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
@@ -222,7 +229,7 @@ func _exit_tree() -> void:
 func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if not pressed or _dash_t > 0.0:
 		return false
-	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE)
+	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE, shooter)
 	_dash_dir = direction
 	_dash_t = DASH_DURATION
 	if shooter is CollisionObject2D:
@@ -309,6 +316,8 @@ func _flame_tick(delta: float) -> void:
 	params.exclude = [vehicle.get_rid()]
 	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
 		var body: Node = hit["collider"]
+		if not Floors.same_floor(vehicle, body):
+			continue  # the torch doesn't reach up to roofs or down to the shore
 		for child in body.get_children():
 			if child is Health:
 				child.take_damage(_def.damage * delta * Combat.scale(vehicle, body))
