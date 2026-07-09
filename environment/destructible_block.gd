@@ -42,6 +42,8 @@ const CONTAINER_PALETTES := [
 	Color(0.22, 0.45, 0.28),  # cargo green
 	Color(0.8, 0.45, 0.12),   # safety orange
 ]
+const LINK := Color(0.55, 0.6, 0.58)       # galvanized chain-link
+const LINK_DARK := Color(0.36, 0.4, 0.39)
 
 const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
@@ -52,6 +54,7 @@ const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 @export var max_hp := 80.0
 @export var deco: StringName = &""  # paint style; "" = plain slab
 @export var floor_index := -1       # ≥1 joins that terrace's collision world
+@export var livery := -1            # containers: CONTAINER_PALETTES index; -1 = seeded
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
 
@@ -107,6 +110,8 @@ func _boom_tint() -> Color:
 			return Color(1.0, 0.45, 0.15)  # fuel fire
 		&"fence":
 			return Color(0.9, 0.88, 0.82)  # splinters fly white
+		&"chainlink":
+			return Color(0.7, 0.74, 0.72)  # mesh crumples gray
 		_:
 			return BASE_COLOR
 
@@ -159,6 +164,8 @@ func _draw() -> void:
 			_draw_fence()
 		&"container":
 			_draw_container()
+		&"chainlink":
+			_draw_chainlink()
 
 func _draw_house() -> void:
 	var half := size * 0.5
@@ -297,7 +304,8 @@ func _draw_fence() -> void:
 func _draw_container() -> void:
 	var half := size * 0.5
 	var rng := _seed_rng()
-	var base: Color = CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+	var base: Color = CONTAINER_PALETTES[livery] if livery >= 0 and livery < CONTAINER_PALETTES.size() \
+		else CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
 	var dark := base.darkened(0.4)
 	draw_rect(Rect2(-half + Vector2(6, 9), size), SHADOW)  # stacked-steel height
 	draw_rect(Rect2(-half, size), _shade(base))
@@ -320,6 +328,29 @@ func _draw_container() -> void:
 	for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 		draw_rect(Rect2(corner * (half - Vector2(7, 7)) - Vector2(3, 3), Vector2(6, 6)), _shade(HAZARD_DARK))
 	draw_rect(Rect2(-half, size), _shade(dark), false, 2.5)
+
+## Harbor chain-link (top-down strip): top rail, post dots, sparse diamond-
+## mesh ticks. 12 HP class — crumples on a fender tap.
+func _draw_chainlink() -> void:
+	var half := size * 0.5
+	var tall := size.y > size.x
+	var run := size.y if tall else size.x
+	if tall:
+		draw_rect(Rect2(-1.5, -half.y, 3.0, size.y), _shade(LINK))
+	else:
+		draw_rect(Rect2(-half.x, -1.5, size.x, 3.0), _shade(LINK))
+	var ticks := maxi(int(run / 12.0), 2)
+	for i in ticks:
+		var tt := -run * 0.5 + run * (i + 0.5) / ticks
+		var d := 4.0 if i % 2 == 0 else -4.0
+		if tall:
+			draw_line(Vector2(-d, tt - 4.0), Vector2(d, tt + 4.0), _shade(LINK_DARK), 1.2)
+		else:
+			draw_line(Vector2(tt - 4.0, -d), Vector2(tt + 4.0, d), _shade(LINK_DARK), 1.2)
+	var posts := maxi(int(run / 64.0), 2)
+	for i in posts + 1:
+		var tt := clampf(-run * 0.5 + run * i / posts, -run * 0.5 + 3.0, run * 0.5 - 3.0)
+		draw_circle(Vector2(0.0, tt) if tall else Vector2(tt, 0.0), 3.0, _shade(LINK_DARK))
 
 ## Fuel barrel (top-down drum): red disc, rim ring, cap, hazard diamond.
 func _draw_barrel() -> void:

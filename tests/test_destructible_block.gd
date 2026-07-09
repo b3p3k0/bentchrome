@@ -55,6 +55,27 @@ func test_container_deco_and_floor_bit() -> void:
 	t.root.remove_child(block)
 	block.free()
 
+func test_chainlink_crumples_and_livery_overrides() -> void:
+	var fence = BlockScene.instantiate()
+	fence.deco = &"chainlink"
+	fence.size = Vector2(150, 12)
+	fence.max_hp = 12.0
+	t.root.add_child(fence)
+	t.check_approx(fence.get_node("Health").hp, 12.0, "chainlink: fender-tap HP class")
+	fence.get_node("Health").take_damage(12.0)
+	t.check(fence.is_queued_for_deletion(), "chainlink: crumples like any block")
+	t.root.remove_child(fence)
+	fence.free()
+	var block_src = load("res://environment/destructible_block.gd")
+	var palettes: Array = block_src.CONTAINER_PALETTES
+	var box = BlockScene.instantiate()
+	box.deco = &"container"
+	box.livery = 2
+	t.root.add_child(box)
+	t.check(box.livery >= 0 and box.livery < palettes.size(), "container: livery override in range")
+	t.root.remove_child(box)
+	box.free()
+
 func test_cross_floor_blast_is_gated() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
