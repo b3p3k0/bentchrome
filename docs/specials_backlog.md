@@ -17,6 +17,7 @@ the weapon `.tres` (see `data/weapons/splat_effect.tres` for the pattern).
 | Splat Cat | Splat Effect | PROJECTILE | Cobbled-iron harpoon; the skewered victim runs at half speed for 3s. Cap 2 / 6s. |
 | Bumper | Blunt Blaze | FLAME | Nose-anchored flame column (~300px, one fixed 3s burst per press, 27 dps); bathed targets ignite 10s (4 dps). Cap 2 / 15s — a committed play, not a hose. |
 | Smoky | Taser | BEAM | Living lightning bolt latches nearest car ≤400px (breaks past 800 or on LoS block), 4s zap (12 dps + slow). Cap 3 / 8s. |
+| **Lackey** | Blaze & Bolt + Breach Turret | FLAME+BEAM twin, turret | Twin special: Bumper's torch (clinch) + Smoky's taser (chase) drain ONE shared pool (2 / 10s; SpecialController picks per activation). The Breach Cannon is a LIVE auto-aiming turret: 45 dmg power-class shot / 2.8s / ~1100px range / 120°/s traverse — fires even during break-offs. No mines, ever. |
 | Cricket | Leap | DASH | Lock-on body-check ≤700px at 1400 px/s over obstacles; connect = ram damage + victim slow + 2s invuln. Cap 1 / 10s. |
 | Hammertoe | Toe Jam | TRIGGER | Armed charge (exhaust stacks smoke) — smash something within 5s or the charge is lost unspent: flat 60 replaces crash damage on a landed ram. Cap 1 / 8s. |
 
