@@ -23,6 +23,7 @@ var _hp_label: Label
 var _god_label: Label
 var _life_pips: Array = []
 var _speed_label: Label
+var _floor_label: Label  # multi-floor levels only; hidden on legacy (floor -1)
 var _heat_bar: ProgressBar
 var _heat_label: Label
 var _boost_bar: ProgressBar
@@ -44,6 +45,10 @@ func _process(_delta: float) -> void:
 		var gs := get_node_or_null(^"/root/GameState")
 		_god_label.visible = gs != null and gs.devgod
 	_speed_label.text = "SPEED %3.0f MPH" % (_player.get_speed() * MPH_PER_PXS)
+	if _floor_label:
+		_floor_label.visible = _player.floor_index >= 1
+		if _floor_label.visible:
+			_floor_label.text = "FLOOR %d" % _player.floor_index
 	var mg := _player.get_mg_mount()
 	if mg:
 		_heat_bar.value = mg.heat_fraction() * 100.0
@@ -172,6 +177,9 @@ func _build_dash() -> void:
 	_hp_bar = _bar(vbox, Color(0.75, 0.2, 0.2))
 	_hp_bar.value = 100.0
 	_speed_label = _label(vbox, "SPEED", 20)
+	_floor_label = _label(vbox, "FLOOR", 14)
+	_floor_label.modulate = DIM_TEXT
+	_floor_label.visible = false  # legacy levels stay pixel-identical
 	var lives_hdr := _label(vbox, "LIVES", 14)
 	lives_hdr.modulate = DIM_TEXT
 	var lives_row := HBoxContainer.new()

@@ -16,6 +16,10 @@ const STATION := Color(0.92, 0.92, 0.95)
 const PLAYER_COLOR := Color(1.0, 0.85, 0.2)
 const ENEMY_COLOR := Color(0.95, 0.25, 0.2)
 const DUMMY_COLOR := Color(0.5, 0.5, 0.5, 0.6)
+const FLOOR_LOW := Color(0.0, 0.0, 0.0, 0.24)      # sea-level plates read sunken
+const FLOOR_HIGH := Color(0.75, 0.8, 0.9, 0.16)    # roof/deck plates read raised
+const WATER_VOID := Color(0.05, 0.11, 0.16, 0.95)  # deep water: lethal, but wet
+const CHEV := 4.0  # enemy chevron half-width (floor above = ^, below = v)
 
 const Catalog := preload("res://levels/entity_catalog.gd")
 
@@ -24,6 +28,8 @@ var _terrain: Array = []     # {rect, color}
 var _solids: Array = []      # {rect}
 var _breakables: Array = []  # {ref, rect} — skipped once freed
 var _stations: Array = []    # world positions
+var _floor_low: Array = []   # floor-1 tag rects (dark overlay)
+var _floor_high: Array = []  # floor-3 tag rects (light overlay)
 var _scanned := false
 
 func _process(_delta: float) -> void:
@@ -38,8 +44,12 @@ func _draw() -> void:
 		return
 	for tz in _terrain:
 		draw_rect(_map_rect(tz.rect), tz.color)
+	for fl in _floor_low:
+		draw_rect(_map_rect(fl), FLOOR_LOW)
 	for s in _solids:
 		draw_rect(_map_rect(s.rect), BUILDING)
+	for fh in _floor_high:
+		draw_rect(_map_rect(fh), FLOOR_HIGH)
 	for b in _breakables:
 		if is_instance_valid(b.ref):
 			draw_rect(_map_rect(b.rect), BREAKABLE)
@@ -53,9 +63,24 @@ func _draw() -> void:
 		return
 	for d in get_tree().get_nodes_in_group(&"dummies"):
 		draw_circle(_map(d.global_position), 2.0, DUMMY_COLOR)
+	# Blips are shape-coded against the player's terrace: same floor (or a
+	# legacy level) = the classic dot, a floor above = ^, below = v.
+	var pf := _floor_of(player)
 	for e in get_tree().get_nodes_in_group(&"enemies"):
-		if e.global_position.distance_to(player.global_position) <= RANGE:
-			draw_circle(_map(e.global_position), 3.0, ENEMY_COLOR)
+		if e.global_position.distance_to(player.global_position) > RANGE:
+			continue
+		var p := _map(e.global_position)
+		var ef := _floor_of(e)
+		if pf >= 1 and ef >= 1 and ef > pf:
+			draw_polyline(PackedVector2Array([
+				p + Vector2(-CHEV, 3), p + Vector2(0, -4), p + Vector2(CHEV, 3),
+			]), ENEMY_COLOR, 2.0)
+		elif pf >= 1 and ef >= 1 and ef < pf:
+			draw_polyline(PackedVector2Array([
+				p + Vector2(-CHEV, -3), p + Vector2(0, 4), p + Vector2(CHEV, -3),
+			]), ENEMY_COLOR, 2.0)
+		else:
+			draw_circle(p, 3.0, ENEMY_COLOR)
 	var spin: float = player.heading + PI / 2
 	var p := _map(player.global_position)
 	draw_colored_polygon(PackedVector2Array([
@@ -84,6 +109,8 @@ func _scan() -> void:
 	_solids.clear()
 	_breakables.clear()
 	_stations.clear()
+	_floor_low.clear()
+	_floor_high.clear()
 	var lo := Vector2(INF, INF)
 	var hi := Vector2(-INF, -INF)
 	var found_wall := false
@@ -119,6 +146,18 @@ func _scan() -> void:
 			# Drop-offs paint as near-black voids so the edge reads on the map.
 			_terrain.append({"rect": Rect2(node.global_position - node.size * 0.5, node.size),
 				"color": Color(0.01, 0.01, 0.02, 0.95)})
+		elif node is Area2D and "is_deep_water" in node:
+			# Deep water: same lethal-void treatment, but reads as sea.
+			_terrain.append({"rect": Rect2(node.global_position - node.size * 0.5, node.size),
+				"color": WATER_VOID})
+		elif node is Area2D and "floor_index" in node:
+			# Floor-tag plates: low terraces darken, high ones lighten; the
+			# mid floor is the baseline and stays unpainted.
+			var rect := Rect2(node.global_position - node.size * 0.5, node.size)
+			if int(node.floor_index) == 1:
+				_floor_low.append(rect)
+			elif int(node.floor_index) >= 3:
+				_floor_high.append(rect)
 	if found_wall:
 		_bounds = Rect2(lo, hi - lo)
 		_scanned = true
@@ -134,3 +173,7 @@ func _has_health(node: Node) -> bool:
 		if c.name == "Health":
 			return true
 	return false
+
+func _floor_of(node: Node) -> int:
+	var f: Variant = node.get("floor_index")
+	return int(f) if f is int else -1
