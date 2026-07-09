@@ -30,7 +30,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 40.0
 horizontal_alignment = 1
-text = "<  A / D  or  Arrows  >        Enter / Space: select        W: driver bio"
+text = "<  A / D  or  Arrows  >        Enter / Space: select        W: driver bio        ESC: back"
 
 [node name="Footer" type="PanelContainer" parent="."]
 layout_mode = 1

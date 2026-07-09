@@ -60,7 +60,18 @@ func _load_cars() -> void:
 			_cars.append(vs)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _done or _cars.is_empty():
+	if _done:
+		return
+	# ESC steps back one layer: dossier -> carousel -> title. Once gameplay
+	# starts, ESC belongs to the pause menu instead.
+	if event.is_action_pressed(&"pause"):
+		get_viewport().set_input_as_handled()
+		if _bio and _bio.visible:
+			_bio.visible = false
+		else:
+			SceneFlow.to_title()
+		return
+	if _cars.is_empty():
 		return
 	if event.is_action_pressed(&"select_more_info"):
 		get_viewport().set_input_as_handled()
@@ -152,7 +163,7 @@ func _build_bio() -> void:
 	vbox.add_child(_bio_special)
 
 	var hint := Label.new()
-	hint.text = "W to close"
+	hint.text = "W / ESC to close"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT

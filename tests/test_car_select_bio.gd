@@ -32,5 +32,16 @@ func test_bio_toggle_and_content() -> void:
 	select._toggle_bio()
 	t.check(not select._bio.visible, "bio: toggle closes")
 
+	# ESC steps back one layer: with the dossier open it closes the dossier
+	# (and must NOT leave the carousel — the title-back branch would swap
+	# scenes, which is exactly why it only fires with the bio hidden).
+	select._toggle_bio()
+	t.check(select._bio.visible, "bio: reopened for the ESC check")
+	var esc := InputEventAction.new()
+	esc.action = &"pause"
+	esc.pressed = true
+	select._unhandled_input(esc)
+	t.check(not select._bio.visible, "bio: ESC closes the dossier first")
+
 	t.root.remove_child(select)
 	select.free()
