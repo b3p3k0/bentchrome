@@ -40,8 +40,42 @@ const BRIDGE_EDGE := Color(0.6, 0.53, 0.2)
 @export var kind: StringName = &"pier_surface"
 @export var size := Vector2(512, 256)
 
+# Underpass read: overhead kinds (bridge, crane) fade while anything drawing
+# BELOW them sits underneath — "car is under, not on". The check compares
+# z_index directly, so it can never disagree with what's rendered.
+const UNDER_FADE := 0.45
+const FADE_SPEED := 6.0
+
+var _under_area: Area2D = null
+
 func _ready() -> void:
 	queue_redraw()
+	if kind == &"bridge" or kind == &"crane":
+		_under_area = Area2D.new()
+		_under_area.collision_layer = 0
+		_under_area.collision_mask = 1  # vehicles always keep the ground bit
+		var col := CollisionShape2D.new()
+		var shape := RectangleShape2D.new()
+		if kind == &"bridge":
+			shape.size = size
+		else:
+			# Only the boom overhangs traffic; legs/pads sit on the ground.
+			var boom_len := size.x * 0.72
+			shape.size = Vector2(boom_len, 60.0)
+			col.position = Vector2(-size.x * 0.5 + 24.0 + boom_len * 0.5, 0.0)
+		col.shape = shape
+		_under_area.add_child(col)
+		add_child(_under_area)
+
+func _process(delta: float) -> void:
+	if _under_area == null:
+		return
+	var target := 1.0
+	for body in _under_area.get_overlapping_bodies():
+		if body is CanvasItem and (body as CanvasItem).z_index < z_index:
+			target = UNDER_FADE
+			break
+	modulate.a = move_toward(modulate.a, target, FADE_SPEED * delta)
 
 func _draw() -> void:
 	match kind:

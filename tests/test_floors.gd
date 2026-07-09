@@ -203,6 +203,23 @@ func test_ramp_node_builds_the_recipe() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_overhead_structures_fade_for_underpassers() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var bridge = load("res://levels/dock_deco.gd").new()
+	bridge.kind = &"bridge"
+	bridge.size = Vector2(300, 200)
+	bridge.z_index = 1
+	container.add_child(bridge)
+	var car = VehicleScene.instantiate()
+	container.add_child(car)  # (0,0): under the deck, grounded legacy = z 0
+	await _settle(12)  # overlap registers + fade eases in
+	t.check(bridge.modulate.a < 0.6, "underpass: deck fades while a car is beneath (a=%.2f)" % bridge.modulate.a)
+	car.global_position = Vector2(2000, 0)
+	await _settle(30)
+	t.check(bridge.modulate.a > 0.9, "underpass: deck recovers once clear (a=%.2f)" % bridge.modulate.a)
+	_done({"container": container, "car": car})
+
 func test_no_zones_stays_legacy() -> void:
 	var f := _fixture([])
 	await _settle(3)
