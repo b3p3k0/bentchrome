@@ -7,6 +7,9 @@ extends Area2D
 ## perimeter. Ramps launch in whatever direction you're moving, so the paint
 ## is deliberately omnidirectional (authored square); the striped top reads
 ## "launcher marker", not a parkable platform.
+## On multi-floor levels a ramp BELONGS to one terrace (floor_index) — a roof
+## car crossing above a street ramp's footprint never triggers it. Author
+## ramps clear of building footprints regardless; the gate is the backstop.
 
 const FACE_LIT := Color(1.0, 0.72, 0.25)   # north face — sun from the top
 const FACE_MID := Color(0.85, 0.55, 0.16)  # east/west faces
@@ -19,6 +22,9 @@ const STRIPE_LEN := 16.0   # border stripe cadence
 const TOP_FRAC := 0.4      # plateau size as a fraction of the footprint
 const TOP_STRIPE_W := 7.0  # caution band width on the plateau
 const TOP_STRIPE_GAP := 14.0
+const Floors := preload("res://game/floors.gd")  # terrace gate (dependency-free)
+
+@export var floor_index := -1  # ≥1: only cars on this terrace trigger the launch
 
 var _size := Vector2.ZERO
 
@@ -33,7 +39,7 @@ func _ready() -> void:
 		queue_redraw()
 
 func _on_body_entered(body: Node) -> void:
-	if body is Vehicle:
+	if body is Vehicle and Floors.same_floor(self, body):
 		body.launch_from_ramp()
 
 func _draw() -> void:

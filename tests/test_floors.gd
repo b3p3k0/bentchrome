@@ -134,6 +134,20 @@ func test_respawn_resets_to_legacy_then_readopts() -> void:
 	t.check(f.car.floor_index == 3, "floors: respawned car re-adopts from the sensor")
 	_done(f)
 
+func test_ramp_launches_only_its_own_terrace() -> void:
+	var f := _fixture([{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)}])
+	await _settle(3)  # car adopts the roof
+	var ramp = load("res://environment/ramp.gd").new()
+	ramp.floor_index = 2
+	f.container.add_child(ramp)
+	f.car.velocity = Vector2(300, 0)
+	ramp._on_body_entered(f.car)
+	t.check(f.car.vz == 0.0, "floors: a street ramp ignores roof wheels")
+	ramp.floor_index = 3
+	ramp._on_body_entered(f.car)
+	t.check(f.car.vz > 0.0, "floors: the same-terrace ramp launches")
+	_done(f)
+
 func test_no_zones_stays_legacy() -> void:
 	var f := _fixture([])
 	await _settle(3)

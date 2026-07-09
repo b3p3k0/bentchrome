@@ -14,6 +14,15 @@ func _zone_rect(z: Node) -> Rect2:
 	var size: Vector2 = z.get("size")
 	return Rect2(z.position - size * 0.5, size)
 
+func _body_rect(n: Node2D) -> Rect2:
+	var size_v: Variant = n.get("size")
+	if size_v is Vector2:
+		return Rect2(n.position - (size_v as Vector2) * 0.5, size_v)
+	var col := n.get_node_or_null(^"Col") as CollisionShape2D
+	if col and col.shape is RectangleShape2D:
+		return Rect2(n.position + col.position - col.shape.size * 0.5, col.shape.size)
+	return Rect2()
+
 func test_dock_structure() -> void:
 	var scene: PackedScene = load("res://levels/dock/dock.tscn")
 	var dock: Node = scene.instantiate()
@@ -75,6 +84,33 @@ func test_dock_structure() -> void:
 			if z.name != bname and int(z.floor) == 3 and grown.intersects(z.rect):
 				touches += 1
 		t.check(touches >= 2, "dock: %s connects two roof surfaces (touches %d)" % [bname, touches])
+
+	# Props keep their distance: no container inside another, and every ramp
+	# belongs to exactly one terrace and stands clear of solid scenery.
+	var boxes: Array = []
+	var ramp_solids: Array = []
+	var ramps: Array = []
+	for child in dock.get_children():
+		var n := String(child.name)
+		if n.begins_with("Container"):
+			boxes.append(child)
+			ramp_solids.append(child)
+		elif n.begins_with("Warehouse") or n.begins_with("Rail") or n == "RetainingWall":
+			ramp_solids.append(child)
+		elif child is Area2D and child.get_script() != null \
+				and (child.get_script() as Script).resource_path.ends_with("ramp.gd"):
+			ramps.append(child)
+	for i in boxes.size():
+		for j in range(i + 1, boxes.size()):
+			t.check(not _body_rect(boxes[i]).intersects(_body_rect(boxes[j])),
+				"dock: %s and %s don't overlap" % [boxes[i].name, boxes[j].name])
+	t.check(ramps.size() == 8, "dock: eight ramps found (got %d)" % ramps.size())
+	for r in ramps:
+		t.check(int(r.get("floor_index")) >= 1, "dock: %s belongs to one terrace" % r.name)
+		var rr := _body_rect(r)
+		for solid in ramp_solids:
+			t.check(not rr.intersects(_body_rect(solid)),
+				"dock: %s stands clear of %s" % [r.name, solid.name])
 
 	# Each connector's approach run starts on its own from_floor.
 	for c in connectors:

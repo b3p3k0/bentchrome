@@ -154,9 +154,10 @@ func _scan() -> void:
 			# Deep water: same lethal-void treatment, but reads as sea.
 			_terrain.append({"rect": Rect2(node.global_position - node.size * 0.5, node.size),
 				"color": WATER_VOID})
-		elif node is Area2D and "floor_index" in node:
+		elif node is Area2D and "floor_index" in node and "size" in node:
 			# Floor-tag plates: low terraces darken, high ones lighten; the
-			# mid floor is the baseline and stays unpainted.
+			# mid floor is the baseline and stays unpainted. (The size guard
+			# matters: ramps and mines carry floor_index too, but no rect.)
 			var rect := Rect2(node.global_position - node.size * 0.5, node.size)
 			if int(node.floor_index) == 1:
 				_floor_low.append(rect)
