@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -12,6 +12,9 @@
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
 [ext_resource type="Script" path="res://levels/building_deco.gd" id="12_deco"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
+[ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
 [ext_resource type="Resource" path="res://data/vehicles/lackey.tres" id="14_boss"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
@@ -101,53 +104,33 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 [node name="Col" type="CollisionShape2D" parent="Jump"]
 shape = SubResource("RectangleShape2D_ramp")
 
-[node name="Container1" type="StaticBody2D" parent="."]
-collision_layer = 4
-script = ExtResource("12_deco")
+[node name="Container1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-512, -128)
+size = Vector2(512, 128)
+max_hp = 140.0
+deco = &"container"
+livery = 0
 
-[node name="Vis" type="Polygon2D" parent="Container1"]
-color = Color(0.3, 0.3, 0.36, 1)
-polygon = PackedVector2Array(-256, -64, 256, -64, 256, 64, -256, 64)
-
-[node name="Col" type="CollisionShape2D" parent="Container1"]
-shape = SubResource("RectangleShape2D_container")
-
-[node name="Container2" type="StaticBody2D" parent="."]
-collision_layer = 4
-script = ExtResource("12_deco")
+[node name="Container2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(512, 128)
+size = Vector2(512, 128)
+max_hp = 140.0
+deco = &"container"
+livery = 1
 
-[node name="Vis" type="Polygon2D" parent="Container2"]
-color = Color(0.3, 0.3, 0.36, 1)
-polygon = PackedVector2Array(-256, -64, 256, -64, 256, 64, -256, 64)
-
-[node name="Col" type="CollisionShape2D" parent="Container2"]
-shape = SubResource("RectangleShape2D_container")
-
-[node name="Container3" type="StaticBody2D" parent="."]
-collision_layer = 4
-script = ExtResource("12_deco")
+[node name="Container3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-256, 768)
+size = Vector2(512, 128)
+max_hp = 140.0
+deco = &"container"
+livery = 2
 
-[node name="Vis" type="Polygon2D" parent="Container3"]
-color = Color(0.3, 0.3, 0.36, 1)
-polygon = PackedVector2Array(-256, -64, 256, -64, 256, 64, -256, 64)
-
-[node name="Col" type="CollisionShape2D" parent="Container3"]
-shape = SubResource("RectangleShape2D_container")
-
-[node name="Container4" type="StaticBody2D" parent="."]
-collision_layer = 4
-script = ExtResource("12_deco")
+[node name="Container4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(256, -768)
-
-[node name="Vis" type="Polygon2D" parent="Container4"]
-color = Color(0.3, 0.3, 0.36, 1)
-polygon = PackedVector2Array(-256, -64, 256, -64, 256, 64, -256, 64)
-
-[node name="Col" type="CollisionShape2D" parent="Container4"]
-shape = SubResource("RectangleShape2D_container")
+size = Vector2(512, 128)
+max_hp = 140.0
+deco = &"container"
+livery = 3
 
 [node name="Crate1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1088, 448)
@@ -172,6 +155,141 @@ position = Vector2(1088, 1088)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
+
+[node name="FenceN1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1170, -1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceN2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-620, -1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceN3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(620, -1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceN4" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1170, -1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceS1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1170, 1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceS2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-620, 1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceS3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(620, 1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="FenceS4" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1170, 1380)
+size = Vector2(460, 12)
+max_hp = 12.0
+deco = &"chainlink"
+
+[node name="BarrelNE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(880, -620)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(800, -700)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-880, 620)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-800, 700)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BollardW" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-300, -720)
+kind = &"bollard"
+
+[node name="BollardE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(300, -720)
+kind = &"bollard"
+
+[node name="MarkPadN" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-260, -1476, 260, -1476)
+style = &"stop_line"
+
+[node name="MarkPadS" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-260, -956, 260, -956)
+style = &"stop_line"
+
+[node name="MarkPadW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-260, -1476, -260, -956)
+style = &"stop_line"
+
+[node name="MarkPadE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(260, -1476, 260, -956)
+style = &"stop_line"
+
+[node name="MarkApproach" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(0, 1150, 0, -880)
+style = &"dashed_yellow"
+
+[node name="LightNW" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(-1300, -1300)
+kind = &"street_light"
+
+[node name="LightNE" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(1300, -1300)
+kind = &"street_light"
+
+[node name="LightSW" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(-1300, 1300)
+kind = &"street_light"
+
+[node name="LightSE" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(1300, 1300)
+kind = &"street_light"
+
+[node name="Steam1" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(400, 0)
+kind = &"manhole"
+
+[node name="Steam2" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(-420, 210)
+kind = &"manhole"
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, 1216)
