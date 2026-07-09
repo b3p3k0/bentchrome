@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -16,6 +16,10 @@
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
 [ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
 [ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="23_curb"]
+[ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="24_fzone"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="25_ramp"]
+[ext_resource type="Script" path="res://environment/floor_connector.gd" id="27_conn"]
+[ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -70,6 +74,21 @@ size = Vector2(128, 128)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ramp"]
 size = Vector2(224, 224)
+
+[sub_resource type="RectangleShape2D" id="R_summit"]
+size = Vector2(896, 896)
+
+[sub_resource type="RectangleShape2D" id="R_pwall_n"]
+size = Vector2(920, 24)
+
+[sub_resource type="RectangleShape2D" id="R_pwall_e"]
+size = Vector2(24, 920)
+
+[sub_resource type="RectangleShape2D" id="R_pwall_wseg"]
+size = Vector2(24, 330)
+
+[sub_resource type="RectangleShape2D" id="R_pwall_sseg"]
+size = Vector2(330, 24)
 
 [node name="Snowy" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -295,6 +314,7 @@ position = Vector2(-480, 0)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
+floor_index = 2
 
 [node name="Vis" type="Polygon2D" parent="Jump"]
 color = Color(0.9, 0.55, 0.15, 0.85)
@@ -304,7 +324,7 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="Rock1" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(-448, -896)
 
@@ -316,9 +336,9 @@ polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 shape = SubResource("RectangleShape2D_rock")
 
 [node name="Rock2" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
-position = Vector2(896, -448)
+position = Vector2(640, -160)
 
 [node name="Vis" type="Polygon2D" parent="Rock2"]
 color = Color(0.3, 0.3, 0.36, 1)
@@ -328,7 +348,7 @@ polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 shape = SubResource("RectangleShape2D_rock")
 
 [node name="Rock3" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(448, 896)
 
@@ -340,7 +360,7 @@ polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 shape = SubResource("RectangleShape2D_rock")
 
 [node name="Rock4" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(-896, 448)
 
@@ -352,7 +372,7 @@ polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 shape = SubResource("RectangleShape2D_rock")
 
 [node name="Rock5" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(0, -896)
 
@@ -365,6 +385,185 @@ shape = SubResource("RectangleShape2D_rock")
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, 1344)
+
+[node name="FZPlate" parent="." instance=ExtResource("24_fzone")]
+floor_index = 2
+size = Vector2(3456, 3456)
+
+[node name="FZPlateau" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(896, -896)
+floor_index = 3
+size = Vector2(896, 896)
+
+[node name="SummitSnow" type="Area2D" parent="."]
+position = Vector2(896, -896)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"snow"
+
+[node name="Vis" type="Polygon2D" parent="SummitSnow"]
+material = SubResource("SM_snow")
+color = Color(0.82, 0.85, 0.92, 0.55)
+polygon = PackedVector2Array(-448, -448, 448, -448, 448, 448, -448, 448)
+
+[node name="Col" type="CollisionShape2D" parent="SummitSnow"]
+shape = SubResource("R_summit")
+
+[node name="LedgeWest" type="Node2D" parent="."]
+position = Vector2(448, -896)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(896, 70)
+
+[node name="LedgeSouth" type="Node2D" parent="."]
+position = Vector2(896, -448)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(896, 70)
+
+[node name="LedgeEast" type="Node2D" parent="."]
+position = Vector2(1344, -896)
+rotation = -1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(896, 70)
+
+[node name="PlateauWallN" type="StaticBody2D" parent="."]
+position = Vector2(896, -1344)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallN"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-460, -12, 460, -12, 460, 12, -460, 12)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallN"]
+shape = SubResource("R_pwall_n")
+
+[node name="PlateauWallE" type="StaticBody2D" parent="."]
+position = Vector2(1344, -896)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallE"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -460, 12, -460, 12, 460, -12, 460)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallE"]
+shape = SubResource("R_pwall_e")
+
+[node name="PlateauWallWN" type="StaticBody2D" parent="."]
+position = Vector2(448, -1179)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallWN"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -165, 12, -165, 12, 165, -12, 165)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallWN"]
+shape = SubResource("R_pwall_wseg")
+
+[node name="PlateauWallWS" type="StaticBody2D" parent="."]
+position = Vector2(448, -613)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallWS"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -165, 12, -165, 12, 165, -12, 165)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallWS"]
+shape = SubResource("R_pwall_wseg")
+
+[node name="PlateauWallSW" type="StaticBody2D" parent="."]
+position = Vector2(613, -448)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallSW"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-165, -12, 165, -12, 165, 12, -165, 12)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallSW"]
+shape = SubResource("R_pwall_sseg")
+
+[node name="PlateauWallSE" type="StaticBody2D" parent="."]
+position = Vector2(1179, -448)
+collision_layer = 20
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="PlateauWallSE"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-165, -12, 165, -12, 165, 12, -165, 12)
+
+[node name="Col" type="CollisionShape2D" parent="PlateauWallSE"]
+shape = SubResource("R_pwall_sseg")
+
+[node name="RampWest" type="Node2D" parent="."]
+position = Vector2(448, -896)
+rotation = 1.5708
+script = ExtResource("25_ramp")
+low_floor = 2
+high_floor = 3
+size = Vector2(192, 240)
+
+[node name="RampSouth" type="Node2D" parent="."]
+position = Vector2(896, -448)
+script = ExtResource("25_ramp")
+low_floor = 2
+high_floor = 3
+size = Vector2(192, 240)
+
+[node name="ConWestGradeUp" type="Node2D" parent="."]
+position = Vector2(448, -896)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConWestGradeDown" type="Node2D" parent="."]
+position = Vector2(448, -896)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConSouthGradeUp" type="Node2D" parent="."]
+position = Vector2(896, -448)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, -1)
+kind = &"grade"
+
+[node name="ConSouthGradeDown" type="Node2D" parent="."]
+position = Vector2(896, -448)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, 1)
+kind = &"grade"
+
+[node name="ConEastEdgeDown" type="Node2D" parent="."]
+position = Vector2(1320, -896)
+script = ExtResource("27_conn")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"edge"
+
+[node name="AmmoPowerSummit" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(896, -896)
+kind = "power"
+amount = 1
+
+[node name="AmmoStandardSummit" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1100, -700)
 
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2
@@ -441,36 +640,43 @@ amount = 1
 position = Vector2(-704, -1330)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="Drift2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(448, -1360)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="Drift3" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(1024, -1300)
 kind = &"drift"
 footprint = 48.0
+floor_index = 3
 
 [node name="Drift4" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(192, 48)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="Drift5" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(1088, -64)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="Drift6" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-960, 1400)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="Drift7" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(960, 1408)
 kind = &"drift"
 footprint = 48.0
+floor_index = 2
 
 [node name="StreetDeco" type="Node2D" parent="."]
 
@@ -484,34 +690,44 @@ snow_amount = 240
 [node name="Cone1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-1010, -40)
 kind = &"cone"
+floor_index = 2
 
 [node name="Cone2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-620, -170)
 kind = &"cone"
+floor_index = 2
 
 [node name="Sign1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-1030, -170)
 kind = &"sign"
+floor_index = 2
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-320, 1344)
+start_floor = 2
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(0, -1344)
+start_floor = 2
 
 [node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-1344, -800)
+start_floor = 2
 
 [node name="Enemy3" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(1344, 800)
+start_floor = 2
 
 [node name="Enemy4" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(640, 1344)
+start_floor = 2
 
 [node name="Enemy5" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-320, 0)
+start_floor = 2
 
 [node name="Enemy6" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(1600, -1600)
+start_floor = 2
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]
