@@ -148,6 +148,61 @@ func test_jump_pad_launches_only_its_own_terrace() -> void:
 	t.check(f.car.vz > 0.0, "floors: the same-terrace jump pad launches")
 	_done(f)
 
+func test_driveable_ramp_grades_both_ways() -> void:
+	var f := _fixture([{"floor": 2, "pos": Vector2.ZERO, "size": Vector2(900, 900)}])
+	var ramp = load("res://environment/ramp.gd").new()
+	ramp.low_floor = 2
+	ramp.high_floor = 3
+	ramp.size = Vector2(200, 400)
+	ramp.rotation = PI / 2  # high end points +x
+	ramp.position = Vector2(600, 0)
+	f.container.add_child(ramp)
+	await _settle(3)
+	t.check(f.car.floor_index == 2, "ramp: car starts on the plate")
+	f.car.global_position = Vector2(500, 0)  # low half
+	await _settle(3)
+	t.check(f.car.floor_index == 2 and f.car.height == 0.0, "ramp: low half stays low, grounded")
+	f.car.global_position = Vector2(700, 0)  # high half
+	await _settle(3)
+	t.check(f.car.floor_index == 3, "ramp: climbs to the high floor at grade")
+	t.check(f.car.height == 0.0 and f.car.vz == 0.0, "ramp: no hop on the climb")
+	var health = f.car.get_node("Health")
+	t.check(health.hp >= health.max_hp, "ramp: grading costs nothing")
+	f.car.global_position = Vector2(500, 0)  # back down the slope
+	await _settle(3)
+	t.check(f.car.floor_index == 2 and f.car.height == 0.0, "ramp: descends at grade too")
+	# Side exit: from the high half straight onto the plain plate = ledge hop.
+	f.car.global_position = Vector2(700, 0)
+	await _settle(3)
+	f.car.global_position = Vector2(0, 0)
+	await _settle(3)
+	t.check(f.car.height > 0.0 or f.car.vz > 0.0, "ramp: off the side is a real drop")
+	await _settle(60)
+	t.check(f.car.floor_index == 2 and f.car.height == 0.0, "ramp: side drop lands on the plate")
+	_done(f)
+
+func test_ramp_node_builds_the_recipe() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var ramp = load("res://environment/ramp.gd").new()
+	ramp.low_floor = 2
+	ramp.high_floor = 3
+	container.add_child(ramp)
+	var zones := 0
+	var rails := 0
+	for child in ramp.get_children():
+		if child is Area2D and bool(child.get("ramp")):
+			zones += 1
+			t.check(int(child.floor_index) in [2, 3], "ramp node: half tags a real floor")
+		elif child is StaticBody2D:
+			rails += 1
+			t.check(child.collision_layer == (4 | 16 | 32),
+				"ramp node: rail blocks both terraces (got %d)" % child.collision_layer)
+	t.check(zones == 2, "ramp node: two ramp-flagged halves (got %d)" % zones)
+	t.check(rails == 2, "ramp node: two side rails (got %d)" % rails)
+	t.root.remove_child(container)
+	container.free()
+
 func test_no_zones_stays_legacy() -> void:
 	var f := _fixture([])
 	await _settle(3)

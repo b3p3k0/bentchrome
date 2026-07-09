@@ -8,6 +8,9 @@ extends Area2D
 
 @export var floor_index := 1
 @export var size := Vector2(512, 512)
+@export var ramp := false  # driveable transition: cars grade to this zone's
+						   # floor at ground level, both directions — no hop,
+						   # no fall bill (see environment/ramp.gd)
 
 func _ready() -> void:
 	collision_layer = 256  # floor_tag channel — only FloorSensors listen

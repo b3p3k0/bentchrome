@@ -309,6 +309,9 @@ func _update_floor() -> void:
 		return
 	if floor_index < 0:
 		_adopt_floor(sensed)
+	elif _floor_sensor.on_ramp and sensed != floor_index:
+		_adopt_floor(sensed)  # driveable ramp: grade over BOTH ways — no hop,
+							  # no fall bill; the slope carries you
 	elif sensed < floor_index:
 		pop_airborne(Floors.DROP_POP_VZ * float(floor_index - sensed))
 
