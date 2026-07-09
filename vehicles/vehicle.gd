@@ -28,6 +28,7 @@ const FLOOR_SCALE_TWEEN := 0.25  # size-cue tween on floor change (visuals only)
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -393,6 +394,38 @@ func fall_into_pit() -> void:
 		tween.tween_property(_visual, "scale", Vector2(0.05, 0.05), 0.7)
 	if _shadow:
 		tween.parallel().tween_property(_shadow, "scale", Vector2(0.05, 0.05), 0.7)
+	tween.tween_callback(func() -> void:
+		if _health:
+			_health.kill()
+		_falling = false)
+
+## Into the drink: the pit's diminishing-car exit, but wetter — a splash ring
+## at entry, a slightly slower shrink darkening toward the water, and rising
+## bubbles that outlive the car. _falling suppresses the explosion here too.
+func sink_into_water() -> void:
+	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
+		return
+	_falling = true
+	set_physics_process(false)
+	velocity = Vector2.ZERO
+	set_deferred("collision_layer", 0)
+	set_deferred("collision_mask", 0)
+	var scene := get_tree().current_scene
+	if scene:  # headless fixtures may not set one
+		var splash := ExplosionScene.instantiate()
+		splash.global_position = global_position
+		splash.tint = Color(0.55, 0.75, 0.95)
+		splash.size_scale = 0.5
+		scene.add_child(splash)
+		var bubbles := SinkBubbles.new()
+		bubbles.global_position = global_position
+		scene.add_child(bubbles)
+	var tween := create_tween()
+	if _visual:
+		tween.tween_property(_visual, "scale", Vector2(0.05, 0.05), 0.8)
+		tween.parallel().tween_property(_visual, "modulate", Color(0.25, 0.35, 0.45), 0.8)
+	if _shadow:
+		tween.parallel().tween_property(_shadow, "scale", Vector2(0.05, 0.05), 0.8)
 	tween.tween_callback(func() -> void:
 		if _health:
 			_health.kill()
