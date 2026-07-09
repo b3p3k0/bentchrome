@@ -12,7 +12,7 @@ extends Driver
 ##   OPPORTUNIST — scores the weakest car highest, hangs back, pounces, flees early.
 
 @export var mix := Vector3(1, 0, 0)  # weights: x=aggressor, y=ambusher, z=opportunist
-@export var relentless := false      # bosses: never RELENT, half-length BREAK arcs
+@export var relentless := false      # bosses: skip mook RELENT, run the boss valve
 
 # Named blends (assign to `mix`). 3 pure + 3 pairs + 1 triple.
 const PRESET_BRAWLER := Vector3(1, 0, 0)
@@ -73,11 +73,13 @@ const RELENT_ANGLE := 2.6    # ~150° — a real disengage, wider than BREAK
 # BOSS pressure valve: relentless drivers don't RELENT like mooks, but they DO
 # break off — hit the player hard, then boost away for a beat (showing the rear
 # weakspot at speed). The breather scales with dominance: a healthy player gets
-# barely any mercy ("smack tf outta them"); a dying one gets room to breathe.
-const BOSS_HIT_BUDGET := 70.0   # damage dealt to the player before breaking off
-const BOSS_ENGAGE_LIMIT := 9.0  # can't orbit forever even whiffing
-const BOSS_BREAK_MIN := 1.2     # breather when the player is dominating
-const BOSS_BREAK_MAX := 4.5     # breather when the player is on the ropes
+# a short one; a dying one gets a real window. July 2026 playtest softened the
+# whole valve — the turret keeps pressure during breathers now, so the CAR can
+# afford to breathe (budget 70->50, limit 9->7, breathers 1.2-4.5 -> 2.0-5.5).
+const BOSS_HIT_BUDGET := 50.0   # damage dealt to the player before breaking off
+const BOSS_ENGAGE_LIMIT := 7.0  # can't orbit forever even whiffing
+const BOSS_BREAK_MIN := 2.0     # breather when the player is dominating
+const BOSS_BREAK_MAX := 5.5     # breather when the player is on the ropes
 
 # WADE: water runs at 45% speed and the AI has no terrain sense — a hunter that
 # drives into a lake bogs down forever. After WADE_TRIP seconds wet, commit to
@@ -327,8 +329,11 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			_mode = Mode.PURSUE
 	elif dist < _near and not scavenging:
 		# (A crate isn't a threat — drive straight over it, no spacing arc.)
+		# Bosses used to take HALF-length arcs here — that was the close-combat
+		# suffocation Kevin's playtest flagged. Everyone arcs full-length now;
+		# boss pressure comes from the turret, not the bumper.
 		_mode = Mode.BREAK
-		_break_t = BREAK_TIME * (0.5 if relentless else 1.0)
+		_break_t = BREAK_TIME
 		# Veer toward the clearer side (feelers), committed for the whole arc.
 		_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 
