@@ -23,7 +23,8 @@ const DASH_INVULN_T := 2.0        # invulnerability after connecting
 const DASH_SLOW := 0.5            # victim speed drain
 const DASH_SLOW_T := 2.0
 
-const FLAME_DURATION := 5.0       # one press = one fixed burst per ammo (2 cap / 15s recharge)
+const FLAME_DURATION := 3.0       # one press = one fixed burst per ammo (2 cap / 15s recharge)
+								  # July 2026 balance: 5s + 30 dps read OP in playtest
 const FLAME_LENGTH := 300.0       # nose-forward reach
 const FLAME_WIDTH := 70.0         # column thickness
 
