@@ -5,17 +5,21 @@ extends StaticBody2D
 ## NEVER references Vehicle — CarPaint is dependency-free by design.
 
 const CarPaintScript := preload("res://vehicles/car_paint.gd")
+const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
 # Smoky excluded: his animated light bar reads "alive", wrong for a wreck.
 const IDS := [&"ghost", &"splatcat", &"bumper", &"razorback", &"kandykane", &"cricket", &"hammertoe"]
 const RUST := Color(0.35, 0.26, 0.2)
 
 @export var max_hp := 50.0
+@export var floor_index := -1  # ≥1 joins that terrace's collision world
 
 @onready var _health: Health = $Health
 
 var _paint: Node2D
 
 func _ready() -> void:
+	if floor_index >= 1:
+		collision_layer |= Floors.floor_bit(floor_index)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0))
 	_paint = CarPaintScript.new()

@@ -35,6 +35,13 @@ const PUMP_RED := Color(0.72, 0.16, 0.14)
 const PUMP_FACE := Color(0.9, 0.88, 0.84)
 const BARREL_RED := Color(0.78, 0.15, 0.12)
 const BARREL_RIM := Color(0.45, 0.09, 0.08)
+# Shipping containers: position-seeded liveries off the harbor rainbow.
+const CONTAINER_PALETTES := [
+	Color(0.62, 0.22, 0.16),  # rust red
+	Color(0.18, 0.35, 0.55),  # harbor blue
+	Color(0.22, 0.45, 0.28),  # cargo green
+	Color(0.8, 0.45, 0.12),   # safety orange
+]
 
 const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
@@ -150,6 +157,8 @@ func _draw() -> void:
 			_draw_barrel()
 		&"fence":
 			_draw_fence()
+		&"container":
+			_draw_container()
 
 func _draw_house() -> void:
 	var half := size * 0.5
@@ -282,6 +291,35 @@ func _draw_fence() -> void:
 		draw_rect(Rect2(-2.0, -half.y, 4.0, size.y), rail)
 	else:
 		draw_rect(Rect2(-half.x, -2.0, size.x, 4.0), rail)
+
+## Shipping container (top-down): seeded livery, corrugation ribs across the
+## short axis, corner castings, door bars on the +long end.
+func _draw_container() -> void:
+	var half := size * 0.5
+	var rng := _seed_rng()
+	var base: Color = CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+	var dark := base.darkened(0.4)
+	draw_rect(Rect2(-half + Vector2(6, 9), size), SHADOW)  # stacked-steel height
+	draw_rect(Rect2(-half, size), _shade(base))
+	var tall := size.y > size.x
+	var run := size.y if tall else size.x
+	var ribs := maxi(int(run / 14.0), 3)
+	for i in range(1, ribs):
+		var t := -run * 0.5 + run * i / ribs
+		if tall:
+			draw_line(Vector2(-half.x + 2, t), Vector2(half.x - 2, t), _shade(dark), 1.5)
+		else:
+			draw_line(Vector2(t, -half.y + 2), Vector2(t, half.y - 2), _shade(dark), 1.5)
+	# Door end: twin lock bars along the +long end.
+	if tall:
+		draw_line(Vector2(-half.x * 0.45, half.y - 3), Vector2(-half.x * 0.45, half.y - 12), _shade(HAZARD_DARK), 2.5)
+		draw_line(Vector2(half.x * 0.45, half.y - 3), Vector2(half.x * 0.45, half.y - 12), _shade(HAZARD_DARK), 2.5)
+	else:
+		draw_line(Vector2(half.x - 3, -half.y * 0.45), Vector2(half.x - 12, -half.y * 0.45), _shade(HAZARD_DARK), 2.5)
+		draw_line(Vector2(half.x - 3, half.y * 0.45), Vector2(half.x - 12, half.y * 0.45), _shade(HAZARD_DARK), 2.5)
+	for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+		draw_rect(Rect2(corner * (half - Vector2(7, 7)) - Vector2(3, 3), Vector2(6, 6)), _shade(HAZARD_DARK))
+	draw_rect(Rect2(-half, size), _shade(dark), false, 2.5)
 
 ## Fuel barrel (top-down drum): red disc, rim ring, cap, hazard diamond.
 func _draw_barrel() -> void:

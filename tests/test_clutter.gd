@@ -43,7 +43,7 @@ func test_clutter_pops_on_one_hit() -> void:
 
 func test_street_kinds_and_hydrant_spout() -> void:
 	var kinds: Dictionary = load("res://environment/clutter.gd").KINDS
-	for k in [&"mailbox", &"sign", &"cone", &"bike", &"hydrant"]:
+	for k in [&"mailbox", &"sign", &"cone", &"bike", &"hydrant", &"bollard", &"pallet"]:
 		t.check(kinds.has(k), "clutter: %s kind exists" % k)
 	var container := Node2D.new()
 	t.root.add_child(container)
@@ -60,6 +60,15 @@ func test_street_kinds_and_hydrant_spout() -> void:
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
+
+func test_floor_index_folds_layer_bit() -> void:
+	var c = ClutterScene.instantiate()
+	c.kind = &"bollard"
+	c.floor_index = 2
+	t.root.add_child(c)
+	t.check(c.collision_layer == (4 | 16), "clutter: terrace bit joins the obstacle bit")
+	t.root.remove_child(c)
+	c.free()
 
 func test_radar_gate_math() -> void:
 	# Mirrors ui/radar.gd's MIN_BLIP skip: clutter-sized rects drop, houses stay.

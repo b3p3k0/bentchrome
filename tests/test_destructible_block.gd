@@ -43,6 +43,42 @@ func test_block_dies_and_frees() -> void:
 	t.root.remove_child(block)
 	block.free()
 
+func test_container_deco_and_floor_bit() -> void:
+	var block = BlockScene.instantiate()
+	block.deco = &"container"
+	block.size = Vector2(160, 64)
+	block.floor_index = 3
+	t.root.add_child(block)
+	t.check(block.collision_layer == (4 | 32), "container: terrace bit joins the obstacle bit")
+	block.get_node("Health").take_damage(999.0)
+	t.check(block.is_queued_for_deletion(), "container: breaks open like any block")
+	t.root.remove_child(block)
+	block.free()
+
+func test_cross_floor_blast_is_gated() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var barrel = BlockScene.instantiate()
+	barrel.deco = &"barrel"
+	barrel.size = Vector2(44, 44)
+	barrel.max_hp = 30.0
+	barrel.floor_index = 2  # dock-level drum
+	container.add_child(barrel)
+	var crate = BlockScene.instantiate()
+	crate.position = Vector2(80, 0)  # inside the 130px blast, but a roof up
+	crate.floor_index = 3
+	container.add_child(crate)
+	await t.physics_frame
+	var crate_health = crate.get_node("Health")
+	var before: float = crate_health.hp
+	barrel.get_node("Health").take_damage(999.0)
+	await t.physics_frame
+	t.check(crate_health.hp >= before, "barrel: dock blast doesn't cook the roof")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func test_barrel_blast_damages_neighbors() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)

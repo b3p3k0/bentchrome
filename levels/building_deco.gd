@@ -21,6 +21,8 @@ const PARAPET := Color(0.42, 0.42, 0.5)
 const PARAPET_LIP := Color(0.18, 0.18, 0.22, 0.7)
 const MIN_FURNITURE_DIM := 192.0  # smaller slabs (statue, court walls) stay bare
 
+@export var furniture := true  # false = bare gravel + parapet (driveable roofs)
+
 var _size := Vector2.ZERO
 var _rng_seed := 0
 
@@ -51,7 +53,7 @@ func _draw() -> void:
 			rng.randf_range(-half.y + 8.0, half.y - 11.0))
 		draw_rect(Rect2(p, Vector2(3, 3)), GRAVEL_DARK if rng.randf() < 0.6 else GRAVEL_LIGHT)
 
-	if _size.x >= MIN_FURNITURE_DIM and _size.y >= MIN_FURNITURE_DIM:
+	if furniture and _size.x >= MIN_FURNITURE_DIM and _size.y >= MIN_FURNITURE_DIM:
 		# HVAC units: boxed, edge-lit, big ones get a fan well.
 		for i in 2 + _rng_seed % 3:
 			var w := rng.randf_range(38.0, 66.0)
