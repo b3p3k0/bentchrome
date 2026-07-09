@@ -26,6 +26,10 @@ extends Resource
 @export var special_recharge_seconds := 12.0 # time to regrow one round
 @export var turret: WeaponDef  # bosses: auto-aiming hull turret (weapons/turret.gd);
 							   # null = none. Fires autonomously at the player.
+@export var special_b: WeaponDef  # twin special: shares the SPECIAL slot's ammo
+								  # pool — using either barrel depletes both.
+								  # SpecialController picks per activation.
+@export var no_mines := false  # this car never arms mines, crates included
 
 # Per-car raw handling-knob overrides (knob name -> value) applied after
 # StatCurves, so hand-tuning wins while StatCurves stays the default. Written by

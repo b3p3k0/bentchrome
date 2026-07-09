@@ -204,9 +204,12 @@ func _apply_stats() -> void:
 	_paint.apply(stats.id, stats.primary_color, stats.accent_color)
 	_sync_body_metrics()
 	if _rack:
-		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds)
+		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds,
+			stats.special_b, stats.no_mines)
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
+	if _special:
+		_special.set_twin(stats.special_b)
 	# Boss turret: an autonomous auto-aiming barrel riding the hull (data-driven —
 	# any car whose stats carry a turret def grows one; fixed_loadout bosses never
 	# re-roll, and the name guard keeps live re-stats from stacking barrels).

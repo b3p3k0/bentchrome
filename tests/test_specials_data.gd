@@ -17,6 +17,41 @@ func _def(path: String) -> Resource:
 func _first_effect(def) -> Resource:
 	return def.on_hit_effects[0] if def.on_hit_effects.size() > 0 else null
 
+func test_lackey_loadout() -> void:
+	var stats: Variant = load("res://data/vehicles/lackey.tres")
+	t.check(stats.special != null and stats.special.kind == 4, "lackey: main barrel is the FLAME torch")
+	t.check(stats.special_b != null and stats.special_b.kind == 1, "lackey: twin barrel is the BEAM bolt")
+	t.check(stats.no_mines, "lackey: never touches mines")
+	t.check(stats.turret != null and stats.turret.kind == 0
+		and is_equal_approx(stats.turret.damage, 45.0), "lackey: turret slings power-class shots")
+	t.check(stats.special_ammo_cap == 2 and is_equal_approx(stats.special_recharge_seconds, 10.0),
+		"lackey: shared pool 2 charges / 10s")
+
+func test_twin_barrel_chooses_by_context() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var shooter := CharacterBody2D.new()
+	container.add_child(shooter)
+	var ctrl = ControllerScript.new()
+	shooter.add_child(ctrl)
+	var blaze: Variant = load("res://data/weapons/blunt_blaze.tres")
+	var taser: Variant = load("res://data/weapons/taser.tres")
+	ctrl.set_weapon(blaze)
+	ctrl.set_twin(taser)
+	var prey := CharacterBody2D.new()
+	prey.position = Vector2(300, 0)  # inside the taser's 400 latch
+	prey.add_to_group(&"vehicles")
+	container.add_child(prey)
+	await t.physics_frame
+	t.check(ctrl._active_def(shooter.global_position, shooter) == taser,
+		"twin: latchable target at range -> the bolt")
+	prey.position = Vector2(800, 0)  # out of latch reach
+	await t.physics_frame
+	t.check(ctrl._active_def(shooter.global_position, shooter) == blaze,
+		"twin: nothing to latch -> the torch")
+	t.root.remove_child(container)
+	container.free()
+
 func test_splat_effect_def() -> void:
 	var d := _def("res://data/weapons/splat_effect.tres")
 	t.check(not d.stub and d.kind == 0, "splat: live projectile")

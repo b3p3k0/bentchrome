@@ -30,6 +30,28 @@ func test_configure_defaults() -> void:
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
 	r.free()
 
+func test_twin_special_shares_one_pool() -> void:
+	var r = RackScript.new()
+	var a = DefScript.new()
+	a.display_name = "Torch"
+	var b = DefScript.new()
+	b.display_name = "Bolt"
+	r.configure(a, 2, 10.0, b, true)
+	t.check(r.special_twin() == b, "rack: twin barrel stored and retrievable")
+	t.check(r.ammo(RackScript.Slot.SPECIAL) == 2, "rack: shared pool starts at cap")
+	r.consume()  # either barrel fires — ONE counter drains
+	t.check(r.ammo(RackScript.Slot.SPECIAL) == 1, "rack: one pool feeds both barrels")
+	t.check(r.cap(RackScript.Slot.MINE) == 0 and r.cap(RackScript.Slot.JUMP_MINE) == 0,
+		"rack: no_mines caps the mine slots at 0")
+	t.check(r.add_ammo(RackScript.Slot.MINE, 2) == 0, "rack: crates can't arm a no_mines car")
+	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mine slot stays empty")
+	r.free()
+
+func test_single_special_has_no_twin() -> void:
+	var r = _rack()
+	t.check(r.special_twin() == null, "rack: ordinary cars carry no twin")
+	r.free()
+
 func test_selection_cycles_and_wraps() -> void:
 	var r = _rack()
 	r.select_next()

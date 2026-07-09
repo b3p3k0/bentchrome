@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
 [ext_resource type="Resource" path="res://data/weapons/lackey_cannon.tres" id="2_cannon"]
+[ext_resource type="Resource" path="res://data/weapons/blunt_blaze.tres" id="3_blaze"]
+[ext_resource type="Resource" path="res://data/weapons/taser.tres" id="4_taser"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -9,8 +11,8 @@ id = &"lackey"
 car_name = "Lackey"
 driver_name = "Lackey"
 flavor = "Corporate muscle in a surplus eight-wheeler. Not selectable, not sociable. The armor shrugs off everything you have — from the front. The engineers cut corners around the exhaust."
-special_name = "Breach Cannon"
-special_desc = "A straight-line siege shot. Enormous damage, glacial reload. Circle behind him — the rear plating is thin."
+special_name = "Blaze & Bolt"
+special_desc = "Stolen kit: Bumper's torch for the clinch, Smoky's taser for the chase — both barrels drain ONE magazine. And the Breach Cannon turret never stops turning. Circle behind him — the rear plating is thin."
 acceleration = 7
 top_speed = 6
 handling = 6
@@ -19,7 +21,9 @@ special_power = 10
 mass = 9
 primary_color = Color(0.32, 0.36, 0.3, 1)
 accent_color = Color(0.65, 0.62, 0.4, 1)
-special = ExtResource("2_cannon")
+special = ExtResource("3_blaze")
 special_ammo_cap = 2
-special_recharge_seconds = 6.0
+special_recharge_seconds = 10.0
 turret = ExtResource("2_cannon")
+special_b = ExtResource("4_taser")
+no_mines = true

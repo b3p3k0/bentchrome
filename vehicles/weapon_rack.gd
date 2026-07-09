@@ -25,20 +25,31 @@ var _selected := 0
 var _recharge_t := 0.0
 var god := false  # DEVGOD: firing never depletes (cooldowns still gate rate)
 
-func configure(special_def: WeaponDef, special_cap: int, special_recharge_seconds: float) -> void:
+func configure(special_def: WeaponDef, special_cap: int, special_recharge_seconds: float,
+		special_twin: WeaponDef = null, no_mines := false) -> void:
+	# Twin special = ONE slot, TWO defs, one counter — firing either barrel
+	# depletes the shared pool by construction. no_mines caps the mine slots
+	# at 0, so crates can never arm them (add_ammo respects cap).
 	_slots = [
-		{"def": special_def, "ammo": special_cap, "cap": special_cap, "recharge": special_recharge_seconds},
+		{"def": special_def, "def_b": special_twin, "ammo": special_cap,
+			"cap": special_cap, "recharge": special_recharge_seconds},
 		{"def": STANDARD_DEF, "ammo": start_standard, "cap": 6, "recharge": 0.0},
 		{"def": HOMING_DEF, "ammo": start_homing, "cap": 3, "recharge": 0.0},
 		{"def": POWER_DEF, "ammo": start_power, "cap": 2, "recharge": 0.0},
-		{"def": MINE_DEF, "ammo": 0, "cap": 4, "recharge": 0.0},       # pickup-fed only
-		{"def": JUMP_MINE_DEF, "ammo": 0, "cap": 3, "recharge": 0.0},  # pickup-fed only
+		{"def": MINE_DEF, "ammo": 0, "cap": 0 if no_mines else 4, "recharge": 0.0},
+		{"def": JUMP_MINE_DEF, "ammo": 0, "cap": 0 if no_mines else 3, "recharge": 0.0},
 	]
 	_selected = Slot.SPECIAL
 	_recharge_t = 0.0
 	selection_changed.emit(_selected)
 	for i in _slots.size():
 		ammo_changed.emit(i, _slots[i].ammo)
+
+## The special's twin barrel (null for single-special cars).
+func special_twin() -> WeaponDef:
+	if _slots.is_empty():
+		return null
+	return _slots[Slot.SPECIAL].get("def_b", null)
 
 func _physics_process(delta: float) -> void:
 	tick(delta)

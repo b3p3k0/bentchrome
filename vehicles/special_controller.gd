@@ -33,6 +33,10 @@ const DROP_COOLDOWN := 0.5        # held button lays a trail, not a carpet
 const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
 
 var _def: WeaponDef = null
+var _twin: WeaponDef = null       # second barrel sharing the SPECIAL ammo pool
+var _beam_def: WeaponDef = null   # running effects keep the def they latched
+var _flame_def: WeaponDef = null  # with — selection/twin swaps can't corrupt them
+var _armed_damage := 0.0
 var _beam_target: Node2D = null
 var _beam_t := 0.0
 var _beam_line: Line2D = null
@@ -55,40 +59,67 @@ func set_weapon(def: WeaponDef) -> void:
 	if _mount:
 		_mount.set_weapon(def)   # projectile-kind firing lives in the mount
 
+## Twin special: a second barrel on the same ammo pool (non-PROJECTILE kinds
+## only — the mount owns projectile defs). Chosen per activation.
+func set_twin(def: WeaponDef) -> void:
+	_twin = def
+
+## Pick the barrel that fits the moment: the BEAM (latch weapon) when a target
+## sits inside its acquisition with clear LoS, otherwise the partner (the
+## close-quarters barrel). Running effects keep the def they latched with.
+func _active_def(origin: Vector2, shooter: Node) -> WeaponDef:
+	if _twin == null or _def == null:
+		return _def
+	var beam_def: WeaponDef = null
+	if _twin.kind == WeaponDef.Kind.BEAM:
+		beam_def = _twin
+	elif _def.kind == WeaponDef.Kind.BEAM:
+		beam_def = _def
+	if beam_def == null:
+		return _def
+	var other: WeaponDef = _def if beam_def == _twin else _twin
+	var tgt := Targeting.nearest_other(origin, shooter, beam_def.acquisition_radius, shooter)
+	if tgt and _los_clear(origin, tgt, shooter):
+		return beam_def
+	return other
+
 ## Returns true when the weapon actually fired (ammo is consumed on true).
 func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if _def == null:
 		return false
-	match _def.kind:
+	var def := _active_def(origin, shooter) if pressed else _def
+	if def == null:
+		return false
+	match def.kind:
 		WeaponDef.Kind.PROJECTILE:
 			if pressed and _mount:
 				return _mount.try_fire(origin, direction, shooter)
 		WeaponDef.Kind.BEAM:
-			return _beam(pressed, origin, direction, shooter)
+			return _beam(pressed, origin, direction, shooter, def)
 		WeaponDef.Kind.DASH:
 			return _dash(pressed, origin, direction, shooter)
 		WeaponDef.Kind.TRIGGER:
-			return _trigger(pressed, origin, direction, shooter)
+			return _trigger(pressed, def)
 		WeaponDef.Kind.FLAME:
-			return _flame(pressed)
+			return _flame(pressed, def)
 		WeaponDef.Kind.DROP:
-			return _drop(pressed, shooter)
+			return _drop(pressed, shooter, def)
 	return false
 
 ## Mines: deploy off the REAR bumper. Internal cooldown so a held button lays
 ## a trail, not a carpet. Ammo is consumed by the caller on true, as always.
-func _drop(pressed: bool, shooter: Node) -> bool:
-	if not pressed or _drop_cd > 0.0 or _def.projectile_scene == null:
+func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
+	if not pressed or _drop_cd > 0.0 or def.projectile_scene == null:
 		return false
 	var vehicle := shooter as Node2D
 	var scene := get_tree().current_scene
 	if vehicle == null or scene == null:
 		return false
 	_drop_cd = DROP_COOLDOWN
-	var mine := _def.projectile_scene.instantiate()
+	var mine := def.projectile_scene.instantiate()
 	var heading: float = vehicle.get("heading")
 	mine.global_position = vehicle.global_position - Vector2.RIGHT.rotated(heading) * 48.0
-	mine.damage = _def.damage
+	mine.damage = def.damage
 	mine.dropper = shooter
 	if "floor_index" in mine:
 		mine.floor_index = Floors.floor_of(shooter)  # armed for the dropper's terrace
@@ -99,12 +130,13 @@ func _drop(pressed: bool, shooter: Node) -> bool:
 ## BEAM_DURATION (light dps + slow), holding through turns. The latch breaks
 ## only when line of sight is blocked (wall/block/another car), the target
 ## strays far beyond range, or the target dies.
-func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node) -> bool:
-	if not pressed or _beam_t > 0.0 or _def == null:
+func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, def: WeaponDef) -> bool:
+	if not pressed or _beam_t > 0.0 or def == null:
 		return false
-	var tgt := Targeting.nearest_other(origin, shooter, _def.acquisition_radius, shooter)
+	var tgt := Targeting.nearest_other(origin, shooter, def.acquisition_radius, shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
+	_beam_def = def
 	_beam_target = tgt
 	_beam_t = BEAM_DURATION
 	# Lightning rig: a wide faint glow line under a thin hot bolt, plus sparks
@@ -169,14 +201,15 @@ func _beam_tick(delta: float) -> void:
 	var muzzle := vehicle.get_node_or_null("Visual/Muzzle") as Node2D
 	var origin: Vector2 = muzzle.global_position if muzzle else vehicle.global_position
 	var dist := origin.distance_to(_beam_target.global_position)
-	if dist > _def.acquisition_radius * BEAM_HOLD_FACTOR \
+	if _beam_def == null \
+			or dist > _beam_def.acquisition_radius * BEAM_HOLD_FACTOR \
 			or not Floors.same_floor(vehicle, _beam_target) \
 			or not _los_clear(origin, _beam_target, vehicle):
 		_end_beam()  # a roof-drop snaps the taser, same as breaking LoS
 		return
 	if _beam_target.has_method("take_ram_damage"):
 		# Damage authored as dps; AI-on-AI runs through the governor.
-		_beam_target.take_ram_damage(_def.damage * delta * Combat.scale(vehicle, _beam_target), vehicle)
+		_beam_target.take_ram_damage(_beam_def.damage * delta * Combat.scale(vehicle, _beam_target), vehicle)
 	if _beam_target.has_method("apply_effect"):
 		var slow := StatusEffectSpec.new()
 		slow.kind = &"slow"
@@ -196,6 +229,7 @@ func _beam_tick(delta: float) -> void:
 
 func _end_beam() -> void:
 	_beam_target = null
+	_beam_def = null
 	_beam_t = 0.0
 	if _beam_line:
 		_beam_line.queue_free()
@@ -286,9 +320,10 @@ func _end_dash(vehicle: CharacterBody2D) -> void:
 ## holding fire chains bursts into a sustained torch (recharge-fed). Damage is
 ## authored as dps; anything Health-bearing inside the column cooks, vehicles
 ## also pick up the def's burn effect (refreshed every tick while bathed).
-func _flame(pressed: bool) -> bool:
+func _flame(pressed: bool, def: WeaponDef) -> bool:
 	if not pressed or _flame_t > 0.0:
 		return false
+	_flame_def = def
 	_flame_t = FLAME_DURATION
 	var vehicle := get_parent() as Node2D
 	var visual := vehicle.get_node_or_null("Visual") if vehicle else null
@@ -315,18 +350,21 @@ func _flame_tick(delta: float) -> void:
 	params.transform = Transform2D(heading, vehicle.global_position + forward * (FLAME_LENGTH * 0.5 + _nose() + 4.0))
 	params.collision_mask = 5  # ground | obstacle
 	params.exclude = [vehicle.get_rid()]
+	if _flame_def == null:
+		_end_flame()
+		return
 	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
 		var body: Node = hit["collider"]
 		if not Floors.same_floor(vehicle, body):
 			continue  # the torch doesn't reach up to roofs or down to the shore
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(_def.damage * delta * Combat.scale(vehicle, body))
+				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
 				break
 		if body.has_method("apply_effect"):
-			for spec in _def.on_hit_effects:
+			for spec in _flame_def.on_hit_effects:
 				body.apply_effect(spec)
 	_flame_t -= delta
 	if _flame_t <= 0.0:
@@ -360,6 +398,7 @@ func _flame_shape() -> PackedVector2Array:
 
 func _end_flame() -> void:
 	_flame_t = 0.0
+	_flame_def = null
 	if _flame_vis:
 		_flame_vis.queue_free()
 		_flame_vis = null
@@ -368,11 +407,12 @@ func _end_flame() -> void:
 ## damage with one heavy flat hit (def.damage). Smash something within
 ## TRIGGER_WINDOW or the charge is lost — missed opportunity, too bad, so sad.
 ## The exhaust stacks belch smoke while armed.
-func _trigger(pressed: bool, _origin: Vector2, _direction: Vector2, _shooter: Node) -> bool:
+func _trigger(pressed: bool, def: WeaponDef) -> bool:
 	if not pressed or _armed:
 		return false
 	_armed = true
 	_armed_t = TRIGGER_WINDOW
+	_armed_damage = def.damage if def else 0.0  # captured: swaps can't re-price it
 	_set_armed_fx(true)
 	return true
 
@@ -384,7 +424,7 @@ func take_armed_hit() -> float:
 	_armed = false
 	_armed_t = 0.0
 	_set_armed_fx(false)
-	return _def.damage if _def else 0.0
+	return _armed_damage
 
 func _disarm_expired() -> void:
 	_armed = false
