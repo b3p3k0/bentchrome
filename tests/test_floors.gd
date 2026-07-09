@@ -198,6 +198,9 @@ func test_ramp_node_builds_the_recipe() -> void:
 			rails += 1
 			t.check(child.collision_layer == (4 | 16 | 32),
 				"ramp node: rail blocks both terraces (got %d)" % child.collision_layer)
+			var col: CollisionShape2D = child.get_child(0)
+			t.check(is_equal_approx((col.shape as RectangleShape2D).size.y, ramp.size.y),
+				"ramp node: rail runs the full slope (chokepoint)")
 	t.check(zones == 2, "ramp node: two ramp-flagged halves (got %d)" % zones)
 	t.check(rails == 2, "ramp node: two side rails (got %d)" % rails)
 	t.root.remove_child(container)
@@ -212,6 +215,11 @@ func test_floor_lift_reads_elevation() -> void:
 	var vis: Node2D = f.car.get_node("Visual")
 	t.check(absf(vis.position.y + 32.0) < 1.0,
 		"lift: roof car body rides 32px up (y=%.1f)" % vis.position.y)
+	var shadow: Node2D = f.car.get_node("Shadow")
+	t.check(absf(shadow.position.y + 32.0) < 1.0,
+		"lift: the shadow rides the terrace with the car (y=%.1f)" % shadow.position.y)
+	t.check(shadow.modulate.a > 0.95,
+		"lift: a grounded roof car keeps a tight full shadow (a=%.2f)" % shadow.modulate.a)
 	f.car.global_position = Vector2(900, 0)  # one-floor drop back to baseline
 	await _settle(90)
 	t.check(absf(vis.position.y) < 1.0,

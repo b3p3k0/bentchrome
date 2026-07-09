@@ -295,12 +295,14 @@ func _update_depth(delta: float) -> void:
 			vz = 0.0
 			_resolve_landing_floor()
 			_set_airborne(false)
-	var lift := height + _floor_lift  # jump arc + held terrace elevation
-	_visual.position.y = -lift
+	_visual.position.y = -(height + _floor_lift)
 	if _shadow:
-		var s := clampf(1.0 - lift * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
+		# The shadow RIDES the terrace lift (tight under a driving car) and only
+		# detaches/shrinks with real airtime — floating is for jumps, not roofs.
+		_shadow.position.y = -_floor_lift
+		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
 		_shadow.scale = Vector2(s, s)
-		_shadow.modulate.a = clampf(1.0 - lift * 0.0016, 0.4, 1.0)
+		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
 
 ## Grounded floor bookkeeping. Adopting happens on first zone contact; driving
 ## past a lower zone's edge is a ledge hop down (floor resolves at touchdown).

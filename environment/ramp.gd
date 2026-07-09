@@ -5,9 +5,9 @@ extends Node2D
 ##   - two ramp-flagged FloorZone halves (low half tags low_floor, high half
 ##     high_floor): crossing the midline grades a car's floor over at ground
 ##     level, both directions — no hop, no fall damage;
-##   - side rails along the HIGH half: thin statics carrying BOTH floors'
-##     bits, so a street car can't sideswipe into elevation (smash-proof by
-##     design — they're the geometry, not set dressing);
+##   - side rails along the FULL slope: thin statics carrying BOTH floors'
+##     bits — the ramp is a CHOKEPOINT by design, entered at its low end only
+##     (smash-proof; they're the geometry, not set dressing);
 ##   - slope shading painted over whatever sits under the strip. Surface FEEL
 ##     is composition: author a TerrainZone over the strip (grass = hill,
 ##     snow = slippery climb, bare asphalt = parking-garage grade).
@@ -44,10 +44,10 @@ func _ready() -> void:
 		var rail := StaticBody2D.new()
 		rail.collision_layer = rail_bits
 		rail.collision_mask = 0
-		rail.position = Vector2(s * (size.x * 0.5 + RAIL_W * 0.5 + 2.0), -size.y * 0.25)
+		rail.position = Vector2(s * (size.x * 0.5 + RAIL_W * 0.5 + 2.0), 0.0)
 		var col := CollisionShape2D.new()
 		var shape := RectangleShape2D.new()
-		shape.size = Vector2(RAIL_W, size.y * 0.5)
+		shape.size = Vector2(RAIL_W, size.y)
 		col.shape = shape
 		rail.add_child(col)
 		add_child(rail)
@@ -63,10 +63,10 @@ func _draw() -> void:
 		var band := Rect2(Vector2(-half.x, -half.y + i * step_h), Vector2(size.x, step_h + 1.0))
 		draw_rect(band, Color(1.0, 1.0, 1.0, HILITE_A * (1.0 - t)))
 		draw_rect(band, Color(0.0, 0.0, 0.0, SHADOW_A * t))
-	# Rail faces along the high half (the painted side of the invisible statics).
+	# Rail faces along the full slope (the painted side of the chokepoint).
 	var rail_x := half.x + 2.0
-	draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y * 0.5)), EDGE)
-	draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y * 0.5)), EDGE)
+	draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+	draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
 	draw_rect(Rect2(-half, size), EDGE, false, 2.0)
 	# Up-slope chevrons along the centerline.
 	var chevrons := maxi(int(size.y / 112.0), 2)
