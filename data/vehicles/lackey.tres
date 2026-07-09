@@ -22,3 +22,4 @@ accent_color = Color(0.65, 0.62, 0.4, 1)
 special = ExtResource("2_cannon")
 special_ammo_cap = 2
 special_recharge_seconds = 6.0
+turret = ExtResource("2_cannon")

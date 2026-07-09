@@ -32,6 +32,7 @@ const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
+const TurretScript := preload("res://weapons/turret.gd")
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -206,6 +207,15 @@ func _apply_stats() -> void:
 		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds)
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
+	# Boss turret: an autonomous auto-aiming barrel riding the hull (data-driven —
+	# any car whose stats carry a turret def grows one; fixed_loadout bosses never
+	# re-roll, and the name guard keeps live re-stats from stacking barrels).
+	if stats.turret and _visual and _visual.get_node_or_null(^"Turret") == null:
+		var turret := TurretScript.new()
+		turret.name = "Turret"
+		turret.position = Vector2(2.5, 0)  # the painted cannon ring (2,0 × fleet)
+		_visual.add_child(turret)
+		turret.set_weapon(stats.turret)
 
 func set_stats(new_stats: VehicleStats) -> void:
 	if new_stats == null:

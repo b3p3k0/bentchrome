@@ -24,6 +24,8 @@ extends Resource
 @export var special: WeaponDef  # signature secondary weapon
 @export var special_ammo_cap := 1            # rounds held at once
 @export var special_recharge_seconds := 12.0 # time to regrow one round
+@export var turret: WeaponDef  # bosses: auto-aiming hull turret (weapons/turret.gd);
+							   # null = none. Fires autonomously at the player.
 
 # Per-car raw handling-knob overrides (knob name -> value) applied after
 # StatCurves, so hand-tuning wins while StatCurves stays the default. Written by

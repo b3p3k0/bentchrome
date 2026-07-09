@@ -6,9 +6,10 @@
 [resource]
 script = ExtResource("1_def")
 display_name = "Breach Cannon"
-cooldown = 1.4
+cooldown = 2.8
 damage = 45.0
-projectile_speed = 1350.0
+projectile_speed = 1400.0
 projectile_lifetime = 3.0
 projectile_scene = ExtResource("2_proj")
-note = "Lackey's main gun: devastating, dead straight, slow to reload. Dodge sideways, not backward."
+projectile_tint = Color(1, 0.25, 0.2, 1)
+note = "Lackey's LIVE turret (weapons/turret.gd): tracks the player independent of the hull, fires power-missile-class shots every 2.8s inside ~1100px. Aim lag is the dodge — orbit hard."

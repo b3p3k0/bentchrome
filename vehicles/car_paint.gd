@@ -402,9 +402,9 @@ func _draw_lackey() -> void:
 	draw_line(Vector2(-26, 15), Vector2(20, 15), accent.darkened(0.2), 1.5)
 	draw_circle(Vector2(-16, -5), 3.5, primary.darkened(0.4))    # crew hatches
 	draw_circle(Vector2(-16, 6), 3.5, primary.darkened(0.4))
-	draw_circle(Vector2(2, 0), 5.0, primary.darkened(0.45))      # cannon ring
-	draw_rect(Rect2(2, -1.5, 24, 3), TIRE)                       # breach cannon
-	draw_rect(Rect2(24, -2.5, 4, 5), TIRE)                       # muzzle brake
+	# Cannon ring only — the barrel is the LIVE turret now (weapons/turret.gd,
+	# spawned by Vehicle when stats.turret is set); this is its mount base.
+	draw_circle(Vector2(2, 0), 5.0, primary.darkened(0.45))
 	_outline(hull)
 
 ## Smoky: pursuit SUV — boxy, white door livery, push bar, flashing light bar.
