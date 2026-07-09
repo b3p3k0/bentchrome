@@ -30,9 +30,25 @@ const PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE, NAVIGATE }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
+const Floors := preload("res://game/floors.gd")  # terraced-floor math
+
+# NAVIGATE (floor levels only): a cross-floor target needs a connector — an
+# authored FloorConnector marking a ramp up or a drop edge down. Committed
+# two-phase waypoint run (the CLEAR pattern — decide once, drive it): APPROACH
+# the entry point, then COMMIT full-throttle through the exit; never re-picked
+# per frame. Ambusher/opportunist mixes holding an armed tracking secondary
+# keep the vantage for NAV_SNIPE_TIME first — pursue keeps them orbiting, the
+# cross-floor fire gate lets missiles arc down, and the timer guarantees the
+# descent. No route found = plain pursue (the old behavior; unstick backstops).
+const NAV_TIMEOUT := 6.0
+const NAV_ENTRY_LEAD := 220.0
+const NAV_EXIT_LEAD := 260.0
+const NAV_ARRIVE := 90.0
+const NAV_SNIPE_TIME := 8.0
+const CROSS_FLOOR_PENALTY := 0.1
 
 # BREAK: the spacing move. Closing under _near veers off at a committed angle
 # instead of retreating — an arcing strafing run that keeps momentum and
@@ -129,6 +145,10 @@ var _shun_target: Node2D = null  # antler-lock opponent to avoid re-targeting
 var _shun_t := 0.0
 var _pin_repeats := 0  # stuck trips at the same spot this episode-cluster
 var _hop_cd := 0.0
+var _nav_connector: Node2D = null  # committed route (duck-typed FloorConnector)
+var _nav_phase := 0                # 0 = approach the entry, 1 = commit the exit
+var _nav_t := 0.0
+var _snipe_t := 0.0                # vantage-hold meter (tracking-armed, above)
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -265,6 +285,13 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"boost": false,
 		}
 
+	# Floor navigation: cross-floor targets need a connector. NAVIGATE early-
+	# returns like WADE/CLEAR; legacy levels (floor -1) never enter, fleeing
+	# outranks it, and roof snipers hold the vantage inside the gate.
+	var nav := _navigate_gate(vehicle, target, rack, scavenging, real_vel, delta)
+	if not nav.is_empty():
+		return nav
+
 	# Pressure meter: only the player earns relief; AI-vs-AI is governed already.
 	# Mooks RELENT (no-fire breather); bosses run the boss valve — heavier hit
 	# budget, dominance-scaled breather, boosted disengage.
@@ -332,10 +359,11 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		}
 	elif _mode == Mode.BREAK:
 		# The arc: veer off the (live) bearing at the committed angle — full
-		# throttle, guns free if the nose happens to sweep across the target.
+		# throttle, guns free if the nose happens to sweep across the target
+		# (and the target shares our terrace — MG lead can't climb).
 		var veer := wrapf(bearing + BREAK_ANGLE * _break_side - vehicle.heading, -PI, PI)
 		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
-		var los := _los_clear(vehicle, target)
+		var los := Floors.same_floor(vehicle, target) and _los_clear(vehicle, target)
 		intent = {
 			"throttle": 1.0,
 			"steer": clampf(veer * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
@@ -356,12 +384,17 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			weave = sin(_weave_t * WEAVE_FREQ + _weave_phase) * WEAVE_GAIN
 		# Don't chew on buildings: hold fire without line of sight. The mounts'
 		# 3x AI cooldown_scale gates the rate; ammo/recharge gate the specials.
-		var los := _los_clear(vehicle, target)
+		# Cross-floor: MG never fires (lead can't climb), but an armed tracking
+		# secondary rains down/up with a walls-only LoS — missiles arc over
+		# floor geometry, so only the arena boundary can deny the shot.
+		var same := Floors.same_floor(vehicle, target)
+		var los := same and _los_clear(vehicle, target)
+		var arc: bool = not same and _selected_tracking(rack) and _los_clear(vehicle, target, 2)
 		intent = {
 			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
 			"steer": clampf(diff * 2.0 + weave + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": not scavenging and absf(aim) < 0.35 and dist < FIRE_RANGE and los,
-			"fire_selected": not scavenging and absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and los,
+			"fire_selected": not scavenging and absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and (los or arc),
 			"boost": dist > 900.0 and absf(diff) < 0.5,  # burn nitro to close long gaps
 		}
 
@@ -382,6 +415,96 @@ func _enter_boss_break(vehicle, target) -> void:
 	_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 	_engage_t = 0.0
 	_engage_hp = -1.0
+
+## NAVIGATE entry/exit gate, called every tick from get_intent. Returns the
+## drive intent while riding a connector, {} to fall through to the ladder.
+func _navigate_gate(vehicle, target, rack, scavenging: bool, real_vel: Vector2, delta: float) -> Dictionary:
+	var vfloor := Floors.floor_of(vehicle)
+	if vfloor < 1:
+		return {}
+	var tfloor := Floors.floor_of(target)
+	var cross: bool = tfloor >= 1 and tfloor != vfloor
+	if _mode == Mode.NAVIGATE:
+		return _navigate_intent(vehicle, target, vfloor, cross, real_vel, delta)
+	if not cross or scavenging or vehicle.get_hp_fraction() < _flee:
+		_snipe_t = 0.0
+		return {}
+	# Roof snipers: going DOWN with an armed tracking secondary, hold the
+	# vantage a while — pursue keeps them orbiting (perpetual motion holds by
+	# construction), the arc fire gate rains missiles, the timer forces the
+	# descent eventually.
+	var sniper: bool = tfloor < vfloor and (mix.y + mix.z) > mix.x \
+		and rack != null and rack.can_consume() and _selected_tracking(rack)
+	if sniper and _snipe_t < NAV_SNIPE_TIME:
+		_snipe_t += delta
+		return {}
+	if _enter_navigate(vehicle, target, vfloor, tfloor):
+		return _navigate_intent(vehicle, target, vfloor, true, real_vel, delta)
+	return {}
+
+## Picks the best connector leaving this floor toward the target's, scored by
+## my distance plus half the target's (a route that also closes the gap wins).
+## One hop at a time — 1->3 re-plans after landing on 2.
+func _enter_navigate(vehicle, target, vfloor: int, tfloor: int) -> bool:
+	var want := signi(tfloor - vfloor)
+	var best: Node2D = null
+	var best_score := INF
+	for c in vehicle.get_tree().get_nodes_in_group(&"floor_connectors"):
+		if int(c.get("from_floor")) != vfloor or signi(int(c.get("to_floor")) - vfloor) != want:
+			continue
+		var score: float = vehicle.global_position.distance_to(c.global_position) \
+			+ 0.5 * target.global_position.distance_to(c.global_position)
+		if score < best_score:
+			best_score = score
+			best = c
+	if best == null:
+		_snipe_t = 0.0  # no route: plain pursue is the fallback, never a park
+		return false
+	_nav_connector = best
+	_nav_phase = 0
+	_nav_t = NAV_TIMEOUT
+	_mode = Mode.NAVIGATE
+	return true
+
+## The committed run: approach the entry lead point, then full-throttle
+## through the exit lead (boosting on ramps — launching needs >=120). Exits
+## on any floor change, timeout, target floor match, or a flee trip; stuck
+## machinery stays live underneath (UNSTICK/hop own their reversing).
+func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vector2, delta: float) -> Dictionary:
+	_nav_t -= delta
+	var c: Node2D = _nav_connector
+	var done: bool = _nav_t <= 0.0 or c == null or not is_instance_valid(c) \
+		or not cross or int(c.get("from_floor")) != vfloor \
+		or vehicle.get_hp_fraction() < _flee
+	if done:
+		_mode = Mode.PURSUE
+		_nav_connector = null
+		_snipe_t = 0.0
+		return {}  # hand back to the normal ladder this same tick
+	var approach: Vector2 = c.get("approach_dir")
+	var waypoint: Vector2 = c.global_position - approach * NAV_ENTRY_LEAD
+	if _nav_phase == 0 and vehicle.global_position.distance_to(waypoint) < NAV_ARRIVE:
+		_nav_phase = 1
+	if _nav_phase == 1:
+		waypoint = c.global_position + approach * NAV_EXIT_LEAD
+	if _update_stuck(real_vel.length(), true, delta):
+		return _on_stuck(vehicle, target, (waypoint - vehicle.global_position).angle())
+	var diff := wrapf((waypoint - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
+	return {
+		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
+		"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+		"fire_mg": false,
+		"fire_selected": false,
+		"boost": _nav_phase == 1 and c.get("kind") == &"ramp",
+	}
+
+## The selected secondary tracks (homing) — the only thing allowed to fire
+## across floors.
+func _selected_tracking(rack) -> bool:
+	if rack == null:
+		return false
+	var def: Variant = rack.selected_def()
+	return def != null and def.turn_rate_deg > 0.0 and def.acquisition_radius > 0.0
 
 ## Antler-lock detection at the stuck trip: feelers CLEAR (they never see cars)
 ## plus a non-player vehicle in contact range = two cars pushing. Shun the elk
@@ -461,19 +584,28 @@ func _unstick_intent() -> Dictionary:
 
 ## Casts three feelers (nose, ±35°) against walls/blocks and derives a steering
 ## bias away from the obstruction; sets _blocked when the nose ray hits close.
+## On a terrace the mask swaps to own-floor statics (+ curbs) — a roof car
+## must not swerve at street clutter it can't even touch — and every vehicle
+## body is excluded because floor bits ride on CAR layers too (feelers never
+## see cars; ramming is gameplay).
 func _update_feelers(vehicle) -> void:
 	_avoid_bias = 0.0
 	_blocked = false
 	if not (vehicle is CollisionObject2D):
 		return
+	var vfloor := Floors.floor_of(vehicle)
+	var mask := FEELER_MASK if vfloor < 1 else (2 | Floors.floor_bit(vfloor) | 64)
+	var exclude: Array = [(vehicle as CollisionObject2D).get_rid()]
+	if vfloor >= 1:
+		exclude = _all_car_rids(vehicle)
 	var length: float = FEELER_BASE + vehicle.get_speed() * FEELER_SPEED_FACTOR
 	var origin: Vector2 = vehicle.global_position
 	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
 	var frac := []  # hit fraction per feeler [left, center, right]; 1.0 = clear
 	for offset in [-FEELER_ANGLE, 0.0, FEELER_ANGLE]:
 		var dir := Vector2.RIGHT.rotated(vehicle.heading + offset)
-		var query := PhysicsRayQueryParameters2D.create(origin, origin + dir * length, FEELER_MASK)
-		query.exclude = [(vehicle as CollisionObject2D).get_rid()]
+		var query := PhysicsRayQueryParameters2D.create(origin, origin + dir * length, mask)
+		query.exclude = exclude
 		var hit := space.intersect_ray(query)
 		frac.append(origin.distance_to(hit["position"]) / length if not hit.is_empty() else 1.0)
 	# Side hits push away, closer = stronger; positive steer turns right.
@@ -514,17 +646,36 @@ func _nearest_crate(vehicle) -> Node2D:
 			best = p
 	return best
 
-## True when no wall/block sits between the nose and the target (LOS_MASK —
-## other cars don't block; collateral fire is free-for-all gameplay, and the
-## AI-only hazard curbs never stop a shot).
-func _los_clear(vehicle, target: Node2D) -> bool:
+## True when no wall/block sits between the nose and the target. Other cars
+## never block (collateral fire is free-for-all gameplay) and hazard curbs
+## never stop a shot. Legacy = LOS_MASK; on a terrace the mask swaps to
+## walls + own-floor statics with every car excluded (floor bits ride on car
+## layers). Pass an explicit mask for special rays (2 = the missile arc).
+func _los_clear(vehicle, target: Node2D, mask := 0) -> bool:
 	if not (vehicle is CollisionObject2D and target is CollisionObject2D):
 		return false
+	var vfloor := Floors.floor_of(vehicle)
+	var exclude: Array = [(vehicle as CollisionObject2D).get_rid(), (target as CollisionObject2D).get_rid()]
+	if mask == 0:
+		if vfloor >= 1:
+			mask = 2 | Floors.floor_bit(vfloor)
+			exclude = _all_car_rids(vehicle)
+		else:
+			mask = LOS_MASK
 	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
 	var query := PhysicsRayQueryParameters2D.create(
-		vehicle.global_position, target.global_position, LOS_MASK)
-	query.exclude = [(vehicle as CollisionObject2D).get_rid(), (target as CollisionObject2D).get_rid()]
+		vehicle.global_position, target.global_position, mask)
+	query.exclude = exclude
 	return space.intersect_ray(query).is_empty()
+
+## Every vehicle body's RID — terrace ray queries exclude them all so the
+## cars-are-transparent contract survives the floor bits on car layers.
+func _all_car_rids(vehicle) -> Array:
+	var out: Array = []
+	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
+		if v is CollisionObject2D:
+			out.append((v as CollisionObject2D).get_rid())
+	return out
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak),
 ## plus a grudge bonus for whoever hurt us last — retaliation cascades keep
@@ -558,6 +709,8 @@ func _select_target(vehicle) -> Node2D:
 			score += REVENGE_BONUS
 		if v.is_in_group(&"player"):
 			score += PLAYER_PRIORITY
+		if not Floors.same_floor(vehicle, v):
+			score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
 		if score > best_score:
 			best_score = score
 			best = v
