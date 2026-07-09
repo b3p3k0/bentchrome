@@ -1,6 +1,7 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://vehicles/vehicle.gd" id="1_veh"]
+[ext_resource type="Script" path="res://vehicles/floor_sensor.gd" id="14_fsn"]
 [ext_resource type="Script" path="res://vehicles/driving_controller.gd" id="2_ctl"]
 [ext_resource type="Script" path="res://vehicles/drivers/player_driver.gd" id="3_drv"]
 [ext_resource type="Script" path="res://vehicles/terrain_sensor.gd" id="4_tsn"]
@@ -52,6 +53,14 @@ collision_mask = 128
 script = ExtResource("4_tsn")
 
 [node name="TSCollision" type="CollisionShape2D" parent="TerrainSensor"]
+shape = SubResource("CircleShape2D_sensor")
+
+[node name="FloorSensor" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 256
+script = ExtResource("14_fsn")
+
+[node name="FSCollision" type="CollisionShape2D" parent="FloorSensor"]
 shape = SubResource("CircleShape2D_sensor")
 
 [node name="MachineGunMount" type="Node" parent="."]

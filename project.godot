@@ -37,7 +37,12 @@ window/stretch/mode="viewport"
 2d_physics/layer_1="ground"
 2d_physics/layer_2="wall"
 2d_physics/layer_3="obstacle"
+2d_physics/layer_4="floor_low"
+2d_physics/layer_5="floor_mid"
+2d_physics/layer_6="floor_high"
+2d_physics/layer_7="hazard_edge"
 2d_physics/layer_8="terrain"
+2d_physics/layer_9="floor_tag"
 
 [rendering]
 

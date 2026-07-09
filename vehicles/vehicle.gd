@@ -11,13 +11,22 @@ extends CharacterBody2D
 ## Collision layers: 1 = ground (vehicles, dummies), 2 = walls/barriers,
 ## 4 = obstacles (blocks/cover). While airborne the car keeps only the wall bit,
 ## so ramp jumps clear obstacles but can't leave the arena.
+##
+## Multi-floor levels (terraced: floors.gd) tag regions with FloorZones; the
+## FloorSensor reads them and the car carries floor_index (-1 = legacy level,
+## masks identical to the classic values above). On a floor, cars collide via
+## their floor bit instead of the plain ground/obstacle bits, so cross-floor
+## cars and other floors' walls don't exist physically. All grounded layer/mask
+## decisions live in _apply_ground_collision() — the single mask authority.
 
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
 const HEADING_STEPS := 16  # quantize the visual to N compass steps (retro
 							# directional-sprite feel); 0 = smooth rotation
+const FLOOR_SCALE_TWEEN := 0.25  # size-cue tween on floor change (visuals only)
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
+const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const ExplosionScene := preload("res://environment/explosion.tscn")
 
 @export_group("Identity")
@@ -35,6 +44,7 @@ const ExplosionScene := preload("res://environment/explosion.tscn")
 @export var gravity_z := 1300.0
 @export var ramp_launch := 760.0
 @export var min_launch_speed := 120.0
+@export var fall_damage_frac := 0.25  # of max HP, landing 2+ floors below takeoff
 
 @export_group("Ram")
 @export var ram_damage_scale := 0.06
@@ -49,6 +59,14 @@ var heading: float = 0.0  # radians; the direction the nose points
 var current_terrain: StringName = &"road"
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
+var floor_index := -1     # terrace we drive on; -1 = legacy single-plane level
+var _takeoff_floor := -1  # floor at the moment we went airborne (fall bookkeeping)
+var _floor_tween: Tween = null
+var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never radii
+	set(v):
+		_floor_vis = v
+		if _visual:
+			_visual.scale = Vector2.ONE * body_scale * v
 var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
 var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
@@ -63,6 +81,7 @@ var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 @onready var _shadow: Node2D = $Shadow
 @onready var _paint: Node2D = $Visual/Body
 @onready var _terrain_sensor: TerrainSensor = $TerrainSensor
+@onready var _floor_sensor: FloorSensor = $FloorSensor
 @onready var _mg_mount: WeaponMount = $MachineGunMount
 @onready var _special: SpecialController = $SpecialController
 @onready var _muzzle: Marker2D = $Visual/Muzzle
@@ -214,6 +233,7 @@ func get_controller() -> DrivingController:
 func _physics_process(delta: float) -> void:
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
+	_update_floor()
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
 	if _controller and not (_special and _special.is_dashing()):
 		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
@@ -264,17 +284,73 @@ func _update_depth(delta: float) -> void:
 		if height <= 0.0:
 			height = 0.0
 			vz = 0.0
+			_resolve_landing_floor()
 			_set_airborne(false)
 	_visual.position.y = -height
 	if _shadow:
-		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale
+		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
 		_shadow.scale = Vector2(s, s)
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
 
+## Grounded floor bookkeeping. Adopting happens on first zone contact; driving
+## past a lower zone's edge is a ledge hop down (floor resolves at touchdown).
+## A HIGHER sensed floor while grounded is deliberately ignored — walls own the
+## up-boundaries; you climb by landing there, never by grinding a seam.
+func _update_floor() -> void:
+	if _floor_sensor == null or height > 0.0 or vz != 0.0 or _falling:
+		return
+	var sensed: int = _floor_sensor.current_floor
+	if sensed < 1:
+		return
+	if floor_index < 0:
+		_adopt_floor(sensed)
+	elif sensed < floor_index:
+		pop_airborne(Floors.DROP_POP_VZ * float(floor_index - sensed))
+
+## Touchdown: the floor tag under the car becomes its floor; dropping 2+
+## floors from takeoff costs a slice of max HP (blink shield / DEVGOD apply).
+func _resolve_landing_floor() -> void:
+	var from := _takeoff_floor
+	_takeoff_floor = -1
+	if _floor_sensor == null:
+		return
+	var sensed: int = _floor_sensor.current_floor
+	if sensed < 1:
+		return
+	if sensed != floor_index:
+		_adopt_floor(sensed)
+	if from >= 1 and from - sensed > Floors.FALL_FREE_FLOORS and _health:
+		_health.take_damage(_health.max_hp * fall_damage_frac)
+		add_shake(6.0)
+
+func _adopt_floor(f: int) -> void:
+	floor_index = f
+	_apply_ground_collision()
+	var target: float = float(Floors.VISUAL_SCALE.get(f, 1.0))
+	if _floor_tween:
+		_floor_tween.kill()
+	_floor_tween = create_tween()
+	_floor_tween.tween_property(self, "_floor_vis", target, FLOOR_SCALE_TWEEN)
+
+## The single authority for grounded collision values (legacy -1 = the classic
+## 1 / ground|wall|obstacle). SpecialController's dash-end restore duck-types
+## current_ground_mask() — keep the signature.
+func current_ground_mask() -> int:
+	return Floors.ground_mask(floor_index)
+
+func _apply_ground_collision() -> void:
+	set_deferred("collision_layer", Floors.ground_layer(floor_index))
+	set_deferred("collision_mask", current_ground_mask())
+
 func _set_airborne(on: bool) -> void:
 	# Airborne: keep the wall bit (stay in the arena), drop ground + obstacles
-	# (clear other cars and blocks — ramp jumps sail over cover).
-	set_deferred("collision_mask", LAYER_WALL if on else (LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE))
+	# (clear other cars and blocks — ramp jumps sail over cover). Every launch
+	# stamps the takeoff floor so landings can bill the fall.
+	if on:
+		_takeoff_floor = floor_index
+		set_deferred("collision_mask", LAYER_WALL)
+	else:
+		_apply_ground_collision()
 
 ## Smaller pop than a ramp (jump mines) — airborne physics from any height kick.
 func pop_airborne(vz_speed: float) -> void:
@@ -386,8 +462,12 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 	height = 0.0
 	vz = 0.0
 	_falling = false
-	set_deferred("collision_layer", LAYER_GROUND)
-	set_deferred("collision_mask", LAYER_GROUND | LAYER_WALL | LAYER_OBSTACLE)
+	floor_index = -1     # re-adopted from the FloorSensor on first grounded tick
+	_takeoff_floor = -1
+	if _floor_tween:
+		_floor_tween.kill()
+	_floor_vis = 1.0
+	_apply_ground_collision()
 	if _health:
 		_health.hp = _health.max_hp
 	if _status:

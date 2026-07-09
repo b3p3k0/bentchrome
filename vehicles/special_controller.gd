@@ -263,10 +263,16 @@ func _dash_tick(delta: float) -> void:
 func _end_dash(vehicle: CharacterBody2D) -> void:
 	_dash_t = 0.0
 	_dash_target = null
-	# Restore the mask to match the car's air state (grounded 7 / airborne 2),
-	# same split as Vehicle._set_airborne.
+	# Restore the mask to match the car's air state, same split as
+	# Vehicle._set_airborne. Grounded values come from the car's own mask
+	# authority (floor-aware); duck-typed — never name Vehicle here.
 	var airborne: bool = vehicle.get("height") != null and vehicle.get("height") > 0.0
-	vehicle.set_deferred("collision_mask", 2 if airborne else 7)
+	if airborne:
+		vehicle.set_deferred("collision_mask", 2)
+	elif vehicle.has_method(&"current_ground_mask"):
+		vehicle.set_deferred("collision_mask", vehicle.current_ground_mask())
+	else:
+		vehicle.set_deferred("collision_mask", 7)
 
 ## Blunt Blaze: a column of flame off the nose for FLAME_DURATION per ammo —
 ## holding fire chains bursts into a sustained torch (recharge-fed). Damage is

@@ -46,6 +46,7 @@ const VEHICLE_PROPS := {
 	"ram_min_speed": [50.0, 400.0, 10.0],
 	"bounce_factor": [0.0, 1.0, 0.05],
 	"bounce_min_speed": [20.0, 300.0, 10.0],
+	"fall_damage_frac": [0.0, 0.6, 0.05],
 }
 const CONTROLLER_PROPS := {
 	"boost_top_factor": [1.0, 2.5, 0.05],
