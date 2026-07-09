@@ -14,6 +14,10 @@ extends Node2D
 ##                 (quay over water, retaining wall over the lowland). Local
 ##                 +y is the LOW side — rotate the node to face any drop.
 ##                 size.x = run length, size.y = falloff reach.
+##   bridge:       a roof-to-roof deck plate. Author the NODE at z_index 1 —
+##                 the overhead layer: floor-2 cars (z 0) vanish beneath it,
+##                 floor-3 cars (z 2) ride on top. Driveability comes from a
+##                 matching floor-3 FloorZone; rails are separate statics.
 
 const HULL := Color(0.34, 0.21, 0.18)       # rusted plating
 const HULL_DARK := Color(0.22, 0.13, 0.11)
@@ -29,6 +33,9 @@ const CLEAT := Color(0.2, 0.21, 0.24)
 const CRANE_STEEL := Color(0.72, 0.5, 0.14)  # harbor-gantry yellow
 const CRANE_DARK := Color(0.45, 0.31, 0.09)
 const CABLE := Color(0.18, 0.18, 0.2)
+const BRIDGE_DECK := Color(0.38, 0.4, 0.45)
+const BRIDGE_LINE := Color(0.27, 0.29, 0.33)
+const BRIDGE_EDGE := Color(0.6, 0.53, 0.2)
 
 @export var kind: StringName = &"pier_surface"
 @export var size := Vector2(512, 256)
@@ -44,8 +51,28 @@ func _draw() -> void:
 			_draw_crane()
 		&"ledge_shadow":
 			_draw_ledge_shadow()
+		&"bridge":
+			_draw_bridge()
 		_:
 			_draw_pier()
+
+## Steel deck spanning two roofs: plating seams across the run, center dashes,
+## hazard lips along the long edges. Span runs along local x.
+func _draw_bridge() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half, size), BRIDGE_DECK)
+	var seams := maxi(int(size.x / 72.0), 2)
+	for i in range(1, seams):
+		var x := -half.x + size.x * i / seams
+		draw_line(Vector2(x, -half.y + 2.0), Vector2(x, half.y - 2.0), BRIDGE_LINE, 2.0)
+	var dashes := maxi(int(size.x / 48.0), 2)
+	for i in dashes:
+		if i % 2 == 0:
+			var x0 := -half.x + size.x * i / dashes
+			draw_line(Vector2(x0 + 6.0, 0.0), Vector2(x0 + size.x / dashes - 6.0, 0.0), BRIDGE_LINE, 2.0)
+	draw_rect(Rect2(Vector2(-half.x, -half.y), Vector2(size.x, 5.0)), BRIDGE_EDGE)
+	draw_rect(Rect2(Vector2(-half.x, half.y - 5.0), Vector2(size.x, 5.0)), BRIDGE_EDGE)
+	draw_rect(Rect2(-half, size), BRIDGE_LINE, false, 2.0)
 
 func _draw_ledge_shadow() -> void:
 	var steps := 6
