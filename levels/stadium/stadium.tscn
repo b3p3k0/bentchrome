@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=27 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -16,6 +16,10 @@
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
 [ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
 [ext_resource type="Script" path="res://levels/stadium/stadium_deco.gd" id="30_sdeco"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
+[ext_resource type="Resource" path="res://data/vehicles/goliath.tres" id="32_gstats"]
+[ext_resource type="Script" path="res://vehicles/goliath/goliath_driver.gd" id="33_gdrv"]
+[ext_resource type="Script" path="res://vehicles/goliath/goliath_boss.gd" id="34_gboss"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -515,9 +519,69 @@ amount = 2
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, 0)
 
+[node name="GoliathLoop" type="Node2D" parent="."]
+
+[node name="Loop01" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(0, -928)
+
+[node name="Loop02" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1300, -928)
+
+[node name="Loop03" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1780, -1300)
+
+[node name="Loop04" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1440, -600)
+
+[node name="Loop05" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1440, 600)
+
+[node name="Loop06" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1780, 1300)
+
+[node name="Loop07" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(1300, 928)
+
+[node name="Loop08" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(0, 928)
+
+[node name="Loop09" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1300, 928)
+
+[node name="Loop10" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1780, 1300)
+
+[node name="Loop11" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1440, 600)
+
+[node name="Loop12" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1440, -600)
+
+[node name="Loop13" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1780, -1300)
+
+[node name="Loop14" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1300, -928)
+
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-1900, 1450)
 rotation = -0.7854
 start_floor = 1
+
+[node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(1900, -1450)
+rotation = 2.3562
+stats = ExtResource("32_gstats")
+fixed_loadout = true
+launch_immune = true
+rear_weakspot = 1.75
+body_scale = 1.6
+start_floor = 1
+
+[node name="Driver" parent="Enemy1"]
+script = ExtResource("33_gdrv")
+
+[node name="BossController" type="Node" parent="Enemy1"]
+script = ExtResource("34_gboss")
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]

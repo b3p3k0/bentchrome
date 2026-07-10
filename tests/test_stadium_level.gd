@@ -115,6 +115,37 @@ func test_stadium_structure() -> void:
 		t.check(best == int(c.from_floor),
 			"stadium: %s approach run sits on floor %d (zone says %d)" % [c.name, int(c.from_floor), best])
 
+	# The boss rig: Goliath duels alone, authored with the full flag set,
+	# riding an authored waypoint ring that stays inside the arena.
+	var boss: Node2D = null
+	for e in enemies:
+		if String(e.name) == "Enemy1":
+			boss = e
+	t.check(enemies.size() == 1 and boss != null,
+		"stadium: Goliath duels alone (got %d enemies)" % enemies.size())
+	if boss:
+		t.check(bool(boss.get("fixed_loadout")), "stadium: the re-roll never touches Goliath")
+		t.check(bool(boss.get("launch_immune")), "stadium: Goliath is launch-immune")
+		t.check(is_equal_approx(float(boss.get("body_scale")), 1.6),
+			"stadium: Goliath wears the x1.6 stadium scale")
+		var bstats: Resource = boss.get("stats")
+		t.check(bstats != null and bstats.get("id") == &"goliath_cab",
+			"stadium: the goliath stats deck is authored")
+		var drv := boss.get_node_or_null(^"Driver")
+		t.check(drv != null and drv.get_script() != null
+			and (drv.get_script() as Script).resource_path.ends_with("goliath_driver.gd"),
+			"stadium: the bespoke GoliathDriver rides the boss")
+		t.check(boss.get_node_or_null(^"BossController") != null,
+			"stadium: the boss controller is mounted")
+	var ring := stadium.get_node_or_null(^"GoliathLoop")
+	t.check(ring != null and ring.get_child_count() >= 8,
+		"stadium: the loop ring is authored (got %d marks)"
+		% (ring.get_child_count() if ring else 0))
+	if ring and not field.is_empty():
+		for m in ring.get_children():
+			t.check((field.rect as Rect2).has_point((m as Node2D).position),
+				"stadium: %s sits inside the arena" % m.name)
+
 	# Props keep their distance: cover never overlaps cover, and every jump
 	# pad belongs to one terrace and stands clear of solid scenery.
 	var solids: Array = []
