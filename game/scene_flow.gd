@@ -18,6 +18,7 @@ const CAMPAIGN := [
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass"},
 	{"scene": "res://levels/depot/depot.tscn", "name": "The Depot"},
 	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks"},
+	{"scene": "res://levels/chase/buzzard_run.tscn", "name": "The Buzzard Run"},
 ]
 
 func to_title() -> void:
