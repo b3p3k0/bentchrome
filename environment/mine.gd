@@ -57,16 +57,21 @@ func _trigger(body: CharacterBody2D) -> void:
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		if audio:
 			audio.play(&"hit_weapon")
-	var dev := deg_to_rad(randf_range(LAND_DEV_MIN, LAND_DEV_MAX))
+	# Launch-immune rigs (Goliath) just crush the mine: no deviation, no pop —
+	# a land mine still bills its damage, a jump mine is consumed for nothing.
+	var immune: bool = body.get("launch_immune") == true
+	if not immune:
+		var dev := deg_to_rad(randf_range(LAND_DEV_MIN, LAND_DEV_MAX))
+		if jump:
+			dev = deg_to_rad(randf_range(JUMP_DEV_MIN, JUMP_DEV_MAX))
+		if randf() < 0.5:
+			dev = -dev
+		body.velocity = body.velocity.rotated(dev)
+		if "heading" in body:
+			body.heading += dev
 	if jump:
-		dev = deg_to_rad(randf_range(JUMP_DEV_MIN, JUMP_DEV_MAX))
-	if randf() < 0.5:
-		dev = -dev
-	body.velocity = body.velocity.rotated(dev)
-	if "heading" in body:
-		body.heading += dev
-	if jump and body.has_method(&"pop_airborne"):
-		body.pop_airborne(JUMP_VZ)
+		if not immune and body.has_method(&"pop_airborne"):
+			body.pop_airborne(JUMP_VZ)
 	elif damage > 0.0:
 		for child in body.get_children():
 			if child is Health:

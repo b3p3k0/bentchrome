@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="2_proj"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Trailer Battery"
+cooldown = 2.6
+damage = 30.0
+projectile_speed = 1300.0
+projectile_lifetime = 3.0
+projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(1, 0.5, 0.15, 1)
+note = "Goliath's trailer armament (weapons/turret.gd x2, authored on the trailer): each barrel tracks the player independently and fires inside ~1100px. Two barrels, so per-shot damage sits under Lackey's single Breach Cannon — the pressure is the volume."

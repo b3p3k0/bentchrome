@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+id = &"goliath_cab"
+car_name = "Goliath"
+driver_name = "Goliath"
+flavor = "Bobtail. No trailer, no ballast, no mercy — the tractor alone is faster than it has any right to be, and it is aimed at you."
+special_name = "Ram Charge"
+special_desc = "Phase-two feel deck: applied to the controller at the transition (StatCurves only — never set_stats, which would repaint and reset HP). Speed and grip way up, armor down; the fresh HP pool is goliath_boss.gd's PHASE2_HP knob, not this armor stat."
+acceleration = 8
+top_speed = 8
+handling = 7
+armor = 4
+special_power = 10
+mass = 8
+primary_color = Color(0.22, 0.23, 0.27, 1)
+accent_color = Color(0.85, 0.45, 0.12, 1)
+no_mines = true

@@ -49,6 +49,29 @@ func test_jump_mine_pops_airborne_no_damage() -> void:
 	t.check(f.car.height > 0.0 or f.car.vz > 0.0, "jump mine: victim popped airborne")
 	_done(f)
 
+## Launch-immune rigs (Goliath) crush mines: a jump mine is consumed for no
+## pop and no spin; a land mine still bills its damage but can't deviate.
+func test_launch_immune_rig_crushes_mines() -> void:
+	var f := _fixture(JumpScene)
+	f.car.launch_immune = true
+	var heading_before: float = f.car.heading
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	t.check(not is_instance_valid(f.mine), "immune rig: jump mine consumed")
+	t.check(f.car.height == 0.0 and f.car.vz == 0.0, "immune rig: no airborne pop")
+	t.check(is_equal_approx(f.car.heading, heading_before), "immune rig: no re-vector")
+	_done(f)
+
+	var g := _fixture(LandScene)
+	g.car.launch_immune = true
+	var heading_land: float = g.car.heading
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	var health = g.car.get_node("Health")
+	t.check(health.hp < health.max_hp, "immune rig: land mine damage still lands")
+	t.check(is_equal_approx(g.car.heading, heading_land), "immune rig: land mine can't spin it")
+	_done(g)
+
 ## Regression: dropping the LAST mine auto-cycles the rack; the still-held
 ## click must NOT fire the newly selected slot (release re-arms the trigger).
 func test_dry_slot_does_not_chain_fire_next_weapon() -> void:

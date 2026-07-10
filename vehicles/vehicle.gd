@@ -44,6 +44,9 @@ const TurretScript := preload("res://weapons/turret.gd")
 @export var body_scale := 1.0         # bosses: scales visuals + collision RADIUS — never
 									  # the body node (scaled physics bodies jam move_and_slide)
 @export var hp_scale := 1.0           # bosses: multiplies StatCurves HP
+@export var launch_immune := false    # too heavy to flip: jump pads roll under it,
+									  # jump mines pop for nothing, land mines can't
+									  # spin it (mine.gd checks this flag too)
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -393,7 +396,7 @@ func _set_airborne(on: bool) -> void:
 
 ## Smaller pop than a jump pad (jump mines) — airborne physics from any height kick.
 func pop_airborne(vz_speed: float) -> void:
-	if height > 0.0:
+	if height > 0.0 or launch_immune:
 		return
 	vz = vz_speed
 	_set_airborne(true)
@@ -414,7 +417,7 @@ func escape_hop(direction: Vector2) -> void:
 ## Jump pads call this; needs speed and ground. (Driveable RAMPS never launch —
 ## they grade the floor over via ramp-flagged FloorZones.)
 func launch_from_jump() -> void:
-	if height > 0.0 or velocity.length() < min_launch_speed:
+	if height > 0.0 or launch_immune or velocity.length() < min_launch_speed:
 		return
 	vz = jump_launch
 	_set_airborne(true)
