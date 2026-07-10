@@ -34,6 +34,15 @@ static var JACKKNIFE_DMG := 26.0      # getting hit by a semi HURTS
 static var JACKKNIFE_KNOCKBACK := 900.0  # fling speed off the tail (px/s)
 static var JACKKNIFE_SPIN := deg_to_rad(140.0)  # heading kick on the victim
 static var JACKKNIFE_STUN := 0.5      # hands-off-the-wheel window (s)
+static var SKID_SWAY_RATE := 1.2      # rad/s: the bogie lays rubber past this
+									  # (under the attack rate — marks telegraph
+									  # the sway before the tail goes live)
+
+const SKID_COLOR := Color(0.05, 0.05, 0.06, 0.6)  # drive_fx's rubber
+const SKID_WIDTH := 6.0
+const SKID_FADE := 2.0
+const MAX_SKID_NODES := 24            # shared global cap ("skidmarks" group)
+const BOGIE_POINTS := [Vector2(-58, -30), Vector2(-58, 30)]  # main-plate local
 
 var yaw := 0.0        # trailer facing (radians, world)
 var yaw_rate := 0.0   # rad/s, signed — the jackknife window reads abs()
@@ -48,6 +57,7 @@ var _main: AnimatableBody2D = null
 var _nose: AnimatableBody2D = null
 var _swing_box: Area2D = null
 var _swing_cd := 0.0
+var _skids: Array = []  # active bogie Line2D pair, parented to the level
 var _vis_scale := 1.6
 
 ## Build plates, pin behind the cab, exempt the cab's own physics, stamp
@@ -73,6 +83,7 @@ func _physics_process(delta: float) -> void:
 		return
 	tow_tick(_cab.global_position, _cab_heading(), delta)
 	_swing_cd = maxf(_swing_cd - delta, 0.0)
+	_update_skids()
 	if absf(yaw_rate) > SWING_ATTACK_RATE:
 		_swing_strike()
 
@@ -165,6 +176,43 @@ func _on_plate_damaged(amount: float, _hp: float, proxy: Health, weak: bool) -> 
 	if cab_health:
 		cab_health.take_damage(amount * TRAILER_DMG_FRAC
 			* (TRAILER_WEAK_MULT if weak else 1.0))
+
+## Bogie rubber while the tail sways hard — drive_fx's skid recipe (Line2D
+## pair in the shared "skidmarks" group, points at the wheel contacts, fade
+## on settle). The marks telegraph the whip before the strike window opens.
+func _update_skids() -> void:
+	var swaying := absf(yaw_rate) > SKID_SWAY_RATE
+	if swaying and _skids.is_empty():
+		_start_skid()
+	elif not swaying and not _skids.is_empty():
+		_end_skid()
+	for i in mini(_skids.size(), BOGIE_POINTS.size()):
+		_skids[i].add_point(main_center + (BOGIE_POINTS[i] as Vector2).rotated(yaw))
+
+func _start_skid() -> void:
+	var host := get_tree().current_scene
+	if host == null or get_tree().get_nodes_in_group(&"skidmarks").size() >= MAX_SKID_NODES:
+		return
+	for i in BOGIE_POINTS.size():
+		var line := Line2D.new()
+		line.width = SKID_WIDTH
+		line.default_color = SKID_COLOR
+		line.add_to_group(&"skidmarks")
+		host.add_child(line)
+		# Early in the draw order: under buildings and cars, over the floor.
+		host.move_child(line, mini(2, host.get_child_count() - 1))
+		_skids.append(line)
+
+func _end_skid() -> void:
+	for line in _skids:
+		if is_instance_valid(line):
+			var tween: Tween = line.create_tween()
+			tween.tween_property(line, "modulate:a", 0.0, SKID_FADE)
+			tween.tween_callback(line.queue_free)
+	_skids.clear()
+
+func _exit_tree() -> void:
+	_end_skid()
 
 ## Shadow, box paint, and the two battery turrets — all on the MAIN plate,
 ## offset so the paint centers on the whole trailer, not the plate.

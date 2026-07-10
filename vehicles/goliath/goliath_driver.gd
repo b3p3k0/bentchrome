@@ -22,8 +22,12 @@ static var REENGAGE_COOLDOWN := 2.5     # post-parting grace before the next one
 static var RAM_FRONT_ARC := deg_to_rad(45.0)  # front-arc half-angle -> grille
 static var RAM_TIME := 1.4          # committed hunt window
 static var RAM_FIRE_CONE := 0.35    # MG alignment during the hunt (rad)
-static var JACKKNIFE_STEER := 1.0   # committed swing magnitude
-static var JACKKNIFE_TIME := 1.1    # how long the yank holds
+static var JACKKNIFE_STEER := 1.0   # sway magnitude
+static var JACKKNIFE_TIME := 1.1    # the full sway window
+static var JACKKNIFE_SWAY_OUT := 0.35   # fraction of the window steering away
+										# (the wind-up that loads the tail)
+static var JACKKNIFE_SWAY_BACK := 0.75  # fraction where the counter-snap ends;
+										# the rest straightens back onto course
 static var JACKKNIFE_THROTTLE := 0.9  # speed keeps the tail's energy up
 static var JACKKNIFE_COOLDOWN := 6.0  # the tail is an occasion, not a habit
 static var JACKKNIFE_MIN_SPEED := 320.0  # real px/s — the maneuver NEEDS
@@ -91,7 +95,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		Mode.RAM:
 			return _hunt_intent(vehicle, player)
 		Mode.JACKKNIFE:
-			return {"throttle": JACKKNIFE_THROTTLE, "steer": _jk_steer}
+			return {"throttle": JACKKNIFE_THROTTLE, "steer": _sway_steer()}
 		Mode.PARTING:
 			return _parting_intent(vehicle, player)
 		_:
@@ -122,6 +126,17 @@ func _real_speed(vehicle) -> float:
 func _enter_parting() -> void:
 	_mode = Mode.PARTING
 	_timer = PARTING_SHOT_TIME
+
+## The whip-crack, NOT a U-turn: a quick out / snap-back / straighten sway —
+## the cab roughly holds its line while the trailer loads up one way and
+## cracks back across the other. The strike is still the trailer's physics.
+func _sway_steer() -> float:
+	var t := 1.0 - clampf(_timer / JACKKNIFE_TIME, 0.0, 1.0)
+	if t < JACKKNIFE_SWAY_OUT:
+		return _jk_steer      # wind-up: load the tail away from them
+	if t < JACKKNIFE_SWAY_BACK:
+		return -_jk_steer     # the crack: whip it back across
+	return 0.0                # straighten and let the assist settle it
 
 func _hunt_intent(vehicle, player: Node2D) -> Dictionary:
 	if player == null:

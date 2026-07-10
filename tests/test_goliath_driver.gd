@@ -73,6 +73,21 @@ func test_jackknife_hands_off_via_parting_shot() -> void:
 	t.check(f.driver._reengage > 0.0, "flow: re-engage grace armed — waves, not a smother")
 	_done(f)
 
+## The jackknife is a whip-crack sway, not a U-turn: wind-up away from the
+## player, counter-snap back across, then hands straight for the settle.
+func test_jackknife_sways_out_back_and_straight() -> void:
+	var f := _fixture(Vector2(0, 300))  # right flank -> wind-up steer is negative
+	var intent: Dictionary = f.driver.get_intent(f.rig, 1.0 / 60.0)
+	var wind_up: float = float(intent.get("steer", 0.0))
+	t.check(wind_up < 0.0, "sway: wind-up loads the tail (away side)")
+	intent = f.driver.get_intent(f.rig, DriverScript.JACKKNIFE_TIME * 0.5)
+	t.check(float(intent.get("steer", 0.0)) > 0.0, "sway: the crack snaps back across")
+	intent = f.driver.get_intent(f.rig, DriverScript.JACKKNIFE_TIME * 0.35)
+	t.check(f.driver._mode == DriverScript.Mode.JACKKNIFE
+		and is_zero_approx(float(intent.get("steer", 0.0))),
+		"sway: the settle runs hands-straight — no U-turn")
+	_done(f)
+
 ## The tail is an occasion: it demands momentum AND a cooled-down rig —
 ## a glued-on player can't bait a dog-chases-tail spin cycle.
 func test_jackknife_needs_momentum_and_cooldown() -> void:

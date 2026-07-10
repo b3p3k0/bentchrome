@@ -88,6 +88,29 @@ func test_swing_strike_bites_once() -> void:
 		"swing: cooldown holds the second bite")
 	_done(f)
 
+## Sway rubber: a hard whip starts the bogie skid pair; settling back in
+## line fades them out.
+func test_sway_lays_rubber() -> void:
+	var f := _fixture()
+	t.current_scene = f.container
+	var pos := Vector2.ZERO
+	for i in 60:  # settle straight east
+		pos += Vector2(12, 0)
+		f.trailer.tow_tick(pos, 0.0, 1.0 / 60.0)
+	f.trailer._update_skids()
+	t.check(f.trailer._skids.is_empty(), "skids: a straight pull lays nothing")
+	pos += Vector2(12, -4)
+	f.trailer.tow_tick(pos, -PI / 2.0, 1.0 / 60.0)  # the yank
+	f.trailer._update_skids()
+	t.check(f.trailer._skids.size() == 2, "skids: the whip starts the bogie pair")
+	for i in 90:  # settle back onto a straight north line
+		pos += Vector2(0, -12)
+		f.trailer.tow_tick(pos, -PI / 2.0, 1.0 / 60.0)
+	f.trailer._update_skids()
+	t.check(f.trailer._skids.is_empty(), "skids: the settle fades the rubber out")
+	t.current_scene = null
+	_done(f)
+
 func test_plates_wear_the_rig_contract() -> void:
 	var f := _fixture()
 	var main: AnimatableBody2D = f.trailer.get_node("TrailerMain")
