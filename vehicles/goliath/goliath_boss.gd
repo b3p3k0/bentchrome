@@ -13,7 +13,7 @@ const TrailerScript := preload("res://vehicles/goliath/goliath_trailer.gd")
 const CutsceneScript := preload("res://vehicles/goliath/goliath_cutscene.gd")
 const PH2_STATS := preload("res://data/vehicles/goliath_ph2.tres")
 
-static var PHASE1_HP := 1400.0    # the trailered fortress pool — big enough
+static var PHASE1_HP := 1000.0    # the trailered fortress pool — big enough
 								  # to be a siege, small enough that every
 								  # volley visibly moves the bar
 static var PHASE2_HP := 900.0     # the fresh bobtail pool

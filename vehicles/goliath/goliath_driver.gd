@@ -52,6 +52,11 @@ static var CHARGE_HIT_SPIN := deg_to_rad(140.0)
 static var CHARGE_HIT_STUN := 0.7
 static var RETREAT_TIME := 2.5       # the back-off lap after a connect
 static var RETREAT_THROTTLE := 1.0
+static var RAM_COOLDOWN := 45.0      # after ANY charge attempt: back to the
+									 # track by default, lead-not-steel if
+									 # crowded, pursuit when it expires — the
+									 # rhythm the player counters around
+static var HARASS_THROTTLE := 0.8    # cooldown engagement pace
 
 static var STUCK_SPEED := 40.0      # real px/s below this counts as pinned
 static var STUCK_TRIP := 1.2        # seconds pinned before RECOVER (the rig
@@ -64,6 +69,7 @@ var _reengage := 0.0
 var _jk_cd := 0.0
 var _jk_steer := 0.0
 var _charge_dir := Vector2.RIGHT
+var _ram_cd := 0.0
 var _stuck_t := 0.0
 var _rev_steer := 1.0
 var _points: PackedVector2Array = PackedVector2Array()
@@ -86,6 +92,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	_timer -= delta
 	_reengage = maxf(_reengage - delta, 0.0)
 	_jk_cd = maxf(_jk_cd - delta, 0.0)
+	_ram_cd = maxf(_ram_cd - delta, 0.0)
 	var player := vehicle.get_tree().get_first_node_in_group(&"player") as Node2D
 	if player != null and not is_instance_valid(player):
 		player = null
@@ -129,7 +136,9 @@ func is_forcing() -> bool:
 
 ## Phase 2, bobtail. The charge is committed the moment it launches: no
 ## re-homing, no steering — dodge it and it keeps the appointment with
-## whatever was behind you.
+## whatever was behind you. Every attempt (hit, bait, or whiff) arms the
+## RAM_COOLDOWN: he returns to the track, answers crowding with lead, and
+## only when it expires does the pursuit resume — the counterable rhythm.
 func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 	if _mode == Mode.CHARGE:
 		var colliders := _slide_colliders(vehicle)
@@ -145,15 +154,29 @@ func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 			vehicle.heading = _charge_dir.angle()
 			return {}
 		else:
-			_enter_lineup()  # whiffed into open air — square up again
+			_mode = Mode.LOOP  # open-air whiff: the cooldown owns what's next
 	if _mode == Mode.RETREAT:
 		if _timer > 0.0:
 			var intent := _loop_intent(vehicle)
 			intent["throttle"] = RETREAT_THROTTLE
 			return intent
-		_enter_lineup()
+		_mode = Mode.LOOP
+	if _ram_cd > 0.0:
+		# The breather lap: hold the ring; a crowding player draws fire, never
+		# steel. The next charge is earned by the clock, not proximity.
+		_mode = Mode.LOOP
+		if player != null:
+			var to_c: Vector2 = player.global_position - vehicle.global_position
+			if to_c.length() < APPROACH_TRIGGER:
+				var aim := angle_difference(vehicle.heading, to_c.angle())
+				return {
+					"throttle": HARASS_THROTTLE,
+					"steer": clampf(aim * LOOP_STEER_GAIN, -1.0, 1.0),
+					"fire_mg": absf(aim) < PARTING_FIRE_CONE,
+				}
+		return _loop_intent(vehicle)
 	if _mode != Mode.LINE_UP:
-		_enter_lineup()  # fresh out of phase 1 (or a recovery): square up
+		_enter_lineup()  # cooldown clear (or fresh out of phase 1): square up
 	if player == null:
 		return _loop_intent(vehicle)
 	var to_p: Vector2 = player.global_position - vehicle.global_position
@@ -161,6 +184,7 @@ func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 	if _timer <= 0.0 and absf(diff) < CHARGE_ALIGN and to_p.length() < CHARGE_MAX_DIST:
 		_mode = Mode.CHARGE
 		_timer = CHARGE_TIME
+		_ram_cd = RAM_COOLDOWN  # the attempt itself starts the clock
 		_charge_dir = Vector2.RIGHT.rotated(vehicle.heading)  # commit: dead straight
 		vehicle.velocity = _charge_dir * CHARGE_SPEED
 		vehicle.heading = _charge_dir.angle()

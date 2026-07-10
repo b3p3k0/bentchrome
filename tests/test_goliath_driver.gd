@@ -140,8 +140,29 @@ func test_charge_commits_after_windup() -> void:
 	t.check(f.driver.is_forcing(), "ph2: the controller is bypassed mid-charge")
 	t.check(intent.is_empty(), "ph2: no intent while forcing")
 	intent = f.driver.get_intent(f.rig, DriverScript.CHARGE_TIME + 0.1)
-	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "ph2: an open-air whiff squares up again")
+	t.check(f.driver._mode == DriverScript.Mode.LOOP,
+		"ph2: an open-air whiff cools down onto the ring")
 	t.check(not f.driver.is_forcing(), "ph2: forcing ends with the charge")
+	_done(f)
+
+## The pacing loop: every attempt arms the 45s clock — track by default,
+## fire (never steel) when crowded, pursuit only when the clock clears.
+func test_ram_cooldown_paces_the_pursuit() -> void:
+	var f := _phase2_fixture(Vector2(600, 0))
+	f.driver.get_intent(f.rig, 1.0 / 60.0)                          # LINE_UP
+	f.driver.get_intent(f.rig, DriverScript.CHARGE_WINDUP + 0.1)    # -> CHARGE
+	t.check(f.driver._ram_cd > DriverScript.RAM_COOLDOWN - 2.0,
+		"pace: the attempt arms the cooldown clock")
+	f.driver.get_intent(f.rig, DriverScript.CHARGE_TIME + 0.1)      # whiff out
+	var intent: Dictionary = f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LOOP, "pace: cooldown returns him to the track")
+	f.player.position = Vector2(300, 0)  # crowd him mid-cooldown
+	intent = f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LOOP and bool(intent.get("fire_mg", false)),
+		"pace: crowding draws fire, never a charge")
+	f.driver._ram_cd = 0.0
+	f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "pace: clock clear — the hunt resumes")
 	_done(f)
 
 ## The outcome classifiers, pure: a car with apply_impact is a strike, a

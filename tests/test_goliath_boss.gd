@@ -75,11 +75,12 @@ func test_transition_lands_phase2_hot() -> void:
 ## plays (shrunk beats for the suite), and phase 2 is handed back unpaused.
 func test_theatrical_transition_freezes_and_hands_back() -> void:
 	var saved := [CutsceneScript.CAM_TIME, CutsceneScript.EXPLOSION_COUNT,
-		CutsceneScript.EXPLOSION_GAP, CutsceneScript.REV_TIME]
+		CutsceneScript.EXPLOSION_GAP, CutsceneScript.REV_TIME, CutsceneScript.HANDBACK_TIME]
 	CutsceneScript.CAM_TIME = 0.05
 	CutsceneScript.EXPLOSION_COUNT = 1
 	CutsceneScript.EXPLOSION_GAP = 0.05
 	CutsceneScript.REV_TIME = 0.05
+	CutsceneScript.HANDBACK_TIME = 0.05
 	var f := _fixture()
 	var player = VehicleScene.instantiate()  # default faction joins "player"
 	player.position = Vector2(600, 0)
@@ -103,6 +104,7 @@ func test_theatrical_transition_freezes_and_hands_back() -> void:
 	CutsceneScript.EXPLOSION_COUNT = saved[1]
 	CutsceneScript.EXPLOSION_GAP = saved[2]
 	CutsceneScript.REV_TIME = saved[3]
+	CutsceneScript.HANDBACK_TIME = saved[4]
 	_done(f)
 
 func test_chip_damage_does_not_trip_the_gate() -> void:

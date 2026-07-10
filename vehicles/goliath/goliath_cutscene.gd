@@ -13,9 +13,12 @@ const CarPaintScript := preload("res://vehicles/car_paint.gd")  # FLEET_SCALE on
 
 static var CAM_ZOOM := 0.55           # the close-up on the king
 static var CAM_TIME := 0.7            # pan/zoom onto him
-static var EXPLOSION_COUNT := 4       # trailer cook-off booms
-static var EXPLOSION_GAP := 0.35      # seconds between them
-static var REV_TIME := 1.3            # stack smoke / menace beat
+static var EXPLOSION_COUNT := 6       # trailer cook-off booms
+static var EXPLOSION_GAP := 0.4       # seconds between them
+static var REV_TIME := 2.2            # stack smoke / menace beat
+static var REV_PULSES := 2            # fresh smoke bursts across the rev
+static var HANDBACK_TIME := 1.2       # the ride home: zoom out + track back
+static var HANDBACK_ZOOM := 0.42      # the medium overview on the way
 static var STACK_OFFSETS := [Vector2(-8, -14), Vector2(-8, 14)]  # paint-local
 
 var _boss: Node = null
@@ -52,10 +55,23 @@ func _play() -> void:
 		await get_tree().create_timer(EXPLOSION_GAP, true).timeout
 	if _trailer and is_instance_valid(_trailer):
 		_trailer.queue_free()
-	_rev_stacks()
-	await get_tree().create_timer(REV_TIME, true).timeout
+	# The rev: fresh smoke pulses spread across the menace beat.
+	var pulses := maxi(REV_PULSES, 1)
+	for i in pulses:
+		_rev_stacks()
+		await get_tree().create_timer(REV_TIME / float(pulses), true).timeout
+	# The ride home: a medium zoom-out while tracking back to the player,
+	# landing exactly on their camera so the resume never jumps.
 	var pcam := _player_camera()
 	if pcam:
+		var track := create_tween()
+		track.tween_property(_cam, "global_position", pcam.global_position, HANDBACK_TIME) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		var zoom_out := create_tween()
+		zoom_out.tween_property(_cam, "zoom", Vector2(HANDBACK_ZOOM, HANDBACK_ZOOM),
+			HANDBACK_TIME * 0.45)
+		zoom_out.tween_property(_cam, "zoom", pcam.zoom, HANDBACK_TIME * 0.55)
+		await track.finished
 		pcam.make_current()
 	get_tree().paused = false
 	if _boss and is_instance_valid(_boss) and _boss.has_method(&"start_phase2"):
