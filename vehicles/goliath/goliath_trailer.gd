@@ -25,8 +25,11 @@ static var HITCH_OFFSET := 52.0       # cab center -> fifth wheel, behind
 static var KINGPIN_AHEAD := 96.0      # kingpin -> trailer body center
 static var MAX_ARTIC := deg_to_rad(75.0)  # a real semi folds, it doesn't spin
 static var NOSE_FRAC := 0.25          # front quarter = the weak kingpin plate
-static var TRAILER_DMG_FRAC := 0.25   # armored: fraction of hits that forward
+static var TRAILER_DMG_FRAC := 0.45   # armored: fraction of hits that forward —
+									  # body shots must still MATTER (0.25 made
+									  # phase 1 an ammo-starved slog)
 static var TRAILER_WEAK_MULT := 2.0   # nose quarter forwards this much more
+									  # (0.45 x 2 = near-full damage at the hitch)
 static var SWING_ATTACK_RATE := 2.6   # rad/s: the tail is live past this
 static var SWING_HIT_COOLDOWN := 1.2  # seconds between tail bites
 static var SWING_BOX_PAD := 36.0      # hitbox reach beyond the paint

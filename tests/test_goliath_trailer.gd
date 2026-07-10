@@ -124,6 +124,8 @@ func test_plates_wear_the_rig_contract() -> void:
 	var to_cab_main: float = f.trailer.main_center.distance_to(f.cab.global_position)
 	t.check(to_cab_nose < to_cab_main, "the weak nose is the quarter nearest the hitch")
 	var cab_health: Health = f.cab.get_node("Health")
+	cab_health.max_hp = 10000.0  # deep pool: assertions stay true at any
+	cab_health.hp = 10000.0      # TRAILER_DMG_FRAC knob setting
 	var before: float = cab_health.hp
 	var nose_proxy: Health = nose.get_node("Health")
 	nose_proxy.take_damage(100.0)
