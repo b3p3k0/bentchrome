@@ -1,18 +1,46 @@
 extends Driver
-## Goliath's brain — bench build (Batch B): ride the authored waypoint ring
-## around the stadium track at a cruise pace, joining at the nearest point.
-## Deliberately NOT EnemyDriver (the arena FSM is the wrong instinct for a
-## trailered rig — no feelers, they'd see our own trailer as a wall). The
-## phase-1 combat states (ram / jackknife / parting shot / recovery) and the
-## phase-2 charge cycle land in Batches C and D on top of this loop.
+## Goliath's brain. Phase 1 (trailered) is AVOIDANT by design: ride the
+## authored waypoint ring at pace and let the trailer battery talk. A player
+## inside APPROACH_TRIGGER provokes exactly one answer — in the front arc
+## they get the grille (RAM: straight hunt, boost, MG), anywhere else they
+## get the tail (JACKKNIFE: a committed hard steer away from their side so
+## the trailer whips INTO them; the strike itself is the trailer's physics).
+## Either way ends in a PARTING shot over the shoulder, then back to the
+## loop with a re-engage cooldown — pressure comes in waves, not a smother.
+## RECOVER is the big-rig unstick: real-velocity stuck trip, committed
+## reverse-out, rejoin the ring at the nearest mark.
+## Deliberately NOT EnemyDriver: no feelers (they'd see our own trailer),
+## no archetype blend — the loop IS the archetype. Phase 2 lands in Batch D.
 
-static var LOOP_LOOKAHEAD := 340.0  # reserved for C (approach shaping)
+enum Mode { LOOP, RAM, JACKKNIFE, PARTING, RECOVER }
+
 static var LOOP_ARRIVE := 260.0     # waypoint advance radius — wide = smooth arcs
 static var LOOP_STEER_GAIN := 2.2   # chase_driver's proven angle->steer gain
-static var LOOP_THROTTLE := 0.55    # bench cruise; combat paces arrive in C
+static var LOOP_THROTTLE := 0.85    # combat cruise on the ring
+static var APPROACH_TRIGGER := 520.0    # player this close provokes a reaction
+static var REENGAGE_COOLDOWN := 2.5     # post-parting grace before the next one
+static var RAM_FRONT_ARC := deg_to_rad(45.0)  # front-arc half-angle -> grille
+static var RAM_TIME := 1.4          # committed hunt window
+static var RAM_FIRE_CONE := 0.35    # MG alignment during the hunt (rad)
+static var JACKKNIFE_STEER := 1.0   # committed swing magnitude
+static var JACKKNIFE_TIME := 1.1    # how long the yank holds
+static var JACKKNIFE_THROTTLE := 0.9  # speed keeps the tail's energy up
+static var PARTING_SHOT_TIME := 0.8   # the over-the-shoulder goodbye
+static var PARTING_FIRE_CONE := 0.5
+static var STUCK_SPEED := 40.0      # real px/s below this counts as pinned
+static var STUCK_TRIP := 1.2        # seconds pinned before RECOVER (the rig
+									# launches slowly — don't trip on takeoff)
+static var RECOVER_REVERSE_TIME := 1.6
 
+var _mode := Mode.LOOP
+var _timer := 0.0
+var _reengage := 0.0
+var _jk_steer := 0.0
+var _stuck_t := 0.0
+var _rev_steer := 1.0
 var _points: PackedVector2Array = PackedVector2Array()
 var _idx := 0
+var _boss: Node = null
 
 ## Tests and bench rigs feed a ring directly; in the stadium the ring is the
 ## level's GoliathLoop markers, gathered on first intent.
@@ -25,6 +53,86 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_gather_loop(vehicle)
 		if _points.is_empty():
 			return super.get_intent(vehicle, delta)  # no ring authored — park
+	if _boss == null:
+		_boss = vehicle.get_node_or_null(^"BossController")
+	_timer -= delta
+	_reengage = maxf(_reengage - delta, 0.0)
+	var player := vehicle.get_tree().get_first_node_in_group(&"player") as Node2D
+	if player != null and not is_instance_valid(player):
+		player = null
+	_update_stuck(vehicle, delta)
+
+	# Committed states run their timers out, then hand back to the loop.
+	if _mode == Mode.RECOVER:
+		if _timer > 0.0:
+			return {"throttle": -1.0, "steer": _rev_steer}
+		_rejoin(vehicle)
+	elif _mode == Mode.RAM and (_timer <= 0.0 or player == null):
+		_enter_parting()
+	elif _mode == Mode.JACKKNIFE and _timer <= 0.0:
+		_enter_parting()
+	elif _mode == Mode.PARTING and (_timer <= 0.0 or player == null):
+		_reengage = REENGAGE_COOLDOWN
+		_rejoin(vehicle)
+
+	# The loop is home; a close player provokes the reaction (phase 1 only).
+	if _mode == Mode.LOOP and player and _reengage <= 0.0 and _phase() == 1:
+		if vehicle.global_position.distance_to(player.global_position) < APPROACH_TRIGGER:
+			_react(vehicle, player)
+
+	match _mode:
+		Mode.RAM:
+			return _hunt_intent(vehicle, player)
+		Mode.JACKKNIFE:
+			return {"throttle": JACKKNIFE_THROTTLE, "steer": _jk_steer}
+		Mode.PARTING:
+			return _parting_intent(vehicle, player)
+		_:
+			return _loop_intent(vehicle)
+
+## Front arc gets the grille; everyone else gets the tail. The jackknife
+## steers AWAY from the player's side — the trailer whips into them.
+func _react(vehicle, player: Node2D) -> void:
+	var to_p: Vector2 = player.global_position - vehicle.global_position
+	if absf(angle_difference(vehicle.heading, to_p.angle())) < RAM_FRONT_ARC:
+		_mode = Mode.RAM
+		_timer = RAM_TIME
+	else:
+		_mode = Mode.JACKKNIFE
+		_timer = JACKKNIFE_TIME
+		var fwd := Vector2.RIGHT.rotated(vehicle.heading)
+		_jk_steer = -signf(fwd.cross(to_p)) * JACKKNIFE_STEER
+		if _jk_steer == 0.0:
+			_jk_steer = JACKKNIFE_STEER
+
+func _enter_parting() -> void:
+	_mode = Mode.PARTING
+	_timer = PARTING_SHOT_TIME
+
+func _hunt_intent(vehicle, player: Node2D) -> Dictionary:
+	if player == null:
+		return _loop_intent(vehicle)
+	var diff := angle_difference(vehicle.heading,
+		(player.global_position - vehicle.global_position).angle())
+	return {
+		"throttle": 1.0,
+		"steer": clampf(diff * LOOP_STEER_GAIN, -1.0, 1.0),
+		"boost": true,
+		"fire_mg": absf(diff) < RAM_FIRE_CONE,
+	}
+
+func _parting_intent(vehicle, player: Node2D) -> Dictionary:
+	if player == null:
+		return {"throttle": 0.3, "steer": 0.0}
+	var diff := angle_difference(vehicle.heading,
+		(player.global_position - vehicle.global_position).angle())
+	return {
+		"throttle": 0.35,
+		"steer": clampf(diff * LOOP_STEER_GAIN, -1.0, 1.0),
+		"fire_mg": absf(diff) < PARTING_FIRE_CONE,
+	}
+
+func _loop_intent(vehicle) -> Dictionary:
 	var own: Vector2 = vehicle.global_position
 	if own.distance_to(_points[_idx]) < LOOP_ARRIVE:
 		_idx = (_idx + 1) % _points.size()
@@ -35,6 +143,23 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		"fire_mg": false,
 		"fire_selected": false,
 	}
+
+## The big-rig unstick: wedged cars fake velocity, so the trip reads REAL
+## displacement (enemy_driver's lesson). Commit a reverse swing, then rejoin.
+func _update_stuck(vehicle, delta: float) -> void:
+	if _mode == Mode.RECOVER or not vehicle.has_method(&"get_real_velocity"):
+		return
+	var real: Vector2 = vehicle.get_real_velocity()
+	_stuck_t = _stuck_t + delta if real.length() < STUCK_SPEED else 0.0
+	if _stuck_t >= STUCK_TRIP:
+		_stuck_t = 0.0
+		_mode = Mode.RECOVER
+		_timer = RECOVER_REVERSE_TIME
+		_rev_steer = 1.0 if randf() < 0.5 else -1.0
+
+func _rejoin(vehicle) -> void:
+	_mode = Mode.LOOP
+	_idx = _nearest_idx(vehicle)
 
 ## The ring is a plain container of Marker2Ds beside the vehicles (no groups —
 ## the loop belongs to this one level). Join at the nearest point so a corner
@@ -53,12 +178,18 @@ func _gather_loop(vehicle) -> void:
 	if pts.is_empty():
 		return
 	_points = pts
+	_idx = _nearest_idx(vehicle)
+
+func _nearest_idx(vehicle) -> int:
 	var best := 0
 	var best_d := INF
 	var own: Vector2 = vehicle.global_position
-	for i in pts.size():
-		var d := own.distance_squared_to(pts[i])
+	for i in _points.size():
+		var d := own.distance_squared_to(_points[i])
 		if d < best_d:
 			best_d = d
 			best = i
-	_idx = best
+	return best
+
+func _phase() -> int:
+	return int(_boss.phase) if _boss != null else 1

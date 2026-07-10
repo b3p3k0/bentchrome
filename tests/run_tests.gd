@@ -47,6 +47,7 @@ const SUITES := [
 	preload("res://tests/test_stadium_level.gd"),
 	preload("res://tests/test_goliath_trailer.gd"),
 	preload("res://tests/test_goliath_boss.gd"),
+	preload("res://tests/test_goliath_driver.gd"),
 ]
 
 var _checks := 0
