@@ -28,6 +28,13 @@ const ROAD_MARGIN := 70.0   # stay this far inside the sampled road edge
 const LOOKAHEAD := 240.0    # steer at a point this far up the road
 const STEER_GAIN := 2.2
 
+## Yo-yo catch-up: far behind, a Buzzard's engine finds whatever it takes to
+## keep up (max_speed rides the player's + margin); back in the knife-fight
+## range it honors its stats again — always relevant, never unshakeable.
+static var YOYO_FAR := 600.0     # px behind the player where the cheat kicks in
+static var YOYO_NEAR := 250.0    # px behind where honest stats resume
+static var YOYO_MARGIN := 80.0   # px/s over the player's speed while catching up
+
 @export var role: StringName = &"bike"
 @export var lane_offset := 0.0    # director deals lanes so the pack spreads
 @export var phase := 0.0          # per-driver desync for swoop/burst rhythms
@@ -38,6 +45,7 @@ var _aim_t := 0.0
 var _aim_pos := Vector2.ZERO
 var _missile_cd := 2.0            # first rocket never lands on spawn
 var _host: Node = null
+var _base_speed := -1.0           # honest StatCurves max_speed, captured once
 
 func get_intent(vehicle, delta: float) -> Dictionary:
 	var p: Dictionary = ROLES[role]
@@ -63,6 +71,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	else:
 		target_x = _road_target(vehicle, own, lane_offset)
 	var target_y: float = player.global_position.y + hold_dy
+	_yoyo(vehicle, player, own, delta)
 	var steer: float = _steer_to(vehicle, Vector2(target_x, own.y - LOOKAHEAD)) \
 		+ p["wobble"] * sin(_t * 2.6 + phase)
 	# Pace-hold: behind the mark = full gas, ahead = ease off. Never stop.
@@ -88,6 +97,24 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		"fire_mg": fire,
 		"fire_selected": fire_sec,
 	}
+
+func _yoyo(vehicle, player: Node2D, own: Vector2, delta: float) -> void:
+	if not vehicle.has_method(&"get_controller"):
+		return  # bare test fixtures
+	var ctrl = vehicle.get_controller()
+	if ctrl == null:
+		return
+	if _base_speed < 0.0:
+		_base_speed = ctrl.max_speed
+	var behind: float = own.y - player.global_position.y  # + = trailing
+	var pv: Variant = player.get("velocity")
+	var pspeed: float = pv.length() if pv is Vector2 else 0.0
+	var want: float = _base_speed
+	if behind > YOYO_FAR:
+		want = maxf(_base_speed, pspeed + YOYO_MARGIN)
+	elif behind > YOYO_NEAR:
+		return  # hysteresis band — hold whatever it's doing
+	ctrl.max_speed = lerpf(ctrl.max_speed, want, minf(delta * 2.0, 1.0))
 
 func _steer_to(vehicle, point: Vector2) -> float:
 	var own: Vector2 = vehicle.global_position

@@ -25,8 +25,21 @@ func test_wall_pressure_math() -> void:
 	wall.wall_speed = 330.0
 	wall.front_y = player.position.y + 2000.0
 	container.add_child(wall)
+	# Rubberband: at gap 2000 the surge term is (2000-900)*0.35 = 385 on top of
+	# the 330 cruise — 357.5px closed over half a second.
 	wall._physics_process(0.5)
-	t.check(is_equal_approx(wall.gap(), 2000.0 - 165.0), "wall: advances at cruise (gap %d)" % int(wall.gap()))
+	t.check(is_equal_approx(wall.gap(), 2000.0 - 357.5), "wall: surges when trailing (gap %d)" % int(wall.gap()))
+	# At the comfort pivot the surge is zero — pure phase cruise.
+	wall.front_y = player.position.y + WallScript.COMFORT_GAP
+	wall._physics_process(0.5)
+	t.check(is_equal_approx(wall.gap(), WallScript.COMFORT_GAP - 165.0),
+		"wall: eases to cruise inside comfort")
+	# From the max clamp, closure outruns the fastest car in the game (640).
+	wall.front_y = player.position.y + WallScript.MAX_GAP
+	var gap_before: float = wall.gap()
+	wall._physics_process(1.0)
+	t.check(gap_before - wall.gap() > 640.0,
+		"wall: nothing outruns the horde globally (closed %d/s)" % int(gap_before - wall.gap()))
 	player.position.y = -30000.0
 	wall._physics_process(0.016)
 	t.check(is_equal_approx(wall.gap(), WallScript.MAX_GAP), "wall: clamps to MAX_GAP when outrun")

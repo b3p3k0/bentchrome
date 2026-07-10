@@ -10,6 +10,8 @@ extends Node2D
 static var MAX_GAP := 2400.0      # px the wall trails at best (never irrelevant)
 static var KILL_MARGIN := 50.0    # gap at which the swarm takes you
 static var RESPAWN_GAP := 1400.0  # reset distance after a death
+static var COMFORT_GAP := 900.0   # the yo-yo pivot: past this, the horde surges
+static var CATCHUP_RATE := 0.35   # extra px/s of closure per px of excess gap
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
@@ -49,7 +51,10 @@ func _physics_process(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
 		return
 	var player_y: float = target.global_position.y
-	front_y -= wall_speed * delta                    # north is -y
+	# Rubberband: cruise inside COMFORT_GAP, surge harder the farther it trails
+	# — no car outruns the horde globally; skill holds it at arm's length.
+	var pressure := maxf(front_y - player_y - COMFORT_GAP, 0.0) * CATCHUP_RATE
+	front_y -= (wall_speed + pressure) * delta       # north is -y
 	front_y = minf(front_y, player_y + MAX_GAP)      # never out of the mirrors
 	var road_x := 0.0
 	if course != null:

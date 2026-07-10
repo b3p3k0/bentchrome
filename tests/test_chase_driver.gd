@@ -7,9 +7,15 @@ const DriverScript := preload("res://levels/chase/chase_driver.gd")
 
 var t
 
+class FakeController:
+	var max_speed := 500.0
+
 class FakeVehicle extends Node2D:
 	var heading := -PI / 2.0   # north
 	var velocity := Vector2.ZERO
+	var ctrl = FakeController.new()
+	func get_controller():
+		return ctrl
 
 func _init(runner) -> void:
 	t = runner
@@ -118,6 +124,52 @@ func test_sedan_rocket_cadence() -> void:
 	t.check(pulses >= 1 and pulses <= 3, "chase-ai: sedan rockets on a lazy clock (%d in 8s)" % pulses)
 	t.check(max_streak <= 1, "chase-ai: rocket intent is a single-frame pulse")
 	_done(r[0])
+
+func test_yoyo_catchup() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var vehicle := FakeVehicle.new()
+	container.add_child(vehicle)
+	var player := FakeVehicle.new()   # has velocity — the sprinting mark
+	player.add_to_group(&"player")
+	player.velocity = Vector2(0, -600)
+	player.global_position = Vector2(0, -2000)
+	container.add_child(player)
+	var driver = DriverScript.new()
+	container.add_child(driver)
+	vehicle.global_position = Vector2(0, -1000)  # 1000px behind — cheat range
+	for i in 40:
+		driver.get_intent(vehicle, 0.1)
+	t.check(vehicle.ctrl.max_speed > 600.0,
+		"chase-ai: yo-yo finds the pace when trailing (%d)" % int(vehicle.ctrl.max_speed))
+	vehicle.global_position = Vector2(0, -1900)  # 100px behind — knife range
+	for i in 40:
+		driver.get_intent(vehicle, 0.1)
+	t.check(vehicle.ctrl.max_speed < 560.0,
+		"chase-ai: honest stats resume up close (%d)" % int(vehicle.ctrl.max_speed))
+	t.root.remove_child(container)
+	container.free()
+
+func test_brake_passes_through_floor_holds() -> void:
+	const IR := preload("res://game/input_router.gd")
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var vehicle := FakeVehicle.new()
+	container.add_child(vehicle)
+	var driver = preload("res://levels/chase/chase_player_driver.gd").new()
+	container.add_child(driver)
+	var idle: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(idle["throttle"], 0.45), "chase: hands off cruises at the floor")
+	Input.action_press(IR.ACTION_MOVE_DOWN)
+	var braking: Dictionary = driver.get_intent(vehicle, 0.016)
+	Input.action_release(IR.ACTION_MOVE_DOWN)
+	t.check(braking["throttle"] < -0.5, "chase: S is a real brake now (%.2f)" % braking["throttle"])
+	Input.action_press(IR.ACTION_MOVE_UP)
+	var sprint: Dictionary = driver.get_intent(vehicle, 0.016)
+	Input.action_release(IR.ACTION_MOVE_UP)
+	t.check(sprint["throttle"] > 0.9, "chase: W still sprints")
+	t.root.remove_child(container)
+	container.free()
 
 func test_buzzard_data_shape() -> void:
 	var bike = load("res://data/vehicles/buzz_bike.tres")
