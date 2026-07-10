@@ -122,6 +122,47 @@ const DEFS := {
 			{"kind": &"heal", "at": [720.0, 0.0]},
 		],
 	},
+	# --- set pieces (RARE: the picker spaces them ≥15k apart) ---------------
+	&"overpass": {
+		"len": 1100.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"overpass", "shoulder": &"dirt",
+		"set_piece": &"overpass",
+		"props": [
+			{"kind": &"barrel", "at": [830.0, 300.0]},
+		],
+	},
+	&"truckstop": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"truckstop", "shoulder": &"dirt",
+		"set_piece": &"truckstop",
+		"props": [
+			{"kind": &"cone", "at": [420.0, 240.0]},
+			{"kind": &"pump", "at": [560.0, 330.0]},
+			{"kind": &"pump", "at": [660.0, 330.0]},
+			{"kind": &"barrel", "at": [610.0, 390.0]},
+			{"kind": &"barrel", "at": [702.0, 368.0]},
+			{"kind": &"derelict", "at": [860.0, 300.0]},
+		],
+		"pickups": [
+			{"kind": &"standard", "at": [780.0, 260.0]},
+		],
+	},
+	&"convoy": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"convoy", "shoulder": &"grass",
+		"props": [
+			{"kind": &"derelict", "at": [350.0, -120.0]},
+			{"kind": &"derelict", "at": [470.0, -30.0]},
+			{"kind": &"derelict", "at": [560.0, 130.0]},
+			{"kind": &"junk", "at": [700.0, -180.0]},
+			{"kind": &"derelict", "at": [820.0, 40.0]},
+			{"kind": &"log", "at": [950.0, -140.0]},
+		],
+		"pickups": [
+			{"kind": &"heal", "at": [1080.0, 100.0]},
+			{"kind": &"power", "at": [1120.0, -100.0]},
+		],
+	},
 }
 
 ## Picker weights (the pickup chunk is cadence-forced, never rolled).
@@ -137,7 +178,13 @@ const WEIGHTS := {
 	&"potholes": 1.5,
 	&"log_run": 1.5,
 	&"launch": 1.0,
+	&"overpass": 0.8,
+	&"truckstop": 0.6,
+	&"convoy": 0.6,
 }
 
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"potholes", &"log_run", &"launch"]
+
+## Landmark chunks: at most one per RARE_SPACING of course (chase_course).
+const RARE := [&"overpass", &"truckstop", &"convoy"]

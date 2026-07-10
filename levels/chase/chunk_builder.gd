@@ -14,6 +14,7 @@ const ClutterScene := preload("res://environment/clutter.tscn")
 const AmmoScene := preload("res://environment/ammo_pickup.tscn")
 const HealScene := preload("res://environment/heal_pickup.tscn")
 const JumpPadScript := preload("res://environment/jump_pad.gd")
+const StreetDecoScript := preload("res://environment/street_deco.gd")
 
 const STEP := 175.0        # geometry sample spacing along the chunk
 const SHOULDER_W := 90.0   # drivable verge outside the asphalt (grip penalty)
@@ -55,6 +56,12 @@ static func build(entry: Dictionary) -> Node2D:
 	_build_medians(root, entry)
 	_place_props(root, entry)
 	_place_pickups(root, entry)
+	_roadside_flair(root, entry, ds, cx, half)
+	match def.get("set_piece", &""):
+		&"overpass":
+			_overpass(root, entry)
+		&"truckstop":
+			_truckstop(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -280,6 +287,13 @@ static func _place_props(root: Node2D, entry: Dictionary) -> void:
 				junk.max_hp = 20.0
 				junk.deco = &"junk"
 				root.add_child(junk)
+			&"pump":
+				var pump := BlockScene.instantiate()
+				pump.position = pos
+				pump.size = Vector2(64, 64)
+				pump.max_hp = 40.0
+				pump.deco = &"pump"
+				root.add_child(pump)
 			&"pothole":
 				_pothole(root, pos, rng)
 			&"jump":
@@ -317,6 +331,145 @@ static func _place_pickups(root: Node2D, entry: Dictionary) -> void:
 			ammo.position = pos
 			ammo.kind = String(kind)
 			root.add_child(ammo)
+
+## Roadside flair: seeded paint on the embankments whipping by for the speed
+## read — bushes, marker posts, rocks. Pure Polygon2D beyond the walls; no
+## collision, no feelers, no radar. Every chunk gets a stream.
+static func _roadside_flair(root: Node2D, entry: Dictionary, ds: Array, cx: Array, half: Array) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 707
+	var def: Dictionary = entry["def"]
+	var chunk_len: float = def["len"]
+	var d := rng.randf_range(80.0, 240.0)
+	var side := 1.0
+	while d < chunk_len - 60.0:
+		var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+		var base_x: float = cx[i] + side * (half[i] + SHOULDER_W + 60.0 + rng.randf_range(0.0, 50.0))
+		var pos := Vector2(base_x, -d)
+		match rng.randi() % 3:
+			0:  # scrub bush — two offset blobs
+				var bush := Polygon2D.new()
+				bush.polygon = _blob(pos, rng.randf_range(9.0, 16.0), rng)
+				bush.color = Color(0.24, 0.34, 0.18)
+				root.add_child(bush)
+				var bush2 := Polygon2D.new()
+				bush2.polygon = _blob(pos + Vector2(10, 6), rng.randf_range(6.0, 10.0), rng)
+				bush2.color = Color(0.3, 0.4, 0.22)
+				root.add_child(bush2)
+			1:  # mile-marker post
+				var post := Polygon2D.new()
+				post.polygon = PackedVector2Array([
+					pos + Vector2(-3, -14), pos + Vector2(3, -14),
+					pos + Vector2(3, 14), pos + Vector2(-3, 14),
+				])
+				post.color = Color(0.2, 0.42, 0.28)
+				root.add_child(post)
+				var cap := Polygon2D.new()
+				cap.polygon = PackedVector2Array([
+					pos + Vector2(-4, -18), pos + Vector2(4, -18),
+					pos + Vector2(4, -12), pos + Vector2(-4, -12),
+				])
+				cap.color = Color(0.85, 0.87, 0.9)
+				root.add_child(cap)
+			2:  # roadside rock
+				var rock := Polygon2D.new()
+				rock.polygon = _blob(pos, rng.randf_range(8.0, 14.0), rng)
+				rock.color = Color(0.38, 0.37, 0.36)
+				root.add_child(rock)
+		side = -side
+		d += rng.randf_range(200.0, 340.0)
+
+static func _blob(center: Vector2, r: float, rng: RandomNumberGenerator) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 7:
+		var a := TAU * float(i) / 7.0
+		pts.append(center + Vector2(cos(a), sin(a)) * r * rng.randf_range(0.75, 1.15))
+	return pts
+
+## Overpass: a concrete deck crossing OVER the road (z 1 paint — cars pass
+## under; the terrace z-order trick, no FloorZones, pure dressing) with a
+## shadow band beneath and two pillar walls forcing a line through.
+static func _overpass(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	var mid: float = def["len"] * 0.5
+	var c := _center_x(entry, mid)
+	var span: float = def["half_w"] + SHOULDER_W + EMBANK_W + 160.0
+	var shadow := Polygon2D.new()
+	shadow.name = "OverShadow"
+	shadow.polygon = PackedVector2Array([
+		Vector2(c - span, -mid + 150), Vector2(c + span, -mid + 150),
+		Vector2(c + span, -mid - 150), Vector2(c - span, -mid - 150),
+	])
+	shadow.color = Color(0.0, 0.0, 0.0, 0.3)
+	shadow.z_index = -1
+	root.add_child(shadow)
+	var deck := Polygon2D.new()
+	deck.name = "OverDeck"
+	deck.polygon = PackedVector2Array([
+		Vector2(c - span, -mid + 110), Vector2(c + span, -mid + 110),
+		Vector2(c + span, -mid - 110), Vector2(c - span, -mid - 110),
+	])
+	deck.color = Color(0.32, 0.32, 0.35)
+	deck.z_index = 1
+	root.add_child(deck)
+	for edge in [-96.0, 96.0]:
+		var rail := Polygon2D.new()
+		rail.polygon = PackedVector2Array([
+			Vector2(c - span, -mid + edge + 8), Vector2(c + span, -mid + edge + 8),
+			Vector2(c + span, -mid + edge - 8), Vector2(c - span, -mid + edge - 8),
+		])
+		rail.color = Color(0.22, 0.22, 0.25)
+		rail.z_index = 1
+		root.add_child(rail)
+	for side in [-1.0, 1.0]:
+		var pillar := StaticBody2D.new()
+		pillar.name = "PillarL" if side < 0.0 else "PillarR"
+		pillar.collision_layer = 2
+		pillar.collision_mask = 0
+		pillar.position = Vector2(c + side * 300.0, -mid)
+		var col := CollisionShape2D.new()
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(56, 56)
+		col.shape = shape
+		pillar.add_child(col)
+		var paint := Polygon2D.new()
+		paint.polygon = PackedVector2Array([
+			Vector2(-28, -28), Vector2(28, -28), Vector2(28, 28), Vector2(-28, 28),
+		])
+		paint.color = Color(0.42, 0.42, 0.45)
+		pillar.add_child(paint)
+		var stripe := Polygon2D.new()
+		stripe.polygon = PackedVector2Array([
+			Vector2(-28, 18), Vector2(28, 18), Vector2(28, 28), Vector2(-28, 28),
+		])
+		stripe.color = Color(0.95, 0.8, 0.2)
+		pillar.add_child(stripe)
+		root.add_child(pillar)
+
+## Truckstop dressing: dirt apron paint, a flickering neon sign and light
+## pools off the shoulder (street_deco — non-colliding by design).
+static func _truckstop(root: Node2D, entry: Dictionary) -> void:
+	var c := _center_x(entry, 620.0)
+	var apron := Polygon2D.new()
+	apron.name = "Apron"
+	apron.polygon = PackedVector2Array([
+		Vector2(c + 250, -380), Vector2(c + 470, -380),
+		Vector2(c + 470, -880), Vector2(c + 250, -880),
+	])
+	apron.color = Color(0.36, 0.3, 0.22)
+	apron.z_index = -1
+	root.add_child(apron)
+	var neon := Node2D.new()
+	neon.set_script(StreetDecoScript)
+	neon.kind = &"neon"
+	neon.position = Vector2(c + 430, -840)
+	root.add_child(neon)
+	for d in [460.0, 800.0]:
+		var lamp := Node2D.new()
+		lamp.set_script(StreetDecoScript)
+		lamp.kind = &"street_light"
+		lamp.position = Vector2(c + 440, -d)
+		root.add_child(lamp)
 
 ## Pothole: a cracked pale lip around a dark pit (pure paint) over a small
 ## dirt TerrainZone — hitting one costs grip for a beat; airtime clears it.

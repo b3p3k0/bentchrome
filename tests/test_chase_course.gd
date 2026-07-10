@@ -204,6 +204,65 @@ func test_builder_medians() -> void:
 	t.check(on_spine, "builder: weave rails ride the centerline")
 	chicane.free()
 
+func test_rare_set_pieces_spaced() -> void:
+	for seed_val in [11, 222, 3333]:
+		var c = _course(seed_val)
+		var last_rare := -CourseScript.RARE_SPACING
+		var ok := true
+		var seen := 0
+		for entry in c.plan:
+			if entry["name"] in ChunkDefs.RARE:
+				seen += 1
+				if entry["start_d"] - last_rare < CourseScript.RARE_SPACING:
+					ok = false
+				last_rare = entry["start_d"]
+		t.check(ok, "course: landmarks spaced >= %dk (seed %d)" % [int(CourseScript.RARE_SPACING / 1000.0), seed_val])
+		t.check(seen >= 3, "course: the run gets its landmarks (seed %d, %d)" % [seed_val, seen])
+
+func test_builder_set_pieces_and_flair() -> void:
+	var over: Node2D = Builder.build(_entry_for(&"overpass"))
+	var statics := 0
+	var deck := false
+	for child in over.get_children():
+		if child is StaticBody2D and child.collision_layer == 2:
+			statics += 1
+		if child is Polygon2D and child.z_index == 1:
+			deck = true
+	t.check(statics == 4, "builder: overpass = 2 embankments + 2 pillars (got %d)" % statics)
+	t.check(deck, "builder: the deck rides z 1 — drive under it")
+	over.free()
+	var stop: Node2D = Builder.build(_entry_for(&"truckstop"))
+	var pumps := 0
+	var deco := 0
+	for child in stop.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd") and child.deco == &"pump":
+			pumps += 1
+		if script and script.resource_path.ends_with("street_deco.gd"):
+			deco += 1
+	t.check(pumps == 2, "builder: truckstop pumps in (got %d)" % pumps)
+	t.check(deco >= 3, "builder: neon + light pools dress the stop (got %d)" % deco)
+	stop.free()
+	var convoy: Node2D = Builder.build(_entry_for(&"convoy"))
+	var wrecks := 0
+	var loot := 0
+	for child in convoy.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("derelict_car.gd"):
+			wrecks += 1
+		if script and (script.resource_path.ends_with("heal_pickup.gd")
+				or script.resource_path.ends_with("ammo_pickup.gd")):
+			loot += 1
+	t.check(wrecks == 4 and loot == 2, "builder: convoy wreckage pays out (%d wrecks, %d loot)" % [wrecks, loot])
+	convoy.free()
+	var plain: Node2D = Builder.build(_entry_for(&"straight"))
+	var flair := 0
+	for child in plain.get_children():
+		if child is Polygon2D and child.z_index == 0:
+			flair += 1
+	t.check(flair >= 4, "builder: roadside flair streams every chunk (got %d)" % flair)
+	plain.free()
+
 func test_builder_momentum_obstacles() -> void:
 	var pchunk: Node2D = Builder.build(_entry_for(&"potholes"))
 	var pits := 0

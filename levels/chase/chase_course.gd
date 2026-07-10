@@ -11,6 +11,7 @@ const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 static var TARGET_LEN := 130000.0
 static var PICKUP_EVERY := 9000.0   # max px between pickup chunks
 static var SPINE_BOUND := 800.0     # meander: curves must bend back inside this
+static var RARE_SPACING := 15000.0  # min px between landmark set pieces
 const TAPER := 300.0                # width blend distance past a chunk seam
 
 var plan: Array = []      # {name, def, start_d, entry_x, exit_x, entry_half_w, stations}
@@ -26,12 +27,14 @@ func pre_roll(seed_val: int) -> void:
 	_append(&"straight")   # calm launch — the horde spawns into these
 	_append(&"straight")
 	var since_pickup := total_len  # the launch counts toward the first crate
+	var since_rare := RARE_SPACING * 0.5  # first landmark lands mid-early
 	while total_len < TARGET_LEN:
-		var name := _pick(rng, since_pickup)
+		var name := _pick(rng, since_pickup, since_rare)
 		_append(name)
 		var picked_def: Dictionary = ChunkDefs.DEFS[name]
 		var picked_len: float = picked_def["len"]
 		since_pickup = 0.0 if name == &"pickup" else since_pickup + picked_len
+		since_rare = 0.0 if name in ChunkDefs.RARE else since_rare + picked_len
 
 func _append(name: StringName) -> void:
 	var def: Dictionary = ChunkDefs.DEFS[name]
@@ -60,7 +63,7 @@ func _append(name: StringName) -> void:
 	})
 	total_len += def["len"]
 
-func _pick(rng: RandomNumberGenerator, since_pickup: float) -> StringName:
+func _pick(rng: RandomNumberGenerator, since_pickup: float, since_rare: float) -> StringName:
 	if since_pickup > PICKUP_EVERY:
 		return &"pickup"
 	var prev_name: StringName = plan[plan.size() - 1]["name"]
@@ -70,6 +73,8 @@ func _pick(rng: RandomNumberGenerator, since_pickup: float) -> StringName:
 	for name in ChunkDefs.WEIGHTS:
 		if name == prev_name and name in ChunkDefs.NO_REPEAT:
 			continue
+		if name in ChunkDefs.RARE and since_rare < RARE_SPACING:
+			continue  # landmarks stay landmarks — one per stretch
 		if name == &"curve_l" and exit_x < -SPINE_BOUND:
 			continue  # already far left — bend back toward the spine
 		if name == &"curve_r" and exit_x > SPINE_BOUND:
