@@ -9,6 +9,7 @@ extends "res://levels/combat_level.gd"
 const CourseScript := preload("res://levels/chase/chase_course.gd")
 const StreamerScript := preload("res://levels/chase/course_streamer.gd")
 const WallScript := preload("res://levels/chase/horde_wall.gd")
+const DirectorScript := preload("res://levels/chase/chase_director.gd")
 
 static var RUN_SECONDS := 180.0
 static var ROLL_SPEED := 300.0     # respawn rolling start (300 px/s = 45 mph)
@@ -20,6 +21,7 @@ var kills := 0   # director bumps this; the chase HUD reads it
 
 var _wall = null
 var _streamer = null
+var _director = null
 var _end_screen = null
 var _won := false
 
@@ -41,6 +43,12 @@ func _ready() -> void:
 	_wall.course = course
 	_wall.front_y = _player.global_position.y + WallScript.RESPAWN_GAP
 	add_child(_wall)
+	_director = DirectorScript.new()
+	_director.name = "ChaseDirector"
+	_director.host = self
+	_director.target = _player
+	_director.wall = _wall
+	add_child(_director)
 	for child in get_children():
 		if child is CanvasLayer and "suppress_group_win" in child:
 			_end_screen = child
@@ -53,6 +61,8 @@ func _process(delta: float) -> void:
 	clock += delta
 	if clock >= RUN_SECONDS and _end_screen != null:
 		_won = true
+		if _director:
+			_director.frozen = true
 		_end_screen._show(true)
 
 ## Duck-typed HUD/director surface (group &"chase_host").
@@ -79,6 +89,8 @@ func _respawn() -> void:
 	_scatter_buzzards()
 	if _wall:
 		_wall.reset_behind(pos.y + WallScript.RESPAWN_GAP)
+	if _director:
+		_director.on_player_respawn()
 
 func _scatter_buzzards() -> void:
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):
