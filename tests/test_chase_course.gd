@@ -204,6 +204,44 @@ func test_builder_medians() -> void:
 	t.check(on_spine, "builder: weave rails ride the centerline")
 	chicane.free()
 
+func test_builder_momentum_obstacles() -> void:
+	var pchunk: Node2D = Builder.build(_entry_for(&"potholes"))
+	var pits := 0
+	for child in pchunk.get_children():
+		if child is Area2D and child.collision_layer == 128:
+			for sub in child.get_children():
+				if sub is CollisionShape2D and sub.shape is CircleShape2D:
+					pits += 1  # shoulders are rect strips; only pits are circles
+					break
+	t.check(pits == 5, "builder: potholes chunk pits the asphalt (got %d)" % pits)
+	pchunk.free()
+	var lchunk: Node2D = Builder.build(_entry_for(&"log_run"))
+	var logs := 0
+	var junk := 0
+	for child in lchunk.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd"):
+			if child.deco == &"log":
+				logs += 1
+			elif child.deco == &"junk":
+				junk += 1
+	t.check(logs == 3 and junk == 1, "builder: log run drops its timber (%d logs, %d junk)" % [logs, junk])
+	lchunk.free()
+	var jchunk: Node2D = Builder.build(_entry_for(&"launch"))
+	var pad: Node = null
+	for child in jchunk.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("jump_pad.gd"):
+			pad = child
+	t.check(pad != null, "builder: launch chunk carries a jump pad")
+	if pad != null:
+		t.check(pad.collision_mask == 1, "builder: pad senses ground vehicles")
+		var col := pad.get_node_or_null(^"Col") as CollisionShape2D
+		t.check(col != null and col.shape is RectangleShape2D \
+			and (col.shape as RectangleShape2D).size == Vector2(224, 224),
+			"builder: pad footprint is the canon 224 square")
+	jchunk.free()
+
 func test_streamer_builds_window_and_frees_behind() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)

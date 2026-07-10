@@ -13,6 +13,7 @@ const BlockScene := preload("res://environment/destructible_block.tscn")
 const ClutterScene := preload("res://environment/clutter.tscn")
 const AmmoScene := preload("res://environment/ammo_pickup.tscn")
 const HealScene := preload("res://environment/heal_pickup.tscn")
+const JumpPadScript := preload("res://environment/jump_pad.gd")
 
 const STEP := 175.0        # geometry sample spacing along the chunk
 const SHOULDER_W := 90.0   # drivable verge outside the asphalt (grip penalty)
@@ -264,6 +265,39 @@ static func _place_props(root: Node2D, entry: Dictionary) -> void:
 				cone.kind = &"cone"
 				cone.footprint = 22.0
 				root.add_child(cone)
+			&"log":
+				var log_block := BlockScene.instantiate()
+				log_block.position = pos
+				log_block.rotation = rng.randf_range(-0.35, 0.35)  # never square to the road
+				log_block.size = Vector2(140, 26)
+				log_block.max_hp = 15.0
+				log_block.deco = &"log"
+				root.add_child(log_block)
+			&"junk":
+				var junk := BlockScene.instantiate()
+				junk.position = pos
+				junk.size = Vector2(70, 50)
+				junk.max_hp = 20.0
+				junk.deco = &"junk"
+				root.add_child(junk)
+			&"pothole":
+				_pothole(root, pos, rng)
+			&"jump":
+				# The arena launch pad, highway edition: airborne clears the
+				# logs and potholes — and the wall doesn't care where you land.
+				var pad := Area2D.new()
+				pad.set_script(JumpPadScript)
+				pad.name = "JumpPad"
+				pad.collision_layer = 0
+				pad.collision_mask = 1
+				pad.position = pos
+				var pad_col := CollisionShape2D.new()
+				pad_col.name = "Col"
+				var pad_shape := RectangleShape2D.new()
+				pad_shape.size = Vector2(224, 224)
+				pad_col.shape = pad_shape
+				pad.add_child(pad_col)
+				root.add_child(pad)
 
 static func _place_pickups(root: Node2D, entry: Dictionary) -> void:
 	var def: Dictionary = entry["def"]
@@ -283,6 +317,43 @@ static func _place_pickups(root: Node2D, entry: Dictionary) -> void:
 			ammo.position = pos
 			ammo.kind = String(kind)
 			root.add_child(ammo)
+
+## Pothole: a cracked pale lip around a dark pit (pure paint) over a small
+## dirt TerrainZone — hitting one costs grip for a beat; airtime clears it.
+static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
+	var r := 36.0
+	var lip := PackedVector2Array()
+	var pit := PackedVector2Array()
+	var n := 10
+	for i in n:
+		var a := TAU * float(i) / float(n)
+		var rad := r * rng.randf_range(0.75, 1.05)
+		var spoke := Vector2(cos(a) * 1.25, sin(a) * 0.85)
+		lip.append(pos + spoke * (rad + 7.0))
+		pit.append(pos + spoke * rad)
+	var lip_poly := Polygon2D.new()
+	lip_poly.polygon = lip
+	lip_poly.color = Color(0.28, 0.27, 0.28)
+	lip_poly.z_index = -1
+	root.add_child(lip_poly)
+	var pit_poly := Polygon2D.new()
+	pit_poly.polygon = pit
+	pit_poly.color = Color(0.09, 0.09, 0.1)
+	pit_poly.z_index = -1
+	root.add_child(pit_poly)
+	var zone := Area2D.new()
+	zone.set_script(TerrainZoneScript)
+	zone.name = "Pothole"
+	zone.collision_layer = 128
+	zone.collision_mask = 0
+	zone.terrain_type = &"dirt"
+	zone.position = pos
+	var col := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = r
+	col.shape = shape
+	zone.add_child(col)
+	root.add_child(zone)
 
 static func _strip(forward: PackedVector2Array, back: PackedVector2Array) -> PackedVector2Array:
 	var out := PackedVector2Array()

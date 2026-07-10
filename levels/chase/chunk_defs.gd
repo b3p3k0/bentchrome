@@ -18,6 +18,7 @@ const DEFS := {
 		"kind": &"straight", "shoulder": &"grass",
 		"props": [
 			{"kind": &"derelict", "at": [420.0, -250.0]},
+			{"kind": &"pothole", "at": [640.0, 90.0]},
 			{"kind": &"cone", "at": [800.0, 300.0]},
 			{"kind": &"cone", "at": [860.0, 266.0]},
 			{"kind": &"barrel", "at": [950.0, -330.0]},
@@ -70,6 +71,7 @@ const DEFS := {
 			{"kind": &"derelict", "at": [300.0, -170.0]},
 			{"kind": &"derelict", "at": [650.0, 170.0]},
 			{"kind": &"derelict", "at": [1000.0, -170.0]},
+			{"kind": &"log", "at": [1180.0, -60.0]},
 			{"kind": &"cone", "at": [1300.0, 170.0]},
 			{"kind": &"cone", "at": [1340.0, 140.0]},
 		],
@@ -86,6 +88,40 @@ const DEFS := {
 			{"kind": &"standard", "at": [640.0, 130.0]},
 		],
 	},
+	&"potholes": {
+		"len": 1200.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"potholes", "shoulder": &"dirt",
+		"props": [
+			{"kind": &"cone", "at": [130.0, -220.0]},
+			{"kind": &"pothole", "at": [220.0, -140.0]},
+			{"kind": &"pothole", "at": [430.0, 120.0]},
+			{"kind": &"pothole", "at": [640.0, -50.0]},
+			{"kind": &"pothole", "at": [850.0, 200.0]},
+			{"kind": &"pothole", "at": [1050.0, -180.0]},
+		],
+	},
+	&"log_run": {
+		"len": 1300.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"log_run", "shoulder": &"grass",
+		"props": [
+			{"kind": &"log", "at": [300.0, -180.0]},
+			{"kind": &"log", "at": [620.0, 140.0]},
+			{"kind": &"junk", "at": [880.0, -240.0]},
+			{"kind": &"log", "at": [1050.0, -40.0]},
+		],
+	},
+	&"launch": {
+		"len": 1100.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"launch", "shoulder": &"grass",
+		"props": [
+			{"kind": &"cone", "at": [280.0, -160.0]},
+			{"kind": &"cone", "at": [280.0, 160.0]},
+			{"kind": &"jump", "at": [430.0, 0.0]},
+		],
+		"pickups": [
+			{"kind": &"heal", "at": [720.0, 0.0]},
+		],
+	},
 }
 
 ## Picker weights (the pickup chunk is cadence-forced, never rolled).
@@ -98,7 +134,10 @@ const WEIGHTS := {
 	&"chicane": 1.0,
 	&"narrow": 1.0,
 	&"slalom": 1.0,
+	&"potholes": 1.5,
+	&"log_run": 1.5,
+	&"launch": 1.0,
 }
 
 ## No two of these back to back — breathers between technical sections.
-const NO_REPEAT := [&"narrow", &"chicane", &"slalom"]
+const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"potholes", &"log_run", &"launch"]

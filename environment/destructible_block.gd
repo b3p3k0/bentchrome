@@ -154,6 +154,8 @@ func _draw() -> void:
 			_draw_barrier()
 		&"rail":
 			_draw_rail()
+		&"log":
+			_draw_log()
 		&"junk":
 			_draw_junk()
 		&"pump":
@@ -253,6 +255,22 @@ func _draw_rail() -> void:
 		draw_circle(Vector2(half.x - 8, 0), 3.0, _shade(METAL_DARK))
 
 ## Junk pile: rusty blobs, a dead tire, a pipe poking out.
+## Fallen trunk (deco = &"log"): bark seams along the long axis, pale sawn
+## ends. Low HP by authoring intent — blow through it, pay in momentum.
+func _draw_log() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half + SHADOW_OFFSET * 0.5, size), SHADOW)
+	var trunk := _shade(Color(0.4, 0.28, 0.17))
+	var bark := _shade(Color(0.28, 0.19, 0.11))
+	var cut := _shade(Color(0.72, 0.6, 0.42))
+	draw_rect(Rect2(-half, size), trunk)
+	for i in 3:
+		var y := -half.y + size.y * (0.25 + 0.25 * float(i))
+		draw_line(Vector2(-half.x + 4, y), Vector2(half.x - 4, y), bark, 1.5)
+	draw_circle(Vector2(-half.x + 4, 0), size.y * 0.34, cut)
+	draw_circle(Vector2(half.x - 4, 0), size.y * 0.34, cut)
+	draw_circle(Vector2(half.x - 4, 0), size.y * 0.14, bark)
+
 func _draw_junk() -> void:
 	var half := size * 0.5
 	var rng := _seed_rng()
