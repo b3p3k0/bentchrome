@@ -51,6 +51,7 @@ static func build(entry: Dictionary) -> Node2D:
 	for side in [-1.0, 1.0]:
 		_build_shoulder(root, ds, cx, half, side, shoulder)
 		_build_embankment(root, ds, cx, half, side, shoulder)
+	_build_medians(root, entry)
 	_place_props(root, entry)
 	_place_pickups(root, entry)
 	return root
@@ -119,30 +120,76 @@ static func _build_shoulder(root: Node2D, ds: Array, cx: Array, half: Array, sid
 		var e: float = cx[i] + side * half[i]
 		inner.append(Vector2(e, y))
 		outer.append(Vector2(e + side * SHOULDER_W, y))
+	root.add_child(_zone_strip("ShoulderL" if side < 0.0 else "ShoulderR", shoulder, inner, outer))
+
+## A TerrainZone between two edge polylines: painted strip + one rotated
+## rect Col per segment. Shoulders and medians share it.
+static func _zone_strip(zone_name: String, kind: StringName, edge_a: PackedVector2Array, edge_b: PackedVector2Array) -> Area2D:
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
-	zone.name = "ShoulderL" if side < 0.0 else "ShoulderR"
+	zone.name = zone_name
 	zone.collision_layer = 128
 	zone.collision_mask = 0
-	zone.terrain_type = shoulder
+	zone.terrain_type = kind
 	zone.z_index = -1
 	var vis := Polygon2D.new()
 	vis.name = "Vis"
-	vis.color = SHOULDER_VIS.get(shoulder, SHOULDER_VIS[&"grass"])
-	vis.polygon = _strip(inner, outer)
+	vis.color = SHOULDER_VIS.get(kind, SHOULDER_VIS[&"grass"])
+	vis.polygon = _strip(edge_a, edge_b)
 	zone.add_child(vis)
-	for i in ds.size() - 1:
-		var a := (inner[i] + outer[i]) * 0.5
-		var b := (inner[i + 1] + outer[i + 1]) * 0.5
-		var seg := b - a
+	for i in edge_a.size() - 1:
+		var mid_a := (edge_a[i] + edge_b[i]) * 0.5
+		var mid_b := (edge_a[i + 1] + edge_b[i + 1]) * 0.5
+		var seg := mid_b - mid_a
 		var col := CollisionShape2D.new()
 		var shape := RectangleShape2D.new()
-		shape.size = Vector2(seg.length() + 6.0, SHOULDER_W)
+		shape.size = Vector2(seg.length() + 6.0, edge_a[i].distance_to(edge_b[i]))
 		col.shape = shape
-		col.position = (a + b) * 0.5
+		col.position = (mid_a + mid_b) * 0.5
 		col.rotation = seg.angle()
 		zone.add_child(col)
-	root.add_child(zone)
+	return zone
+
+## Median runs along the centerline: grass/dirt grip islands or crumple-rail
+## guardrails (the Freeway Loop's) — the road diet that forces a line choice.
+static func _build_medians(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	if not def.has("median"):
+		return
+	var idx := 0
+	for m in def["median"]:
+		var kind: StringName = m["kind"]
+		var from_d: float = m["from"]
+		var to_d: float = m["to"]
+		if kind == &"rail":
+			var d := from_d
+			while d <= to_d:
+				var rail := BlockScene.instantiate()
+				rail.position = Vector2(_center_x(entry, d), -d)
+				rail.rotation = _road_angle(entry, d)
+				rail.size = Vector2(110, 18)
+				rail.max_hp = 20.0
+				rail.deco = &"rail"
+				root.add_child(rail)
+				d += 150.0
+		else:
+			var w: float = m["half_w"]
+			var a := PackedVector2Array()
+			var b := PackedVector2Array()
+			var n := maxi(int(ceilf((to_d - from_d) / STEP)), 1)
+			for i in n + 1:
+				var d2 := from_d + (to_d - from_d) * float(i) / float(n)
+				var c := _center_x(entry, d2)
+				a.append(Vector2(c - w, -d2))
+				b.append(Vector2(c + w, -d2))
+			root.add_child(_zone_strip("Median%d" % idx, kind, a, b))
+		idx += 1
+
+## Local road direction at d (north = -y), for aligning rail segments.
+static func _road_angle(entry: Dictionary, d: float) -> float:
+	var behind := _center_x(entry, maxf(d - 40.0, 0.0))
+	var ahead := _center_x(entry, d + 40.0)
+	return Vector2(ahead - behind, -80.0).angle()
 
 ## The impassable rim: an opaque painted slope with a layer-2 wall under its
 ## inner edge — "floor 2 but no way up", so nothing feels invisible.

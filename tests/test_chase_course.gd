@@ -36,6 +36,12 @@ func test_defs_sane() -> void:
 					var side: float = item["at"][1]
 					t.check(d > 0.0 and d < def["len"], "course: %s %s inside the chunk" % [name, key])
 					t.check(absf(side) <= def["half_w"] + 90.0, "course: %s %s inside the walls" % [name, key])
+		if def.has("median"):
+			for m in def["median"]:
+				t.check(m["from"] >= 0.0 and m["to"] > m["from"] and m["to"] <= def["len"],
+					"course: %s median run inside the chunk" % name)
+				t.check(m["half_w"] < def["half_w"],
+					"course: %s median leaves lanes both sides" % name)
 	for name in ChunkDefs.WEIGHTS:
 		t.check(ChunkDefs.DEFS.has(name), "course: weight table names a real def (%s)" % name)
 
@@ -104,7 +110,7 @@ func test_sample_continuous_and_tapered() -> void:
 		var start: float = c.plan[narrow_i]["start_d"]
 		var at_seam: Dictionary = c.sample(start + 1.0)
 		var past_taper: Dictionary = c.sample(start + 320.0)
-		t.check(at_seam["half_w"] > 400.0, "course: narrow entry keeps the wide width")
+		t.check(at_seam["half_w"] > 340.0, "course: narrow entry keeps the wide width")
 		t.check(is_equal_approx(past_taper["half_w"], 260.0), "course: narrow reaches its width past the taper")
 
 func test_builder_structure() -> void:
@@ -155,6 +161,48 @@ func test_builder_structure() -> void:
 				wrecks += 1
 		t.check(wrecks == 3, "builder: slalom seeds its derelicts (got %d)" % wrecks)
 		schunk.free()
+
+## A standalone plan entry for a def (what chase_course._append builds), so
+## builder tests don't depend on a def rolling in some seed.
+func _entry_for(name: StringName) -> Dictionary:
+	var def: Dictionary = ChunkDefs.DEFS[name]
+	var stations: Array = [Vector2.ZERO]
+	if def.has("path"):
+		for pt in def["path"]:
+			stations.append(Vector2(pt[0], pt[1]))
+	stations.append(Vector2(def["len"], def["exit_dx"]))
+	return {"name": name, "def": def, "start_d": 0.0, "entry_x": 0.0,
+		"exit_x": def["exit_dx"], "entry_half_w": def["half_w"], "stations": stations}
+
+func test_builder_medians() -> void:
+	var divided: Node2D = Builder.build(_entry_for(&"divided"))
+	var zones := 0
+	var rails := 0
+	for child in divided.get_children():
+		if child is Area2D and child.collision_layer == 128:
+			zones += 1
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd") \
+				and child.deco == &"rail":
+			rails += 1
+	t.check(zones == 3, "builder: divided = 2 shoulders + 1 grass median (got %d)" % zones)
+	t.check(rails >= 2, "builder: divided caps its median with rails (got %d)" % rails)
+	divided.free()
+	var chicane: Node2D = Builder.build(_entry_for(&"chicane"))
+	var weave_rails := 0
+	var on_spine := true
+	for child in chicane.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd") \
+				and child.deco == &"rail":
+			weave_rails += 1
+			var cd: float = -child.position.y
+			var want_x: float = Builder._center_x(_entry_for(&"chicane"), cd)
+			if absf(child.position.x - want_x) > 5.0:
+				on_spine = false
+	t.check(weave_rails >= 5, "builder: chicane rails run the weave (got %d)" % weave_rails)
+	t.check(on_spine, "builder: weave rails ride the centerline")
+	chicane.free()
 
 func test_streamer_builds_window_and_frees_behind() -> void:
 	var container := Node2D.new()

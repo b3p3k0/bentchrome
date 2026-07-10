@@ -10,36 +10,49 @@ extends RefCounted
 
 const DEFS := {
 	&"straight": {
-		"len": 1200.0, "exit_dx": 0.0, "half_w": 420.0,
+		"len": 1200.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"straight", "shoulder": &"grass",
 	},
 	&"straight_junk": {
-		"len": 1200.0, "exit_dx": 0.0, "half_w": 420.0,
+		"len": 1200.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"straight", "shoulder": &"grass",
 		"props": [
 			{"kind": &"derelict", "at": [420.0, -250.0]},
-			{"kind": &"cone", "at": [800.0, 330.0]},
-			{"kind": &"cone", "at": [860.0, 296.0]},
-			{"kind": &"barrel", "at": [950.0, -380.0]},
+			{"kind": &"cone", "at": [800.0, 300.0]},
+			{"kind": &"cone", "at": [860.0, 266.0]},
+			{"kind": &"barrel", "at": [950.0, -330.0]},
 		],
 	},
 	&"curve_l": {
-		"len": 1400.0, "exit_dx": -460.0, "half_w": 420.0,
+		"len": 1400.0, "exit_dx": -460.0, "half_w": 360.0,
 		"kind": &"curve", "shoulder": &"grass",
 		"path": [[380.0, -70.0], [1020.0, -390.0]],
 	},
 	&"curve_r": {
-		"len": 1400.0, "exit_dx": 460.0, "half_w": 420.0,
+		"len": 1400.0, "exit_dx": 460.0, "half_w": 360.0,
 		"kind": &"curve", "shoulder": &"grass",
 		"path": [[380.0, 70.0], [1020.0, 390.0]],
 	},
 	&"chicane": {
-		"len": 1500.0, "exit_dx": 0.0, "half_w": 420.0,
+		"len": 1500.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"chicane", "shoulder": &"dirt",
 		"path": [[400.0, -190.0], [750.0, 0.0], [1100.0, 190.0]],
 		"props": [
-			{"kind": &"barrel", "at": [750.0, -330.0]},
-			{"kind": &"barrel", "at": [790.0, -366.0]},
+			{"kind": &"barrel", "at": [750.0, -300.0]},
+			{"kind": &"barrel", "at": [790.0, -336.0]},
+		],
+		# Crumple rails down the weave: take the S for real, or pay hull.
+		"median": [
+			{"kind": &"rail", "from": 300.0, "to": 1200.0, "half_w": 10.0},
+		],
+	},
+	&"divided": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"divided", "shoulder": &"grass",
+		"median": [
+			{"kind": &"rail", "from": 150.0, "to": 280.0, "half_w": 10.0},
+			{"kind": &"grass", "from": 280.0, "to": 1120.0, "half_w": 70.0},
+			{"kind": &"rail", "from": 1120.0, "to": 1250.0, "half_w": 10.0},
 		],
 	},
 	&"narrow": {
@@ -51,7 +64,7 @@ const DEFS := {
 		],
 	},
 	&"slalom": {
-		"len": 1500.0, "exit_dx": 0.0, "half_w": 420.0,
+		"len": 1500.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"slalom", "shoulder": &"grass",
 		"props": [
 			{"kind": &"derelict", "at": [300.0, -170.0]},
@@ -62,7 +75,7 @@ const DEFS := {
 		],
 	},
 	&"pickup": {
-		"len": 1000.0, "exit_dx": 0.0, "half_w": 420.0,
+		"len": 1000.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"pickup", "shoulder": &"grass",
 		"props": [
 			{"kind": &"cone", "at": [380.0, -190.0]},
@@ -79,6 +92,7 @@ const DEFS := {
 const WEIGHTS := {
 	&"straight": 3.0,
 	&"straight_junk": 2.0,
+	&"divided": 2.0,
 	&"curve_l": 2.0,
 	&"curve_r": 2.0,
 	&"chicane": 1.0,

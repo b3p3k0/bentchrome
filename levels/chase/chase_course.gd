@@ -25,7 +25,7 @@ func pre_roll(seed_val: int) -> void:
 	rng.seed = seed_val
 	_append(&"straight")   # calm launch — the horde spawns into these
 	_append(&"straight")
-	var since_pickup := 0.0
+	var since_pickup := total_len  # the launch counts toward the first crate
 	while total_len < TARGET_LEN:
 		var name := _pick(rng, since_pickup)
 		_append(name)
