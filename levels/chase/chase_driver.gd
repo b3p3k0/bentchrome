@@ -15,12 +15,25 @@ static var ROLES := {
 		"swoop_period": 4.5, "swoop_frac": 0.45,
 		"range": 420.0, "burst_len": 0.5, "burst_gap": 1.8,
 		"aim_delay": 0.15, "wobble": 0.0, "use_secondary": false, "secondary_cd": 0.0,
+		"yoyo": true,
 	},
 	&"sedan": {
 		"hold_far": 430.0, "hold_near": 260.0,
 		"swoop_period": 7.0, "swoop_frac": 0.35,
 		"range": 760.0, "burst_len": 0.9, "burst_gap": 2.6,
 		"aim_delay": 0.45, "wobble": 0.3, "use_secondary": true, "secondary_cd": 4.5,
+		"yoyo": true,
+	},
+	# The technical never chases and never self-fires: it aims to hold a mark
+	# far AHEAD, physics says no (top speed 2), and it falls back through the
+	# field with the bed turret doing all the talking. No yo-yo — falling away
+	# is the design.
+	&"technical": {
+		"hold_far": -900.0, "hold_near": -900.0,
+		"swoop_period": 8.0, "swoop_frac": 0.0,
+		"range": 0.0, "burst_len": 0.0, "burst_gap": 1.0,
+		"aim_delay": 0.5, "wobble": 0.1, "use_secondary": false, "secondary_cd": 0.0,
+		"yoyo": false,
 	},
 }
 
@@ -71,7 +84,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	else:
 		target_x = _road_target(vehicle, own, lane_offset)
 	var target_y: float = player.global_position.y + hold_dy
-	_yoyo(vehicle, player, own, delta)
+	if p.get("yoyo", false):
+		_yoyo(vehicle, player, own, delta)
 	var steer: float = _steer_to(vehicle, Vector2(target_x, own.y - LOOKAHEAD)) \
 		+ p["wobble"] * sin(_t * 2.6 + phase)
 	# Pace-hold: behind the mark = full gas, ahead = ease off. Never stop.

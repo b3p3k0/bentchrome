@@ -171,6 +171,31 @@ func test_brake_passes_through_floor_holds() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_technical_holds_lane_and_never_fires() -> void:
+	var r := _rig()
+	var driver = r[2]
+	driver.role = &"technical"
+	var vehicle: FakeVehicle = r[1]
+	var player: Node2D = r[3]
+	player.global_position = Vector2(0, -400)
+	vehicle.global_position = Vector2(0, -200)   # close behind — bikes would shoot
+	var fired := false
+	for i in 200:
+		var intent: Dictionary = driver.get_intent(vehicle, 0.016)
+		if intent["fire_mg"] or intent["fire_selected"]:
+			fired = true
+	t.check(not fired, "chase-ai: technical's driver never touches a trigger")
+	vehicle.global_position = Vector2(0, 1000)   # 1400 behind — yo-yo range for others
+	var base: float = vehicle.ctrl.max_speed
+	for i in 40:
+		driver.get_intent(vehicle, 0.1)
+	t.check(is_equal_approx(vehicle.ctrl.max_speed, base),
+		"chase-ai: no yo-yo — falling back is the technical's job")
+	var behind_mark: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(behind_mark["throttle"], 1.0),
+		"chase-ai: it always chases its ahead-mark flat out")
+	_done(r[0])
+
 func test_buzzard_data_shape() -> void:
 	var bike = load("res://data/vehicles/buzz_bike.tres")
 	var sedan = load("res://data/vehicles/buzz_sedan.tres")
@@ -180,6 +205,12 @@ func test_buzzard_data_shape() -> void:
 	t.check(sedan.special != null and sedan.special.damage <= 15.0,
 		"buzzardz: sedan rocket stays a nuisance")
 	t.check(bike.top_speed >= 7, "buzzardz: bikes can actually catch you")
+	var tech = load("res://data/vehicles/buzz_technical.tres")
+	t.check(tech.top_speed <= 3, "buzzardz: the technical can't chase — it doesn't have to")
+	t.check(tech.no_mines, "buzzardz: technicals never mine the road")
+	t.check(tech.turret != null and tech.turret.damage <= 15.0 and tech.turret.cooldown >= 2.0
+		and tech.turret.projectile_speed <= 800.0,
+		"buzzardz: the bed gun thumps but stays dodgeable")
 	var buzzard = load("res://levels/chase/buzzard.tscn").instantiate()
 	t.check(buzzard.ai_cooldown_scale < 3.0,
 		"buzzardz: pack cadence, not the arena 3x throttle")

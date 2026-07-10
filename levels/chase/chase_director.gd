@@ -8,26 +8,30 @@ extends Node
 const BuzzardScene := preload("res://levels/chase/buzzard.tscn")
 const BikeStats := preload("res://data/vehicles/buzz_bike.tres")
 const SedanStats := preload("res://data/vehicles/buzz_sedan.tres")
+const TechnicalStats := preload("res://data/vehicles/buzz_technical.tres")
 
 ## The pressure arc. t = phase start (host clock seconds).
 static var PHASES := [
 	{"t": 0.0,   "cap": 2, "interval": 5.0, "weights": {&"bike": 1.0},                "wall": 300.0},
 	{"t": 15.0,  "cap": 4, "interval": 4.0, "weights": {&"bike": 0.7, &"sedan": 0.3}, "wall": 330.0},
 	{"t": 50.0,  "cap": 3, "interval": 6.0, "weights": {&"bike": 1.0},                "wall": 320.0},
-	{"t": 65.0,  "cap": 6, "interval": 3.5, "weights": {&"bike": 0.5, &"sedan": 0.5}, "wall": 350.0},
-	{"t": 110.0, "cap": 4, "interval": 5.0, "weights": {&"sedan": 1.0},               "wall": 340.0},
-	{"t": 125.0, "cap": 8, "interval": 2.8, "weights": {&"bike": 0.5, &"sedan": 0.5}, "wall": 380.0},
+	{"t": 65.0,  "cap": 6, "interval": 3.5, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "wall": 350.0},
+	{"t": 110.0, "cap": 4, "interval": 5.0, "weights": {&"sedan": 0.7, &"technical": 0.3},              "wall": 340.0},
+	{"t": 125.0, "cap": 8, "interval": 2.8, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "wall": 380.0},
 	{"t": 168.0, "cap": 8, "interval": 999.0, "weights": {},                          "wall": 420.0},
 ]
 
 static var SPAWN_BEHIND := 1100.0   # off-screen even at the 0.42 overview zoom
+static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
 static var CULL_BEHIND := 2600.0    # matches the streamer's free line
 static var RESPAWN_GRACE := 2.5     # seconds of held fire after a player death
 
-## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70.
+## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70,
+## technical ~90. ahead = enters from the top of the screen, falls back.
 static var CLASS_TABLE := {
-	&"bike": {"stats": null, "hp_scale": 0.55},
-	&"sedan": {"stats": null, "hp_scale": 0.85},
+	&"bike": {"stats": null, "hp_scale": 0.55, "ahead": false},
+	&"sedan": {"stats": null, "hp_scale": 0.85, "ahead": false},
+	&"technical": {"stats": null, "hp_scale": 0.95, "ahead": true},
 }
 
 var host = null            # buzzard_run host: clock, course, kills
@@ -44,6 +48,7 @@ func _ready() -> void:
 	rng.randomize()
 	CLASS_TABLE[&"bike"]["stats"] = BikeStats
 	CLASS_TABLE[&"sedan"]["stats"] = SedanStats
+	CLASS_TABLE[&"technical"]["stats"] = TechnicalStats
 
 static func phase_at(t: float) -> Dictionary:
 	var current: Dictionary = PHASES[0]
@@ -99,15 +104,22 @@ func spawn(kind: StringName) -> Node:
 	driver.lane_offset = _lane_flip * rng.randf_range(80.0, 240.0)
 	_lane_flip = -_lane_flip
 	driver.phase = rng.randf_range(0.0, 6.0)
-	var spawn_y: float = target.global_position.y + SPAWN_BEHIND
+	var ahead: bool = row.get("ahead", false)
+	var spawn_y: float = target.global_position.y + (-SPAWN_AHEAD if ahead else SPAWN_BEHIND)
 	var road_x := 0.0
 	var half := 300.0
 	if host != null and host.course != null:
 		var s: Dictionary = host.course.sample(-spawn_y)
 		road_x = s["x"]
 		half = s["half_w"]
-	b.global_position = Vector2(road_x + rng.randf_range(-half + 90.0, half - 90.0), spawn_y)
-	b.velocity = Vector2(0.0, -(target.velocity.length() + 60.0))  # pace-matched entry
+	# Ahead-spawns hug a lane edge — never a dead-center surprise at 600 px/s.
+	var x_range := Vector2(-half + 90.0, half - 90.0)
+	var spawn_x: float = road_x + (signf(driver.lane_offset) * (half - 130.0) if ahead \
+		else rng.randf_range(x_range.x, x_range.y))
+	b.global_position = Vector2(spawn_x, spawn_y)
+	var entry_speed: float = target.velocity.length() * 0.4 if ahead \
+		else target.velocity.length() + 60.0
+	b.velocity = Vector2(0.0, -entry_speed)  # pace-matched entry
 	var health = b.get_node(^"Health")
 	health.died.connect(func() -> void:
 		if host != null and is_instance_valid(host):

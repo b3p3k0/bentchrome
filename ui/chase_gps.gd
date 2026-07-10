@@ -15,6 +15,7 @@ const ROAD := Color(0.22, 0.24, 0.27)
 const SPINE := Color(0.45, 0.75, 0.5, 0.7)
 const PLAYER := Color(1.0, 0.85, 0.2)
 const ENEMY := Color(0.85, 0.25, 0.2)
+const TECH := Color(0.95, 0.65, 0.2)
 const PICKUP := Color(0.3, 0.85, 0.4)
 const WALL := Color(0.8, 0.3, 0.15)
 
@@ -76,7 +77,13 @@ func _draw() -> void:
 		if enemy.global_position.distance_to(player.global_position) > BLIP_RANGE:
 			continue
 		var ep := _panel(enemy.global_position, player_d, center_x, sy)
-		draw_rect(Rect2(ep - Vector2(3, 3), Vector2(6, 6)), ENEMY)
+		var edriver = enemy.get_node_or_null(^"Driver")
+		if edriver != null and edriver.get("role") == &"technical":
+			draw_colored_polygon(PackedVector2Array([  # amber diamond — the truck
+				ep + Vector2(0, -5), ep + Vector2(5, 0), ep + Vector2(0, 5), ep + Vector2(-5, 0),
+			]), TECH)
+		else:
+			draw_rect(Rect2(ep - Vector2(3, 3), Vector2(6, 6)), ENEMY)
 	# The player chevron (fixed 87.5% down by construction).
 	var me := _panel(player.global_position, player_d, center_x, sy)
 	draw_colored_polygon(PackedVector2Array([

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/projectile.tscn" id="2_proj"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Bed Gun"
+cooldown = 2.2
+damage = 12.0
+projectile_speed = 700.0
+projectile_lifetime = 2.2
+projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(0.9, 0.6, 0.25, 1)
+note = "The technical's welded bed mount: a slow, heavy thump every couple of seconds. 700 px/s straight shots — watch the barrel, break the line. Ignoring the truck is what hurts."

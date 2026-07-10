@@ -52,6 +52,14 @@ func test_spawn_cull_grace_and_kills() -> void:
 	var sedan = director.spawn(&"sedan")
 	var sedan_hp: float = sedan.get_node(^"Health").max_hp
 	t.check(sedan_hp > bike_hp, "director: sedan carries more plate")
+	var tech = director.spawn(&"technical")
+	var tech_dy: float = tech.global_position.y - player.global_position.y
+	t.check(absf(tech_dy + DirectorScript.SPAWN_AHEAD) < 50.0,
+		"director: technical rolls in from ahead (dy %d)" % int(tech_dy))
+	t.check(tech.get_node_or_null(^"Visual/Turret") != null,
+		"director: the bed turret grew from stats")
+	tech.queue_free()  # keep the cap math below at two live birds
+	await t.physics_frame
 	t.check(sedan.get_node(^"Driver").lane_offset * bike.get_node(^"Driver").lane_offset < 0.0,
 		"director: lanes alternate sides")
 	# Cap respect: phase 0 caps at 2 and both slots are taken.

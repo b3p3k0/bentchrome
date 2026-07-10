@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://data/weapons/buzz_turret.tres" id="2_gun"]
+
+[resource]
+script = ExtResource("1_stats")
+id = &"buzz_technical"
+car_name = "Buzzard Technical"
+driver_name = "Buzzard Gunner"
+flavor = "A pickup that gave up hauling for hurting: sandbags in the bed, a welded gun mount, and a driver whose only job is holding the lane while the gunner works. Too slow to chase — it doesn't have to. Roster-external: chase mode only."
+acceleration = 3
+top_speed = 2
+handling = 3
+armor = 3
+special_power = 5
+mass = 6
+primary_color = Color(0.35, 0.36, 0.3, 1)
+accent_color = Color(0.62, 0.55, 0.38, 1)
+turret = ExtResource("2_gun")
+no_mines = true

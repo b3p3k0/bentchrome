@@ -94,6 +94,11 @@ const STYLES := {
 		"skid_points": [Vector2(-18, -10), Vector2(-18, 10)],
 		"steer_wheels": [],
 	},
+	&"buzz_technical": {
+		"half_len": 29.0, "half_wid": 15.0, "radius": 21.0,
+		"skid_points": [Vector2(-20, -11), Vector2(-20, 11)],
+		"steer_wheels": [Vector2(19, -11), Vector2(19, 11)],
+	},
 }
 
 # Kandy Kane's polka dots — fixed pattern, same truck every boot.
@@ -217,6 +222,8 @@ func _draw() -> void:
 			_draw_buzz_bike()
 		&"buzz_sedan":
 			_draw_buzz_sedan()
+		&"buzz_technical":
+			_draw_buzz_technical()
 		_:
 			_draw_box()
 
@@ -480,4 +487,28 @@ func _draw_buzz_sedan() -> void:
 	draw_rect(Rect2(24, 8, 3, 4), CLOTH)                         # the one headlight
 	draw_rect(Rect2(-26, -8, 2.5, 5), LIGHT_RED.darkened(0.35))  # taped taillight
 	draw_line(Vector2(-24, -4), Vector2(-24, 6), accent.darkened(0.4), 1.2)  # trunk rope
+	_outline(hull)
+
+## Buzzard technical: a sagging pickup, cab pushed forward, long open bed —
+## the sandbag ring mid-bed anchors the LIVE turret (Vehicle grows one at
+## (2.5, 0) when stats.turret is set; it draws over this mount).
+func _draw_buzz_technical() -> void:
+	_wheel(Vector2(-20, -13), Vector2(11, 6))
+	_wheel(Vector2(-20, 13), Vector2(11, 6))
+	_wheel(Vector2(19, -13), Vector2(10, 6), _steer)
+	_wheel(Vector2(19, 13), Vector2(10, 6), _steer)
+	var hull := _hull(29, 15, 4, 3)
+	draw_colored_polygon(hull, primary)
+	draw_rect(Rect2(-26, -12, 34, 24), Color(0.16, 0.16, 0.18))  # long open bed
+	draw_line(Vector2(-21, -12), Vector2(-21, 12), accent.darkened(0.3), 1.5)  # bed ribs
+	draw_line(Vector2(-9, -12), Vector2(-9, 12), accent.darkened(0.3), 1.5)
+	draw_rect(Rect2(-28, -13, 3, 26), Color(0.42, 0.42, 0.44))   # dropped tailgate, primer
+	draw_rect(Rect2(-18, 7, 6, 4), Color(0.55, 0.32, 0.16))      # rusted fuel cans
+	draw_rect(Rect2(-18, -11, 6, 4), Color(0.35, 0.4, 0.3))
+	draw_rect(Rect2(8, -13, 4, 26), primary.darkened(0.35))      # cab back wall
+	draw_rect(Rect2(12, -11, 6, 22), GLASS.darkened(0.1))        # windshield
+	draw_rect(Rect2(18, -10, 8, 20), primary.darkened(0.15))     # stubby hood
+	draw_rect(Rect2(27, 7, 3, 4), CLOTH)                         # one headlight — gang spec
+	draw_circle(Vector2(2, 0), 7.5, Color(0.5, 0.44, 0.3))       # sandbag mount ring
+	draw_circle(Vector2(2, 0), 5.0, primary.darkened(0.45))
 	_outline(hull)
