@@ -25,6 +25,11 @@ static var RAM_FIRE_CONE := 0.35    # MG alignment during the hunt (rad)
 static var JACKKNIFE_STEER := 1.0   # committed swing magnitude
 static var JACKKNIFE_TIME := 1.1    # how long the yank holds
 static var JACKKNIFE_THROTTLE := 0.9  # speed keeps the tail's energy up
+static var JACKKNIFE_COOLDOWN := 6.0  # the tail is an occasion, not a habit
+static var JACKKNIFE_MIN_SPEED := 320.0  # real px/s — the maneuver NEEDS
+									# momentum: attack, recover, resume course,
+									# get back up to speed, THEN swing again
+									# (otherwise it's a dog chasing its tail)
 static var PARTING_SHOT_TIME := 0.8   # the over-the-shoulder goodbye
 static var PARTING_FIRE_CONE := 0.5
 static var STUCK_SPEED := 40.0      # real px/s below this counts as pinned
@@ -35,6 +40,7 @@ static var RECOVER_REVERSE_TIME := 1.6
 var _mode := Mode.LOOP
 var _timer := 0.0
 var _reengage := 0.0
+var _jk_cd := 0.0
 var _jk_steer := 0.0
 var _stuck_t := 0.0
 var _rev_steer := 1.0
@@ -57,6 +63,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_boss = vehicle.get_node_or_null(^"BossController")
 	_timer -= delta
 	_reengage = maxf(_reengage - delta, 0.0)
+	_jk_cd = maxf(_jk_cd - delta, 0.0)
 	var player := vehicle.get_tree().get_first_node_in_group(&"player") as Node2D
 	if player != null and not is_instance_valid(player):
 		player = null
@@ -90,20 +97,27 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_:
 			return _loop_intent(vehicle)
 
-## Front arc gets the grille; everyone else gets the tail. The jackknife
-## steers AWAY from the player's side — the trailer whips into them.
+## Front arc gets the grille; everyone else gets the tail — IF the tail is
+## earned: off cooldown and back up to speed. A slow or spent rig holds its
+## course and accelerates instead (the loop builds the next swing's momentum).
 func _react(vehicle, player: Node2D) -> void:
 	var to_p: Vector2 = player.global_position - vehicle.global_position
 	if absf(angle_difference(vehicle.heading, to_p.angle())) < RAM_FRONT_ARC:
 		_mode = Mode.RAM
 		_timer = RAM_TIME
-	else:
+	elif _jk_cd <= 0.0 and _real_speed(vehicle) >= JACKKNIFE_MIN_SPEED:
 		_mode = Mode.JACKKNIFE
 		_timer = JACKKNIFE_TIME
+		_jk_cd = JACKKNIFE_COOLDOWN
 		var fwd := Vector2.RIGHT.rotated(vehicle.heading)
 		_jk_steer = -signf(fwd.cross(to_p)) * JACKKNIFE_STEER
 		if _jk_steer == 0.0:
 			_jk_steer = JACKKNIFE_STEER
+
+func _real_speed(vehicle) -> float:
+	if vehicle.has_method(&"get_real_velocity"):
+		return vehicle.get_real_velocity().length()
+	return 0.0
 
 func _enter_parting() -> void:
 	_mode = Mode.PARTING

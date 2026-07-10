@@ -15,7 +15,7 @@ const VehicleScene := preload("res://vehicles/vehicle.tscn")
 class FakeRig:
 	extends Node2D
 	var heading := 0.0
-	var fake_vel := Vector2(200, 0)
+	var fake_vel := Vector2(400, 0)  # cruising: fast enough to earn the tail
 	func get_real_velocity() -> Vector2:
 		return fake_vel
 
@@ -71,6 +71,30 @@ func test_jackknife_hands_off_via_parting_shot() -> void:
 	f.driver.get_intent(f.rig, DriverScript.PARTING_SHOT_TIME + 0.1)
 	t.check(f.driver._mode == DriverScript.Mode.LOOP, "flow: parting shot resumes the loop")
 	t.check(f.driver._reengage > 0.0, "flow: re-engage grace armed — waves, not a smother")
+	_done(f)
+
+## The tail is an occasion: it demands momentum AND a cooled-down rig —
+## a glued-on player can't bait a dog-chases-tail spin cycle.
+func test_jackknife_needs_momentum_and_cooldown() -> void:
+	var f := _fixture(Vector2(0, 300))
+	f.rig.fake_vel = Vector2(100, 0)  # crawling: no swing without momentum
+	f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LOOP,
+		"tail gate: a slow rig holds course and accelerates")
+	f.rig.fake_vel = Vector2(400, 0)  # back up to speed
+	f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.JACKKNIFE, "tail gate: momentum earns the swing")
+	t.check(f.driver._jk_cd > 0.0, "tail gate: the swing arms its cooldown")
+	# Ride the maneuver out with the player still glued on...
+	f.driver.get_intent(f.rig, DriverScript.JACKKNIFE_TIME + 0.1)   # -> PARTING
+	f.driver.get_intent(f.rig, DriverScript.PARTING_SHOT_TIME + 0.1)  # -> LOOP
+	f.driver._reengage = 0.0  # even past the re-engage grace...
+	f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LOOP,
+		"tail gate: the cooldown holds the second swing — resume course first")
+	f.driver._jk_cd = 0.0  # cooled down and still at speed:
+	f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.JACKKNIFE, "tail gate: earned again")
 	_done(f)
 
 func test_pinned_rig_recovers_in_reverse() -> void:
