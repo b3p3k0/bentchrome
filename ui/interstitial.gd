@@ -43,15 +43,20 @@ func _build_ui() -> void:
 	var flow := get_node_or_null(^"/root/SceneFlow")
 	var next_index: int = gs.level_index if gs else 0
 	var next_name: String = "?"
-	var boss_next := false
+	var next_scene := ""
 	if flow and next_index < flow.CAMPAIGN.size():
 		next_name = flow.CAMPAIGN[next_index].name
-		boss_next = String(flow.CAMPAIGN[next_index].scene).ends_with("depot.tscn")
+		next_scene = String(flow.CAMPAIGN[next_index].scene)
 
-	if boss_next:
+	if next_scene.ends_with("depot.tscn"):
 		var portrait := TextureLoader.load_texture("res://assets/img/bios/lackey.png")
 		if portrait:
 			_build_card(portrait, "PREPARE TO MEET LAST YEAR'S WINNER — LACKEY", AMBER)
+			return
+	if next_scene.ends_with("stadium.tscn"):
+		var portrait := TextureLoader.load_texture("res://assets/img/bios/goliath.png")
+		if portrait:
+			_build_card(portrait, "THE COLISEUM'S UNDEFEATED KING AWAITS — GOLIATH", AMBER)
 			return
 
 	var card := TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1])
