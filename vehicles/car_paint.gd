@@ -83,6 +83,20 @@ const STYLES := {
 		"skid_points": [Vector2(-24, -18), Vector2(-24, 18)],
 		"steer_wheels": [Vector2(24, -18), Vector2(24, 18)],
 	},
+	# Goliath (stadium boss, roster-external): the tractor unit — ×1.6
+	# body_scale in the stadium makes it the biggest thing rolling.
+	&"goliath_cab": {
+		"half_len": 34.0, "half_wid": 16.0, "radius": 26.0,
+		"skid_points": [Vector2(-21, -14), Vector2(-21, 14)],
+		"steer_wheels": [Vector2(24, -13), Vector2(24, 13)],
+	},
+	# The trailer is NOT a Vehicle: radius here is cosmetic-only (shadow and
+	# metrics sanity) — collision is the authored rects on its sub-bodies.
+	&"goliath_trailer": {
+		"half_len": 55.0, "half_wid": 18.0, "radius": 30.0,
+		"skid_points": [Vector2(-42, -15), Vector2(-42, 15)],
+		"steer_wheels": [],
+	},
 	# The Buzzardz (chase mode, roster-external like lackey): tatty raider kit.
 	&"buzz_bike": {
 		"half_len": 17.0, "half_wid": 7.0, "radius": 11.0,
@@ -218,6 +232,10 @@ func _draw() -> void:
 			_draw_hammertoe()
 		&"lackey":
 			_draw_lackey()
+		&"goliath_cab":
+			_draw_goliath_cab()
+		&"goliath_trailer":
+			_draw_goliath_trailer()
 		&"buzz_bike":
 			_draw_buzz_bike()
 		&"buzz_sedan":
@@ -428,6 +446,66 @@ func _draw_lackey() -> void:
 	# spawned by Vehicle when stats.turret is set); this is its mount base.
 	draw_circle(Vector2(2, 0), 5.0, primary.darkened(0.45))
 	_outline(hull)
+
+## Goliath, the tractor: long hood, chrome grille and tanks, sleeper cab,
+## twin exhaust stacks (the engine-rev smoke anchors: local (-8, ±14)), and
+## the fifth-wheel plate at the rear where the trailer's kingpin rides.
+func _draw_goliath_cab() -> void:
+	_wheel(Vector2(24, -13), Vector2(11, 5), _steer)
+	_wheel(Vector2(24, 13), Vector2(11, 5), _steer)
+	for x in [-16.0, -26.0]:
+		_wheel(Vector2(x, -14), Vector2(12, 6))
+		_wheel(Vector2(x, 14), Vector2(12, 6))
+	var hull := _hull(34, 15, 7, 4)
+	draw_colored_polygon(hull, primary)
+	draw_rect(Rect2(-33, -7, 18, 14), Color(0.15, 0.15, 0.18))   # exposed frame rails
+	draw_circle(Vector2(-26, 0), 7.0, TIRE)                      # fifth-wheel plate
+	draw_circle(Vector2(-26, 0), 4.5, Color(0.3, 0.3, 0.34))
+	draw_rect(Rect2(-31, -1.5, 6, 3), OUTLINE)                   # kingpin slot
+	draw_rect(Rect2(8, -11, 22, 22), primary.darkened(0.12))     # the long hood
+	draw_line(Vector2(8, 0), Vector2(31, 0), CHROME, 2.0)        # hood chrome spine
+	draw_rect(Rect2(30, -9, 3, 18), Color(0.15, 0.15, 0.18))     # grille
+	draw_rect(Rect2(33, -11, 3, 22), CHROME)                     # road-train bumper
+	draw_rect(Rect2(1, -13, 6, 26), GLASS)                       # windshield band
+	draw_rect(Rect2(-7, -14, 8, 28), primary.darkened(0.15))     # cab roof
+	draw_rect(Rect2(-15, -14, 8, 28), primary.darkened(0.28))    # sleeper box
+	draw_rect(Rect2(0, -17, 10, 3), CHROME.darkened(0.2))        # side fuel tanks
+	draw_rect(Rect2(0, 14, 10, 3), CHROME.darkened(0.2))
+	draw_circle(Vector2(-8, -14), 2.4, CHROME)                   # exhaust stacks
+	draw_circle(Vector2(-8, 14), 2.4, CHROME)
+	draw_circle(Vector2(-8, -14), 1.0, Color(0.15, 0.15, 0.18))
+	draw_circle(Vector2(-8, 14), 1.0, Color(0.15, 0.15, 0.18))
+	_headlights(33, 12)
+	_outline(hull)
+
+## Goliath's trailer: a corrugated armored box on a rear bogie. The front
+## quarter wears the hazard diamond — that's the kingpin end, the weak spot —
+## and two sandbag rings anchor the LIVE trailer turrets (paint-local
+## (10, 0) and (-26, 0); the Turret nodes draw their own barrels on top).
+func _draw_goliath_trailer() -> void:
+	for x in [-38.0, -46.0]:
+		_wheel(Vector2(x, -15), Vector2(12, 6))
+		_wheel(Vector2(x, 15), Vector2(12, 6))
+	draw_rect(Rect2(-55, -18, 110, 36), primary)
+	var seams := 10
+	for i in range(1, seams):
+		var x := -55.0 + 110.0 * float(i) / float(seams)
+		draw_line(Vector2(x, -16), Vector2(x, 16), primary.darkened(0.2), 1.0)
+	draw_rect(Rect2(-55, -18, 110, 3), primary.darkened(0.3))    # side rails
+	draw_rect(Rect2(-55, 15, 110, 3), primary.darkened(0.3))
+	draw_rect(Rect2(-55, -17, 4, 34), primary.darkened(0.35))    # rear door frame
+	draw_line(Vector2(-53, -15), Vector2(-53, 15), OUTLINE, 1.0)
+	draw_rect(Rect2(27, -18, 28, 36), primary.lightened(0.12))   # kingpin quarter
+	draw_colored_polygon(PackedVector2Array([                    # the hazard tell
+		Vector2(35, 0), Vector2(41, -6), Vector2(47, 0), Vector2(41, 6),
+	]), NOSE_ACCENT)
+	draw_circle(Vector2(48, 0), 4.0, TIRE)                       # kingpin plate
+	draw_rect(Rect2(30, -16, 4, 5), CHROME.darkened(0.25))       # landing gear
+	draw_rect(Rect2(30, 11, 4, 5), CHROME.darkened(0.25))
+	for at in [Vector2(10, 0), Vector2(-26, 0)]:                 # turret mounts
+		draw_circle(at, 7.5, Color(0.5, 0.44, 0.3))
+		draw_circle(at, 5.0, primary.darkened(0.45))
+	draw_rect(Rect2(-55, -18, 110, 36), OUTLINE, false, 1.5)
 
 ## Smoky: pursuit SUV — boxy, white door livery, push bar, flashing light bar.
 func _draw_smoky() -> void:

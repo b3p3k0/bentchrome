@@ -17,7 +17,7 @@ func _init(runner) -> void:
 	t = runner
 
 func test_every_car_has_a_style() -> void:
-	for id in ORDER + [&"lackey"]:
+	for id in ORDER + [&"lackey", &"goliath_cab", &"goliath_trailer"]:
 		t.check(PaintScript.STYLES.has(id), "style exists: %s" % id)
 
 func test_radii_follow_the_size_canon() -> void:
@@ -28,6 +28,9 @@ func test_radii_follow_the_size_canon() -> void:
 		prev = r
 	var lackey_effective: float = PaintScript.STYLES[&"lackey"].radius * 1.5
 	t.check(lackey_effective > prev, "lackey (x1.5 depot scale) is the biggest thing rolling")
+	var goliath_effective: float = PaintScript.STYLES[&"goliath_cab"].radius * 1.6
+	t.check(goliath_effective > lackey_effective,
+		"goliath (x1.6 stadium scale) out-bulks even lackey")
 
 func test_metrics_sane_and_fallback() -> void:
 	for id in PaintScript.STYLES:
