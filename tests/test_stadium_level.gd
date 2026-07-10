@@ -126,6 +126,8 @@ func test_stadium_structure() -> void:
 	if boss:
 		t.check(bool(boss.get("fixed_loadout")), "stadium: the re-roll never touches Goliath")
 		t.check(bool(boss.get("launch_immune")), "stadium: Goliath is launch-immune")
+		t.check(float(boss.get("mine_weakness")) > 1.0,
+			"stadium: the soft underbelly is authored (land mines bite)")
 		t.check(is_equal_approx(float(boss.get("body_scale")), 1.6),
 			"stadium: Goliath wears the x1.6 stadium scale")
 		var bstats: Resource = boss.get("stats")
@@ -137,6 +139,25 @@ func test_stadium_structure() -> void:
 			"stadium: the bespoke GoliathDriver rides the boss")
 		t.check(boss.get_node_or_null(^"BossController") != null,
 			"stadium: the boss controller is mounted")
+	# The soft belly's ammunition: exactly two land-mine crates — one down on
+	# the field, one up on the rim (the climb earns the counter).
+	var mine_crates: Array = []
+	for child in stadium.get_children():
+		var k: Variant = child.get("kind")
+		if k != null and String(k) == "mine":
+			mine_crates.append(child)
+	t.check(mine_crates.size() == 2,
+		"stadium: exactly two mine crates (got %d)" % mine_crates.size())
+	var crate_floors := {}
+	for c in mine_crates:
+		var cf := -1
+		for z in zones:
+			if (z.rect as Rect2).has_point((c as Node2D).position):
+				cf = maxi(cf, int(z.floor))
+		crate_floors[cf] = true
+	t.check(crate_floors.has(1) and crate_floors.has(2),
+		"stadium: one mine crate per floor")
+
 	var ring := stadium.get_node_or_null(^"GoliathLoop")
 	t.check(ring != null and ring.get_child_count() >= 8,
 		"stadium: the loop ring is authored (got %d marks)"

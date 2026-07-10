@@ -31,6 +31,7 @@ and the boot log always tells you the score:
 | `player_death` | you're destroyed | big send-off |
 | `npc_death` | a rival is destroyed (positional — quieter when far) | explosion |
 | `spawn` | level start and every respawn | power-up / engine start |
+| `ram_warn` | Goliath commits a ram charge (positional) | air horn / engine roar — the tell |
 
 Adding a NEW event = one `CATALOG` row in `game/audio_director.gd` plus a
 `play()`/`play_at()`/`loop_set()` call at the gameplay moment.

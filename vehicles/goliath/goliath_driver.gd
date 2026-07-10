@@ -42,7 +42,9 @@ static var PARTING_FIRE_CONE := 0.5
 # into scenery is self-damage plus a sitting-duck stun: the fight's trick.
 static var CHARGE_WINDUP := 0.7      # line-up beat before a commit is legal
 static var CHARGE_ALIGN := 0.18      # rad: aim tightness required to commit
-static var CHARGE_MAX_DIST := 1400.0 # don't charge from across the arena
+static var CHARGE_MAX_DIST := 850.0  # commit only near the screen edge — the
+									 # player must get to SEE the tell (stacks
+									 # belch + ram_warn) before the steel flies
 static var CHARGE_SPEED := 1300.0    # forced velocity while committed
 static var CHARGE_TIME := 0.9        # open-air whiffs expire here
 static var CHARGE_SELF_DMG := 120.0  # the wall bill on a baited miss
@@ -57,6 +59,8 @@ static var RAM_COOLDOWN := 45.0      # after ANY charge attempt: back to the
 									 # crowded, pursuit when it expires — the
 									 # rhythm the player counters around
 static var HARASS_THROTTLE := 0.8    # cooldown engagement pace
+static var BOBTAIL_STEER_CAP := 0.6  # a semi needs speed and room — phase-2
+									 # steering never gets the j-turn wrist
 
 static var STUCK_SPEED := 40.0      # real px/s below this counts as pinned
 static var STUCK_TRIP := 1.2        # seconds pinned before RECOVER (the rig
@@ -169,16 +173,16 @@ func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 			var to_c: Vector2 = player.global_position - vehicle.global_position
 			if to_c.length() < APPROACH_TRIGGER:
 				var aim := angle_difference(vehicle.heading, to_c.angle())
-				return {
+				return _cap_steer({
 					"throttle": HARASS_THROTTLE,
 					"steer": clampf(aim * LOOP_STEER_GAIN, -1.0, 1.0),
 					"fire_mg": absf(aim) < PARTING_FIRE_CONE,
-				}
-		return _loop_intent(vehicle)
+				})
+		return _cap_steer(_loop_intent(vehicle))
 	if _mode != Mode.LINE_UP:
 		_enter_lineup()  # cooldown clear (or fresh out of phase 1): square up
 	if player == null:
-		return _loop_intent(vehicle)
+		return _cap_steer(_loop_intent(vehicle))
 	var to_p: Vector2 = player.global_position - vehicle.global_position
 	var diff := angle_difference(vehicle.heading, to_p.angle())
 	if _timer <= 0.0 and absf(diff) < CHARGE_ALIGN and to_p.length() < CHARGE_MAX_DIST:
@@ -188,12 +192,50 @@ func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 		_charge_dir = Vector2.RIGHT.rotated(vehicle.heading)  # commit: dead straight
 		vehicle.velocity = _charge_dir * CHARGE_SPEED
 		vehicle.heading = _charge_dir.angle()
+		_ram_cue(vehicle)  # the tell: stacks belch, the horn hits
 		return {}
-	return {
+	return _cap_steer({
 		"throttle": 0.85,
 		"steer": clampf(diff * LOOP_STEER_GAIN, -1.0, 1.0),
 		"fire_mg": absf(diff) < RAM_FIRE_CONE,
-	}
+	})
+
+## Phase-2 steering never exceeds the bobtail cap: sixty feet of Detroit
+## steel turns on speed and room, not a wrist flick.
+func _cap_steer(intent: Dictionary) -> Dictionary:
+	intent["steer"] = clampf(float(intent.get("steer", 0.0)),
+		-BOBTAIL_STEER_CAP, BOBTAIL_STEER_CAP)
+	return intent
+
+## The commit tell: both exhaust stacks belch dark diesel and the ram_warn
+## event fires positionally — paired with the tightened CHARGE_MAX_DIST so
+## it happens where the player can see it.
+func _ram_cue(vehicle) -> void:
+	var audio: Node = vehicle.get_node_or_null(^"/root/AudioDirector")
+	if audio and audio.has_method(&"play_at"):
+		audio.play_at(&"ram_warn", vehicle.global_position)
+	var visual: Node = vehicle.get_node_or_null(^"Visual")
+	if visual == null:
+		return
+	for off in [Vector2(-10, -17.5), Vector2(-10, 17.5)]:  # stacks × fleet scale
+		var smoke := CPUParticles2D.new()
+		smoke.amount = 26
+		smoke.lifetime = 0.6
+		smoke.one_shot = true
+		smoke.explosiveness = 0.8
+		smoke.local_coords = false  # the belch hangs where it happened
+		smoke.direction = Vector2(-1, 0)
+		smoke.spread = 30.0
+		smoke.initial_velocity_min = 80.0
+		smoke.initial_velocity_max = 180.0
+		smoke.scale_amount_min = 2.0
+		smoke.scale_amount_max = 4.0
+		smoke.gravity = Vector2.ZERO
+		smoke.color = Color(0.18, 0.17, 0.16, 0.85)
+		smoke.position = off as Vector2
+		visual.add_child(smoke)
+		smoke.emitting = true
+		smoke.finished.connect(smoke.queue_free)
 
 func _enter_lineup() -> void:
 	_mode = Mode.LINE_UP

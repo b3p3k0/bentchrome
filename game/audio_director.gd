@@ -22,6 +22,8 @@ const CATALOG := {
 	&"player_death": {"volume_db": 2.0, "pitch_jitter": 0.0},
 	&"npc_death": {"volume_db": 0.0, "pitch_jitter": 0.1},
 	&"spawn": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"ram_warn": {"volume_db": 2.0, "pitch_jitter": 0.05},  # Goliath's charge
+		# commit — an air-horn / engine-roar tell, played positionally
 }
 
 var _streams: Dictionary = {}  # event -> AudioStream (absent = no asset yet)

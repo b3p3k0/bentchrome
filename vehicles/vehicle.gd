@@ -47,6 +47,9 @@ const TurretScript := preload("res://weapons/turret.gd")
 @export var launch_immune := false    # too heavy to flip: jump pads roll under it,
 									  # jump mines pop for nothing, land mines can't
 									  # spin it (mine.gd checks this flag too)
+@export var mine_weakness := 1.0      # >1 amplifies land-mine damage — Goliath's
+									  # soft underbelly (all that armor had to be
+									  # paid for somewhere; mine.gd reads this)
 
 @export_group("Depth")
 @export var gravity_z := 1300.0

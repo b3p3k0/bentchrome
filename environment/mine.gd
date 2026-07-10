@@ -73,9 +73,13 @@ func _trigger(body: CharacterBody2D) -> void:
 		if not immune and body.has_method(&"pop_airborne"):
 			body.pop_airborne(JUMP_VZ)
 	elif damage > 0.0:
+		# The soft underbelly: some rigs (Goliath) trade everything for top
+		# armor and pay for it from below — mine_weakness scales the bill.
+		var soft: Variant = body.get("mine_weakness")
+		var belly: float = float(soft) if soft is float else 1.0
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(damage * Combat.scale(dropper, body))
+				child.take_damage(damage * belly * Combat.scale(dropper, body))
 				if "last_attacker" in body and is_instance_valid(dropper) and dropper is Node2D:
 					body.last_attacker = dropper
 				break

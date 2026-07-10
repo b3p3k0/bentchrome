@@ -613,6 +613,11 @@ position = Vector2(-2176, 448)
 kind = "mine"
 amount = 2
 
+[node name="AmmoMineField" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(448, -128)
+kind = "mine"
+amount = 2
+
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, 0)
 
@@ -665,6 +670,7 @@ rotation = 2.3562
 stats = ExtResource("32_gstats")
 fixed_loadout = true
 launch_immune = true
+mine_weakness = 6.0
 rear_weakspot = 1.75
 body_scale = 1.6
 start_floor = 1

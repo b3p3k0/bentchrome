@@ -64,11 +64,13 @@ func test_launch_immune_rig_crushes_mines() -> void:
 
 	var g := _fixture(LandScene)
 	g.car.launch_immune = true
+	g.car.mine_weakness = 3.0  # the soft underbelly: land mines bite deep
 	var heading_land: float = g.car.heading
 	for i in ARM_FRAMES:
 		await t.physics_frame
 	var health = g.car.get_node("Health")
-	t.check(health.hp < health.max_hp, "immune rig: land mine damage still lands")
+	t.check(is_equal_approx(health.max_hp - health.hp, 22.0 * 3.0),
+		"immune rig: the soft belly takes the scaled bill (%.0f)" % (health.max_hp - health.hp))
 	t.check(is_equal_approx(g.car.heading, heading_land), "immune rig: land mine can't spin it")
 	_done(g)
 
