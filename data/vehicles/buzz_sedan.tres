@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://data/weapons/buzz_missile.tres" id="2_rocket"]
+
+[resource]
+script = ExtResource("1_stats")
+id = &"buzz_sedan"
+car_name = "Buzzard Beater"
+driver_name = "Buzzard Wingman"
+flavor = "A pursuit sedan three owners past its last oil change, driven by someone who learned to shoot before they learned to steer. Thin panels, lazy rockets, big pack energy. Roster-external: chase mode only."
+acceleration = 5
+top_speed = 6
+handling = 4
+armor = 2
+special_power = 3
+mass = 4
+primary_color = Color(0.38, 0.33, 0.28, 1)
+accent_color = Color(0.6, 0.5, 0.35, 1)
+special = ExtResource("2_rocket")
+special_ammo_cap = 2
+special_recharge_seconds = 9.0
+no_mines = true

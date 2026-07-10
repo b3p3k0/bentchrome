@@ -83,6 +83,17 @@ const STYLES := {
 		"skid_points": [Vector2(-24, -18), Vector2(-24, 18)],
 		"steer_wheels": [Vector2(24, -18), Vector2(24, 18)],
 	},
+	# The Buzzardz (chase mode, roster-external like lackey): tatty raider kit.
+	&"buzz_bike": {
+		"half_len": 17.0, "half_wid": 7.0, "radius": 11.0,
+		"skid_points": [Vector2(-12, 0)],
+		"steer_wheels": [Vector2(12, 0)],
+	},
+	&"buzz_sedan": {
+		"half_len": 26.0, "half_wid": 14.0, "radius": 19.0,
+		"skid_points": [Vector2(-18, -10), Vector2(-18, 10)],
+		"steer_wheels": [],
+	},
 }
 
 # Kandy Kane's polka dots — fixed pattern, same truck every boot.
@@ -202,6 +213,10 @@ func _draw() -> void:
 			_draw_hammertoe()
 		&"lackey":
 			_draw_lackey()
+		&"buzz_bike":
+			_draw_buzz_bike()
+		&"buzz_sedan":
+			_draw_buzz_sedan()
 		_:
 			_draw_box()
 
@@ -421,4 +436,48 @@ func _draw_smoky() -> void:
 	draw_rect(Rect2(0, -7, 5, 6), LIGHT_RED if hot else LIGHT_RED.darkened(0.6))
 	draw_rect(Rect2(0, 1, 5, 6), LIGHT_BLUE if not hot else LIGHT_BLUE.darkened(0.6))
 	_headlights(25, 15)
+	_outline(hull)
+
+# --- The Buzzardz (chase mode) ------------------------------------------------
+
+## Buzzard scrambler: a dirtbike and its raider — knobby tires, taped tank,
+## bandana instead of a helmet. Cheap, angry, and loud.
+func _draw_buzz_bike() -> void:
+	_wheel(Vector2(-12, 0), Vector2(9, 6))                       # knobby rear
+	_wheel(Vector2(12, 0), Vector2(8, 5), _steer)
+	draw_circle(Vector2(-12, -3.5), 1.2, TIRE)                   # tread lugs
+	draw_circle(Vector2(-12, 3.5), 1.2, TIRE)
+	draw_line(Vector2(-15, 3), Vector2(-3, 2.5), Color(0.5, 0.38, 0.25), 2.0)  # rusty pipe
+	draw_colored_polygon(PackedVector2Array([                    # frame + tank
+		Vector2(-9, -2.5), Vector2(3, -3.0), Vector2(8, -2.0),
+		Vector2(8, 2.0), Vector2(3, 3.0), Vector2(-9, 2.5),
+	]), primary)
+	draw_rect(Rect2(0, -3.0, 4, 6), accent.darkened(0.3))        # taped tank patch
+	draw_line(Vector2(8, -6), Vector2(8, 6), OUTLINE, 2.0)       # tall bars
+	draw_rect(Rect2(11, -4.5, 2, 9), accent)                     # high front fender
+	draw_rect(Rect2(-8, -4, 7, 8), primary.darkened(0.4))        # hunched rider
+	draw_circle(Vector2(-2, 0), 3.0, Color(0.75, 0.62, 0.5))     # bare head
+	draw_rect(Rect2(-4, -3.2, 2.4, 6.4), accent.darkened(0.15))  # bandana
+
+## Buzzard beater: a rust-bucket sedan wearing mismatched panels — primer
+## patches, cracked glass, one headlight, and a rope-tied trunk.
+func _draw_buzz_sedan() -> void:
+	_wheel(Vector2(-18, -12), Vector2(9, 5))
+	_wheel(Vector2(-18, 12), Vector2(9, 5))
+	_wheel(Vector2(17, -12), Vector2(9, 5))
+	_wheel(Vector2(17, 12), Vector2(9, 5))
+	var hull := _hull(26, 14, 5, 4)
+	draw_colored_polygon(hull, primary)
+	draw_rect(Rect2(-6, -14, 12, 6), accent.darkened(0.25))      # mismatched door
+	draw_rect(Rect2(-10, 8, 14, 6), Color(0.42, 0.42, 0.44))     # primer-gray panel
+	draw_rect(Rect2(8, -11, 5, 22), GLASS.darkened(0.15))        # windshield band
+	draw_line(Vector2(9, -8), Vector2(12, 2), OUTLINE, 1.0)      # the crack
+	draw_line(Vector2(12, 2), Vector2(10, 7), OUTLINE, 1.0)
+	draw_rect(Rect2(-14, -9, 18, 18), primary.darkened(0.25))    # sagging roof
+	draw_rect(Rect2(19, -6, 6, 12), TIRE)                        # hood gone — engine
+	draw_circle(Vector2(22, -2), 1.5, CHROME)
+	draw_circle(Vector2(22, 2.5), 1.5, CHROME)
+	draw_rect(Rect2(24, 8, 3, 4), CLOTH)                         # the one headlight
+	draw_rect(Rect2(-26, -8, 2.5, 5), LIGHT_RED.darkened(0.35))  # taped taillight
+	draw_line(Vector2(-24, -4), Vector2(-24, 6), accent.darkened(0.4), 1.2)  # trunk rope
 	_outline(hull)

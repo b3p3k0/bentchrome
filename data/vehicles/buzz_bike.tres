@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+id = &"buzz_bike"
+car_name = "Buzzard Scrambler"
+driver_name = "Buzzard Scout"
+flavor = "A dirtbike held together with tape and spite. The rider fires a scrapgun one-handed — badly — and swerves in close because the gun only works from close. Roster-external: chase mode only."
+acceleration = 9
+top_speed = 8
+handling = 8
+armor = 1
+special_power = 1
+mass = 1
+primary_color = Color(0.45, 0.3, 0.2, 1)
+accent_color = Color(0.72, 0.6, 0.4, 1)
+no_mines = true

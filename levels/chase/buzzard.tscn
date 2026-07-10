@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="1_base"]
+[ext_resource type="Script" path="res://levels/chase/chase_driver.gd" id="2_bdrv"]
+
+[node name="Buzzard" instance=ExtResource("1_base")]
+faction = &"enemies"
+ai_cooldown_scale = 1.4
+rotation = -1.5708
+
+[node name="Driver" parent="." index="1"]
+script = ExtResource("2_bdrv")
+
+[node name="MachineGunMount" parent="." index="6"]
+fire_rate = 10.0
+damage = 1.7
+spread_deg = 12.0
+
+[node name="Camera2D" parent="." index="8"]
+enabled = false

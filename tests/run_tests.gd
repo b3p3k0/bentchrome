@@ -42,6 +42,7 @@ const SUITES := [
 	preload("res://tests/test_spawner_pool.gd"),
 	preload("res://tests/test_chase_course.gd"),
 	preload("res://tests/test_horde_wall.gd"),
+	preload("res://tests/test_chase_driver.gd"),
 ]
 
 var _checks := 0

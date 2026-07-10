@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="2_proj"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Scrap Rocket"
+cooldown = 1.6
+damage = 12.0
+projectile_speed = 850.0
+projectile_lifetime = 3.0
+turn_rate_deg = 90.0
+acquisition_radius = 700.0
+projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(0.75, 0.5, 0.25, 1)
+note = "Buzzard pursuit sedans' pot shot: a fire missile that fell off a truck. Weak, lazy tracking, fired on a sloppy rhythm — a deadly nuisance, not a threat."
