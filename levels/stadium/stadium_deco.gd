@@ -3,12 +3,18 @@ extends Node2D
 ## street_deco/dock_deco: AI feelers never see paint. `kind` picks the piece:
 ##   seating: a terraced grandstand band — concrete base, tiered bench rows
 ##            with seat ticks (weathered, mostly empty; a few missing), stair
-##            aisles between sections, and a guard rail on the field side.
-##            Rows run along local x; local +y FACES THE FIELD — rotate the
-##            node so the crowd looks at the action. size.x = run length,
-##            size.y = band depth.
-## The band is driveable floor-2 paint like any rooftop: cars roll straight
-## over the seats — the deco is the depth read, the FloorZone is the floor.
+##            aisles between sections, a guard rail on the field side, and a
+##            ramp-style light/shade grade (the grandstand IS a driveable
+##            slope — this deco paints the surface_paint=false Ramp beneath).
+##            Rows run along local x; local +y FACES THE FIELD (the low end) —
+##            rotate the node so the crowd looks at the action. size.x = run
+##            length, size.y = band depth.
+##   tunnel:  a locker-room / maintenance maw cut into the boundary wall —
+##            darkening throat, concrete frame, striped apron. Local +y is
+##            the OPENING direction; author the node on the wall's inner
+##            face, after the Boundary in the tree so the maw paints over it.
+## Bands are driveable paint like any rooftop: cars roll straight over the
+## seats — the deco is the depth read, the Ramp/FloorZones own the floors.
 
 const CONCRETE := Color(0.3, 0.3, 0.34)
 const CONCRETE_DARK := Color(0.24, 0.24, 0.28)
@@ -35,8 +41,8 @@ func _ready() -> void:
 
 func _draw() -> void:
 	match kind:
-		&"seating":
-			_draw_seating()
+		&"tunnel":
+			_draw_tunnel()
 		_:
 			_draw_seating()
 
@@ -82,6 +88,34 @@ func _draw_seating() -> void:
 		while ty < half.y - RAIL_D:
 			draw_rect(Rect2(Vector2(ax - AISLE_W * 0.5 + 3.0, ty), Vector2(AISLE_W - 6.0, 3.0)), AISLE_TREAD)
 			ty += 16.0
+	# The grade read: light at the top row, shade at the field — the same
+	# high-end-lit convention as ramp.gd, because this band IS that ramp.
+	var bands := 6
+	var band_h := size.y / bands
+	for i in bands:
+		var bt := float(i) / float(bands - 1)  # 0 = high end (-y), 1 = field
+		var band := Rect2(Vector2(-half.x, -half.y + i * band_h), Vector2(size.x, band_h + 1.0))
+		draw_rect(band, Color(1.0, 1.0, 1.0, 0.1 * (1.0 - bt)))
+		draw_rect(band, Color(0.0, 0.0, 0.0, 0.12 * bt))
 	# Field-side guard rail: the front row's last defense against the derby.
 	draw_rect(Rect2(Vector2(-half.x, half.y - RAIL_D), Vector2(size.x, RAIL_D)), RAIL)
 	draw_rect(Rect2(-half, size), CONCRETE_DARK, false, 2.0)
+
+## The corner maw: throat darkens away from the opening (+y), concrete frame
+## and lintel, hazard-striped apron spilling onto the pocket floor.
+func _draw_tunnel() -> void:
+	var hw := size.x * 0.5
+	var depth := size.y
+	var steps := 5
+	for i in steps:
+		var a := lerpf(1.0, 0.55, float(i) / float(steps - 1))  # deepest = darkest
+		draw_rect(Rect2(Vector2(-hw, -depth + depth * float(i) / steps),
+			Vector2(size.x, depth / steps + 1.0)), Color(0.04, 0.04, 0.06, a))
+	draw_rect(Rect2(Vector2(-hw - 10.0, -depth), Vector2(10.0, depth + 6.0)), CONCRETE)
+	draw_rect(Rect2(Vector2(hw, -depth), Vector2(10.0, depth + 6.0)), CONCRETE)
+	draw_rect(Rect2(Vector2(-hw - 10.0, -depth - 10.0), Vector2(size.x + 20.0, 10.0)), RAIL)
+	draw_rect(Rect2(Vector2(-hw, 0.0), Vector2(size.x, 44.0)), AISLE)
+	var ticks := int(size.x / 24.0)
+	for i in ticks:
+		if i % 2 == 0:
+			draw_rect(Rect2(Vector2(-hw + 4.0 + float(i) * 24.0, 6.0), Vector2(16.0, 10.0)), SEAT_B)

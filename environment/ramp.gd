@@ -30,6 +30,9 @@ const RAIL_W := 12.0
 @export var surface_color := Color(0.16, 0.16, 0.19)  # OPAQUE built surface
 	# (asphalt default; author snow/dirt tones to match the hill's terrain —
 	# the TerrainZone underneath still owns the grip)
+@export var surface_paint := true  # false = zones + rails only; a deco layer
+	# owns the slope's look (stadium grandstands ARE the ramp — seat rows
+	# paint the grade, the Ramp node stays the physics/floor authority)
 
 func _ready() -> void:
 	for cfg in [{"floor": high_floor, "y": -size.y * 0.25}, {"floor": low_floor, "y": size.y * 0.25}]:
@@ -55,6 +58,13 @@ func _ready() -> void:
 
 func _draw() -> void:
 	var half := size * 0.5
+	# Rail faces along the full slope (the painted side of the chokepoint) —
+	# drawn even when a deco layer owns the surface: the rails are physical.
+	var rail_x := half.x + 2.0
+	draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+	draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+	if not surface_paint:
+		return
 	# The slope is a built structure — fully opaque, never tinted street.
 	draw_rect(Rect2(-half, size), surface_color)
 	var step_h := size.y / SHADE_STEPS
@@ -63,10 +73,6 @@ func _draw() -> void:
 		var band := Rect2(Vector2(-half.x, -half.y + i * step_h), Vector2(size.x, step_h + 1.0))
 		draw_rect(band, Color(1.0, 1.0, 1.0, HILITE_A * (1.0 - t)))
 		draw_rect(band, Color(0.0, 0.0, 0.0, SHADOW_A * t))
-	# Rail faces along the full slope (the painted side of the chokepoint).
-	var rail_x := half.x + 2.0
-	draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
-	draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
 	draw_rect(Rect2(-half, size), EDGE, false, 2.0)
 	# Up-slope chevrons along the centerline.
 	var chevrons := maxi(int(size.y / 112.0), 2)

@@ -1,10 +1,12 @@
 extends RefCounted
 ## The Coliseum structural contract, read off the instantiated (never tree-
 ## entered) scene like test_dock_level: the two-floor bowl topology holds
-## (field plate under a floor-2 seating ring), every spawn's start_floor has
-## a matching tag zone under it, grade routes run both directions with their
-## approach runs on the right floor, and the jump pads stand clear of solid
-## scenery. Batch B adds the Goliath checks (boss flags, trailer hygiene).
+## (field plate under a floor-2 outer RIM ring; the grandstand slopes between
+## them are Ramp-built zones, invisible here since the scene never enters the
+## tree), the corner tunnel pockets stay open floor 1, every spawn's
+## start_floor has a matching tag zone under it, grade routes run both
+## directions with their approach runs on the right floor, and the jump pads
+## stand clear of solid scenery. Batch B adds the Goliath checks.
 
 var t
 
@@ -47,25 +49,36 @@ func test_stadium_structure() -> void:
 			enemies.append(child)
 
 	t.check(stations == 1, "stadium: boss arena earns one station (got %d)" % stations)
-	t.check(zones.size() >= 5, "stadium: field plate + seating ring tagged (got %d zones)" % zones.size())
+	t.check(zones.size() >= 5, "stadium: field plate + rim ring tagged (got %d zones)" % zones.size())
 
-	# Bowl topology: exactly one floor-1 plate, and every floor-2 seating band
+	# Bowl topology: exactly one floor-1 plate, and every floor-2 rim band
 	# sits inside it (the ring never leaks past the field's footprint).
 	var field := {}
-	var seat_bands := 0
+	var rim_bands := 0
 	for z in zones:
 		if int(z.floor) == 1:
 			t.check(field.is_empty(), "stadium: a single floor-1 field plate")
 			field = z
 		elif int(z.floor) == 2:
-			seat_bands += 1
+			rim_bands += 1
 	t.check(not field.is_empty(), "stadium: the floor-1 field plate exists")
-	t.check(seat_bands == 4, "stadium: four seating bands ring the bowl (got %d)" % seat_bands)
+	t.check(rim_bands == 4, "stadium: four rim bands crown the bowl (got %d)" % rim_bands)
 	if not field.is_empty():
 		for z in zones:
 			if int(z.floor) == 2:
 				t.check((field.rect as Rect2).grow(2.0).encloses(z.rect),
 					"stadium: %s sits inside the field plate" % z.name)
+
+	# The corner tunnel pockets stay open floor 1 — no rim or authored zone may
+	# creep over them (the grandstand slopes end at the pocket rails).
+	for pc in [Vector2(1984, -1472), Vector2(-1984, -1472),
+			Vector2(1984, 1472), Vector2(-1984, 1472)]:
+		var pocket_floor := -1
+		for z in zones:
+			if (z.rect as Rect2).has_point(pc):
+				pocket_floor = maxi(pocket_floor, int(z.floor))
+		t.check(pocket_floor == 1, "stadium: corner pocket at %s is open floor 1 (got %d)"
+			% [pc, pocket_floor])
 
 	# Every spawn's start_floor has a matching tag zone under it (highest wins,
 	# same rule as the sensor).
