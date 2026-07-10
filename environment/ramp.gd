@@ -33,6 +33,9 @@ const RAIL_W := 12.0
 @export var surface_paint := true  # false = zones + rails only; a deco layer
 	# owns the slope's look (stadium grandstands ARE the ramp — seat rows
 	# paint the grade, the Ramp node stays the physics/floor authority)
+@export var rails := true  # false = no built side rails; the level authors its
+	# own guards (stadium slope ends wear light DESTRUCTIBLE guardrails so a
+	# beached rig can smash out instead of pinning on indestructible geometry)
 
 func _ready() -> void:
 	for cfg in [{"floor": high_floor, "y": -size.y * 0.25}, {"floor": low_floor, "y": size.y * 0.25}]:
@@ -42,27 +45,29 @@ func _ready() -> void:
 		zone.size = Vector2(size.x, size.y * 0.5)
 		zone.position = Vector2(0.0, cfg.y)
 		add_child(zone)
-	var rail_bits: int = 4 | Floors.floor_bit(low_floor) | Floors.floor_bit(high_floor)
-	for s in [-1.0, 1.0]:
-		var rail := StaticBody2D.new()
-		rail.collision_layer = rail_bits
-		rail.collision_mask = 0
-		rail.position = Vector2(s * (size.x * 0.5 + RAIL_W * 0.5 + 2.0), 0.0)
-		var col := CollisionShape2D.new()
-		var shape := RectangleShape2D.new()
-		shape.size = Vector2(RAIL_W, size.y)
-		col.shape = shape
-		rail.add_child(col)
-		add_child(rail)
+	if rails:
+		var rail_bits: int = 4 | Floors.floor_bit(low_floor) | Floors.floor_bit(high_floor)
+		for s in [-1.0, 1.0]:
+			var rail := StaticBody2D.new()
+			rail.collision_layer = rail_bits
+			rail.collision_mask = 0
+			rail.position = Vector2(s * (size.x * 0.5 + RAIL_W * 0.5 + 2.0), 0.0)
+			var col := CollisionShape2D.new()
+			var shape := RectangleShape2D.new()
+			shape.size = Vector2(RAIL_W, size.y)
+			col.shape = shape
+			rail.add_child(col)
+			add_child(rail)
 	queue_redraw()
 
 func _draw() -> void:
 	var half := size * 0.5
-	# Rail faces along the full slope (the painted side of the chokepoint) —
-	# drawn even when a deco layer owns the surface: the rails are physical.
-	var rail_x := half.x + 2.0
-	draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
-	draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+	if rails:
+		# Rail faces along the full slope (the painted side of the chokepoint) —
+		# drawn even when a deco layer owns the surface: the rails are physical.
+		var rail_x := half.x + 2.0
+		draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+		draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
 	if not surface_paint:
 		return
 	# The slope is a built structure — fully opaque, never tinted street.

@@ -54,6 +54,9 @@ const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 @export var max_hp := 80.0
 @export var deco: StringName = &""  # paint style; "" = plain slab
 @export var floor_index := -1       # ≥1 joins that terrace's collision world
+@export var extra_floor := -1       # ≥1 adds a SECOND terrace bit — for guards
+									# straddling a grade boundary (stadium slope
+									# ends), where both floors must collide
 @export var livery := -1            # containers: CONTAINER_PALETTES index; -1 = seeded
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
@@ -64,6 +67,8 @@ var _wreck := 0.0  # 0..1 battle damage, darkens the paint
 func _ready() -> void:
 	if floor_index >= 1:
 		collision_layer |= Floors.floor_bit(floor_index)  # keeps bit 4 for the radar
+	if extra_floor >= 1:
+		collision_layer |= Floors.floor_bit(extra_floor)
 	var half := size * 0.5
 	_vis.polygon = PackedVector2Array([
 		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),

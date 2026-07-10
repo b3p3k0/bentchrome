@@ -31,10 +31,8 @@ static var SWING_ATTACK_RATE := 2.6   # rad/s: the tail is live past this
 
 var yaw := 0.0        # trailer facing (radians, world)
 var yaw_rate := 0.0   # rad/s, signed — the jackknife window reads abs()
-# Computed plate poses — the tow math's output, applied to the node
-# transforms each physics tick. sync_to_physics silently discards transform
-# sets OUTSIDE the physics step, so these vars are the source of truth
-# (and what headless tests assert on).
+# Computed plate poses — the tow math's output, the source of truth the node
+# transforms follow (and what headless tests assert on).
 var main_center := Vector2.ZERO
 var nose_center := Vector2.ZERO
 
@@ -96,8 +94,6 @@ func _place(hitch: Vector2) -> void:
 	var center := hitch - fwd * KINGPIN_AHEAD
 	nose_center = center + fwd * (TRAILER_BODY_LEN * (0.5 - NOSE_FRAC * 0.5))
 	main_center = center - fwd * (TRAILER_BODY_LEN * NOSE_FRAC * 0.5)
-	# Applied for real only inside the physics step (sync_to_physics discards
-	# idle-time transform sets) — the vars above always hold the true pose.
 	_nose.global_position = nose_center
 	_nose.global_rotation = yaw
 	_main.global_position = main_center
@@ -108,7 +104,11 @@ func _place(hitch: Vector2) -> void:
 func _build_plate(plate_name: String, length: float, weak: bool) -> AnimatableBody2D:
 	var plate := AnimatableBody2D.new()
 	plate.name = plate_name
-	plate.sync_to_physics = true
+	# NOT sync_to_physics: Godot discards direct transform sets on synced
+	# bodies wholesale (even physics-tick ones) — the rig was born parked at
+	# the world origin until this flag died. Plates teleport per tick like
+	# every body in this game; the swing hitbox is the authoritative weapon.
+	plate.sync_to_physics = false
 	plate.collision_layer = Floors.floor_bit(1)
 	plate.collision_mask = 0
 	var col := CollisionShape2D.new()

@@ -153,7 +153,8 @@ func test_stadium_structure() -> void:
 	for child in stadium.get_children():
 		var n := String(child.name)
 		if n.begins_with("Container") or n.begins_with("Junk") \
-				or n.begins_with("Crate") or n.begins_with("Barrier"):
+				or n.begins_with("Crate") or n.begins_with("Barrier") \
+				or n.begins_with("Guard"):
 			solids.append(child)
 		elif child is Area2D and child.get_script() != null \
 				and (child.get_script() as Script).resource_path.ends_with("jump_pad.gd"):

@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -50,6 +50,12 @@ size = Vector2(2432, 1408)
 
 [sub_resource type="RectangleShape2D" id="R_pad"]
 size = Vector2(224, 224)
+
+[sub_resource type="RectangleShape2D" id="R_rimwall_v"]
+size = Vector2(24, 256)
+
+[sub_resource type="RectangleShape2D" id="R_rimwall_h"]
+size = Vector2(256, 24)
 
 [node name="Stadium" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -129,6 +135,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(3328, 384)
 surface_paint = false
+rails = false
 
 [node name="SlopeS" type="Node2D" parent="."]
 position = Vector2(0, 1344)
@@ -138,6 +145,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(3328, 384)
 surface_paint = false
+rails = false
 
 [node name="SlopeW" type="Node2D" parent="."]
 position = Vector2(-1856, 0)
@@ -147,6 +155,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(2304, 384)
 surface_paint = false
+rails = false
 
 [node name="SlopeE" type="Node2D" parent="."]
 position = Vector2(1856, 0)
@@ -156,6 +165,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(2304, 384)
 surface_paint = false
+rails = false
 
 [node name="SeatN" type="Node2D" parent="."]
 position = Vector2(0, -1344)
@@ -374,6 +384,170 @@ polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
 position = Vector2(2324, 0)
 shape = SubResource("R_wall_v")
 
+[node name="RimWallNEv" type="StaticBody2D" parent="."]
+position = Vector2(1664, -1664)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallNEv"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -128, 12, -128, 12, 128, -12, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallNEv"]
+shape = SubResource("R_rimwall_v")
+
+[node name="RimWallNEh" type="StaticBody2D" parent="."]
+position = Vector2(2176, -1152)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallNEh"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallNEh"]
+shape = SubResource("R_rimwall_h")
+
+[node name="RimWallNWv" type="StaticBody2D" parent="."]
+position = Vector2(-1664, -1664)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallNWv"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -128, 12, -128, 12, 128, -12, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallNWv"]
+shape = SubResource("R_rimwall_v")
+
+[node name="RimWallNWh" type="StaticBody2D" parent="."]
+position = Vector2(-2176, -1152)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallNWh"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallNWh"]
+shape = SubResource("R_rimwall_h")
+
+[node name="RimWallSEv" type="StaticBody2D" parent="."]
+position = Vector2(1664, 1664)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallSEv"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -128, 12, -128, 12, 128, -12, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallSEv"]
+shape = SubResource("R_rimwall_v")
+
+[node name="RimWallSEh" type="StaticBody2D" parent="."]
+position = Vector2(2176, 1152)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallSEh"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallSEh"]
+shape = SubResource("R_rimwall_h")
+
+[node name="RimWallSWv" type="StaticBody2D" parent="."]
+position = Vector2(-1664, 1664)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallSWv"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-12, -128, 12, -128, 12, 128, -12, 128)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallSWv"]
+shape = SubResource("R_rimwall_v")
+
+[node name="RimWallSWh" type="StaticBody2D" parent="."]
+position = Vector2(-2176, 1152)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RimWallSWh"]
+color = Color(0.34, 0.32, 0.36, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RimWallSWh"]
+shape = SubResource("R_rimwall_h")
+
+[node name="GuardNEn" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1676, -1440)
+rotation = 1.5708
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardNWn" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1676, -1440)
+rotation = 1.5708
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardSEs" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1676, 1440)
+rotation = 1.5708
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardSWs" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1676, 1440)
+rotation = 1.5708
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardNEe" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1952, -1162)
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardSEe" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1952, 1162)
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardNWw" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1952, -1162)
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
+[node name="GuardSWw" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1952, 1162)
+size = Vector2(192, 24)
+max_hp = 40.0
+deco = &"rail"
+floor_index = 1
+extra_floor = 2
+
 [node name="TunnelNE" type="Node2D" parent="."]
 position = Vector2(1984, -1792)
 script = ExtResource("30_sdeco")
@@ -528,39 +702,33 @@ position = Vector2(0, -928)
 position = Vector2(1300, -928)
 
 [node name="Loop03" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(1780, -1300)
+position = Vector2(1460, -780)
 
 [node name="Loop04" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(1440, -600)
+position = Vector2(1440, 0)
 
 [node name="Loop05" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(1440, 600)
+position = Vector2(1460, 780)
 
 [node name="Loop06" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(1780, 1300)
-
-[node name="Loop07" type="Marker2D" parent="GoliathLoop"]
 position = Vector2(1300, 928)
 
-[node name="Loop08" type="Marker2D" parent="GoliathLoop"]
+[node name="Loop07" type="Marker2D" parent="GoliathLoop"]
 position = Vector2(0, 928)
 
-[node name="Loop09" type="Marker2D" parent="GoliathLoop"]
+[node name="Loop08" type="Marker2D" parent="GoliathLoop"]
 position = Vector2(-1300, 928)
 
+[node name="Loop09" type="Marker2D" parent="GoliathLoop"]
+position = Vector2(-1460, 780)
+
 [node name="Loop10" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(-1780, 1300)
+position = Vector2(-1440, 0)
 
 [node name="Loop11" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(-1440, 600)
+position = Vector2(-1460, -780)
 
 [node name="Loop12" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(-1440, -600)
-
-[node name="Loop13" type="Marker2D" parent="GoliathLoop"]
-position = Vector2(-1780, -1300)
-
-[node name="Loop14" type="Marker2D" parent="GoliathLoop"]
 position = Vector2(-1300, -928)
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
