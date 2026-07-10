@@ -1,0 +1,129 @@
+extends RefCounted
+## The Coliseum structural contract, read off the instantiated (never tree-
+## entered) scene like test_dock_level: the two-floor bowl topology holds
+## (field plate under a floor-2 seating ring), every spawn's start_floor has
+## a matching tag zone under it, grade routes run both directions with their
+## approach runs on the right floor, and the jump pads stand clear of solid
+## scenery. Batch B adds the Goliath checks (boss flags, trailer hygiene).
+
+var t
+
+func _init(runner) -> void:
+	t = runner
+
+func _zone_rect(z: Node) -> Rect2:
+	var size: Vector2 = z.get("size")
+	return Rect2(z.position - size * 0.5, size)
+
+func _body_rect(n: Node2D) -> Rect2:
+	var size_v: Variant = n.get("size")
+	if size_v is Vector2:
+		return Rect2(n.position - (size_v as Vector2) * 0.5, size_v)
+	var col := n.get_node_or_null(^"Col") as CollisionShape2D
+	if col and col.shape is RectangleShape2D:
+		return Rect2(n.position + col.position - col.shape.size * 0.5, col.shape.size)
+	return Rect2()
+
+func test_stadium_structure() -> void:
+	var scene: PackedScene = load("res://levels/stadium/stadium.tscn")
+	var stadium: Node = scene.instantiate()
+
+	var zones: Array = []      # {rect, floor, name}
+	var connectors: Array = []
+	var stations := 0
+	var enemies: Array = []
+	var player: Node2D = null
+	for child in stadium.get_children():
+		if child is Area2D and child.scene_file_path.ends_with("floor_zone.tscn"):
+			zones.append({"rect": _zone_rect(child), "floor": int(child.floor_index),
+				"name": String(child.name)})
+		elif child.get("from_floor") != null:
+			connectors.append(child)
+		elif child.get("cooldown_seconds") != null:
+			stations += 1
+		elif child.name == "Vehicle":
+			player = child
+		elif str(child.name).begins_with("Enemy"):
+			enemies.append(child)
+
+	t.check(stations == 1, "stadium: boss arena earns one station (got %d)" % stations)
+	t.check(zones.size() >= 5, "stadium: field plate + seating ring tagged (got %d zones)" % zones.size())
+
+	# Bowl topology: exactly one floor-1 plate, and every floor-2 seating band
+	# sits inside it (the ring never leaks past the field's footprint).
+	var field := {}
+	var seat_bands := 0
+	for z in zones:
+		if int(z.floor) == 1:
+			t.check(field.is_empty(), "stadium: a single floor-1 field plate")
+			field = z
+		elif int(z.floor) == 2:
+			seat_bands += 1
+	t.check(not field.is_empty(), "stadium: the floor-1 field plate exists")
+	t.check(seat_bands == 4, "stadium: four seating bands ring the bowl (got %d)" % seat_bands)
+	if not field.is_empty():
+		for z in zones:
+			if int(z.floor) == 2:
+				t.check((field.rect as Rect2).grow(2.0).encloses(z.rect),
+					"stadium: %s sits inside the field plate" % z.name)
+
+	# Every spawn's start_floor has a matching tag zone under it (highest wins,
+	# same rule as the sensor).
+	var spawns: Array = enemies.duplicate()
+	spawns.append(player)
+	for s in spawns:
+		var want := int(s.get("start_floor"))
+		var best := -1
+		for z in zones:
+			if (z.rect as Rect2).has_point(s.position):
+				best = maxi(best, int(z.floor))
+		t.check(best == want, "stadium: %s start_floor %d matches the zone under it (zone says %d)"
+			% [s.name, want, best])
+
+	# Route completeness: up and down between field and seats, with grade
+	# ramps on all four sides plus lip drop-offs.
+	var pairs := {}
+	var grades_up := 0
+	for c in connectors:
+		pairs["%d>%d" % [int(c.from_floor), int(c.to_floor)]] = true
+		if String(c.kind) == "grade" and int(c.from_floor) == 1:
+			grades_up += 1
+	for key in ["1>2", "2>1"]:
+		t.check(pairs.has(key), "stadium: connector route %s exists" % key)
+	t.check(grades_up == 4, "stadium: a ramp up on every side (got %d)" % grades_up)
+
+	# Each connector's approach run starts on its own from_floor.
+	for c in connectors:
+		var entry: Vector2 = c.position - (c.approach_dir as Vector2).normalized() * 220.0
+		var best := -1
+		for z in zones:
+			if (z.rect as Rect2).has_point(entry):
+				best = maxi(best, int(z.floor))
+		t.check(best == int(c.from_floor),
+			"stadium: %s approach run sits on floor %d (zone says %d)" % [c.name, int(c.from_floor), best])
+
+	# Props keep their distance: cover never overlaps cover, and every jump
+	# pad belongs to one terrace and stands clear of solid scenery.
+	var solids: Array = []
+	var pads: Array = []
+	for child in stadium.get_children():
+		var n := String(child.name)
+		if n.begins_with("Container") or n.begins_with("Junk") \
+				or n.begins_with("Crate") or n.begins_with("Barrier"):
+			solids.append(child)
+		elif child is Area2D and child.get_script() != null \
+				and (child.get_script() as Script).resource_path.ends_with("jump_pad.gd"):
+			pads.append(child)
+	for i in solids.size():
+		for j in range(i + 1, solids.size()):
+			t.check(not _body_rect(solids[i]).intersects(_body_rect(solids[j])),
+				"stadium: %s and %s don't overlap" % [solids[i].name, solids[j].name])
+	t.check(pads.size() == 2, "stadium: two jump pads found (got %d)" % pads.size())
+	for r in pads:
+		t.check(int(r.get("floor_index")) >= 1, "stadium: %s belongs to one terrace" % r.name)
+		var rr := _body_rect(r)
+		for solid in solids:
+			t.check(not rr.intersects(_body_rect(solid)),
+				"stadium: %s stands clear of %s" % [r.name, solid.name])
+
+	stadium.free()

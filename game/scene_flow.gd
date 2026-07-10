@@ -10,7 +10,9 @@ const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the
-## freeway, through the suburbs, into the mountains, and down to the harbor.
+## freeway, through the suburbs, into the mountains, down to the harbor, and
+## finally into the coliseum where Goliath waits. (Junkyard and Central Park
+## slot in before the finale when they're built — everything is size()-driven.)
 const CAMPAIGN := [
 	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown"},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop"},
@@ -19,6 +21,7 @@ const CAMPAIGN := [
 	{"scene": "res://levels/depot/depot.tscn", "name": "The Depot"},
 	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks"},
 	{"scene": "res://levels/chase/buzzard_run.tscn", "name": "The Buzzard Run"},
+	{"scene": "res://levels/stadium/stadium.tscn", "name": "The Coliseum"},
 ]
 
 func to_title() -> void:
