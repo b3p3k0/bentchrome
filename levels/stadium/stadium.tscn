@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -9,6 +9,13 @@
 [ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="24_fzone"]
 [ext_resource type="Script" path="res://environment/ramp.gd" id="25_ramp"]
 [ext_resource type="Script" path="res://environment/floor_connector.gd" id="27_conn"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
+[ext_resource type="Script" path="res://environment/jump_pad.gd" id="4_ramp"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
+[ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
+[ext_resource type="Script" path="res://levels/stadium/stadium_deco.gd" id="30_sdeco"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -31,6 +38,21 @@ size = Vector2(1746, 24)
 [sub_resource type="RectangleShape2D" id="R_lip_v"]
 size = Vector2(24, 1234)
 
+[sub_resource type="ShaderMaterial" id="SM_grass"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.2, 0.32, 0.17, 0.75)
+shader_parameter/speckle_color = Color(0.12, 0.22, 0.1, 1)
+shader_parameter/density = 0.35
+shader_parameter/intensity = 0.4
+shader_parameter/scale = 7.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="RectangleShape2D" id="R_grass"]
+size = Vector2(2688, 1664)
+
+[sub_resource type="RectangleShape2D" id="R_pad"]
+size = Vector2(224, 224)
+
 [node name="Stadium" type="Node2D"]
 script = ExtResource("1_lvl")
 
@@ -41,6 +63,150 @@ polygon = PackedVector2Array(-2304, -1792, 2304, -1792, 2304, 1792, -2304, 1792)
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("1_grid")
 extent = Vector2(2560, 2048)
+
+[node name="GrassPitch" type="Area2D" parent="."]
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="GrassPitch"]
+material = SubResource("SM_grass")
+color = Color(0.22, 0.34, 0.19, 0.75)
+polygon = PackedVector2Array(-1344, -832, 1344, -832, 1344, 832, -1344, 832)
+
+[node name="Col" type="CollisionShape2D" parent="GrassPitch"]
+shape = SubResource("R_grass")
+
+[node name="RoadMarks" type="Node2D" parent="."]
+
+[node name="TrackN" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1600, -1088, 1600, -1088)
+style = &"dashed_yellow"
+
+[node name="TrackS" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1600, 1088, 1600, 1088)
+style = &"dashed_yellow"
+
+[node name="TrackW" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1600, -1088, -1600, 1088)
+style = &"dashed_yellow"
+
+[node name="TrackE" type="Node2D" parent="RoadMarks"]
+script = ExtResource("21_marks")
+points = PackedVector2Array(1600, -1088, 1600, 1088)
+style = &"dashed_yellow"
+
+[node name="SeatNW" type="Node2D" parent="."]
+position = Vector2(-983, -1568)
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1746, 448)
+
+[node name="SeatNE" type="Node2D" parent="."]
+position = Vector2(983, -1568)
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1746, 448)
+
+[node name="SeatSW" type="Node2D" parent="."]
+position = Vector2(-983, 1568)
+rotation = 3.14159
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1746, 448)
+
+[node name="SeatSE" type="Node2D" parent="."]
+position = Vector2(983, 1568)
+rotation = 3.14159
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1746, 448)
+
+[node name="SeatWN" type="Node2D" parent="."]
+position = Vector2(-2080, -951)
+rotation = -1.5708
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1682, 448)
+
+[node name="SeatWS" type="Node2D" parent="."]
+position = Vector2(-2080, 951)
+rotation = -1.5708
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1682, 448)
+
+[node name="SeatEN" type="Node2D" parent="."]
+position = Vector2(2080, -951)
+rotation = 1.5708
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1682, 448)
+
+[node name="SeatES" type="Node2D" parent="."]
+position = Vector2(2080, 951)
+rotation = 1.5708
+script = ExtResource("30_sdeco")
+kind = &"seating"
+size = Vector2(1682, 448)
+
+[node name="LedgeNW" type="Node2D" parent="."]
+position = Vector2(-983, -1344)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1746, 70)
+
+[node name="LedgeNE" type="Node2D" parent="."]
+position = Vector2(983, -1344)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1746, 70)
+
+[node name="LedgeSW" type="Node2D" parent="."]
+position = Vector2(-983, 1344)
+rotation = 3.14159
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1746, 70)
+
+[node name="LedgeSE" type="Node2D" parent="."]
+position = Vector2(983, 1344)
+rotation = 3.14159
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1746, 70)
+
+[node name="LedgeWN" type="Node2D" parent="."]
+position = Vector2(-1856, -727)
+rotation = -1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1234, 70)
+
+[node name="LedgeWS" type="Node2D" parent="."]
+position = Vector2(-1856, 727)
+rotation = -1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1234, 70)
+
+[node name="LedgeEN" type="Node2D" parent="."]
+position = Vector2(1856, -727)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1234, 70)
+
+[node name="LedgeES" type="Node2D" parent="."]
+position = Vector2(1856, 727)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(1234, 70)
 
 [node name="FZField" parent="." instance=ExtResource("24_fzone")]
 floor_index = 1
@@ -332,6 +498,123 @@ polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(2324, 0)
 shape = SubResource("R_wall_v")
+
+[node name="BarrierNE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1568, -1056)
+rotation = 0.7854
+size = Vector2(180, 32)
+max_hp = 60.0
+deco = &"barrier"
+
+[node name="BarrierNW" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1568, -1056)
+rotation = -0.7854
+size = Vector2(180, 32)
+max_hp = 60.0
+deco = &"barrier"
+
+[node name="BarrierSE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1568, 1056)
+rotation = -0.7854
+size = Vector2(180, 32)
+max_hp = 60.0
+deco = &"barrier"
+
+[node name="BarrierSW" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1568, 1056)
+rotation = 0.7854
+size = Vector2(180, 32)
+max_hp = 60.0
+deco = &"barrier"
+
+[node name="ContainerW" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-896, -512)
+rotation = 0.22
+size = Vector2(448, 112)
+max_hp = 140.0
+deco = &"container"
+livery = 2
+
+[node name="ContainerE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(832, 448)
+rotation = -0.31
+size = Vector2(448, 112)
+max_hp = 140.0
+deco = &"container"
+livery = 0
+
+[node name="JunkA" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(192, -640)
+size = Vector2(120, 120)
+max_hp = 55.0
+deco = &"junk"
+
+[node name="JunkB" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-512, 576)
+size = Vector2(120, 120)
+max_hp = 55.0
+deco = &"junk"
+
+[node name="CrateA" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(640, -448)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateB" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(752, -368)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="JumpA" type="Area2D" parent="."]
+position = Vector2(-128, -640)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+floor_index = 1
+
+[node name="Vis" type="Polygon2D" parent="JumpA"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
+
+[node name="Col" type="CollisionShape2D" parent="JumpA"]
+shape = SubResource("R_pad")
+
+[node name="JumpB" type="Area2D" parent="."]
+position = Vector2(128, 640)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+floor_index = 1
+
+[node name="Vis" type="Polygon2D" parent="JumpB"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
+
+[node name="Col" type="CollisionShape2D" parent="JumpB"]
+shape = SubResource("R_pad")
+
+[node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-1088, -256)
+
+[node name="AmmoStandard2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1088, 256)
+
+[node name="AmmoHoming1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(0, -320)
+kind = "homing"
+amount = 1
+
+[node name="AmmoPowerSeatE" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(2080, -448)
+kind = "power"
+amount = 1
+
+[node name="AmmoMineSeatW" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-2080, 448)
+kind = "mine"
+amount = 2
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(896, 128)
