@@ -71,6 +71,12 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if _spent or body == shooter:
 		return
+	# A multi-body rig (Goliath) stamps its parts with meta "part_of" -> the
+	# owning vehicle's path: the rig's own fire sails over its trailer the same
+	# way it skips its shooter — everyone else's shots land on the plating.
+	if body.has_meta(&"part_of") and is_instance_valid(shooter) \
+			and body.get_meta(&"part_of") == shooter.get_path():
+		return
 	var health := _find_health(body)
 	if health:
 		if body.is_in_group(&"player"):

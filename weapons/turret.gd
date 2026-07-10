@@ -20,6 +20,12 @@ const MUZZLE_OUT := 36.0             # barrel tip, in global px (28 local × fle
 const STEEL := Color(0.16, 0.16, 0.18)
 const STEEL_DARK := Color(0.1, 0.1, 0.12)
 
+@export var shooter_path: NodePath  # override: the vehicle credited with this
+	# turret's fire (Goliath's trailer mounts aim from the trailer but shoot
+	# FOR the cab). Empty keeps the classic Visual->body parent walk (Lackey).
+@export var los_exclude_paths: Array[NodePath] = []  # extra bodies the LoS ray
+	# ignores — a rig's own trailer must never deny its own turrets' shots
+
 var _def: WeaponDef = null
 var _cooldown := 0.0
 
@@ -53,6 +59,8 @@ func _physics_process(delta: float) -> void:
 	_fire()
 
 func _vehicle() -> Node:
+	if not shooter_path.is_empty():
+		return get_node_or_null(shooter_path)
 	return get_parent().get_parent() if get_parent() else null  # Visual -> car body
 
 func _los_clear(target: Node2D) -> bool:
@@ -61,7 +69,12 @@ func _los_clear(target: Node2D) -> bool:
 		return false
 	var query := PhysicsRayQueryParameters2D.create(
 		global_position, target.global_position, LOS_MASK)
-	query.exclude = [body.get_rid(), (target as CollisionObject2D).get_rid()]
+	var exclude: Array[RID] = [body.get_rid(), (target as CollisionObject2D).get_rid()]
+	for path in los_exclude_paths:
+		var extra := get_node_or_null(path) as CollisionObject2D
+		if extra:
+			exclude.append(extra.get_rid())
+	query.exclude = exclude
 	return body.get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
 func _fire() -> void:

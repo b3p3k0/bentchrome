@@ -89,6 +89,37 @@ func test_out_of_range_stays_quiet() -> void:
 	t.check(is_equal_approx(f.turret.global_rotation, before), "turret: no tracking past RANGE")
 	_done(f)
 
+## Goliath's trailer mounts: shooter_path credits the cab, los_exclude_paths
+## keeps the rig's own plating out of the LoS ray, and the projectile's
+## part_of pass-through lets the shot sail over the trailer into the target.
+func test_trailer_mount_shoots_for_its_cab() -> void:
+	var f := _fixture(Vector2(600, 0))
+	var cab := CharacterBody2D.new()  # the vehicle this mount shoots FOR
+	f.container.add_child(cab)
+	var part := StaticBody2D.new()    # the rig's own plating, mid-flight-path
+	part.collision_layer = 4 | 8
+	part.position = Vector2(250, 0)
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(60, 240)
+	col.shape = shape
+	part.add_child(col)
+	f.container.add_child(part)
+	part.set_meta(&"part_of", cab.get_path())
+	f.turret.shooter_path = f.turret.get_path_to(cab)
+	var excludes: Array[NodePath] = [f.turret.get_path_to(part)]
+	f.turret.los_exclude_paths = excludes
+	var health = f.player.get_node("Health")
+	var hp_before: float = health.hp
+	for i in 4:
+		await t.physics_frame
+	t.check(_shots(f) == 1, "trailer mount: own plating never denies the shot (got %d)" % _shots(f))
+	for i in 36:  # let the round cross the plating and reach the target
+		await t.physics_frame
+	t.check(health.hp < hp_before, "trailer mount: the shot passed through and landed")
+	t.check(f.player.last_attacker == cab, "trailer mount: the CAB gets the credit")
+	_done(f)
+
 func test_cover_denies_the_shot() -> void:
 	var f := _fixture(Vector2(600, 0))
 	var wall := StaticBody2D.new()
