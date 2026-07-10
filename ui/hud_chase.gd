@@ -6,11 +6,20 @@ extends "res://ui/hud.gd"
 ## group (time_left / wall_gap / kills).
 
 const GPSScript := preload("res://ui/chase_gps.gd")
+const SpeedLinesScript := preload("res://ui/speed_lines.gd")
 
 var _clock_label: Label
 var _wrecked_label: Label
 var _pack_label: Label
 var _wall_bar: ProgressBar
+
+func _build_ui() -> void:
+	super()
+	var lines := SpeedLinesScript.new()
+	lines.name = "SpeedLines"
+	lines.position = Vector2(GUTTER, 0)
+	lines.size = Vector2(1280 - GUTTER * 2, VIEW_H)
+	add_child(lines)
 
 ## The arena radar never fits an unbounded course — the GPS owns the slot.
 func _build_radar() -> void:

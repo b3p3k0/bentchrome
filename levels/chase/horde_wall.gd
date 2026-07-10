@@ -15,6 +15,8 @@ static var CATCHUP_RATE := 0.35   # extra px/s of closure per px of excess gap
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
+const DUST_AMOUNT := 140          # particle budget: one system, under 200
+const RUMBLE_GAP := 500.0         # ground shudder starts here, grows to contact
 
 var target: Node2D = null   # the player, set by the host
 var course = null           # chase_course.gd, set by the host (centers the band)
@@ -22,6 +24,7 @@ var wall_speed := 330.0     # px/s north; the director's phase drives this
 var front_y := 0.0          # world y of the kill line
 
 var _backstop: StaticBody2D = null
+var _dust: CPUParticles2D = null
 
 func _ready() -> void:
 	z_index = 1  # the dust looms over cars it swallows
@@ -36,6 +39,26 @@ func _ready() -> void:
 	col.position = Vector2(0.0, 250.0)
 	_backstop.add_child(col)
 	add_child(_backstop)
+	# The rolling dust bank (snowfall-pattern CPUParticles; world-space so the
+	# cloud trails as the front advances).
+	_dust = CPUParticles2D.new()
+	_dust.name = "Dust"
+	_dust.amount = DUST_AMOUNT
+	_dust.lifetime = 2.6
+	_dust.local_coords = false
+	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_dust.emission_rect_extents = Vector2(950, 170)
+	_dust.position = Vector2(0, 230)
+	_dust.direction = Vector2(0, -1)
+	_dust.spread = 34.0
+	_dust.initial_velocity_min = 60.0
+	_dust.initial_velocity_max = 170.0
+	_dust.gravity = Vector2(0, -22)
+	_dust.scale_amount_min = 3.0
+	_dust.scale_amount_max = 7.5
+	_dust.color = Color(0.52, 0.42, 0.31, 0.32)
+	_dust.preprocess = 2.0
+	add_child(_dust)
 
 func gap() -> float:
 	if target == null or not is_instance_valid(target):
@@ -67,6 +90,11 @@ func _physics_process(delta: float) -> void:
 		var health := target.get_node_or_null(^"Health")
 		if health and health.hp > 0.0:
 			health.take_damage(100000.0)  # shield/DEVGOD respected — Health decides
+	# Ground shudder as the horde closes — a sub-pixel rumble that grows to a
+	# rattle at contact range (screen_shake toggle respected inside add_shake).
+	var g := front_y - player_y
+	if g < RUMBLE_GAP and target.has_method(&"add_shake"):
+		target.add_shake(minf((RUMBLE_GAP - g) * 0.002, 0.9))
 	queue_redraw()
 
 func _draw() -> void:
@@ -81,18 +109,28 @@ func _draw() -> void:
 		draw_rect(Rect2(-half, BAND_DEPTH * t, half * 2.0, BAND_DEPTH * 0.28), col)
 	# Crest line — the hard edge you're actually racing.
 	draw_rect(Rect2(-half, -6.0, half * 2.0, 10.0), Color(0.55, 0.42, 0.3, 0.85))
-	# Headlight pairs flickering in the murk (time-seeded jitter, no state).
+	var tms := Time.get_ticks_msec() * 0.001
+	# Silhouettes first — hulking shapes lurching in the murk, lights on top.
 	var rng := RandomNumberGenerator.new()
+	rng.seed = 977
+	for i in 5:
+		var sx := rng.randf_range(-half * 0.9, half * 0.9)
+		var sy := rng.randf_range(120.0, BAND_DEPTH * 0.9)
+		var rate := rng.randf_range(1.5, 3.0)
+		var bob := sin(tms * rate + float(i) * 1.7) * 6.0
+		var lurch := sin(tms * 0.7 + float(i) * 2.3) * 16.0
+		draw_rect(Rect2(sx - 34.0 + lurch, sy - 20.0 + bob, 68.0, 40.0),
+			Color(0.12, 0.1, 0.09, 0.75))
+		draw_rect(Rect2(sx - 18.0 + lurch, sy - 32.0 + bob, 36.0, 14.0),
+			Color(0.1, 0.09, 0.08, 0.7))
+	# Headlight pairs flickering in the dust (time-seeded jitter, no state).
 	rng.seed = int(Time.get_ticks_msec() / 140)
 	for i in 6:
 		var hx := rng.randf_range(-half * 0.85, half * 0.85)
 		var hy := rng.randf_range(60.0, BAND_DEPTH * 0.8)
 		var glow := Color(1.0, 0.9, 0.55, rng.randf_range(0.5, 0.95))
+		var halo := Color(1.0, 0.85, 0.5, 0.16)
+		draw_circle(Vector2(hx - 11.0, hy), 10.0, halo)
+		draw_circle(Vector2(hx + 11.0, hy), 10.0, halo)
 		draw_circle(Vector2(hx - 11.0, hy), 5.0, glow)
 		draw_circle(Vector2(hx + 11.0, hy), 5.0, glow)
-	# Silhouette humps — the shapes behind the lights.
-	rng.seed = 977
-	for i in 5:
-		var sx := rng.randf_range(-half * 0.9, half * 0.9)
-		var sy := rng.randf_range(120.0, BAND_DEPTH * 0.9)
-		draw_rect(Rect2(sx - 34.0, sy - 20.0, 68.0, 40.0), Color(0.12, 0.1, 0.09, 0.7))
