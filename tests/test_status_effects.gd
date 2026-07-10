@@ -136,6 +136,54 @@ func test_clear_kind_targets_one_effect() -> void:
 	t.check_approx(f.status.speed_scale(), 0.5, "clear_kind: slow untouched")
 	_done(f)
 
+func test_stun_holds_then_expires() -> void:
+	var f := _fixture()
+	f.status.apply(_spec(&"stun", 0.5))
+	t.check(f.status.is_stunned(), "stun: active after apply")
+	f.status.tick(0.6)
+	t.check(not f.status.is_stunned(), "stun: expired after its duration")
+	_done(f)
+
+## The vehicle-level gate: a stunned car ignores its driver entirely — full
+## throttle from the stub moves nothing until the stun expires.
+func test_stun_cuts_driver_intent() -> void:
+	var car = preload("res://vehicles/vehicle.tscn").instantiate()
+	var old_driver = car.get_node("Driver")
+	car.remove_child(old_driver)
+	old_driver.free()
+	var stub = preload("res://tests/stub_driver.gd").new()
+	stub.name = "Driver"
+	car.add_child(stub)
+	t.root.add_child(car)
+	stub.intent = {"throttle": 1.0}
+	car.apply_effect(_spec(&"stun", 10.0))
+	for i in 8:
+		await t.physics_frame
+	t.check(car.velocity.length() < 5.0, "stun: full throttle moves nothing (%.0f px/s)" % car.velocity.length())
+	car.get_node("Status").clear_kind(&"stun")
+	for i in 8:
+		await t.physics_frame
+	t.check(car.velocity.length() > 20.0, "stun cleared: throttle bites again")
+	t.root.remove_child(car)
+	car.free()
+
+## The heavyweight hit reaction: flung from the impact point, spun, billed,
+## and stunned in one call.
+func test_apply_impact_flings_spins_stuns() -> void:
+	var car = preload("res://vehicles/vehicle.tscn").instantiate()
+	t.root.add_child(car)
+	car.global_position = Vector2(100, 0)
+	var heading_before: float = car.heading
+	var hp_before: float = car.get_node("Health").hp
+	car.apply_impact(Vector2.ZERO, 26.0, 900.0, deg_to_rad(140.0), 0.5)
+	t.check(car.velocity.x > 800.0, "impact: flung away from the impact point")
+	t.check(absf(angle_difference(heading_before, car.heading)) > deg_to_rad(90.0),
+		"impact: spun hard off heading")
+	t.check_approx(car.get_node("Health").hp, hp_before - 26.0, "impact: damage billed")
+	t.check(car.get_node("Status").is_stunned(), "impact: stunned")
+	t.root.remove_child(car)
+	car.free()
+
 func test_no_health_sibling_no_crash() -> void:
 	var f := _fixture(false)
 	f.status.apply(_spec(&"burn", 1.0, 10.0))

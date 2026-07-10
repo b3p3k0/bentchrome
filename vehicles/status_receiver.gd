@@ -36,6 +36,11 @@ func tick(delta: float) -> void:
 	if _health:
 		_health.invulnerable = has_effect(&"invuln")
 
+## Control cut (Goliath's jackknife tail / a whiffed ram charge): the Vehicle
+## zeroes its driver intent while this holds — physics keeps carrying the car.
+func is_stunned() -> bool:
+	return has_effect(&"stun")
+
 func speed_scale() -> float:
 	var s := 1.0
 	for e in _active:

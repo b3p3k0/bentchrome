@@ -260,6 +260,8 @@ func _physics_process(delta: float) -> void:
 		current_terrain = _terrain_sensor.current_terrain
 	_update_floor()
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
+	if _status and _status.is_stunned():
+		intent = {}  # stunned: hands off the wheel — friction owns the car
 	if _controller and not (_special and _special.is_dashing()):
 		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
 		# doesn't eat the dash velocity.
@@ -413,6 +415,26 @@ func escape_hop(direction: Vector2) -> void:
 	heading = direction.angle()
 	velocity = direction * ESCAPE_HOP_SPEED
 	pop_airborne(ESCAPE_HOP_VZ)
+
+## A heavyweight collision reaction (Goliath's jackknife tail, the phase-2 ram
+## charge): momentum dies into a hard fling from the impact point, the heading
+## spins off, and a stun cuts the controls while physics carries the car.
+## dmg 0 = the caller already billed damage elsewhere (charge hits ride the
+## normal ram loop; the tail bills its own).
+func apply_impact(from: Vector2, dmg: float, knockback: float, spin: float, stun_t: float) -> void:
+	var dir := (global_position - from).normalized()
+	if dir == Vector2.ZERO:
+		dir = Vector2.RIGHT.rotated(heading)
+	velocity = dir * knockback
+	heading += spin if randf() < 0.5 else -spin
+	if dmg > 0.0 and _health:
+		_health.take_damage(dmg)
+	if _status and stun_t > 0.0:
+		var spec := StatusEffectSpec.new()
+		spec.kind = &"stun"
+		spec.duration = stun_t
+		_status.apply(spec)
+	add_shake(8.0)
 
 ## Jump pads call this; needs speed and ground. (Driveable RAMPS never launch —
 ## they grade the floor over via ramp-flagged FloorZones.)
