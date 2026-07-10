@@ -262,8 +262,10 @@ func _physics_process(delta: float) -> void:
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
 	if _status and _status.is_stunned():
 		intent = {}  # stunned: hands off the wheel — friction owns the car
-	if _controller and not (_special and _special.is_dashing()):
-		# Normal driving; skipped mid-Leap so the controller's top-speed clamp
+	if _controller and not (_special and _special.is_dashing()) \
+			and not (_driver and _driver.has_method(&"is_forcing") and _driver.is_forcing()):
+		# Normal driving; skipped mid-Leap (and mid-charge for drivers that
+		# force velocity, duck-typed) so the controller's top-speed clamp
 		# doesn't eat the dash velocity.
 		_controller.apply(self, intent, delta)
 		if _controller.boosting and _status:

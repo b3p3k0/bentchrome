@@ -12,7 +12,7 @@ extends Driver
 ## Deliberately NOT EnemyDriver: no feelers (they'd see our own trailer),
 ## no archetype blend — the loop IS the archetype. Phase 2 lands in Batch D.
 
-enum Mode { LOOP, RAM, JACKKNIFE, PARTING, RECOVER }
+enum Mode { LOOP, RAM, JACKKNIFE, PARTING, RECOVER, LINE_UP, CHARGE, RETREAT }
 
 static var LOOP_ARRIVE := 260.0     # waypoint advance radius — wide = smooth arcs
 static var LOOP_STEER_GAIN := 2.2   # chase_driver's proven angle->steer gain
@@ -36,6 +36,23 @@ static var JACKKNIFE_MIN_SPEED := 320.0  # real px/s — the maneuver NEEDS
 									# (otherwise it's a dog chasing its tail)
 static var PARTING_SHOT_TIME := 0.8   # the over-the-shoulder goodbye
 static var PARTING_FIRE_CONE := 0.5
+# Phase 2 (bobtail): the charge cycle. LINE_UP squares on the player, the
+# CHARGE is committed dead-straight (baitable BY DESIGN — no re-homing), a
+# connect spins them out and buys a RETREAT lap on the ring, and a whiff
+# into scenery is self-damage plus a sitting-duck stun: the fight's trick.
+static var CHARGE_WINDUP := 0.7      # line-up beat before a commit is legal
+static var CHARGE_ALIGN := 0.18      # rad: aim tightness required to commit
+static var CHARGE_MAX_DIST := 1400.0 # don't charge from across the arena
+static var CHARGE_SPEED := 1300.0    # forced velocity while committed
+static var CHARGE_TIME := 0.9        # open-air whiffs expire here
+static var CHARGE_SELF_DMG := 120.0  # the wall bill on a baited miss
+static var CHARGE_STUN := 2.0        # the sitting-duck window (s)
+static var CHARGE_HIT_KNOCKBACK := 1000.0  # a semi hurts way more than a kart
+static var CHARGE_HIT_SPIN := deg_to_rad(140.0)
+static var CHARGE_HIT_STUN := 0.7
+static var RETREAT_TIME := 2.5       # the back-off lap after a connect
+static var RETREAT_THROTTLE := 1.0
+
 static var STUCK_SPEED := 40.0      # real px/s below this counts as pinned
 static var STUCK_TRIP := 1.2        # seconds pinned before RECOVER (the rig
 									# launches slowly — don't trip on takeoff)
@@ -46,6 +63,7 @@ var _timer := 0.0
 var _reengage := 0.0
 var _jk_cd := 0.0
 var _jk_steer := 0.0
+var _charge_dir := Vector2.RIGHT
 var _stuck_t := 0.0
 var _rev_steer := 1.0
 var _points: PackedVector2Array = PackedVector2Array()
@@ -78,7 +96,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		if _timer > 0.0:
 			return {"throttle": -1.0, "steer": _rev_steer}
 		_rejoin(vehicle)
-	elif _mode == Mode.RAM and (_timer <= 0.0 or player == null):
+	if _phase() == 2:
+		return _phase2_intent(vehicle, player)
+	if _mode == Mode.RAM and (_timer <= 0.0 or player == null):
 		_enter_parting()
 	elif _mode == Mode.JACKKNIFE and _timer <= 0.0:
 		_enter_parting()
@@ -100,6 +120,108 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			return _parting_intent(vehicle, player)
 		_:
 			return _loop_intent(vehicle)
+
+## Duck-typed hook (vehicle.gd's dash-skip generalization): while CHARGING
+## the vehicle bypasses its controller so the top-speed clamp doesn't eat
+## the forced velocity — the obstacle mask stays ON, so walls CAN be hit.
+func is_forcing() -> bool:
+	return _mode == Mode.CHARGE
+
+## Phase 2, bobtail. The charge is committed the moment it launches: no
+## re-homing, no steering — dodge it and it keeps the appointment with
+## whatever was behind you.
+func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
+	if _mode == Mode.CHARGE:
+		var colliders := _slide_colliders(vehicle)
+		var victim := _charge_hit_car(colliders)
+		if victim != null:
+			_strike(vehicle, victim)
+			_enter_retreat(vehicle)
+		elif _charge_hit_scenery(colliders):
+			_self_stun(vehicle)
+			_enter_retreat(vehicle)
+		elif _timer > 0.0:
+			vehicle.velocity = _charge_dir * CHARGE_SPEED
+			vehicle.heading = _charge_dir.angle()
+			return {}
+		else:
+			_enter_lineup()  # whiffed into open air — square up again
+	if _mode == Mode.RETREAT:
+		if _timer > 0.0:
+			var intent := _loop_intent(vehicle)
+			intent["throttle"] = RETREAT_THROTTLE
+			return intent
+		_enter_lineup()
+	if _mode != Mode.LINE_UP:
+		_enter_lineup()  # fresh out of phase 1 (or a recovery): square up
+	if player == null:
+		return _loop_intent(vehicle)
+	var to_p: Vector2 = player.global_position - vehicle.global_position
+	var diff := angle_difference(vehicle.heading, to_p.angle())
+	if _timer <= 0.0 and absf(diff) < CHARGE_ALIGN and to_p.length() < CHARGE_MAX_DIST:
+		_mode = Mode.CHARGE
+		_timer = CHARGE_TIME
+		_charge_dir = Vector2.RIGHT.rotated(vehicle.heading)  # commit: dead straight
+		vehicle.velocity = _charge_dir * CHARGE_SPEED
+		vehicle.heading = _charge_dir.angle()
+		return {}
+	return {
+		"throttle": 0.85,
+		"steer": clampf(diff * LOOP_STEER_GAIN, -1.0, 1.0),
+		"fire_mg": absf(diff) < RAM_FIRE_CONE,
+	}
+
+func _enter_lineup() -> void:
+	_mode = Mode.LINE_UP
+	_timer = CHARGE_WINDUP
+
+func _enter_retreat(vehicle) -> void:
+	_mode = Mode.RETREAT
+	_timer = RETREAT_TIME
+	_idx = _nearest_idx(vehicle)  # the ring IS the back-off route
+
+## The connect: the ram loop already billed the collision damage — this adds
+## the semi treatment (fling, spin, dead stick) on top.
+func _strike(vehicle, victim: Node) -> void:
+	if victim.has_method(&"apply_impact"):
+		victim.apply_impact(vehicle.global_position, 0.0,
+			CHARGE_HIT_KNOCKBACK, CHARGE_HIT_SPIN, CHARGE_HIT_STUN)
+
+## The bait window: a charge that found scenery instead of a car bills the
+## boss pool and sits him down — hit him while the stars circle.
+func _self_stun(vehicle) -> void:
+	var health = vehicle.get_node_or_null(^"Health")
+	if health and health.has_method(&"take_damage"):
+		health.take_damage(CHARGE_SELF_DMG)
+	if vehicle.has_method(&"apply_effect"):
+		var spec := StatusEffectSpec.new()
+		spec.kind = &"stun"
+		spec.duration = CHARGE_STUN
+		vehicle.apply_effect(spec)
+
+## Last frame's move_and_slide contacts (the dash-read idiom: one frame late,
+## no vehicle.gd changes needed). Bare fixtures without the API read empty.
+func _slide_colliders(vehicle) -> Array:
+	var out: Array = []
+	if not vehicle.has_method(&"get_slide_collision_count"):
+		return out
+	for i in vehicle.get_slide_collision_count():
+		var col = vehicle.get_slide_collision(i)
+		if col:
+			out.append(col.get_collider())
+	return out
+
+func _charge_hit_car(colliders: Array) -> Node:
+	for c in colliders:
+		if c != null and c is CharacterBody2D and c.has_method(&"apply_impact"):
+			return c
+	return null
+
+func _charge_hit_scenery(colliders: Array) -> bool:
+	for c in colliders:
+		if c != null and not (c is CharacterBody2D):
+			return true
+	return false
 
 ## Front arc gets the grille; everyone else gets the tail — IF the tail is
 ## earned: off cooldown and back up to speed. A slow or spent rig holds its
@@ -175,8 +297,15 @@ func _loop_intent(vehicle) -> Dictionary:
 
 ## The big-rig unstick: wedged cars fake velocity, so the trip reads REAL
 ## displacement (enemy_driver's lesson). Commit a reverse swing, then rejoin.
+## Charges and stuns are exempt — one is deliberately fast, the other is
+## deliberately parked (the bait window must never turn into a reverse-out).
 func _update_stuck(vehicle, delta: float) -> void:
-	if _mode == Mode.RECOVER or not vehicle.has_method(&"get_real_velocity"):
+	if _mode == Mode.RECOVER or _mode == Mode.CHARGE \
+			or not vehicle.has_method(&"get_real_velocity"):
+		return
+	var status = vehicle.get_node_or_null(^"Status")
+	if status and status.has_method(&"is_stunned") and status.is_stunned():
+		_stuck_t = 0.0
 		return
 	var real: Vector2 = vehicle.get_real_velocity()
 	_stuck_t = _stuck_t + delta if real.length() < STUCK_SPEED else 0.0

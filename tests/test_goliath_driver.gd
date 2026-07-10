@@ -15,9 +15,15 @@ const VehicleScene := preload("res://vehicles/vehicle.tscn")
 class FakeRig:
 	extends Node2D
 	var heading := 0.0
+	var velocity := Vector2.ZERO     # written by the forced charge
 	var fake_vel := Vector2(400, 0)  # cruising: fast enough to earn the tail
 	func get_real_velocity() -> Vector2:
 		return fake_vel
+
+## A stand-in BossController: just the phase the driver reads.
+class FakeBoss:
+	extends Node
+	var phase := 2
 
 var t
 
@@ -110,6 +116,62 @@ func test_jackknife_needs_momentum_and_cooldown() -> void:
 	f.driver._jk_cd = 0.0  # cooled down and still at speed:
 	f.driver.get_intent(f.rig, 1.0 / 60.0)
 	t.check(f.driver._mode == DriverScript.Mode.JACKKNIFE, "tail gate: earned again")
+	_done(f)
+
+func _phase2_fixture(player_at: Vector2) -> Dictionary:
+	var f := _fixture(player_at)
+	var boss := FakeBoss.new()
+	boss.name = "BossController"
+	f.rig.add_child(boss)
+	return f
+
+## Phase 2: the wind-up gates the commit; the committed charge forces
+## velocity dead-straight and bypasses the controller (is_forcing); an
+## open-air whiff squares back up.
+func test_charge_commits_after_windup() -> void:
+	var f := _phase2_fixture(Vector2(600, 0))  # aligned dead ahead
+	var intent: Dictionary = f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "ph2: squares up first")
+	t.check(float(intent.get("throttle", 0.0)) > 0.0, "ph2: line-up keeps rolling")
+	intent = f.driver.get_intent(f.rig, DriverScript.CHARGE_WINDUP + 0.1)
+	t.check(f.driver._mode == DriverScript.Mode.CHARGE, "ph2: wind-up expires into the commit")
+	t.check(f.rig.velocity.x > DriverScript.CHARGE_SPEED * 0.9,
+		"ph2: forced velocity down the committed line")
+	t.check(f.driver.is_forcing(), "ph2: the controller is bypassed mid-charge")
+	t.check(intent.is_empty(), "ph2: no intent while forcing")
+	intent = f.driver.get_intent(f.rig, DriverScript.CHARGE_TIME + 0.1)
+	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "ph2: an open-air whiff squares up again")
+	t.check(not f.driver.is_forcing(), "ph2: forcing ends with the charge")
+	_done(f)
+
+## The outcome classifiers, pure: a car with apply_impact is a strike, a
+## static is scenery (the bait), and the self-stun sits the boss down.
+func test_charge_outcomes() -> void:
+	var f := _phase2_fixture(Vector2(600, 0))
+	var car = VehicleScene.instantiate()
+	f.container.add_child(car)
+	var wall := StaticBody2D.new()
+	f.container.add_child(wall)
+	t.check(f.driver._charge_hit_car([wall, car]) == car, "outcome: the car is the victim")
+	t.check(f.driver._charge_hit_car([wall]) == null, "outcome: scenery is not a victim")
+	t.check(f.driver._charge_hit_scenery([wall]), "outcome: a wall reads as scenery")
+	t.check(not f.driver._charge_hit_scenery([car]), "outcome: a car alone is no bait")
+	var hp_before: float = car.get_node("Health").hp
+	f.driver._self_stun(car)
+	t.check(car.get_node("Health").hp < hp_before, "whiff: the wall bill landed")
+	t.check(car.get_node("Status").is_stunned(), "whiff: sitting-duck stun landed")
+	_done(f)
+
+## The connect buys a back-off lap on the ring, then squares up again.
+func test_retreat_laps_then_lines_up() -> void:
+	var f := _phase2_fixture(Vector2(600, 0))
+	f.driver._mode = DriverScript.Mode.RETREAT
+	f.driver._timer = 1.0
+	var intent: Dictionary = f.driver.get_intent(f.rig, 1.0 / 60.0)
+	t.check(is_equal_approx(float(intent.get("throttle", 0.0)), DriverScript.RETREAT_THROTTLE),
+		"retreat: full gas on the ring")
+	f.driver.get_intent(f.rig, 1.2)
+	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "retreat: hands back to the line-up")
 	_done(f)
 
 func test_pinned_rig_recovers_in_reverse() -> void:
