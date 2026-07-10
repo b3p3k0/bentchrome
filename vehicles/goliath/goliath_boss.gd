@@ -10,9 +10,11 @@ extends Node
 ## Duck-typed toward the cab like everything trailer-side.
 
 const TrailerScript := preload("res://vehicles/goliath/goliath_trailer.gd")
+const CutsceneScript := preload("res://vehicles/goliath/goliath_cutscene.gd")
+const PH2_STATS := preload("res://data/vehicles/goliath_ph2.tres")
 
 static var PHASE1_HP := 2200.0    # the trailered fortress pool
-static var PHASE2_HP := 900.0     # the bobtail pool (consumed by Batch D)
+static var PHASE2_HP := 900.0     # the fresh bobtail pool
 static var PHASE1_END_HP := 1.0   # at-or-below trips the transition
 
 var trailer: Node2D = null
@@ -52,5 +54,37 @@ func _on_cab_damaged(_amount: float, hp: float) -> void:
 	phase = 2
 	_health.god = true       # immortal while the transition pends
 	_health.hp = PHASE1_HP   # sentinel: beats take_damage's died check
-	# Batch D replaces this stub with the cutscene -> start_phase2 chain.
-	print("[goliath] phase 1 depleted — transition pending (Batch D)")
+	# The gate fires inside a physics callback (projectile signal) — the
+	# theatrics wait for the flush before pausing the world.
+	call_deferred("_begin_transition")
+
+## The staged flip when there's someone to stage it FOR; a dead/respawning
+## player skips the theatre and gets phase 2 hot when they come back.
+func _begin_transition() -> void:
+	var player := get_tree().get_first_node_in_group(&"player")
+	var alive: bool = player != null and is_instance_valid(player) \
+		and player.has_method(&"get_hp") and player.get_hp() > 0.0
+	if alive and _cab and is_instance_valid(_cab):
+		var director := CutsceneScript.new()
+		director.name = "GoliathCutscene"
+		_cab.get_parent().add_child(director)
+		director.run(self, _cab, trailer)
+	else:
+		if trailer and is_instance_valid(trailer):
+			trailer.queue_free()
+		start_phase2()
+
+## Bobtail: fresh pool, feel deck swapped on the CONTROLLER only (set_stats
+## would repaint the body and reset HP from armor), immortality off. The HUD
+## bar simply refills — it polls get_hp_fraction.
+func start_phase2() -> void:
+	phase = 2
+	trailer = null  # the cutscene (or the instant path) already freed it
+	if _health:
+		_health.god = false
+		_health.max_hp = PHASE2_HP
+		_health.hp = PHASE2_HP
+	if _cab and is_instance_valid(_cab) and _cab.has_method(&"get_controller"):
+		var ctrl = _cab.get_controller()
+		if ctrl:
+			StatCurves.apply(PH2_STATS, ctrl, null)
