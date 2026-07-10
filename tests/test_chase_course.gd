@@ -143,14 +143,19 @@ func test_builder_structure() -> void:
 	if pickup_i >= 0:
 		var pchunk: Node2D = Builder.build(c.plan[pickup_i])
 		var heals := 0
+		var boosts := 0
 		var crates := 0
 		for child in pchunk.get_children():
 			var script = child.get_script()
 			if script and script.resource_path.ends_with("heal_pickup.gd"):
-				heals += 1
+				if child.kind == &"boost":
+					boosts += 1
+				else:
+					heals += 1
 			if script and script.resource_path.ends_with("ammo_pickup.gd"):
 				crates += 1
-		t.check(heals == 1 and crates == 1, "builder: pickup chunk carries medkit + crate")
+		t.check(heals == 1 and crates == 1 and boosts == 1,
+			"builder: pickup chunk carries medkit + crate + nitro")
 		pchunk.free()
 	if slalom_i >= 0:
 		var schunk: Node2D = Builder.build(c.plan[slalom_i])
@@ -359,5 +364,30 @@ func test_heal_pickup_heals_player_only() -> void:
 	pickup._on_body_entered(player)
 	t.check(is_equal_approx(health.hp, 75.0), "heal: +25 on the damaged player")
 	t.check(pickup.is_queued_for_deletion(), "heal: one shot, gone")
+	t.root.remove_child(container)
+	container.free()
+
+class FakeCtrl:
+	var boost_fuel := 100.0
+
+class FakeBooster extends Node2D:
+	var ctrl = FakeCtrl.new()
+	func get_controller():
+		return ctrl
+
+func test_boost_pickup_refills_nitro() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var pickup = load("res://environment/boost_pickup.tscn").instantiate()
+	container.add_child(pickup)
+	var player := FakeBooster.new()
+	player.add_to_group(&"player")
+	container.add_child(player)
+	pickup._on_body_entered(player)
+	t.check(not pickup.is_queued_for_deletion(), "boost: full tank banks the bottle")
+	player.ctrl.boost_fuel = 80.0
+	pickup._on_body_entered(player)
+	t.check(is_equal_approx(player.ctrl.boost_fuel, 100.0), "boost: +35 caps at the tank (got %d)" % int(player.ctrl.boost_fuel))
+	t.check(pickup.is_queued_for_deletion(), "boost: one shot, gone")
 	t.root.remove_child(container)
 	container.free()

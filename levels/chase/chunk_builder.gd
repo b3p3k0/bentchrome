@@ -13,6 +13,7 @@ const BlockScene := preload("res://environment/destructible_block.tscn")
 const ClutterScene := preload("res://environment/clutter.tscn")
 const AmmoScene := preload("res://environment/ammo_pickup.tscn")
 const HealScene := preload("res://environment/heal_pickup.tscn")
+const BoostScene := preload("res://environment/boost_pickup.tscn")
 const JumpPadScript := preload("res://environment/jump_pad.gd")
 const StreetDecoScript := preload("res://environment/street_deco.gd")
 
@@ -326,6 +327,10 @@ static func _place_pickups(root: Node2D, entry: Dictionary) -> void:
 			var heal := HealScene.instantiate()
 			heal.position = pos
 			root.add_child(heal)
+		elif kind == &"boost":
+			var boost := BoostScene.instantiate()
+			boost.position = pos
+			root.add_child(boost)
 		else:
 			var ammo := AmmoScene.instantiate()
 			ammo.position = pos

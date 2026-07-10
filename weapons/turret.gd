@@ -10,6 +10,7 @@ extends Node2D
 
 const CarPaintScript := preload("res://vehicles/car_paint.gd")  # FLEET_SCALE only
 const Floors := preload("res://game/floors.gd")
+const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
 const RANGE := 1100.0
 const TRAVERSE := deg_to_rad(120.0)  # barrel slew per second — the dodge window
@@ -81,6 +82,9 @@ func _fire() -> void:
 	scene.add_child(p)
 	p.setup(global_position + dir * MUZZLE_OUT, dir, _def.projectile_speed,
 		_def.damage, _def.projectile_lifetime, shooter, 0.0, null)
+	var flash := (spawner.acquire(FlashScene) if spawner else FlashScene.instantiate()) as Node2D
+	scene.add_child(flash)
+	flash.setup(global_position + dir * MUZZLE_OUT, dir, true)
 
 func _draw() -> void:
 	# The barrel that used to be static hull paint — now it turns to face you.

@@ -6,6 +6,7 @@ extends Node
 ## behind; stragglers cull far south. Deaths bump the host's kill tally.
 
 const BuzzardScene := preload("res://levels/chase/buzzard.tscn")
+const TumbleScript := preload("res://levels/chase/death_tumble.gd")
 const BikeStats := preload("res://data/vehicles/buzz_bike.tres")
 const SedanStats := preload("res://data/vehicles/buzz_sedan.tres")
 const TechnicalStats := preload("res://data/vehicles/buzz_technical.tres")
@@ -122,10 +123,32 @@ func spawn(kind: StringName) -> Node:
 	b.velocity = Vector2(0.0, -entry_speed)  # pace-matched entry
 	var health = b.get_node(^"Health")
 	health.died.connect(func() -> void:
-		if host != null and is_instance_valid(host):
-			host.kills += 1)
+		if host == null or not is_instance_valid(host):
+			return
+		host.kills += 1
+		if is_instance_valid(b):
+			_tumble(b))
 	host.add_child(b)
 	return b
+
+## The kill read: a dark hull spinning off with the wreck's momentum while the
+## explosion pops. Director-side — arenas keep their untouched death path.
+func _tumble(b: Node) -> void:
+	if host == null or not is_instance_valid(host):
+		return
+	var hull := Vector2(30.0, 16.0)
+	var paint = b.get_node_or_null(^"Visual/Body")
+	if paint != null and paint.has_method(&"metrics"):
+		var m: Dictionary = paint.metrics()
+		hull = Vector2(m["half_len"], m["half_wid"])
+	var tint := Color(0.4, 0.32, 0.25)
+	var stats = b.get("stats")
+	if stats != null:
+		tint = stats.primary_color
+	var tumble := TumbleScript.new()
+	tumble.z_index = 1
+	host.add_child(tumble)
+	tumble.setup(b.global_position, b.velocity * 0.7, hull, tint)
 
 ## Player respawned: the pack breaks off the trigger for a beat.
 func on_player_respawn() -> void:

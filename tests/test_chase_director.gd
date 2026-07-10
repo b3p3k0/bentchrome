@@ -85,6 +85,12 @@ func test_spawn_cull_grace_and_kills() -> void:
 	bike.get_node(^"Health").kill()
 	await t.physics_frame
 	t.check(scene.kills == kills_before + 1, "director: wrecked buzzard rings the bell")
+	var tumbling := false
+	for child in scene.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("death_tumble.gd"):
+			tumbling = true
+	t.check(tumbling, "director: the wreck tumbles out")
 	# Cull: freeze new spawns, leave the field far behind, sweep.
 	director.frozen = true
 	player.global_position.y -= 6000.0

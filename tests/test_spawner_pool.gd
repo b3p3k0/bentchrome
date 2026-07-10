@@ -129,8 +129,20 @@ func test_mount_fires_pooled_and_expiry_rebanks() -> void:
 		if c is Projectile:
 			first = c
 	t.check(first != null and first.collision_mask == 3, "pool: pierce stamp applied on fire")
+	var flashes := 0
+	for c in f.container.get_children():
+		var script = c.get_script()
+		if script and script.resource_path.ends_with("muzzle_flash.gd"):
+			flashes += 1
+	t.check(flashes == 1, "pool: one muzzle flash per wave")
 	for i in 12:
 		await t.physics_frame
+	var flashes_after := 0
+	for c in f.container.get_children():
+		var script = c.get_script()
+		if script and script.resource_path.ends_with("muzzle_flash.gd"):
+			flashes_after += 1
+	t.check(flashes_after == 0, "pool: the flash banks itself")
 	t.check(_shots(f.container) == 0, "pool: expired shot leaves the scene")
 	t.check(auto.idle_count(ProjectileScene) == 1, "pool: expired shot banks in the autoload")
 	t.check(mount.try_fire(Vector2.ZERO, Vector2.RIGHT, shooter), "pool: second shot fires")

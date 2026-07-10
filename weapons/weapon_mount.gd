@@ -7,6 +7,7 @@ extends Node
 ## on_hit_effects (from the WeaponDef) ride along on each projectile.
 
 const Floors := preload("res://game/floors.gd")  # floor-mask stamping (dependency-free)
+const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
 @export var weapon: WeaponDef           # if set, overrides the fields below
 @export var fire_rate := 12.0
@@ -119,7 +120,11 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	var scene := get_tree().current_scene
 	if scene == null:
 		return
-	var spawner := get_node_or_null(^"/root/Spawner")  # absent in -s test runs
+	var spawner := get_node_or_null(^"/root/Spawner")  # may be absent in bare fixtures
+	# One flash per wave (not per pellet) — pooled; the MG asks 12 times a second.
+	var flash := (spawner.acquire(FlashScene) if spawner else FlashScene.instantiate()) as Node2D
+	scene.add_child(flash)
+	flash.setup(origin, direction, heat_per_shot <= 0.0)
 	var tracking := turn_rate_deg > 0.0 and acquisition_radius > 0.0
 	var shooter_floor := Floors.floor_of(shooter)
 	var tgt: Node2D = null

@@ -1,9 +1,11 @@
 extends Area2D
-## Drive-over medkit: a one-shot partial heal for the PLAYER only (station
-## philosophy — no free patches for the mob). No cooldown machinery, no
-## respawn: grab it or lose it. Skips the grab entirely at full health so a
-## topped-up player can bank it for the next lap past.
+## Drive-over kit: a one-shot grant for the PLAYER only (station philosophy —
+## no free patches for the mob). Two kinds: &"heal" (+HP via the Health child)
+## and &"boost" (+nitro via the controller — the game's only boost refill,
+## chase-course exclusive by authoring). Skips the grab at a full tank so it
+## banks for the next pass. No cooldown machinery, no respawn: grab or lose it.
 
+@export var kind: StringName = &"heal"
 @export var amount := 25.0
 
 func _ready() -> void:
@@ -12,6 +14,15 @@ func _ready() -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if not body.is_in_group(&"player"):
+		return
+	if kind == &"boost":
+		if not body.has_method(&"get_controller"):
+			return
+		var ctrl = body.get_controller()
+		if ctrl == null or ctrl.boost_fuel >= 100.0:
+			return
+		ctrl.boost_fuel = minf(ctrl.boost_fuel + amount, 100.0)
+		queue_free()
 		return
 	var health = body.get_node_or_null(^"Health")
 	if health == null or health.hp <= 0.0 or health.hp >= health.max_hp:
