@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="1_veh"]
+[ext_resource type="Script" path="res://levels/chase/chase_player_driver.gd" id="2_drv"]
+
+[node name="Vehicle" instance=ExtResource("1_veh")]
+rotation = -1.5708
+
+[node name="Driver" parent="."]
+script = ExtResource("2_drv")
+
+[node name="Camera2D" parent="."]
+position = Vector2(0, -260)

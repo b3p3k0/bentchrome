@@ -12,6 +12,11 @@ const PANEL_BG := Color(0.07, 0.07, 0.09)
 
 const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't click menus
 
+## Chase mode: runtime-spawned hordes latch _seen_enemies, and a wiped wave
+## between director spawns would read as "arena cleared" — a win at t=60. The
+## chase host sets this and calls _show(true) itself when the clock runs out.
+@export var suppress_group_win := false
+
 var _seen_enemies := false
 var _over := false
 var _title: Label
@@ -41,7 +46,7 @@ func _process(_delta: float) -> void:
 	# is only lost once the tank is empty (no GameState = old single-life rule).
 	if player and player.get_hp() <= 0.0 and (gs == null or gs.lives <= 0):
 		_show(false)
-	elif _seen_enemies and enemies.is_empty():
+	elif _seen_enemies and enemies.is_empty() and not suppress_group_win:
 		_show(true)
 
 ## Index of the next campaign level after this scene, or -1 (off-campaign /

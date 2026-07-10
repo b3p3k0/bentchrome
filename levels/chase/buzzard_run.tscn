@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://levels/chase/buzzard_run.gd" id="1_lvl"]
+[ext_resource type="PackedScene" path="res://levels/chase/chase_player.tscn" id="2_veh"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="3_hud"]
+
+[node name="BuzzardRun" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Vehicle" parent="." instance=ExtResource("2_veh")]
+position = Vector2(0, -300)
+
+[node name="HUD" parent="." instance=ExtResource("3_hud")]
