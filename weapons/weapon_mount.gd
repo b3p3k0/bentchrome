@@ -119,6 +119,7 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	var scene := get_tree().current_scene
 	if scene == null:
 		return
+	var spawner := get_node_or_null(^"/root/Spawner")  # absent in -s test runs
 	var tracking := turn_rate_deg > 0.0 and acquisition_radius > 0.0
 	var shooter_floor := Floors.floor_of(shooter)
 	var tgt: Node2D = null
@@ -131,7 +132,8 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 			dir = direction.rotated(deg_to_rad(lerpf(-spread_deg * 0.5, spread_deg * 0.5, t)))
 		elif spread_deg > 0.0:
 			dir = direction.rotated(deg_to_rad(randf_range(-spread_deg * 0.5, spread_deg * 0.5)))
-		var p := projectile_scene.instantiate() as Projectile
+		var p := (spawner.acquire(projectile_scene) if spawner
+			else projectile_scene.instantiate()) as Projectile
 		p.modulate = projectile_tint
 		p.hit_sfx = &"hit_mg" if heat_per_shot > 0.0 else &"hit_weapon"
 		if pierces_cover:

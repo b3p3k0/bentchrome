@@ -39,6 +39,7 @@ const SUITES := [
 	preload("res://tests/test_audio_director.gd"),
 	preload("res://tests/test_corner_escape.gd"),
 	preload("res://tests/test_no_camping.gd"),
+	preload("res://tests/test_spawner_pool.gd"),
 ]
 
 var _checks := 0

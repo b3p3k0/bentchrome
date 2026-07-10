@@ -69,7 +69,9 @@ func _fire() -> void:
 		return  # headless fixtures may not set one — same guard as the mount
 	_cooldown = _def.cooldown
 	var dir := Vector2.RIGHT.rotated(global_rotation)
-	var p := _def.projectile_scene.instantiate() as Projectile
+	var spawner := get_node_or_null(^"/root/Spawner")  # absent in -s test runs
+	var p := (spawner.acquire(_def.projectile_scene) if spawner
+		else _def.projectile_scene.instantiate()) as Projectile
 	p.modulate = _def.projectile_tint
 	p.hit_sfx = &"hit_weapon"
 	var shooter := _vehicle()

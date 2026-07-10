@@ -8,6 +8,10 @@ extends Area2D
 
 const HOMING_CONE := deg_to_rad(90.0)
 const Combat := preload("res://game/combat.gd")  # NEVER name Vehicle here — load cycle
+# Every weapons/*.tscn projectile authors collision_mask = 7 (ground|wall|
+# obstacle); per-fire stamps (cover-pierce, floor masks) are applied by the
+# mount after acquire, so pool_reset restores this baseline between shooters.
+const BASE_MASK := 7
 
 @export var spin_deg := 0.0  # visual spin of the Vis child (thrown weapons);
 							  # the node itself keeps facing travel for homing
@@ -22,6 +26,7 @@ var on_hit_effects: Array = []
 var hit_sfx: StringName = &"hit_weapon"  # stamped by the mount (hit_mg for MG fire)
 var _homing := false
 var _age := 0.0
+var _spent := false   # hit landed or lifetime up — inert until reset/setup
 var _vis: Node2D = null
 
 func _ready() -> void:
@@ -38,8 +43,12 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 	shooter = p_shooter
 	target = p_target
 	_homing = p_turn_rate > 0.0 and p_target != null
+	_age = 0.0
+	_spent = false
 
 func _physics_process(delta: float) -> void:
+	if _spent:
+		return
 	if _homing:
 		if is_instance_valid(target):
 			var aim := (target.global_position - global_position).angle()
@@ -57,10 +66,10 @@ func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 	_age += delta
 	if _age >= lifetime:
-		queue_free()
+		_despawn()
 
 func _on_body_entered(body: Node) -> void:
-	if body == shooter:
+	if _spent or body == shooter:
 		return
 	var health := _find_health(body)
 	if health:
@@ -84,7 +93,34 @@ func _on_body_entered(body: Node) -> void:
 		if status:
 			for spec in on_hit_effects:
 				status.apply(spec)
-	queue_free()
+	_despawn()
+
+## Return to the Spawner pool when it exists; queue_free otherwise (headless
+## fixtures, pool disabled). _spent freezes the shot for its removal frame.
+func _despawn() -> void:
+	if _spent:
+		return
+	_spent = true
+	var spawner := get_node_or_null(^"/root/Spawner")
+	if spawner and spawner.has_method(&"release"):
+		spawner.release(self)
+	else:
+		queue_free()
+
+## Spawner callback on pool return: shed the per-fire stamps so the next
+## shooter starts pristine. The mask restore matters most — a leaked pierce or
+## floor mask changes what the next shooter's round can hit.
+func pool_reset() -> void:
+	_spent = false
+	_age = 0.0
+	_homing = false
+	velocity = Vector2.ZERO
+	target = null
+	shooter = null
+	on_hit_effects = []
+	modulate = Color.WHITE
+	hit_sfx = &"hit_weapon"
+	collision_mask = BASE_MASK
 
 func _find_health(body: Node) -> Health:
 	for child in body.get_children():
