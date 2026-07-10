@@ -64,6 +64,30 @@ func test_hard_yank_swings_the_tail_and_clamps() -> void:
 		"yank: the tail eventually falls back in line")
 	_done(f)
 
+## The tail as a weapon: a grounded car inside the swing box takes the full
+## jackknife treatment (fling + spin + damage + stun, grudge on the cab);
+## the cooldown holds the second bite.
+func test_swing_strike_bites_once() -> void:
+	var f := _fixture()
+	var victim = VehicleScene.instantiate()
+	f.container.add_child(victim)
+	victim.global_position = f.trailer.main_center  # parked square on the box
+	await t.physics_frame
+	await t.physics_frame  # Area2D overlaps register on physics ticks
+	var hp_before: float = victim.get_node("Health").hp
+	f.trailer._swing_strike()
+	t.check(victim.get_node("Health").hp < hp_before, "swing: the tail bit (hp dropped)")
+	t.check(victim.velocity.length() > TrailerScript.JACKKNIFE_KNOCKBACK * 0.8,
+		"swing: victim flung (%.0f px/s)" % victim.velocity.length())
+	t.check(victim.get_node("Status").is_stunned(), "swing: victim stunned")
+	t.check(victim.last_attacker == f.cab, "swing: the grudge lands on the cab")
+	t.check(f.trailer._swing_cd > 0.0, "swing: cooldown armed")
+	var hp_mid: float = victim.get_node("Health").hp
+	f.trailer._swing_strike()
+	t.check(is_equal_approx(victim.get_node("Health").hp, hp_mid),
+		"swing: cooldown holds the second bite")
+	_done(f)
+
 func test_plates_wear_the_rig_contract() -> void:
 	var f := _fixture()
 	var main: AnimatableBody2D = f.trailer.get_node("TrailerMain")

@@ -28,6 +28,12 @@ static var NOSE_FRAC := 0.25          # front quarter = the weak kingpin plate
 static var TRAILER_DMG_FRAC := 0.25   # armored: fraction of hits that forward
 static var TRAILER_WEAK_MULT := 2.0   # nose quarter forwards this much more
 static var SWING_ATTACK_RATE := 2.6   # rad/s: the tail is live past this
+static var SWING_HIT_COOLDOWN := 1.2  # seconds between tail bites
+static var SWING_BOX_PAD := 36.0      # hitbox reach beyond the paint
+static var JACKKNIFE_DMG := 26.0      # getting hit by a semi HURTS
+static var JACKKNIFE_KNOCKBACK := 900.0  # fling speed off the tail (px/s)
+static var JACKKNIFE_SPIN := deg_to_rad(140.0)  # heading kick on the victim
+static var JACKKNIFE_STUN := 0.5      # hands-off-the-wheel window (s)
 
 var yaw := 0.0        # trailer facing (radians, world)
 var yaw_rate := 0.0   # rad/s, signed — the jackknife window reads abs()
@@ -40,6 +46,8 @@ var _cab: CharacterBody2D = null
 var _rear := Vector2.ZERO  # bogie axle, world
 var _main: AnimatableBody2D = null
 var _nose: AnimatableBody2D = null
+var _swing_box: Area2D = null
+var _swing_cd := 0.0
 var _vis_scale := 1.6
 
 ## Build plates, pin behind the cab, exempt the cab's own physics, stamp
@@ -64,6 +72,29 @@ func _physics_process(delta: float) -> void:
 	if _cab == null or not is_instance_valid(_cab):
 		return
 	tow_tick(_cab.global_position, _cab_heading(), delta)
+	_swing_cd = maxf(_swing_cd - delta, 0.0)
+	if absf(yaw_rate) > SWING_ATTACK_RATE:
+		_swing_strike()
+
+## The stegosaurus tail: while the trailer whips (hard cab yank OR a violent
+## corner — don't hug the tail), any grounded car caught in the box takes the
+## full jackknife treatment. Purely physical: no AI state needed to arm it.
+func _swing_strike() -> void:
+	if _swing_box == null or _swing_cd > 0.0:
+		return
+	for body in _swing_box.get_overlapping_bodies():
+		if body == _cab or not (body is CharacterBody2D):
+			continue
+		if not body.has_method(&"apply_impact"):
+			continue
+		if body.get("height") != 0.0:
+			continue  # airborne cars sail over the tail
+		body.apply_impact(_main.global_position, JACKKNIFE_DMG,
+			JACKKNIFE_KNOCKBACK, JACKKNIFE_SPIN, JACKKNIFE_STUN)
+		if "last_attacker" in body:
+			body.last_attacker = _cab  # the grudge lands on the boss
+		_swing_cd = SWING_HIT_COOLDOWN
+		return  # one bite per swing
 
 ## The whole tow model, separated for headless tests: pin the hitch, let the
 ## axle chase it, clamp the articulation, measure the swing.
@@ -138,6 +169,19 @@ func _on_plate_damaged(amount: float, _hp: float, proxy: Health, weak: bool) -> 
 ## Shadow, box paint, and the two battery turrets — all on the MAIN plate,
 ## offset so the paint centers on the whole trailer, not the plate.
 func _dress_main() -> void:
+	# The jackknife hitbox rides the main plate, centered on the whole box
+	# with a little reach — the tail bites slightly wider than the paint.
+	_swing_box = Area2D.new()
+	_swing_box.name = "SwingHitbox"
+	_swing_box.collision_layer = 0
+	_swing_box.collision_mask = 1  # cars always keep the ground bit
+	var swing_col := CollisionShape2D.new()
+	var swing_shape := RectangleShape2D.new()
+	swing_shape.size = Vector2(TRAILER_BODY_LEN + SWING_BOX_PAD, TRAILER_WIDTH + SWING_BOX_PAD)
+	swing_col.shape = swing_shape
+	_swing_box.add_child(swing_col)
+	_swing_box.position = Vector2(TRAILER_BODY_LEN * NOSE_FRAC * 0.5, 0.0)
+	_main.add_child(_swing_box)
 	var visual := Node2D.new()
 	visual.name = "Visual"
 	visual.scale = Vector2.ONE * _vis_scale
