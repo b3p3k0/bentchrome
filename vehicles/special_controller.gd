@@ -380,7 +380,8 @@ func _flame_tick(delta: float) -> void:
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
 	params.transform = Transform2D(heading, vehicle.global_position + forward * (FLAME_LENGTH * 0.5 + _nose() + 4.0))
-	params.collision_mask = 5  # ground | obstacle
+	params.collision_mask = 5 | (1 << 9)  # ground | obstacle | soft target
+	params.collide_with_areas = true
 	params.exclude = [vehicle.get_rid()]
 	if _flame_def == null:
 		_end_flame()

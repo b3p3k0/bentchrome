@@ -19,6 +19,7 @@ const SUITES := [
 	preload("res://tests/test_terrain_profiles.gd"),
 	preload("res://tests/test_destructible_block.gd"),
 	preload("res://tests/test_clutter.gd"),
+	preload("res://tests/test_ambient_life.gd"),
 	preload("res://tests/test_car_paint.gd"),
 	preload("res://tests/test_spawn_distance.gd"),
 	preload("res://tests/test_car_select_bio.gd"),

@@ -10,6 +10,7 @@ const ProjectileScene := preload("res://weapons/projectile.tscn")
 const MineScene := preload("res://environment/mine_land.tscn")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const FloorZoneScene := preload("res://environment/floor_zone.tscn")
+const SOFT := 1 << 9
 
 class FloorNode extends Node2D:
 	var floor_index := -1
@@ -48,20 +49,23 @@ func _fired_mask(f: Dictionary) -> int:
 
 func test_straight_shot_masks_to_own_floor() -> void:
 	var f := _mount_fixture(2, false)
-	t.check(_fired_mask(f) == (2 | 16), "gating: floor-2 straight shot = wall + floor bit only")
+	t.check(_fired_mask(f) == (2 | 16 | SOFT),
+		"gating: floor-2 straight shot = wall + floor bit + cosmetic targets")
 	_done(f)
 
 func test_tracking_shot_arcs_over_floors() -> void:
 	var f := _mount_fixture(3, true)
-	t.check(_fired_mask(f) == (1 | 2), "gating: tracking shot flies boundary-only, hits any floor")
+	t.check(_fired_mask(f) == (1 | 2 | SOFT),
+		"gating: tracking shot flies boundary-only plus cosmetic targets")
 	_done(f)
 
 func test_legacy_shooter_keeps_classic_masks() -> void:
 	var f := _mount_fixture(-1, false)
-	t.check(_fired_mask(f) == 7, "gating: legacy straight shot keeps mask 7")
+	t.check(_fired_mask(f) == (7 | SOFT), "gating: legacy shot adds only cosmetic targets")
 	_done(f)
 	var fp := _mount_fixture(-1, true, true)
-	t.check(_fired_mask(fp) == 3, "gating: legacy pierces_cover still drops only the obstacle bit")
+	t.check(_fired_mask(fp) == (3 | SOFT),
+		"gating: legacy pierces_cover drops only obstacle, keeps cosmetic targets")
 	_done(fp)
 
 func test_targeting_same_floor_filter() -> void:

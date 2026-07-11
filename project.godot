@@ -44,6 +44,7 @@ window/stretch/mode="viewport"
 2d_physics/layer_7="hazard_edge"
 2d_physics/layer_8="terrain"
 2d_physics/layer_9="floor_tag"
+2d_physics/layer_10="soft_target"
 
 [rendering]
 

@@ -132,7 +132,8 @@ func _barrel_blast() -> void:
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
 	params.transform = Transform2D(0.0, global_position)
-	params.collision_mask = 1 | 4  # ground (cars) + obstacles (blocks/barrels)
+	params.collision_mask = 1 | 4 | (1 << 9)  # cars + obstacles + soft targets
+	params.collide_with_areas = true
 	params.exclude = [get_rid()]
 	for hit in get_world_2d().direct_space_state.intersect_shape(params):
 		var body: Node = hit["collider"]

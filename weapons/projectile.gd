@@ -13,6 +13,7 @@ const NetEvents := preload("res://game/net/net_events.gd")  # host-armed tap, le
 # obstacle); per-fire stamps (cover-pierce, floor masks) are applied by the
 # mount after acquire, so pool_reset restores this baseline between shooters.
 const BASE_MASK := 7
+const SOFT_TARGET_LAYER := 1 << 9
 
 @export var spin_deg := 0.0  # visual spin of the Vis child (thrown weapons);
 							  # the node itself keeps facing travel for homing
@@ -29,9 +30,11 @@ var _homing := false
 var _age := 0.0
 var _spent := false   # hit landed or lifetime up — inert until reset/setup
 var _vis: Node2D = null
+var harms_ambient := true  # false for deliberately harmless cosmetic rounds
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	_vis = get_node_or_null(^"Vis")
 
 func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_lifetime: float, p_shooter: Node, p_turn_rate := 0.0, p_target: Node2D = null) -> void:
@@ -46,6 +49,8 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 	_homing = p_turn_rate > 0.0 and p_target != null
 	_age = 0.0
 	_spent = false
+	if harms_ambient:
+		collision_mask |= SOFT_TARGET_LAYER
 	if NetEvents.armed and p_damage > 0.0:
 		# Every live shot passes through here (mounts, specials, turrets) — the
 		# one tap the MP host needs. Visual-only client shots carry damage 0,
@@ -108,6 +113,20 @@ func _on_body_entered(body: Node) -> void:
 				status.apply(spec)
 	_despawn()
 
+## Soft targets are atmosphere, never cover: a real projectile pops them but
+## continues on its original flight. Client mirror shots carry damage 0 yet
+## still present the local cosmetic hit; harmless police rounds opt out.
+func _on_area_entered(area: Area2D) -> void:
+	if _spent or not harms_ambient or area == shooter \
+			or area.collision_layer & SOFT_TARGET_LAYER == 0:
+		return
+	var Floors := preload("res://game/floors.gd")
+	if not Floors.same_floor(shooter, area):
+		return
+	var health := _find_health(area)
+	if health:
+		health.take_damage(1.0)
+
 ## Return to the Spawner pool when it exists; queue_free otherwise (headless
 ## fixtures, pool disabled). _spent freezes the shot for its removal frame.
 func _despawn() -> void:
@@ -133,6 +152,7 @@ func pool_reset() -> void:
 	on_hit_effects = []
 	modulate = Color.WHITE
 	hit_sfx = &"hit_weapon"
+	harms_ambient = true
 	collision_mask = BASE_MASK
 
 func _find_health(body: Node) -> Health:

@@ -128,7 +128,8 @@ func test_mount_fires_pooled_and_expiry_rebanks() -> void:
 	for c in f.container.get_children():
 		if c is Projectile:
 			first = c
-	t.check(first != null and first.collision_mask == 3, "pool: pierce stamp applied on fire")
+	t.check(first != null and first.collision_mask == (3 | (1 << 9)),
+		"pool: pierce stamp plus soft-target mask applied on fire")
 	var flashes := 0
 	for c in f.container.get_children():
 		var script = c.get_script()
@@ -152,7 +153,7 @@ func test_mount_fires_pooled_and_expiry_rebanks() -> void:
 		if c is Projectile:
 			second = c
 	t.check(second == first, "pool: same instance flies twice")
-	t.check(second != null and second.collision_mask == 3,
+	t.check(second != null and second.collision_mask == (3 | (1 << 9)),
 		"pool: reused shot re-stamped, not stale")
 	for i in 12:
 		await t.physics_frame  # let the reused shot expire before teardown
