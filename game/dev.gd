@@ -10,9 +10,20 @@ var enabled := false
 var tuning = null  # TuningDeck instance while dev mode is on
 
 func _ready() -> void:
+	_apply_windowed_flag()
 	# Dev sits BEFORE GameState in the autoload order, so its settings haven't
 	# loaded yet — sync after the boot frame settles.
 	_sync_from_settings.call_deferred()
+
+## Net playtests: `-- --windowed` (or `--win`) drops the project's fullscreen
+## setting to a plain 1280x720 window so two instances fit on one box.
+func _apply_windowed_flag() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var args := OS.get_cmdline_user_args()
+	if "--windowed" in args or "--win" in args:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(Vector2i(1280, 720))
 
 func _sync_from_settings() -> void:
 	var gs := get_node_or_null(^"/root/GameState")

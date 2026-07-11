@@ -5,7 +5,9 @@ mono/
 data_*/
 *.translation
 *.import
-export_presets.cfg
+# export_presets.cfg is committed on purpose: ours carries no signing
+# credentials, and reproducible LAN builds need shared presets.
+dist/
 .directory
 .DS_Store
 Thumbs.db

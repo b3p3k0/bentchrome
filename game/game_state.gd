@@ -30,10 +30,11 @@ var devgod := false        # invincible, 1x every weapon, firing never depletes
 var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
 var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
+var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 
 const SETTINGS_PATH := "user://settings.json"
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
-	"dev_mode", "start_level_index", "screen_shake"]
+	"dev_mode", "start_level_index", "screen_shake", "player_name"]
 
 func _ready() -> void:
 	# Headless runs (test/smoke gates) stay hermetic: Kevin's real settings —
@@ -79,4 +80,5 @@ func reset_settings() -> void:
 	dev_mode = false
 	start_level_index = 0
 	screen_shake = true
+	player_name = ""
 	save_settings()
