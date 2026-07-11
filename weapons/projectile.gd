@@ -8,6 +8,7 @@ extends Area2D
 
 const HOMING_CONE := deg_to_rad(90.0)
 const Combat := preload("res://game/combat.gd")  # NEVER name Vehicle here — load cycle
+const NetEvents := preload("res://game/net/net_events.gd")  # host-armed tap, leaf like Combat
 # Every weapons/*.tscn projectile authors collision_mask = 7 (ground|wall|
 # obstacle); per-fire stamps (cover-pierce, floor masks) are applied by the
 # mount after acquire, so pool_reset restores this baseline between shooters.
@@ -45,6 +46,12 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 	_homing = p_turn_rate > 0.0 and p_target != null
 	_age = 0.0
 	_spent = false
+	if NetEvents.armed and p_damage > 0.0:
+		# Every live shot passes through here (mounts, specials, turrets) — the
+		# one tap the MP host needs. Visual-only client shots carry damage 0,
+		# so a mirror can never echo. pool_key = the Spawner's scene path.
+		NetEvents.projectile_spawned(String(get_meta(&"pool_key", scene_file_path)),
+			p_pos, p_dir, p_speed, p_lifetime, p_turn_rate, p_target)
 
 func _physics_process(delta: float) -> void:
 	if _spent:

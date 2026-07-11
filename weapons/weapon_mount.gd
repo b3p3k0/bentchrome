@@ -76,6 +76,12 @@ func tick(delta: float) -> void:
 func heat_fraction() -> float:
 	return heat / heat_max if heat_max > 0.0 else 0.0
 
+## Puppet HUD state: the host's heat/lock, verbatim (a network mirror's own
+## _physics_process is disabled, so nothing here cools or unlocks).
+func net_mirror_heat(frac: float, locked: bool) -> void:
+	heat = clampf(frac, 0.0, 1.0) * heat_max
+	_locked = locked
+
 func is_locked() -> bool:
 	return _locked
 

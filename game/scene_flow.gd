@@ -17,11 +17,11 @@ const MP_MATCH := "res://levels/mp/mp_match.tscn"
 ## join in a later batch once their boss scripting learns to stand down; the
 ## chase course and custom JSON levels stay campaign-side.
 const MP_MAPS := [
-	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown"},
-	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop"},
-	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs"},
-	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass"},
-	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks"},
+	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown", "cars": 5},
+	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop", "cars": 7},
+	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs", "cars": 7},
+	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass", "cars": 7},
+	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks", "cars": 8},
 ]
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the

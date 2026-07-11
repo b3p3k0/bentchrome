@@ -75,6 +75,10 @@ func test_decide_rejections() -> void:
 	var seats_open := _ctx({"peers": Proto.MAX_PLAYERS - 1, "max_peers": Proto.MAX_PLAYERS})
 	t.check(Auth.decide(_resp(seats_open), seats_open).admit,
 		"auth: no-observers session still admits a driver")
+	var mid_match := _ctx({"match_live": true})
+	var mm_verdict: Dictionary = Auth.decide(_resp(mid_match), mid_match)
+	t.check(not mm_verdict.admit and mm_verdict.reason == "match in progress",
+		"auth: v1 joins land in the lobby only")
 
 func test_decide_password() -> void:
 	var ctx := _ctx({"password": "vroom", "needs_password": true})

@@ -148,9 +148,24 @@ func add_ammo(index: int, amount: int) -> int:
 
 ## Recharge progress toward the special's next round, 0..1 (1 = full or n/a).
 func recharge_fraction() -> float:
+	if _net_recharge >= 0.0:
+		return _net_recharge  # network mirror: the host's number, verbatim
 	if _slots.is_empty():
 		return 1.0
 	var s: Dictionary = _slots[Slot.SPECIAL]
 	if s.recharge <= 0.0 or s.ammo >= s.cap:
 		return 1.0
 	return clampf(_recharge_t / s.recharge, 0.0, 1.0)
+
+# ----------------------------------------------------------- network mirror
+
+var _net_recharge := -1.0  # <0 = local sim owns the number
+
+## Puppet HUD state: host-authoritative counts land without signals — a
+## mirror must never drive the SpecialController.
+func net_mirror(selected: int, counts: Array, recharge_frac: float) -> void:
+	for i in mini(counts.size(), _slots.size()):
+		_slots[i].ammo = int(counts[i])
+	if not _slots.is_empty():
+		_selected = clampi(selected, 0, _slots.size() - 1)
+	_net_recharge = clampf(recharge_frac, 0.0, 1.0)

@@ -61,6 +61,8 @@ static func response(chal: Dictionary, password: String, name: String, checksum:
 static func decide(resp: Dictionary, ctx: Dictionary) -> Dictionary:
 	if int(resp.get("proto", -1)) != Proto.PROTOCOL_VERSION:
 		return _reject("protocol mismatch")
+	if bool(ctx.get("match_live", false)):
+		return _reject("match in progress")  # v1: join during the lobby only
 	# Effective cap: MAX_PEERS normally, MAX_PLAYERS when the host runs a
 	# no-observers session (the ctx decides — never the client).
 	if int(ctx.get("peers", 0)) >= int(ctx.get("max_peers", Proto.MAX_PEERS)):

@@ -460,8 +460,7 @@ func _shift_car(car: String, dir: int) -> String:
 		idx = 0
 	return String(ids[wrapi(idx + dir, 0, ids.size())])
 
-## Host's finger is the clock. C8a: the host's own machine enters the arena
-## (clients keep the lobby); C8b broadcasts the start so everyone rides.
+## Host's finger is the clock: broadcast the locked table, everyone rolls.
 func _do_start() -> void:
 	if not Net.is_host() or Net.roster == null:
 		return
@@ -469,7 +468,7 @@ func _do_start() -> void:
 	var need := 2 if mode == &"grudge" else 1
 	if Net.roster.seated_ids().size() < need:
 		return
-	SceneFlow.to_mp_match()
+	Net.start_match()
 
 func _do_leave() -> void:
 	Net.leave()  # session_changed(OFF) routes everyone home

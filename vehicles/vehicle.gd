@@ -100,6 +100,8 @@ static var NET_INTERP_MS := 50.0  # render-behind buffer; the MP shell syncs
 var _net_a := {}          # older sample {t, pos, vel, heading, height}
 var _net_b := {}          # newer sample
 var _net_prev_hp := -1.0  # local hit feedback: flash/shake on streamed drops
+var _net_alive := true    # edge-detected: falling = boom + hide, rising = show
+var _net_shield := false  # streamed blink-shield flag (visual pulse only)
 
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
@@ -381,6 +383,8 @@ func set_net_puppet(on: bool) -> void:
 		_net_a = {}
 		_net_b = {}
 		_net_prev_hp = get_hp()
+		_net_alive = true
+		_net_shield = false
 	else:
 		_apply_ground_collision()
 
@@ -415,6 +419,27 @@ func apply_net_state(slice: Dictionary) -> void:
 		_controller.handbraking = bool(slice.get("handbrake", _controller.handbraking))
 	if _status and slice.has("burn"):
 		_status.set_cosmetic(&"burn", bool(slice.burn))
+	if slice.has("alive"):
+		var alive: bool = slice.alive
+		if _net_alive and not alive:
+			_spawn_explosion()  # the mirror's boom — the host already billed it
+			visible = false
+		elif alive and not _net_alive:
+			visible = true
+			_net_a = {}  # a respawn teleports; never lerp across the map
+		_net_alive = alive
+	if slice.has("shield"):
+		_net_shield = bool(slice.shield)
+		if not _net_shield and _visual and _net_alive:
+			_visual.modulate.a = 1.0
+	# HUD mirrors: the viewer's dash reads its puppet like a live car.
+	if _mg_mount and slice.has("heat"):
+		_mg_mount.net_mirror_heat(float(slice.heat), bool(slice.get("mg_locked", false)))
+	if _controller and slice.has("boost_fuel"):
+		_controller.boost_fuel = float(slice.boost_fuel)
+	if _rack and slice.has("ammo"):
+		_rack.net_mirror(int(slice.get("slot", 0)), slice.ammo,
+			float(slice.get("recharge", 1.0)))
 
 ## The puppet's whole physics tick: interpolate the two newest samples at
 ## (now - NET_INTERP_MS), then the sim's visual tail — identical read.
@@ -441,6 +466,9 @@ func _puppet_physics(_delta: float) -> void:
 		_shadow.rotation = visual_heading
 	_paint_depth()
 	_update_draw_order(height > 0.0)
+	if _net_shield and _visual and _net_alive:
+		# The respawn blink, mirrored: same 200ms cadence as the SP tween.
+		_visual.modulate.a = 0.35 if (Time.get_ticks_msec() / 100) % 2 == 0 else 1.0
 
 ## Grounded floor bookkeeping. Adopting happens on first zone contact; driving
 ## past a lower zone's edge is a ledge hop down (floor resolves at touchdown).
@@ -666,6 +694,9 @@ func apply_effect(spec: StatusEffectSpec) -> void:
 
 func is_burning() -> bool:
 	return _status != null and _status.has_effect(&"burn")
+
+func is_shielded() -> bool:
+	return _status != null and _status.has_effect(&"invuln")
 
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.

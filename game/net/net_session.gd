@@ -16,10 +16,13 @@ const Discovery := preload("res://game/net/net_discovery.gd")
 const Roster := preload("res://game/net/net_roster.gd")
 const Config := preload("res://game/net/match_config.gd")
 const Snapshot := preload("res://game/net/net_snapshot.gd")
+const LoaderScript := preload("res://levels/level_loader.gd")
 
 signal session_changed()
 signal peers_changed()
 signal lobby_changed()
+signal match_started()
+signal snapshot_arrived(data: Dictionary)
 signal join_failed(reason: String)
 signal kicked(reason: String)
 
@@ -46,6 +49,9 @@ var _last_kick := ""    # client: reason from a kick notice
 var _net_drivers := {}  # host, mid-match: peer_id -> NetworkDriver
 var _input_tick := 0    # client: outgoing frame counter (stale-drop on host)
 var _cycle_seq := 0     # client: outgoing weapon-cycle sequence
+var match_actors: Array = []  # [{peer, car, name}] — row order IS wire order
+var match_live := false      # gates late joins (v1: lobby-join only)
+var _last_snap_tick := 0     # client: stale-snapshot guard
 
 func _ready() -> void:
 	set_process(false)
@@ -139,6 +145,9 @@ func leave() -> void:
 	_net_drivers.clear()
 	_input_tick = 0
 	_cycle_seq = 0
+	match_actors = []
+	match_live = false
+	_last_snap_tick = 0
 	_password = ""
 	_join_password = ""
 	set_process(false)
@@ -273,6 +282,64 @@ func _apply_opt_next(id: int, on: bool, car: String) -> void:
 		return
 	_lobby_dirty()
 
+# -------------------------------------------------------------- match plane
+
+## Host: freeze the ruleset, build the actor table (seats first, then Grand
+## Melee AI backfill to the map's authored car count), broadcast, roll
+## everyone into the arena. The table's ORDER is the snapshot wire order.
+func start_match() -> void:
+	if mode != Mode.HOSTING or roster == null:
+		return
+	var actors: Array = []
+	for id_v in roster.seated_ids():
+		var id := int(id_v)
+		actors.append({"peer": id, "car": roster.pick_of(id),
+			"name": String(peers.get(id, {}).get("name", "?"))})
+	if StringName(String(match_config.get("mode", &"melee"))) == &"melee":
+		var idx := clampi(int(match_config.get("map", 0)), 0, SceneFlow.MP_MAPS.size() - 1)
+		var want := int(SceneFlow.MP_MAPS[idx].get("cars", actors.size())) - actors.size()
+		if want > 0:
+			# Host-only RNG: under host authority the table IS the truth.
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			for pick in LoaderScript.pick_cars(want, "", rng):
+				actors.append({"peer": 0, "car": String(pick),
+					"name": Config.car_name(String(pick))})
+	rpc_start_match.rpc(match_config, actors)
+	_apply_match_start(match_config, actors)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_start_match(cfg: Dictionary, actors: Array) -> void:
+	_apply_match_start(cfg, actors)
+
+func _apply_match_start(cfg: Dictionary, actors: Array) -> void:
+	match_config = cfg
+	match_actors = actors
+	match_live = true
+	_last_snap_tick = 0
+	match_started.emit()
+	# Headless -s harnesses have no current scene to swap; they instantiate
+	# the shell themselves. Every real boot path always has one.
+	if get_tree().current_scene != null:
+		SceneFlow.to_mp_match()
+
+# -------------------------------------------------------------- state plane
+
+## Host: one packed snapshot to every peer (unreliable, latest-wins).
+func broadcast_snapshot(bytes: PackedByteArray) -> void:
+	if mode == Mode.HOSTING:
+		rpc_snapshot.rpc(bytes)
+
+@rpc("authority", "call_remote", "unreliable_ordered", 1)
+func rpc_snapshot(bytes: PackedByteArray) -> void:
+	var data: Dictionary = Snapshot.unpack_snapshot(bytes)
+	if data.is_empty():
+		return
+	if int(data.tick) <= _last_snap_tick:
+		return  # stale straggler
+	_last_snap_tick = int(data.tick)
+	snapshot_arrived.emit(data)
+
 # -------------------------------------------------------------- input plane
 # Client PlayerDriver intent -> 7-byte frames at the physics rate (unreliable
 # ordered, latest-wins on the host's NetworkDriver); weapon-cycle edges ride
@@ -368,6 +435,7 @@ func _on_auth_packet(id: int, bytes: PackedByteArray) -> void:
 			"strict_mods": _strict_mods,
 			"peers": peers.size(),
 			"max_peers": _effective_cap(),
+			"match_live": match_live,  # v1: lobby-join only
 		}
 		_nonces.erase(id)  # single-use, replay-proof
 		var verdict: Dictionary = Auth.decide(msg, ctx)
