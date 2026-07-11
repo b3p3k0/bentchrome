@@ -13,6 +13,10 @@ extends Node2D
 ##            darkening throat, concrete frame, striped apron. Local +y is
 ##            the OPENING direction; author the node on the wall's inner
 ##            face, after the Boundary in the tree so the maw paints over it.
+##   chamfer: the 45° corner cut capping the bleacher ends — a raised
+##            black/yellow caution band with a lit top lip and a drop shadow
+##            spilling toward the track. Local +y is the TRACK side; ride it
+##            as a child of the corner's StaticBody2D so paint = collision.
 ## Bands are driveable paint like any rooftop: cars roll straight over the
 ## seats — the deco is the depth read, the Ramp/FloorZones own the floors.
 
@@ -43,6 +47,8 @@ func _draw() -> void:
 	match kind:
 		&"tunnel":
 			_draw_tunnel()
+		&"chamfer":
+			_draw_chamfer()
 		_:
 			_draw_seating()
 
@@ -99,6 +105,28 @@ func _draw_seating() -> void:
 		draw_rect(band, Color(0.0, 0.0, 0.0, 0.12 * bt))
 	# Field-side guard rail: the front row's last defense against the derby.
 	draw_rect(Rect2(Vector2(-half.x, half.y - RAIL_D), Vector2(size.x, RAIL_D)), RAIL)
+	draw_rect(Rect2(-half, size), CONCRETE_DARK, false, 2.0)
+
+## The corner cut: caution stripes across the 45° band, a lit lip on the rim
+## side, a drop shadow toward the track — reads raised, deflects the eye the
+## same way the collision deflects the car.
+func _draw_chamfer() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(Vector2(-half.x, half.y), Vector2(size.x, 26.0)),
+		Color(0.0, 0.0, 0.0, 0.3))  # the drop shadow spills toward the track
+	var stripe := 36.0
+	var i := 0
+	var x0 := -half.x
+	while x0 < half.x:
+		var w := minf(stripe, half.x - x0)
+		draw_rect(Rect2(Vector2(x0, -half.y), Vector2(w, size.y)),
+			SEAT_B.lightened(0.25) if i % 2 == 0 else Color(0.12, 0.12, 0.14))
+		x0 += stripe
+		i += 1
+	draw_rect(Rect2(Vector2(-half.x, -half.y - 6.0), Vector2(size.x, 6.0)),
+		Color(1.0, 1.0, 1.0, 0.22))  # lit top lip (rim side)
+	draw_rect(Rect2(Vector2(-half.x, half.y - 3.0), Vector2(size.x, 3.0)),
+		Color(0.0, 0.0, 0.0, 0.35))  # dark base line (track side)
 	draw_rect(Rect2(-half, size), CONCRETE_DARK, false, 2.0)
 
 ## The corner maw: throat darkens away from the opening (+y), concrete frame

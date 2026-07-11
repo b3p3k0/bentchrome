@@ -101,16 +101,26 @@ func test_stadium_structure() -> void:
 				t.check((field.rect as Rect2).grow(2.0).encloses(z.rect),
 					"stadium: %s sits inside the field plate" % z.name)
 
-	# The corner tunnel pockets stay open floor 1 — no rim or authored zone may
-	# creep over them (the grandstand slopes end at the pocket rails).
-	for pc in [Vector2(1984, -1472), Vector2(-1984, -1472),
-			Vector2(1984, 1472), Vector2(-1984, 1472)]:
-		var pocket_floor := -1
+	# The chamfered corners: the crown ring runs CONTINUOUSLY — the corner
+	# strips behind each 45° wall read floor 2, so a rim lap never dead-ends.
+	for pc in [Vector2(1984, -1664), Vector2(2176, -1300), Vector2(-1984, -1664),
+			Vector2(-2176, 1300), Vector2(1984, 1664), Vector2(-1984, 1664)]:
+		var ring_floor := -1
 		for z in zones:
 			if (z.rect as Rect2).has_point(pc):
-				pocket_floor = maxi(pocket_floor, int(z.floor))
-		t.check(pocket_floor == 1, "stadium: corner pocket at %s is open floor 1 (got %d)"
-			% [pc, pocket_floor])
+				ring_floor = maxi(ring_floor, int(z.floor))
+		t.check(ring_floor == 2, "stadium: crown ring covers the corner at %s (got %d)"
+			% [pc, ring_floor])
+
+	# Four raised 45° chamfer walls cap the bleacher ends (floor-1 cars deflect
+	# along them; rim cars dive off over them).
+	var chamfers := 0
+	for child in stadium.get_children():
+		if String(child.name).begins_with("Chamfer") and child is StaticBody2D:
+			chamfers += 1
+			t.check((child as StaticBody2D).collision_layer == 12,
+				"stadium: %s wears obstacle + floor-1 bits" % child.name)
+	t.check(chamfers == 4, "stadium: four corner chamfers (got %d)" % chamfers)
 
 	# Every spawn's start_floor has a matching tag zone under it (highest wins,
 	# same rule as the sensor).
@@ -206,8 +216,7 @@ func test_stadium_structure() -> void:
 	for child in stadium.get_children():
 		var n := String(child.name)
 		if n.begins_with("Container") or n.begins_with("Junk") \
-				or n.begins_with("Crate") or n.begins_with("Barrier") \
-				or n.begins_with("Guard"):
+				or n.begins_with("Crate") or n.begins_with("Barrier"):
 			solids.append(child)
 		elif child is Area2D and child.get_script() != null \
 				and (child.get_script() as Script).resource_path.ends_with("jump_pad.gd"):

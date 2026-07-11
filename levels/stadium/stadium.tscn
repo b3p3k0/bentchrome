@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -50,6 +50,9 @@ size = Vector2(2432, 1408)
 
 [sub_resource type="RectangleShape2D" id="R_pad"]
 size = Vector2(224, 224)
+
+[sub_resource type="RectangleShape2D" id="R_chamfer"]
+size = Vector2(544, 28)
 
 
 [node name="Stadium" type="Node2D"]
@@ -106,22 +109,22 @@ size = Vector2(4608, 3584)
 [node name="FZRimN" parent="." instance=ExtResource("24_fzone")]
 position = Vector2(0, -1664)
 floor_index = 2
-size = Vector2(3328, 256)
+size = Vector2(4608, 256)
 
 [node name="FZRimS" parent="." instance=ExtResource("24_fzone")]
 position = Vector2(0, 1664)
 floor_index = 2
-size = Vector2(3328, 256)
+size = Vector2(4608, 256)
 
 [node name="FZRimW" parent="." instance=ExtResource("24_fzone")]
 position = Vector2(-2176, 0)
 floor_index = 2
-size = Vector2(256, 2304)
+size = Vector2(256, 3584)
 
 [node name="FZRimE" parent="." instance=ExtResource("24_fzone")]
 position = Vector2(2176, 0)
 floor_index = 2
-size = Vector2(256, 2304)
+size = Vector2(256, 3584)
 
 [node name="SlopeN" type="Node2D" parent="."]
 position = Vector2(0, -1344)
@@ -197,84 +200,6 @@ script = ExtResource("30_sdeco")
 kind = &"seating"
 size = Vector2(2304, 384)
 
-[node name="CrownNEw" type="Node2D" parent="."]
-position = Vector2(1664, -1664)
-rotation = -1.5708
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownNEs" type="Node2D" parent="."]
-position = Vector2(2176, -1152)
-rotation = 3.14159
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownNWe" type="Node2D" parent="."]
-position = Vector2(-1664, -1664)
-rotation = 1.5708
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownNWs" type="Node2D" parent="."]
-position = Vector2(-2176, -1152)
-rotation = 3.14159
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownSEw" type="Node2D" parent="."]
-position = Vector2(1664, 1664)
-rotation = -1.5708
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownSEn" type="Node2D" parent="."]
-position = Vector2(2176, 1152)
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownSWe" type="Node2D" parent="."]
-position = Vector2(-1664, 1664)
-rotation = 1.5708
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
-[node name="CrownSWn" type="Node2D" parent="."]
-position = Vector2(-2176, 1152)
-script = ExtResource("25_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(256, 128)
-surface_color = Color(0.3, 0.3, 0.34, 1)
-rails = false
-
 [node name="ShadeBaseN" type="Node2D" parent="."]
 position = Vector2(0, -1152)
 script = ExtResource("28_ddeco")
@@ -328,6 +253,62 @@ rotation = 1.5708
 script = ExtResource("28_ddeco")
 kind = &"ledge_shadow"
 size = Vector2(2304, 36)
+
+[node name="ChamferNE" type="StaticBody2D" parent="."]
+position = Vector2(1856, -1344)
+rotation = 0.7854
+collision_layer = 12
+collision_mask = 0
+
+[node name="Paint" type="Node2D" parent="ChamferNE"]
+script = ExtResource("30_sdeco")
+kind = &"chamfer"
+size = Vector2(544, 28)
+
+[node name="Col" type="CollisionShape2D" parent="ChamferNE"]
+shape = SubResource("R_chamfer")
+
+[node name="ChamferNW" type="StaticBody2D" parent="."]
+position = Vector2(-1856, -1344)
+rotation = -0.7854
+collision_layer = 12
+collision_mask = 0
+
+[node name="Paint" type="Node2D" parent="ChamferNW"]
+script = ExtResource("30_sdeco")
+kind = &"chamfer"
+size = Vector2(544, 28)
+
+[node name="Col" type="CollisionShape2D" parent="ChamferNW"]
+shape = SubResource("R_chamfer")
+
+[node name="ChamferSE" type="StaticBody2D" parent="."]
+position = Vector2(1856, 1344)
+rotation = 2.3562
+collision_layer = 12
+collision_mask = 0
+
+[node name="Paint" type="Node2D" parent="ChamferSE"]
+script = ExtResource("30_sdeco")
+kind = &"chamfer"
+size = Vector2(544, 28)
+
+[node name="Col" type="CollisionShape2D" parent="ChamferSE"]
+shape = SubResource("R_chamfer")
+
+[node name="ChamferSW" type="StaticBody2D" parent="."]
+position = Vector2(-1856, 1344)
+rotation = -2.3562
+collision_layer = 12
+collision_mask = 0
+
+[node name="Paint" type="Node2D" parent="ChamferSW"]
+script = ExtResource("30_sdeco")
+kind = &"chamfer"
+size = Vector2(544, 28)
+
+[node name="Col" type="CollisionShape2D" parent="ChamferSW"]
+shape = SubResource("R_chamfer")
 
 [node name="ConNGradeUp" type="Node2D" parent="."]
 position = Vector2(0, -1344)
@@ -394,35 +375,35 @@ approach_dir = Vector2(-1, 0)
 kind = &"grade"
 
 [node name="ConNEEdgeDown" type="Node2D" parent="."]
-position = Vector2(1664, -1664)
+position = Vector2(1920, -1410)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
-approach_dir = Vector2(1, 0)
+approach_dir = Vector2(-1, 1)
 kind = &"edge"
 
 [node name="ConSWEdgeDown" type="Node2D" parent="."]
-position = Vector2(-1664, 1664)
+position = Vector2(-1920, 1410)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
-approach_dir = Vector2(-1, 0)
+approach_dir = Vector2(1, -1)
 kind = &"edge"
 
 [node name="ConNWEdgeDown" type="Node2D" parent="."]
-position = Vector2(-2176, -1152)
+position = Vector2(-1920, -1410)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
-approach_dir = Vector2(0, -1)
+approach_dir = Vector2(1, 1)
 kind = &"edge"
 
 [node name="ConSEEdgeDown" type="Node2D" parent="."]
-position = Vector2(2176, 1152)
+position = Vector2(1920, 1410)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
-approach_dir = Vector2(0, 1)
+approach_dir = Vector2(-1, -1)
 kind = &"edge"
 
 [node name="Boundary" type="StaticBody2D" parent="."]
@@ -464,74 +445,6 @@ polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(2324, 0)
 shape = SubResource("R_wall_v")
-
-[node name="GuardNEn" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(1676, -1440)
-rotation = 1.5708
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardNWn" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(-1676, -1440)
-rotation = 1.5708
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardSEs" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(1676, 1440)
-rotation = 1.5708
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardSWs" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(-1676, 1440)
-rotation = 1.5708
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardNEe" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(1952, -1162)
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardSEe" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(1952, 1162)
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardNWw" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(-1952, -1162)
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
-
-[node name="GuardSWw" parent="." instance=ExtResource("9_dblock")]
-position = Vector2(-1952, 1162)
-size = Vector2(192, 24)
-max_hp = 40.0
-deco = &"rail"
-floor_index = 1
-extra_floor = 2
 
 [node name="TunnelNE" type="Node2D" parent="."]
 position = Vector2(1984, -1792)
@@ -722,12 +635,12 @@ position = Vector2(-1460, -780)
 position = Vector2(-1300, -928)
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
-position = Vector2(-1900, 1450)
+position = Vector2(-1560, 1080)
 rotation = -0.7854
 start_floor = 1
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
-position = Vector2(1900, -1450)
+position = Vector2(1560, -1080)
 rotation = 2.3562
 stats = ExtResource("32_gstats")
 fixed_loadout = true
