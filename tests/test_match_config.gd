@@ -41,6 +41,9 @@ func test_whitelists_and_junk() -> void:
 	t.check(cfg.format == &"brawl", "config: unknown format falls to default")
 	t.check(not cfg.has("speedhack"), "config: unknown keys are dropped")
 	t.check(cfg.gotnext == false, "config: known bools pass")
+	t.check(cfg.observers == true, "config: observers default to welcome")
+	t.check(Config.normalize({"observers": false}, 5).observers == false,
+		"config: observers toggle passes")
 	var relay: Dictionary = Config.normalize({"mode": "grudge", "format": "lives"}, 5)
 	t.check(relay.mode == &"grudge" and relay.format == &"lives",
 		"config: String-typed names (RPC/JSON round-trips) still whitelist")

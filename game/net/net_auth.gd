@@ -61,7 +61,9 @@ static func response(chal: Dictionary, password: String, name: String, checksum:
 static func decide(resp: Dictionary, ctx: Dictionary) -> Dictionary:
 	if int(resp.get("proto", -1)) != Proto.PROTOCOL_VERSION:
 		return _reject("protocol mismatch")
-	if int(ctx.get("peers", 0)) >= Proto.MAX_PEERS:
+	# Effective cap: MAX_PEERS normally, MAX_PLAYERS when the host runs a
+	# no-observers session (the ctx decides — never the client).
+	if int(ctx.get("peers", 0)) >= int(ctx.get("max_peers", Proto.MAX_PEERS)):
 		return _reject("server full")
 	if bool(ctx.get("needs_password", false)):
 		var got := Marshalls.base64_to_raw(String(resp.get("proof", "")))

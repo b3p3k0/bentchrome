@@ -145,7 +145,10 @@ func _do_host() -> void:
 		_strict_check.button_pressed)
 	if not err.is_empty():
 		_alert(_host_status, err)
-	# Success routes via session_changed -> lobby.
+		return
+	# The host drives by default (SEAT 1 is already theirs) — pick the ride
+	# first, then the car-select confirm routes into the lobby.
+	SceneFlow.to_select()
 
 func _do_join() -> void:
 	_persist_name()
@@ -177,7 +180,9 @@ func _persist_name() -> void:
 func _on_session_changed() -> void:
 	if not is_inside_tree():
 		return
-	if Net.mode == Net.Mode.JOINED or Net.mode == Net.Mode.HOSTING:
+	# Clients route straight to the lobby; a fresh HOST detours through the
+	# ride picker first (_do_host owns that hop).
+	if Net.mode == Net.Mode.JOINED:
 		SceneFlow.to_mp_lobby()
 
 func _on_join_failed(reason: String) -> void:

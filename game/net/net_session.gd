@@ -88,6 +88,9 @@ func host(port: int, password: String, server_name: String, strict_mods: bool) -
 	peers = {1: {"name": display_name(), "modded": false, "ip": "local"}}
 	roster = Roster.new(Proto.MAX_PLAYERS)
 	match_config = Config.defaults()
+	# The host always drives by default: SEAT 1 is theirs until they stand up.
+	roster.claim_seat(1, 0)
+	roster.set_pick(1, _default_pick())
 	_discovery = Discovery.new()
 	_discovery.start_beacon(_beacon_info())
 	set_process(true)
@@ -237,8 +240,7 @@ func _apply_claim_seat(id: int, idx: int) -> void:
 		return
 	if roster.claim_seat(id, idx):
 		if roster.pick_of(id).is_empty():
-			var ids: Array = Config.car_ids()
-			roster.set_pick(id, String(ids[0]) if not ids.is_empty() else "")
+			roster.set_pick(id, _default_pick())
 		_lobby_dirty()
 
 func _apply_leave_seat(id: int) -> void:
@@ -312,6 +314,7 @@ func _on_auth_packet(id: int, bytes: PackedByteArray) -> void:
 			"host_checksum": Manifest.cached(),
 			"strict_mods": _strict_mods,
 			"peers": peers.size(),
+			"max_peers": _effective_cap(),
 		}
 		_nonces.erase(id)  # single-use, replay-proof
 		var verdict: Dictionary = Auth.decide(msg, ctx)
@@ -444,6 +447,19 @@ func _settle_fail(reason: String) -> void:
 
 # ------------------------------------------------------------------ helpers
 
+## The connection budget honors the observers rule: no bench = seats only.
+func _effective_cap() -> int:
+	return Proto.MAX_PEERS if bool(match_config.get("observers", true)) else Proto.MAX_PLAYERS
+
+## A fresh seat inherits the SP picker's car when it's a real roster slug.
+func _default_pick() -> String:
+	var gs := get_node_or_null(^"/root/GameState")
+	var pick: String = String(gs.selected_vehicle_id) if gs else ""
+	var ids: Array = Config.car_ids()
+	if not pick.is_empty() and ids.has(pick):
+		return pick
+	return String(ids[0]) if not ids.is_empty() else ""
+
 func _peer_ip(id: int) -> String:
 	if _enet == null:
 		return ""
@@ -462,7 +478,7 @@ func _beacon_info() -> Dictionary:
 		"name": label,
 		"proto": Proto.PROTOCOL_VERSION,
 		"players": peers.size(),
-		"max": Proto.MAX_PEERS,
+		"max": _effective_cap(),
 		"has_password": not _password.is_empty(),
 		"game_port": game_port,
 		"map": map_name,

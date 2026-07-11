@@ -33,7 +33,8 @@ static func defaults() -> Dictionary:
 		"lives": 3,           # LIVES: per-seat tank
 		"brawl_frag_cap": 0,  # BRAWL: optional first-to-N cap (0 = off)
 		"brawl_time_cap": 0,  # BRAWL: optional time cap seconds (0 = off)
-		"gotnext": true,
+		"observers": true,    # OFF caps admissions at the 4 seats — no bench
+		"gotnext": true,      # only meaningful with observers ON
 		"difficulty": 2,      # Difficulty.Tier — HARD is the 1.0 baseline
 	}
 
@@ -54,6 +55,7 @@ static func normalize(cfg: Dictionary, map_count: int) -> Dictionary:
 	out.brawl_frag_cap = clampi(int(cfg.get("brawl_frag_cap", 0)), 0, 50)
 	var time_cap := int(cfg.get("brawl_time_cap", 0))
 	out.brawl_time_cap = 0 if time_cap <= 0 else clampi(time_cap, 180, 1200)
+	out.observers = bool(cfg.get("observers", out.observers))
 	out.gotnext = bool(cfg.get("gotnext", out.gotnext))
 	out.difficulty = clampi(int(cfg.get("difficulty", out.difficulty)), 0, 2)
 	return out

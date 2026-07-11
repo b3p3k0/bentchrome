@@ -69,6 +69,12 @@ func test_decide_rejections() -> void:
 	t.check(not Auth.decide({}, ctx).admit, "auth: empty response rejected")
 	var full := _ctx({"peers": Proto.MAX_PEERS})
 	t.check(not Auth.decide(_resp(full), full).admit, "auth: 13th peer bounced")
+	var seats_only := _ctx({"peers": Proto.MAX_PLAYERS, "max_peers": Proto.MAX_PLAYERS})
+	t.check(not Auth.decide(_resp(seats_only), seats_only).admit,
+		"auth: no-observers session caps at the seats")
+	var seats_open := _ctx({"peers": Proto.MAX_PLAYERS - 1, "max_peers": Proto.MAX_PLAYERS})
+	t.check(Auth.decide(_resp(seats_open), seats_open).admit,
+		"auth: no-observers session still admits a driver")
 
 func test_decide_password() -> void:
 	var ctx := _ctx({"password": "vroom", "needs_password": true})

@@ -75,16 +75,26 @@ func _build() -> void:
 	vbox.add_theme_constant_override("separation", 10)
 
 	_head = Label.new()
-	_head.add_theme_font_size_override("font_size", 24)
+	_head.add_theme_font_size_override("font_size", 22)
 	_head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_head.modulate = AMBER
 	vbox.add_child(_head)
 
-	vbox.add_child(_section("SEATS"))
+	# Two columns: the floor (seats + bench) left, the rule board right — the
+	# whole worst case fits the 720 viewport with room to breathe.
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 36)
+	vbox.add_child(columns)
+
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 8)
+	left.custom_minimum_size = Vector2(470, 0)
+	columns.add_child(left)
+
+	left.add_child(_section("SEATS"))
 	_seat_rows = VBoxContainer.new()
 	_seat_rows.add_theme_constant_override("separation", 4)
-	_seat_rows.custom_minimum_size = Vector2(640, 0)
-	vbox.add_child(_seat_rows)
+	left.add_child(_seat_rows)
 
 	_rig_row = HBoxContainer.new()
 	_rig_row.add_theme_constant_override("separation", 10)
@@ -92,34 +102,37 @@ func _build() -> void:
 	rig_label.text = "MY RIG"
 	rig_label.add_theme_font_size_override("font_size", 15)
 	rig_label.modulate = DIM_TEXT
-	rig_label.custom_minimum_size = Vector2(140, 0)
+	rig_label.custom_minimum_size = Vector2(110, 0)
 	_rig_row.add_child(rig_label)
-	_rig_row.add_child(_arrow("<", _cycle_pick.bind(-1)))
 	_rig_value = Label.new()
 	_rig_value.add_theme_font_size_override("font_size", 16)
 	_rig_value.modulate = AMBER
-	_rig_value.custom_minimum_size = Vector2(220, 0)
-	_rig_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rig_value.custom_minimum_size = Vector2(180, 0)
 	_rig_row.add_child(_rig_value)
-	_rig_row.add_child(_arrow(">", _cycle_pick.bind(1)))
-	vbox.add_child(_rig_row)
+	_rig_row.add_child(_small_button("CHANGE RIDE", _change_ride))
+	left.add_child(_rig_row)
 
-	vbox.add_child(_section("OBSERVERS + QUEUE"))
+	left.add_child(_section("OBSERVERS + QUEUE"))
 	_obs_rows = VBoxContainer.new()
 	_obs_rows.add_theme_constant_override("separation", 4)
-	vbox.add_child(_obs_rows)
+	left.add_child(_obs_rows)
 
-	vbox.add_child(_section("RULES"))
-	_add_rule(vbox, "map", "MAP")
-	_add_rule(vbox, "mode", "MODE")
-	_add_rule(vbox, "format", "FORMAT")
-	_add_rule(vbox, "frag_target", "FRAG TARGET")
-	_add_rule(vbox, "time_limit", "TIME LIMIT")
-	_add_rule(vbox, "lives", "LIVES")
-	_add_rule(vbox, "brawl_frag_cap", "BRAWL FRAG CAP")
-	_add_rule(vbox, "brawl_time_cap", "BRAWL TIME CAP")
-	_add_rule(vbox, "gotnext", "I GOT NEXT")
-	_add_rule(vbox, "difficulty", "AI DIFFICULTY")
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 8)
+	columns.add_child(right)
+
+	right.add_child(_section("RULES"))
+	_add_rule(right, "map", "MAP")
+	_add_rule(right, "mode", "MODE")
+	_add_rule(right, "format", "FORMAT")
+	_add_rule(right, "observers", "OBSERVERS")
+	_add_rule(right, "gotnext", "I GOT NEXT")
+	_add_rule(right, "frag_target", "FRAG TARGET")
+	_add_rule(right, "time_limit", "TIME LIMIT")
+	_add_rule(right, "lives", "LIVES")
+	_add_rule(right, "brawl_frag_cap", "BRAWL FRAG CAP")
+	_add_rule(right, "brawl_time_cap", "BRAWL TIME CAP")
+	_add_rule(right, "difficulty", "AI DIFFICULTY")
 
 	var footer := HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -158,9 +171,13 @@ func _build() -> void:
 	# Lock the amber border to the worst case: every rule row is still visible
 	# right now, so this measurement IS the maximum the rules board ever needs.
 	# Row visibility changes then shrink the content from the top, never the
-	# frame — no jump when the host steps mode or format.
+	# frame — no jump when the host steps mode or format. Clamped to the
+	# viewport so the frame can never outgrow the screen again.
 	var worst := _panel.get_combined_minimum_size()
-	_panel.custom_minimum_size = Vector2(worst.x, worst.y + OBSERVER_RESERVE)
+	var view := get_viewport_rect().size
+	_panel.custom_minimum_size = Vector2(
+		minf(worst.x, view.x - 40.0),
+		minf(worst.y + OBSERVER_RESERVE, view.y - 40.0))
 
 # ---------------------------------------------------------------- refresh
 
@@ -327,12 +344,13 @@ func _refresh_rules(cfg: Dictionary) -> void:
 	var mode := StringName(String(cfg.get("mode", &"melee")))
 	var visible_keys := {
 		"map": true, "mode": true, "format": true,
+		"observers": true,
+		"gotnext": bool(cfg.get("observers", true)),  # no bench, no queue
 		"frag_target": format == &"frag",
 		"time_limit": format == &"timed",
 		"lives": format == &"lives",
 		"brawl_frag_cap": format == &"brawl",
 		"brawl_time_cap": format == &"brawl",
-		"gotnext": format != &"lives",
 		"difficulty": mode == &"melee",
 	}
 	for key in _rule_rows:
@@ -363,6 +381,8 @@ func _rule_text(key: String, cfg: Dictionary) -> String:
 		"brawl_time_cap":
 			var tcap := int(cfg.get("brawl_time_cap", 0))
 			return "off" if tcap == 0 else "%d min" % (tcap / 60)
+		"observers":
+			return "WELCOME" if bool(cfg.get("observers", true)) else "SEATS ONLY"
 		"gotnext":
 			return "ON" if bool(cfg.get("gotnext", true)) else "OFF"
 		"difficulty":
@@ -393,6 +413,8 @@ func _step_rule(key: String, dir: int) -> void:
 			patch.brawl_frag_cap = _cycle_list(BRAWL_FRAG_CAPS, int(cfg.brawl_frag_cap), dir)
 		"brawl_time_cap":
 			patch.brawl_time_cap = _cycle_list(BRAWL_TIME_CAPS, int(cfg.brawl_time_cap), dir)
+		"observers":
+			patch.observers = not bool(cfg.observers)
 		"gotnext":
 			patch.gotnext = not bool(cfg.gotnext)
 		"difficulty":
@@ -407,9 +429,10 @@ func _cycle_list(values: Array, current: int, dir: int) -> int:
 
 # ----------------------------------------------------------------- actions
 
-func _cycle_pick(dir: int) -> void:
-	_my_car = _shift_car(_my_car, dir)
-	Net.request_set_pick(_my_car)
+## Seated players change rides through the real carousel — it confirms with
+## request_set_pick and routes back here (session state lives on Net).
+func _change_ride() -> void:
+	SceneFlow.to_select()
 
 func _cycle_queue_car(dir: int, queued: bool) -> void:
 	var next_car := _shift_car(_my_car, dir)

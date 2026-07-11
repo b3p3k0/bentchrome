@@ -62,12 +62,15 @@ func _load_cars() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:
 		return
-	# ESC steps back one layer: dossier -> carousel -> difficulty select. Once
+	# ESC steps back one layer: dossier -> carousel -> difficulty select (or
+	# the garage lobby when this is a LAN session's ride picker). Once
 	# gameplay starts, ESC belongs to the pause menu instead.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		if _bio and _bio.visible:
 			_bio.visible = false
+		elif _mp_session():
+			SceneFlow.to_mp_lobby()
 		else:
 			SceneFlow.to_difficulty()
 		return
@@ -87,9 +90,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			return  # reading, not racing — close the bio first
 		_done = true
 		GameState.selected_vehicle_id = _cars[_index].id
+		if _mp_session():
+			# LAN ride picker: lock the pick on the roster, back to the lobby.
+			var net := get_node_or_null(^"/root/Net")
+			net.request_set_pick(String(_cars[_index].id))
+			SceneFlow.to_mp_lobby()
+			return
 		GameState.reset_campaign()
 		# Settings' START LEVEL picker: launch into the chosen campaign stop.
 		SceneFlow.to_level(GameState.start_level_index)
+
+## Soft-coupled MP check: this stays a pure SP screen unless a session is live.
+func _mp_session() -> bool:
+	var net := get_node_or_null(^"/root/Net")
+	return net != null and net.is_active()
 
 func _toggle_bio() -> void:
 	if _bio == null:
