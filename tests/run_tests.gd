@@ -59,6 +59,7 @@ const SUITES := [
 	preload("res://tests/test_network_driver.gd"),
 	preload("res://tests/test_mp_match.gd"),
 	preload("res://tests/test_net_state_snapshot.gd"),
+	preload("res://tests/test_match_director.gd"),
 ]
 
 var _checks := 0

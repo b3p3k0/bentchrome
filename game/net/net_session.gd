@@ -23,6 +23,10 @@ signal peers_changed()
 signal lobby_changed()
 signal match_started()
 signal snapshot_arrived(data: Dictionary)
+signal match_status_changed()
+signal kill_feed(text: String)
+signal actor_swapped(actor_idx: int, peer: int, car: String, name: String)
+signal match_ended(result: Dictionary)
 signal join_failed(reason: String)
 signal kicked(reason: String)
 
@@ -51,6 +55,9 @@ var _input_tick := 0    # client: outgoing frame counter (stale-drop on host)
 var _cycle_seq := 0     # client: outgoing weapon-cycle sequence
 var match_actors: Array = []  # [{peer, car, name}] — row order IS wire order
 var match_live := false      # gates late joins (v1: lobby-join only)
+var match_scores := {}       # mirrored from the host's MatchDirector
+var match_remaining := -1.0  # seconds on the clock (-1 = no clock)
+var last_result := {}        # the previous match's verdict, for the lobby
 var _last_snap_tick := 0     # client: stale-snapshot guard
 
 func _ready() -> void:
@@ -147,6 +154,9 @@ func leave() -> void:
 	_cycle_seq = 0
 	match_actors = []
 	match_live = false
+	match_scores = {}
+	match_remaining = -1.0
+	last_result = {}
 	_last_snap_tick = 0
 	_password = ""
 	_join_password = ""
@@ -322,6 +332,68 @@ func _apply_match_start(cfg: Dictionary, actors: Array) -> void:
 	# the shell themselves. Every real boot path always has one.
 	if get_tree().current_scene != null:
 		SceneFlow.to_mp_match()
+
+## Host relays from the MatchDirector — scores/clock, feed lines, rotation
+## swaps, and the final verdict. Each applies locally AND broadcasts.
+func push_match_status(scores: Dictionary, remaining: float) -> void:
+	if mode != Mode.HOSTING:
+		return
+	rpc_match_status.rpc(scores, remaining)
+	match_scores = scores
+	match_remaining = remaining
+	match_status_changed.emit()
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_match_status(scores: Dictionary, remaining: float) -> void:
+	match_scores = scores
+	match_remaining = remaining
+	match_status_changed.emit()
+
+func push_kill_feed(text: String) -> void:
+	if mode != Mode.HOSTING:
+		return
+	rpc_kill_feed.rpc(text)
+	kill_feed.emit(text)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_kill_feed(text: String) -> void:
+	kill_feed.emit(text)
+
+## Got-next rotation landed: actor_idx changes hands. The host stamps the
+## real callsign, updates the shared table, and tells everyone (the roster
+## change itself rides the usual lobby broadcast).
+func notify_actor_swap(actor_idx: int, peer: int, car: String) -> void:
+	if mode != Mode.HOSTING or actor_idx < 0 or actor_idx >= match_actors.size():
+		return
+	var name := String(peers.get(peer, {}).get("name", "?"))
+	match_actors[actor_idx] = {"peer": peer, "car": car, "name": name}
+	rpc_actor_swap.rpc(actor_idx, peer, car, name)
+	actor_swapped.emit(actor_idx, peer, car, name)
+	_lobby_dirty()
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_actor_swap(actor_idx: int, peer: int, car: String, name: String) -> void:
+	if actor_idx >= 0 and actor_idx < match_actors.size():
+		match_actors[actor_idx] = {"peer": peer, "car": car, "name": name}
+	actor_swapped.emit(actor_idx, peer, car, name)
+
+func end_match(result: Dictionary) -> void:
+	if mode != Mode.HOSTING:
+		return
+	rpc_match_end.rpc(result)
+	_apply_match_end(result)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_match_end(result: Dictionary) -> void:
+	_apply_match_end(result)
+
+func _apply_match_end(result: Dictionary) -> void:
+	match_live = false
+	last_result = result
+	match_ended.emit(result)
+	# Same -s guard as match start; real boots always have a scene.
+	if get_tree().current_scene != null:
+		SceneFlow.to_mp_lobby()
 
 # -------------------------------------------------------------- state plane
 

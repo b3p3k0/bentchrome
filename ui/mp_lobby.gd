@@ -210,10 +210,18 @@ func _refresh() -> void:
 	var need := 2 if mode == &"grudge" else 1
 	_start_btn.visible = Net.is_host()
 	_start_btn.disabled = seats_filled < need
-	_status.text = "%d/%d seated — %s rolls with %d+ driver%s%s" % [
+	var tail := "" if Net.is_host() else "  (the host calls the start)"
+	var result_line := ""
+	var last: Dictionary = Net.last_result
+	if not last.is_empty():
+		var names: Array = []
+		for peer in last.get("winners", []):
+			names.append(String(last.scores.get(int(peer), {}).get("name", "?")))
+		var who := ", ".join(names) if not names.is_empty() else "THE WASTELAND"
+		result_line = "last match: %s — %s\n" % [who, String(last.get("reason", ""))]
+	_status.text = result_line + "%d/%d seated — %s rolls with %d+ driver%s%s" % [
 		seats_filled, Proto.MAX_PLAYERS,
-		String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else "",
-		"" if Net.is_host() else "  (the host calls the start)"]
+		String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else "", tail]
 
 func _refresh_seats() -> void:
 	for child in _seat_rows.get_children():

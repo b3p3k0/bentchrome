@@ -88,7 +88,14 @@ var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
-var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
+# Whoever hurt us last — AI holds a grudge, and the MP MatchDirector bills
+# kills against it within a recency window (pit-shoves count; ancient grudges
+# don't). The setter stamps the clock on every hit, whoever assigns it.
+var last_attacker: Node2D = null:
+	set(v):
+		last_attacker = v
+		last_attacker_ms = Time.get_ticks_msec()
+var last_attacker_ms := 0
 
 # --- Network puppet (LAN clients render EVERY car through this; the host runs
 # the real sim). The whole _physics_process body is bypassed; state arrives as

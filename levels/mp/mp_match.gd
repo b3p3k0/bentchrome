@@ -16,12 +16,18 @@ const Loader := preload("res://levels/level_loader.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const Difficulty := preload("res://game/difficulty.gd")
 const NetDriverScript := preload("res://vehicles/drivers/network_driver.gd")
+const PlayerDriverScript := preload("res://vehicles/drivers/player_driver.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const PauseOverlayScene := preload("res://ui/mp_pause_overlay.tscn")
 
+const FEED_LINES := 4
+const FEED_TTL := 4.0
+
 var _arena: Node2D
 var _director: Node
+var _feed_box: VBoxContainer
+var _feed_entries: Array = []  # [{label, born}]
 var _actor_cars: Array = []      # actor index -> Vehicle (host: sim; client: puppet)
 var _my_driver: Driver = null    # client: local PlayerDriver, sampled for the wire
 var _my_car: Vehicle = null
@@ -43,11 +49,14 @@ func _ready() -> void:
 		return
 	_load_arena()
 	add_child(PauseOverlayScene.instantiate())
+	_build_kill_feed()
+	_net.kill_feed.connect(_on_feed_line)
 	if _net.is_host():
 		NetEvents.armed = true
 		NetEvents.queue = []
 		_spawn_host_side()
 	else:
+		_net.actor_swapped.connect(_on_actor_swapped_client)
 		_spawn_client_side()
 
 func _exit_tree() -> void:
@@ -55,6 +64,13 @@ func _exit_tree() -> void:
 	if _net and _net.is_host() and _net.roster:
 		for id in _net.roster.seated_ids():
 			_net.unregister_net_driver(int(id))
+
+func _process(_delta: float) -> void:
+	# Kill feed fade: lines age out, oldest first.
+	var now := Time.get_ticks_msec()
+	while not _feed_entries.is_empty() \
+			and now - int(_feed_entries[0].born) > FEED_TTL * 1000.0:
+		(_feed_entries.pop_front().label as Label).queue_free()
 
 func _physics_process(delta: float) -> void:
 	if not _net.is_active():
@@ -97,10 +113,6 @@ func _spawn_host_side() -> void:
 		push_warning("mp_match: no spawns or no actors — empty arena")
 		return
 	Difficulty.tier = int(_net.match_config.get("difficulty", Difficulty.Tier.HARD))
-	_director = DirectorScript.new()
-	_director.name = "MatchDirector"
-	_director.spawns = spawns
-	add_child(_director)
 	for i in actors.size():
 		if i >= spawns.size():
 			push_warning("mp_match: more actors than spawns — extras skipped")
@@ -119,12 +131,76 @@ func _spawn_host_side() -> void:
 				var nd: Driver = NetDriverScript.new()
 				car.set_driver(nd)
 				_net.register_net_driver(peer, nd)
-			_director.register_car(peer, car)
 			_actor_cars.append(car)
 		else:
 			var ai := _spawn_car(EnemyScene, spawns[i], car_id)
 			ai.get_node("Driver").mix = Loader.mix_for_car(car_id)
 			_actor_cars.append(ai)
+	# The director gets SHARED references — swaps and tallies write through.
+	_director = DirectorScript.new()
+	_director.name = "MatchDirector"
+	_director.setup(_net.match_config, _net.match_actors, _actor_cars,
+		_net.roster, spawns)
+	_director.status_changed.connect(_push_status)
+	_director.feed_line.connect(_net.push_kill_feed)
+	_director.seat_swap.connect(_on_seat_swap_host)
+	_director.ended.connect(_net.end_match)
+	add_child(_director)
+
+func _push_status() -> void:
+	_net.push_match_status(_director.scores, _director.time_remaining())
+
+## The rotation landed (host): the wrecked seat's CAR changes hands — restat
+## to the entrant's locked pick, rewire the driver, shift camera/local marks.
+func _on_seat_swap_host(actor_idx: int, from_peer: int, to_peer: int, car_id: String) -> void:
+	var car: Vehicle = _actor_cars[actor_idx] if is_instance_valid(_actor_cars[actor_idx]) else null
+	if car == null:
+		return
+	if not car_id.is_empty():
+		car.set_stats(load("res://data/vehicles/%s.tres" % car_id))
+	_net.unregister_net_driver(from_peer)
+	var cam := car.get_node_or_null(^"Camera2D") as Camera2D
+	if from_peer == _net.my_id():
+		VehiclesHelper.unmark_local(car)  # the rig takes the host's eyes (C10)
+	if to_peer == _net.my_id():
+		car.set_driver(PlayerDriverScript.new())
+		VehiclesHelper.mark_local(car)
+		if cam:
+			cam.enabled = true
+	else:
+		var nd: Driver = NetDriverScript.new()
+		car.set_driver(nd)
+		_net.register_net_driver(to_peer, nd)
+		if cam:
+			cam.enabled = false
+	_net.notify_actor_swap(actor_idx, to_peer, car_id)
+
+## The rotation landed (client): restat the puppet, shift marks and camera.
+func _on_actor_swapped_client(actor_idx: int, peer: int, car_id: String, _name: String) -> void:
+	if actor_idx < 0 or actor_idx >= _actor_cars.size():
+		return
+	var car: Vehicle = _actor_cars[actor_idx] if is_instance_valid(_actor_cars[actor_idx]) else null
+	if car == null:
+		return
+	if not car_id.is_empty():
+		car.set_stats(load("res://data/vehicles/%s.tres" % car_id))
+	var cam := car.get_node_or_null(^"Camera2D") as Camera2D
+	if _my_car == car and peer != _net.my_id():
+		# That was my ride — I'm on the bench now (the rig lands in C10).
+		VehiclesHelper.unmark_local(car)
+		_my_car = null
+		_my_driver = null
+	if peer == _net.my_id():
+		VehiclesHelper.mark_local(car)
+		_my_car = car
+		_my_driver = car.get_node(^"Driver")
+		if cam:
+			cam.enabled = true
+
+## The host's exit for capless brawls — wired from the pause overlay.
+func host_force_end() -> void:
+	if _director:
+		_director.force_end("the host called it")
 
 ## One row per actor, wire order. Freed cars (AI deaths) stay as dead rows.
 func _collect_rows() -> Array:
@@ -230,6 +306,32 @@ func _spawn_visual_projectile(ev: Dictionary) -> void:
 	_arena.add_child(shot)
 	shot.setup(ev.pos, ev.dir, float(ev.speed), 0.0, float(ev.lifetime),
 		null, float(ev.turn_rate), target)
+
+# ---------------------------------------------------------------- kill feed
+
+func _build_kill_feed() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 15  # over the HUD, under the pause overlay
+	add_child(layer)
+	_feed_box = VBoxContainer.new()
+	_feed_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_feed_box.offset_top = 10.0
+	_feed_box.add_theme_constant_override("separation", 2)
+	layer.add_child(_feed_box)
+
+func _on_feed_line(text: String) -> void:
+	if _feed_box == null:
+		return
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 14)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.modulate = Color(1.0, 0.85, 0.2)
+	label.custom_minimum_size = Vector2(0, 0)
+	_feed_box.add_child(label)
+	_feed_entries.append({"label": label, "born": Time.get_ticks_msec()})
+	while _feed_entries.size() > FEED_LINES:
+		(_feed_entries.pop_front().label as Label).queue_free()
 
 # ------------------------------------------------------------------- shared
 

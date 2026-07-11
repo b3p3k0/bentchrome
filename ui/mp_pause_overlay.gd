@@ -61,8 +61,17 @@ func _build() -> Control:
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
 	vbox.add_child(_button("RESUME", func() -> void: _panel.visible = false))
+	var net := get_node(^"/root/Net")
+	if net and net.is_host():
+		# Capless brawls need an exit; the shell owns the director.
+		vbox.add_child(_button("END MATCH", _end_match))
 	vbox.add_child(_button("LEAVE MATCH", _leave))
 	return root
+
+func _end_match() -> void:
+	var shell := get_parent()
+	if shell and shell.has_method(&"host_force_end"):
+		shell.host_force_end()
 
 func _leave() -> void:
 	# Autoloads by path: this script rides mp_match's preload chain into the
