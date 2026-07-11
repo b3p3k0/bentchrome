@@ -20,12 +20,14 @@ const PlayerDriverScript := preload("res://vehicles/drivers/player_driver.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const PauseOverlayScene := preload("res://ui/mp_pause_overlay.tscn")
+const RigScene := preload("res://levels/mp/spectator_rig.tscn")
 
 const FEED_LINES := 4
 const FEED_TTL := 4.0
 
 var _arena: Node2D
 var _director: Node
+var _rig: Node2D = null        # my spectator rig (observer / eliminated / rotated out)
 var _feed_box: VBoxContainer
 var _feed_entries: Array = []  # [{label, born}]
 var _actor_cars: Array = []      # actor index -> Vehicle (host: sim; client: puppet)
@@ -51,6 +53,7 @@ func _ready() -> void:
 	add_child(PauseOverlayScene.instantiate())
 	_build_kill_feed()
 	_net.kill_feed.connect(_on_feed_line)
+	_net.match_status_changed.connect(_on_status_changed)
 	if _net.is_host():
 		NetEvents.armed = true
 		NetEvents.queue = []
@@ -58,6 +61,8 @@ func _ready() -> void:
 	else:
 		_net.actor_swapped.connect(_on_actor_swapped_client)
 		_spawn_client_side()
+	if _my_actor_index() < 0:
+		_deploy_rig()  # on the bench from the first green flag
 
 func _exit_tree() -> void:
 	NetEvents.reset()
@@ -148,7 +153,46 @@ func _spawn_host_side() -> void:
 	add_child(_director)
 
 func _push_status() -> void:
-	_net.push_match_status(_director.scores, _director.time_remaining())
+	_net.push_match_status(_director.scores, _director.time_remaining(),
+		_director.eliminated.keys())
+
+# ---------------------------------------------------------------- the bench
+
+func _my_actor_index() -> int:
+	var actors: Array = _net.match_actors
+	for i in actors.size():
+		if int(actors[i].peer) == _net.my_id():
+			return i
+	return -1
+
+## My eyes when I have no wheel: observer from the start, out of lives, or
+## rotated to the back of the line.
+func _deploy_rig() -> void:
+	if _rig != null:
+		return
+	_rig = RigScene.instantiate()
+	_rig.targets = _actor_cars
+	var names: Array = []
+	for actor in _net.match_actors:
+		names.append(String(actor.name))
+	_rig.actor_names = names
+	add_child(_rig)
+
+func _retire_rig() -> void:
+	if _rig:
+		_rig.queue_free()
+		_rig = null
+
+## Elimination reaches every machine through the status sync; each deploys
+## its own rig when ITS driver is out.
+func _on_status_changed() -> void:
+	if _rig == null and _net.match_eliminated.has(_net.my_id()):
+		var idx := _my_actor_index()
+		if idx >= 0 and idx < _actor_cars.size() and is_instance_valid(_actor_cars[idx]):
+			VehiclesHelper.unmark_local(_actor_cars[idx])
+		_my_car = null
+		_my_driver = null
+		_deploy_rig()
 
 ## The rotation landed (host): the wrecked seat's CAR changes hands — restat
 ## to the entrant's locked pick, rewire the driver, shift camera/local marks.
@@ -161,8 +205,12 @@ func _on_seat_swap_host(actor_idx: int, from_peer: int, to_peer: int, car_id: St
 	_net.unregister_net_driver(from_peer)
 	var cam := car.get_node_or_null(^"Camera2D") as Camera2D
 	if from_peer == _net.my_id():
-		VehiclesHelper.unmark_local(car)  # the rig takes the host's eyes (C10)
+		VehiclesHelper.unmark_local(car)
+		if cam:
+			cam.enabled = false
+		_deploy_rig()  # the rig takes the host's eyes
 	if to_peer == _net.my_id():
+		_retire_rig()
 		car.set_driver(PlayerDriverScript.new())
 		VehiclesHelper.mark_local(car)
 		if cam:
@@ -186,11 +234,15 @@ func _on_actor_swapped_client(actor_idx: int, peer: int, car_id: String, _name: 
 		car.set_stats(load("res://data/vehicles/%s.tres" % car_id))
 	var cam := car.get_node_or_null(^"Camera2D") as Camera2D
 	if _my_car == car and peer != _net.my_id():
-		# That was my ride — I'm on the bench now (the rig lands in C10).
+		# That was my ride — the rig takes my eyes, back of the line for me.
 		VehiclesHelper.unmark_local(car)
+		if cam:
+			cam.enabled = false
 		_my_car = null
 		_my_driver = null
+		_deploy_rig()
 	if peer == _net.my_id():
+		_retire_rig()
 		VehiclesHelper.mark_local(car)
 		_my_car = car
 		_my_driver = car.get_node(^"Driver")

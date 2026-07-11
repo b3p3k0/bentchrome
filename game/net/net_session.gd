@@ -57,6 +57,7 @@ var match_actors: Array = []  # [{peer, car, name}] — row order IS wire order
 var match_live := false      # gates late joins (v1: lobby-join only)
 var match_scores := {}       # mirrored from the host's MatchDirector
 var match_remaining := -1.0  # seconds on the clock (-1 = no clock)
+var match_eliminated: Array = []  # peers out of lives (rig handoff cue)
 var last_result := {}        # the previous match's verdict, for the lobby
 var _last_snap_tick := 0     # client: stale-snapshot guard
 
@@ -156,6 +157,7 @@ func leave() -> void:
 	match_live = false
 	match_scores = {}
 	match_remaining = -1.0
+	match_eliminated = []
 	last_result = {}
 	_last_snap_tick = 0
 	_password = ""
@@ -335,18 +337,20 @@ func _apply_match_start(cfg: Dictionary, actors: Array) -> void:
 
 ## Host relays from the MatchDirector — scores/clock, feed lines, rotation
 ## swaps, and the final verdict. Each applies locally AND broadcasts.
-func push_match_status(scores: Dictionary, remaining: float) -> void:
+func push_match_status(scores: Dictionary, remaining: float, eliminated: Array) -> void:
 	if mode != Mode.HOSTING:
 		return
-	rpc_match_status.rpc(scores, remaining)
+	rpc_match_status.rpc(scores, remaining, eliminated)
 	match_scores = scores
 	match_remaining = remaining
+	match_eliminated = eliminated
 	match_status_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_match_status(scores: Dictionary, remaining: float) -> void:
+func rpc_match_status(scores: Dictionary, remaining: float, eliminated: Array) -> void:
 	match_scores = scores
 	match_remaining = remaining
+	match_eliminated = eliminated
 	match_status_changed.emit()
 
 func push_kill_feed(text: String) -> void:
