@@ -63,7 +63,8 @@ const CONFETTI_COLORS := [Color(0.85, 0.25, 0.2), Color(0.95, 0.8, 0.2),
 const UNDER_FADE := 0.45       # jumbotron alpha while a car is beneath it
 const FADE_SPEED := 6.0
 
-static var FLOOD_HP := 70.0    # a tower takes a medium beating before dark
+static var FLOOD_HP := 30.0    # fragile by design: one committed ram at speed
+							   # or a ~1s concentrated MG burst blows it out
 
 @export var kind: StringName = &"seating"
 @export var size := Vector2(1746, 448)
@@ -190,14 +191,23 @@ func _draw_floodlight() -> void:
 	var f := Vector2.RIGHT.rotated(aim + sway)
 	var n := f.orthogonal()
 	var reach := 760.0 + sin(_t * 0.33 + _phase_seed) * 60.0
+	var wash := Color(LAMP_WARM.r, LAMP_WARM.g, LAMP_WARM.b, POOL_A)
+	var wash_in := Color(LAMP_WARM.r, LAMP_WARM.g, LAMP_WARM.b, POOL_A * 0.8)
 	draw_colored_polygon(PackedVector2Array([
 		f * 42.0 + n * 34.0, f * 42.0 - n * 34.0,
 		f * reach - n * 170.0, f * reach + n * 170.0,
-	]), Color(LAMP_WARM.r, LAMP_WARM.g, LAMP_WARM.b, POOL_A))
+	]), wash)
 	draw_colored_polygon(PackedVector2Array([
 		f * 42.0 + n * 22.0, f * 42.0 - n * 22.0,
 		f * (reach * 0.55) - n * 80.0, f * (reach * 0.55) + n * 80.0,
-	]), Color(LAMP_WARM.r, LAMP_WARM.g, LAMP_WARM.b, POOL_A * 0.8))
+	]), wash_in)
+	# the throw ends in soft ovals, not a hard cut (draw_circle squashed via
+	# the canvas transform — there is no ellipse primitive)
+	draw_set_transform(f * reach, aim + sway, Vector2(0.45, 1.0))
+	draw_circle(Vector2.ZERO, 170.0, wash)
+	draw_set_transform(f * (reach * 0.55), aim + sway, Vector2(0.45, 1.0))
+	draw_circle(Vector2.ZERO, 80.0, wash_in)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# the tower itself: pad, mast, crossbar, four lamps + glow
 	draw_circle(Vector2(3, 5), 20.0, Color(0.0, 0.0, 0.0, 0.3))
 	draw_circle(Vector2.ZERO, 16.0, CONCRETE_DARK)
