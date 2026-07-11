@@ -159,8 +159,12 @@ func _ready() -> void:
 	rotation = 0.0
 	# DEVGOD (settings): player-only — damage-immune, one of everything, firing
 	# never depletes. Pits still kill; the level's lives loop comps the life.
+	# INERT in a live LAN session (duck-typed off the Net autoload; Mode.OFF
+	# is 0) — nobody gods up a lobby.
 	var god_gs := get_node_or_null(^"/root/GameState")
-	if faction == &"player" and god_gs and god_gs.devgod:
+	var net_live := get_node_or_null(^"/root/Net")
+	var in_mp: bool = net_live != null and int(net_live.get("mode")) != 0
+	if faction == &"player" and god_gs and god_gs.devgod and not in_mp:
 		if _health:
 			_health.god = true
 		if _rack:

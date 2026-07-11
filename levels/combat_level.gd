@@ -11,6 +11,12 @@ const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const RESPAWN_DELAY := 1.6
 const SHIELD_TIME := 2.0
 
+## MP shell mode: the baked cars become spawn DATA and leave the tree before
+## their first physics tick; pause/end screens, the enemy re-roll, and the
+## lives loop all stand down — the shell (levels/mp/mp_match.gd) owns them.
+@export var mp_managed := false
+var mp_spawns: Array = []  # [{pos, heading, floor}] — player slot first, then Enemy1..N
+
 @onready var _player: Vehicle = $Vehicle
 
 var _spawn_point := Vector2.ZERO
@@ -21,6 +27,11 @@ func _ready() -> void:
 	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
+	if mp_managed:
+		_collect_and_clear_for_mp()
+		print("[boot] level ready — WASD to drive, Space/LMB to fire")
+		set_process(false)
+		return
 	_randomize_enemies()
 	print("[boot] level ready — WASD to drive, Space/LMB to fire")
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
@@ -63,6 +74,28 @@ func _respawn() -> void:
 	_respawning = false
 	if _player and is_instance_valid(_player):
 		_player.respawn(_spawn_point, _spawn_heading, SHIELD_TIME)
+
+## The baked cars' transforms become the level's spawn set (player slot
+## first, then Enemy1..N in tree order), then the cars leave synchronously —
+## children _ready before the parent, but physics hasn't ticked, so nothing
+## ever simulates. Zero .tscn edits: the baked positions ARE the authoring.
+func _collect_and_clear_for_mp() -> void:
+	mp_spawns.clear()
+	var baked: Array = [_player]
+	for child in get_children():
+		if child != _player and child is Vehicle:
+			baked.append(child)
+	for car in baked:
+		if car == null or not is_instance_valid(car):
+			continue
+		mp_spawns.append({
+			"pos": car.global_position,
+			"heading": car.heading,  # _ready already folded authored rotation in
+			"floor": car.start_floor,
+		})
+		remove_child(car)
+		car.free()
+	_player = null
 
 ## Reassigns the scene's baked enemy cars at runtime: random, all distinct,
 ## never the player's car. Children ready before the parent, so _player.stats

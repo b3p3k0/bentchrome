@@ -76,6 +76,15 @@ if echo "$LOBBY_OUT" | grep -qiE "$ERR_RE" || ! echo "$LOBBY_OUT" | grep -q '^\[
   echo "== smoke: FAIL (mp lobby)"; exit 1
 fi
 
+# MP match shell: cold-boot with no session (must bail to the front door
+# without touching an arena or a socket).
+echo "== smoke: mp match"
+MATCH_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://levels/mp/mp_match.tscn --quit-after 10 2>&1)"
+if echo "$MATCH_OUT" | grep -qiE "$ERR_RE" || ! echo "$MATCH_OUT" | grep -q '^\[boot\] mp match ready'; then
+  echo "$MATCH_OUT" | grep -iE "$ERR_RE" || true
+  echo "== smoke: FAIL (mp match)"; exit 1
+fi
+
 # Campaign levels: boot each hand-authored scene cold (parse errors, broken
 # instances, and load cycles in level content all surface here).
 for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn levels/depot/depot.tscn levels/dock/dock.tscn levels/chase/buzzard_run.tscn levels/stadium/stadium.tscn; do

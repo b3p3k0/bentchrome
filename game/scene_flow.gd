@@ -11,6 +11,7 @@ const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 const MP_MENU := "res://ui/mp_menu.tscn"
 const MP_LOBBY := "res://ui/mp_lobby.tscn"
+const MP_MATCH := "res://levels/mp/mp_match.tscn"
 
 ## The versus map pool: the five standard arenas. Boss yards (Depot, Coliseum)
 ## join in a later batch once their boss scripting learns to stand down; the
@@ -67,6 +68,9 @@ func to_mp_menu() -> void:
 
 func to_mp_lobby() -> void:
 	goto_scene(MP_LOBBY)
+
+func to_mp_match() -> void:
+	goto_scene(MP_MATCH)
 
 func to_custom_level(path: String) -> void:
 	GameState.pending_level_path = path

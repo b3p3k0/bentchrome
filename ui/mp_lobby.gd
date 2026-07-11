@@ -140,7 +140,7 @@ func _build() -> void:
 	_start_btn = Button.new()
 	_start_btn.text = "START MATCH"
 	_start_btn.add_theme_font_size_override("font_size", 18)
-	_start_btn.disabled = true
+	_start_btn.pressed.connect(_do_start)
 	footer.add_child(_start_btn)
 	var leave_btn := Button.new()
 	leave_btn.text = "LEAVE GARAGE"
@@ -206,11 +206,14 @@ func _refresh() -> void:
 	_refresh_rules(cfg)
 
 	var seats_filled: int = Net.roster.seated_ids().size()
-	var need := 2 if StringName(String(cfg.get("mode", &"melee"))) == &"grudge" else 1
-	_start_btn.tooltip_text = "the arena crew arrives in Batch 2"
-	_status.text = "%d/%d seated (%s wants %d+) — START wakes up in Batch 2" \
-		% [seats_filled, Proto.MAX_PLAYERS,
-			String(Config.MODE_NAMES.get(StringName(String(cfg.get("mode", &"melee"))), "?")), need]
+	var mode := StringName(String(cfg.get("mode", &"melee")))
+	var need := 2 if mode == &"grudge" else 1
+	_start_btn.visible = Net.is_host()
+	_start_btn.disabled = seats_filled < need
+	_status.text = "%d/%d seated — %s rolls with %d+ driver%s%s" % [
+		seats_filled, Proto.MAX_PLAYERS,
+		String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else "",
+		"" if Net.is_host() else "  (the host calls the start)"]
 
 func _refresh_seats() -> void:
 	for child in _seat_rows.get_children():
@@ -456,6 +459,17 @@ func _shift_car(car: String, dir: int) -> String:
 	if idx < 0:
 		idx = 0
 	return String(ids[wrapi(idx + dir, 0, ids.size())])
+
+## Host's finger is the clock. C8a: the host's own machine enters the arena
+## (clients keep the lobby); C8b broadcasts the start so everyone rides.
+func _do_start() -> void:
+	if not Net.is_host() or Net.roster == null:
+		return
+	var mode := StringName(String(Net.match_config.get("mode", &"melee")))
+	var need := 2 if mode == &"grudge" else 1
+	if Net.roster.seated_ids().size() < need:
+		return
+	SceneFlow.to_mp_match()
 
 func _do_leave() -> void:
 	Net.leave()  # session_changed(OFF) routes everyone home
