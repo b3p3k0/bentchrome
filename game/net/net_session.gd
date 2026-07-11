@@ -15,6 +15,7 @@ const Banlist := preload("res://game/net/net_banlist.gd")
 const Discovery := preload("res://game/net/net_discovery.gd")
 const Roster := preload("res://game/net/net_roster.gd")
 const Config := preload("res://game/net/match_config.gd")
+const Snapshot := preload("res://game/net/net_snapshot.gd")
 
 signal session_changed()
 signal peers_changed()
@@ -42,6 +43,9 @@ var _verdicts := {}  # peer_id -> admit verdict, held until peer_connected
 var _join_password := ""
 var _last_reject := ""  # client: reason from a pre-disconnect reject packet
 var _last_kick := ""    # client: reason from a kick notice
+var _net_drivers := {}  # host, mid-match: peer_id -> NetworkDriver
+var _input_tick := 0    # client: outgoing frame counter (stale-drop on host)
+var _cycle_seq := 0     # client: outgoing weapon-cycle sequence
 
 func _ready() -> void:
 	set_process(false)
@@ -132,6 +136,9 @@ func leave() -> void:
 	_banlist = null
 	_nonces.clear()
 	_verdicts.clear()
+	_net_drivers.clear()
+	_input_tick = 0
+	_cycle_seq = 0
 	_password = ""
 	_join_password = ""
 	set_process(false)
@@ -265,6 +272,52 @@ func _apply_opt_next(id: int, on: bool, car: String) -> void:
 	elif not roster.opt_out(id):
 		return
 	_lobby_dirty()
+
+# -------------------------------------------------------------- input plane
+# Client PlayerDriver intent -> 7-byte frames at the physics rate (unreliable
+# ordered, latest-wins on the host's NetworkDriver); weapon-cycle edges ride
+# the reliable channel with a sequence so they land exactly once. The MP
+# match shell registers one NetworkDriver per remote seat.
+
+func register_net_driver(peer_id: int, driver: Node) -> void:
+	if mode == Mode.HOSTING:
+		_net_drivers[peer_id] = driver
+
+func unregister_net_driver(peer_id: int) -> void:
+	_net_drivers.erase(peer_id)
+
+## Client: ship this tick's sampled intent to the host.
+func send_input(intent: Dictionary) -> void:
+	if mode != Mode.JOINED:
+		return
+	_input_tick += 1
+	rpc_input_frame.rpc_id(1, Snapshot.pack_input(_input_tick, intent))
+
+## Client: one weapon-wheel click, guaranteed delivery.
+func send_weapon_cycle(dir: int) -> void:
+	if mode != Mode.JOINED or dir == 0:
+		return
+	_cycle_seq += 1
+	rpc_weapon_cycle.rpc_id(1, _cycle_seq, signi(dir))
+
+@rpc("any_peer", "call_remote", "unreliable_ordered", 2)
+func rpc_input_frame(bytes: PackedByteArray) -> void:
+	if mode != Mode.HOSTING:
+		return
+	var driver: Node = _net_drivers.get(multiplayer.get_remote_sender_id())
+	if driver == null:
+		return
+	var frame: Dictionary = Snapshot.unpack_input(bytes)
+	if not frame.is_empty():
+		driver.feed_frame(frame)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_weapon_cycle(seq: int, dir: int) -> void:
+	if mode != Mode.HOSTING:
+		return
+	var driver: Node = _net_drivers.get(multiplayer.get_remote_sender_id())
+	if driver:
+		driver.feed_cycle(seq, dir)
 
 ## Host: rebroadcast the lobby truth (and refresh the beacon card).
 func _lobby_dirty() -> void:
