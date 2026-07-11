@@ -75,7 +75,11 @@ Yep—Settings > Controls. If something refuses to bind, log an issue and we’l
 Yes. `tools/editor.sh` launches the level editor: drop in blocks, ammo crates, terrain patches, and up to four enemy starts, then hit Playtest. Levels are plain JSON in your `user://levels/` folder — swap files with other drivers freely; they're data, not code, so nothing in them can run on your machine. Full manual in `docs/level_editor.md`. (An in-game custom-levels menu is still in the garage — for now the editor's Playtest button and a `--level=` launch flag are the way in.)
 
 **Multiplayer when?**  
-Not yet. The wasteland is lonely on purpose, but co-op/versus are parked in the Future Hooks garage.
+NOW. LAN parties are back: title screen > MULTIPLAYER. One of you hosts a garage (pick a port, set a password if your friends can't be trusted — they can't), everyone else finds it in the LAN browser or dials the IP direct (works over the internet too if the host forwards the port). Four seats, up to eight watching from the bench, and the host runs the whole show — the simulation lives on their machine, so bring your beefiest box to host.
+
+Two flavors: **Grudge Match** (humans only, settle it) and **Grand Melee** (the empty seats fill with AI at whatever difficulty the host picks). Four rulesets: **Rotation Brawl** (endless scoreboard scrap, optional kill/time caps, host calls it from ESC), **Frag Target** (first to N), **Timed** (most wrecks at the horn — ties split the crown), and **Lives Elimination** (run dry and you're benched, last one rolling wins). Every car is one-of-one on the floor — first come, first serve on the roster, and the carousel tags claimed rides.
+
+The bench is a lifestyle: observers get a free camera (cycle drivers with the weapon keys, WASD to roam, G to zoom) and an **I GOT NEXT** queue — pick your ride when you opt in, and when someone gets wrecked you take the wheel while they ride the pine. Changing wheels mid-queue sends you to the back; you were warned. Hosts can kick, ban sticks (by IP, survives restarts), and modded builds get flagged — or bounced, host's call.
 
 **How does saving work?**  
 Campaign checkpoints between arenas, inventory persists, permadeath stays in the roguelike lane.
