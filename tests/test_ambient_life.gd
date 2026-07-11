@@ -118,6 +118,29 @@ func test_harmless_projectile_opts_out() -> void:
 	shot.free()
 	shooter.free()
 
+func test_nonliving_soft_prop_leaves_debris_not_blood() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var cart = ActorScene.instantiate()
+	cart.kind = &"hotdog_cart"
+	cart.leaves_splat = false
+	container.add_child(cart)
+	cart.get_node("Health").take_damage(1.0)
+	await t.process_frame
+	var debris := 0
+	var splats := 0
+	for child in container.get_children():
+		if child is CPUParticles2D:
+			debris += 1
+		elif child is AmbientSplat:
+			splats += 1
+	t.check(debris == 1 and splats == 0,
+		"ambient prop: cart leaves one debris puff and no blood")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func test_vehicle_contact_requires_runover_speed_and_same_floor() -> void:
 	var slow = ActorScene.instantiate()
 	var fast = ActorScene.instantiate()

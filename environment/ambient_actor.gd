@@ -262,7 +262,28 @@ func _finish_die() -> void:
 		splat.floor_index = floor_index
 		host.add_child(splat)
 		splat.global_position = global_position
+	elif host:
+		_spawn_prop_debris(host)
 	queue_free()
+
+func _spawn_prop_debris(host: Node) -> void:
+	var puff := CPUParticles2D.new()
+	puff.one_shot = true
+	puff.emitting = true
+	puff.amount = 12
+	puff.lifetime = 0.55
+	puff.explosiveness = 1.0
+	puff.spread = 180.0
+	puff.initial_velocity_min = 90.0
+	puff.initial_velocity_max = 210.0
+	puff.damping_min = 120.0
+	puff.damping_max = 240.0
+	puff.scale_amount_min = 1.5
+	puff.scale_amount_max = 3.5
+	puff.color = Color(0.72, 0.42, 0.2, 0.9)
+	puff.finished.connect(puff.queue_free)
+	host.add_child(puff)
+	puff.global_position = global_position
 
 func _draw() -> void:
 	var stride := sin(_anim_t * 10.0 + float(actor_seed % 17)) * (3.0 if _moving else 0.5)
