@@ -14,6 +14,8 @@ extends Driver
 
 enum Mode { LOOP, RAM, JACKKNIFE, PARTING, RECOVER, LINE_UP, CHARGE, RETREAT }
 
+const Difficulty := preload("res://game/difficulty.gd")  # charge-rhythm tier knob
+
 static var LOOP_ARRIVE := 260.0     # waypoint advance radius — wide = smooth arcs
 static var LOOP_STEER_GAIN := 2.2   # chase_driver's proven angle->steer gain
 static var LOOP_THROTTLE := 0.85    # combat cruise on the ring
@@ -188,7 +190,8 @@ func _phase2_intent(vehicle, player: Node2D) -> Dictionary:
 	if _timer <= 0.0 and absf(diff) < CHARGE_ALIGN and to_p.length() < CHARGE_MAX_DIST:
 		_mode = Mode.CHARGE
 		_timer = CHARGE_TIME
-		_ram_cd = RAM_COOLDOWN  # the attempt itself starts the clock
+		# The attempt itself starts the clock; easier tiers space the charges out.
+		_ram_cd = RAM_COOLDOWN * Difficulty.knob(&"goliath_ram_cooldown")
 		_charge_dir = Vector2.RIGHT.rotated(vehicle.heading)  # commit: dead straight
 		vehicle.velocity = _charge_dir * CHARGE_SPEED
 		vehicle.heading = _charge_dir.angle()

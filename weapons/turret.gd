@@ -10,6 +10,7 @@ extends Node2D
 
 const CarPaintScript := preload("res://vehicles/car_paint.gd")  # FLEET_SCALE only
 const Floors := preload("res://game/floors.gd")
+const Difficulty := preload("res://game/difficulty.gd")  # turrets only fire AI-side
 const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
 const RANGE := 1100.0
@@ -81,7 +82,7 @@ func _fire() -> void:
 	var scene := get_tree().current_scene
 	if scene == null or _def.projectile_scene == null:
 		return  # headless fixtures may not set one — same guard as the mount
-	_cooldown = _def.cooldown
+	_cooldown = _def.cooldown * Difficulty.knob(&"ai_fire_cooldown")
 	var dir := Vector2.RIGHT.rotated(global_rotation)
 	var spawner := get_node_or_null(^"/root/Spawner")  # absent in -s test runs
 	var p := (spawner.acquire(_def.projectile_scene) if spawner

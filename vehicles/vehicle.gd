@@ -29,6 +29,7 @@ const FLOOR_LIFT := 32.0  # px of visual lift per floor above the baseline (2) â
 						  # the jump-cue held: body up, shadow grounded, so an
 						  # elevated car reads elevated even overlapping a low one
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
+const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf)
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
@@ -126,12 +127,14 @@ func _ready() -> void:
 	if start_floor >= 1:
 		_adopt_floor(start_floor)  # deferred masks land before the first physics tick
 	if faction != &"player":
-		# Same loadout as the player, a third of the trigger speed.
+		# Same loadout as the player, a third of the trigger speed â€” slower
+		# still on the easier tiers (difficulty knob is 1.0 on hard).
+		var trigger_scale := ai_cooldown_scale * Difficulty.knob(&"ai_fire_cooldown")
 		if _mg_mount:
-			_mg_mount.cooldown_scale = ai_cooldown_scale
+			_mg_mount.cooldown_scale = trigger_scale
 		var secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
 		if secondary:
-			secondary.cooldown_scale = ai_cooldown_scale
+			secondary.cooldown_scale = trigger_scale
 	if _rack and _special:
 		# Selection drives what the special/secondary path fires next. The lock
 		# forces a trigger release before the newly selected slot can fire.

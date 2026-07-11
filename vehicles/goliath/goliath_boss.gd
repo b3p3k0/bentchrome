@@ -12,6 +12,7 @@ extends Node
 const TrailerScript := preload("res://vehicles/goliath/goliath_trailer.gd")
 const CutsceneScript := preload("res://vehicles/goliath/goliath_cutscene.gd")
 const PH2_STATS := preload("res://data/vehicles/goliath_ph2.tres")
+const Difficulty := preload("res://game/difficulty.gd")
 
 static var PHASE1_HP := 1000.0    # the trailered fortress pool — big enough
 								  # to be a siege, small enough that every
@@ -24,6 +25,8 @@ var phase := 1
 
 var _cab: CharacterBody2D = null
 var _health: Health = null
+var _pool1 := 0.0  # phase-1 pool with the difficulty knob applied — read once
+				   # at fight start so the sentinel refill matches the pool
 
 func _ready() -> void:
 	# The level root is still assembling during children's _ready — defer so
@@ -46,8 +49,9 @@ func _setup() -> void:
 	trailer.attach(cab)
 	_health = cab.get_node_or_null(^"Health") as Health
 	if _health:
-		_health.max_hp = PHASE1_HP
-		_health.hp = PHASE1_HP
+		_pool1 = PHASE1_HP * Difficulty.knob(&"goliath_hp")
+		_health.max_hp = _pool1
+		_health.hp = _pool1
 		_health.damaged.connect(_on_cab_damaged)
 
 func _on_cab_damaged(_amount: float, hp: float) -> void:
@@ -55,7 +59,7 @@ func _on_cab_damaged(_amount: float, hp: float) -> void:
 		return
 	phase = 2
 	_health.god = true       # immortal while the transition pends
-	_health.hp = PHASE1_HP   # sentinel: beats take_damage's died check
+	_health.hp = _pool1      # sentinel: beats take_damage's died check
 	# The gate fires inside a physics callback (projectile signal) — the
 	# theatrics wait for the flush before pausing the world.
 	call_deferred("_begin_transition")
@@ -84,8 +88,9 @@ func start_phase2() -> void:
 	trailer = null  # the cutscene (or the instant path) already freed it
 	if _health:
 		_health.god = false
-		_health.max_hp = PHASE2_HP
-		_health.hp = PHASE2_HP
+		var pool2 := PHASE2_HP * Difficulty.knob(&"goliath_hp")
+		_health.max_hp = pool2
+		_health.hp = pool2
 	if _cab and is_instance_valid(_cab) and _cab.has_method(&"get_controller"):
 		var ctrl = _cab.get_controller()
 		if ctrl:

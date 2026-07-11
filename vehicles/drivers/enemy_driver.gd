@@ -11,6 +11,8 @@ extends Driver
 ##   AMBUSHER    — nearest car but approaches at a flank angle; hit-and-run.
 ##   OPPORTUNIST — scores the weakest car highest, hangs back, pounces, flees early.
 
+const Difficulty := preload("res://game/difficulty.gd")  # boss-valve tier knobs
+
 @export var mix := Vector3(1, 0, 0)  # weights: x=aggressor, y=ambusher, z=opportunist
 @export var relentless := false      # bosses: skip mook RELENT, run the boss valve
 
@@ -304,7 +306,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_engage_t += delta
 		var dealt: float = _engage_hp - target.get_hp()
 		if relentless:
-			if dealt >= BOSS_HIT_BUDGET or _engage_t > BOSS_ENGAGE_LIMIT:
+			if dealt >= BOSS_HIT_BUDGET * Difficulty.knob(&"boss_hit_budget") \
+					or _engage_t > BOSS_ENGAGE_LIMIT * Difficulty.knob(&"boss_engage_limit"):
 				_enter_boss_break(vehicle, target)
 		elif _engage_t > ENGAGE_LIMIT or dealt >= RELENT_DAMAGE:
 			_mode = Mode.RELENT
@@ -412,7 +415,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 ## any mercy; -1 (player dying, boss healthy) = a real window to regroup.
 func _boss_break_time(vehicle, target) -> float:
 	var dominance: float = target.get_hp_fraction() - vehicle.get_hp_fraction()
-	return lerpf(BOSS_BREAK_MAX, BOSS_BREAK_MIN, clampf((dominance + 1.0) * 0.5, 0.0, 1.0))
+	return lerpf(BOSS_BREAK_MAX, BOSS_BREAK_MIN, clampf((dominance + 1.0) * 0.5, 0.0, 1.0)) \
+		* Difficulty.knob(&"boss_break_time")
 
 func _enter_boss_break(vehicle, target) -> void:
 	_mode = Mode.RELENT
