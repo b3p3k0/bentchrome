@@ -683,6 +683,9 @@ func sink_into_water() -> void:
 func _on_died() -> void:
 	if _special:
 		_special.cancel_dash()
+	var drive_fx := get_node_or_null(^"DriveFX")
+	if drive_fx and drive_fx.has_method(&"clear_splat_tracks"):
+		drive_fx.clear_splat_tracks()
 	if not _falling:
 		_spawn_explosion()
 	var audio_d := get_node_or_null(^"/root/AudioDirector")
@@ -746,6 +749,9 @@ func is_shielded() -> bool:
 func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 	if _special:
 		_special.cancel_dash()
+	var drive_fx := get_node_or_null(^"DriveFX")
+	if drive_fx and drive_fx.has_method(&"clear_splat_tracks"):
+		drive_fx.clear_splat_tracks()
 	if is_in_group(&"player"):
 		var audio_s := get_node_or_null(^"/root/AudioDirector")
 		if audio_s:

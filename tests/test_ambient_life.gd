@@ -4,11 +4,30 @@ extends RefCounted
 const ActorScene := preload("res://environment/ambient_actor.tscn")
 const PopulationScript := preload("res://environment/ambient_population.gd")
 const ProjectileScene := preload("res://weapons/projectile.tscn")
+const SplatScene := preload("res://environment/ambient_splat.tscn")
+const DriveFXScript := preload("res://vehicles/drive_fx.gd")
 
 var t
 
 class FloorCar extends CharacterBody2D:
 	var floor_index := -1
+
+class FxController:
+	var boosting := false
+	var handbraking := false
+
+class FxCar extends CharacterBody2D:
+	var floor_index := -1
+	var current_terrain: StringName = &"road"
+	var heading := 0.0
+	var height := 0.0
+	var one_track := false
+	var ctrl := FxController.new()
+	func get_controller():
+		return ctrl
+	func body_metrics() -> Dictionary:
+		return {"skid_points": [Vector2(-8, 0)] if one_track
+			else [Vector2(-8, -5), Vector2(-8, 5)]}
 
 func _init(runner) -> void:
 	t = runner
@@ -69,8 +88,9 @@ func test_projectile_kills_soft_target_without_becoming_spent() -> void:
 	var shooter := Node2D.new()
 	shot.setup(Vector2.ZERO, Vector2.RIGHT, 100.0, 2.0, 1.0, shooter)
 	shot._on_area_entered(actor)
-	t.check(actor.is_queued_for_deletion(), "ambient projectile: one contact pops actor")
+	t.check(actor._dead, "ambient projectile: one contact marks actor dead immediately")
 	t.check(not shot._spent, "ambient projectile: target never consumes the shot")
+	await t.process_frame
 	var splat_found := false
 	for child in container.get_children():
 		if child is AmbientSplat:
@@ -118,7 +138,7 @@ func test_vehicle_contact_requires_runover_speed_and_same_floor() -> void:
 		"ambient runover: a crawling car cannot kill")
 	car.velocity = Vector2(120, 0)
 	fast._on_body_entered(car)
-	t.check(fast.is_queued_for_deletion(), "ambient runover: a moving car pops the target")
+	t.check(fast._dead, "ambient runover: a moving car pops the target")
 	other_floor._on_body_entered(car)
 	t.check_approx(other_floor.get_node("Health").hp, 1.0,
 		"ambient runover: cross-floor wheels cannot touch the target")
@@ -253,3 +273,85 @@ func test_mowers_are_route_locked_and_actor_scale_stays_below_bike() -> void:
 	var radius: float = actor.get_node("CollisionShape2D").shape.radius
 	t.check(radius < 12.0, "regional ambience: soft target is smaller than Mr Ghastly's bike")
 	actor.free()
+
+func test_splat_transfers_only_to_same_floor_vehicle() -> void:
+	var splat = SplatScene.instantiate()
+	splat.floor_index = 2
+	t.root.add_child(splat)
+	var same := FxCar.new()
+	same.floor_index = 2
+	same.add_to_group(&"vehicles")
+	var same_fx = DriveFXScript.new()
+	same_fx.name = "DriveFX"
+	same.add_child(same_fx)
+	t.root.add_child(same)
+	splat._on_body_entered(same)
+	t.check_approx(same_fx._blood_t, AmbientSplat.TIRE_CARRY,
+		"blood tracks: same-floor splat transfers carry time")
+	var other := FxCar.new()
+	other.floor_index = 3
+	other.add_to_group(&"vehicles")
+	var other_fx = DriveFXScript.new()
+	other_fx.name = "DriveFX"
+	other.add_child(other_fx)
+	t.root.add_child(other)
+	splat._on_body_entered(other)
+	t.check_approx(other_fx._blood_t, 0.0, "blood tracks: cross-floor tires stay clean")
+	t.root.remove_child(splat)
+	t.root.remove_child(same)
+	t.root.remove_child(other)
+	splat.free()
+	same.free()
+	other.free()
+
+func test_drive_fx_uses_authored_tire_contacts_and_fades() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var car := FxCar.new()
+	container.add_child(car)
+	var fx = DriveFXScript.new()
+	fx.name = "DriveFX"
+	car.add_child(fx)
+	car.velocity = Vector2(80, 0)
+	fx.carry_splat(0.2)
+	t.check(fx._blood_tracks.size() == 2, "blood tracks: ordinary car lays rear pair")
+	fx._physics_process(0.1)
+	t.check((fx._blood_tracks[0] as Line2D).get_point_count() == 1,
+		"blood tracks: moving wheel appends world-space point")
+	for line in fx._blood_tracks:
+		t.check((line as Line2D).default_color == DriveFXScript.BLOOD_COLOR,
+			"blood tracks: transfer uses dried-red color")
+	fx._physics_process(0.2)
+	t.check(fx._blood_tracks.is_empty() and is_zero_approx(fx._blood_t),
+		"blood tracks: carry expires into fade without persistent state")
+	var bike := FxCar.new()
+	bike.one_track = true
+	container.add_child(bike)
+	var bike_fx = DriveFXScript.new()
+	bike_fx.name = "DriveFX"
+	bike.add_child(bike_fx)
+	bike_fx.carry_splat()
+	t.check(bike_fx._blood_tracks.size() == 1, "blood tracks: bike lays one centered line")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_blood_tracks_respect_shared_global_cap() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	for i in DriveFXScript.MAX_SKID_NODES:
+		var occupied := Line2D.new()
+		occupied.add_to_group(&"skidmarks")
+		container.add_child(occupied)
+	var car := FxCar.new()
+	container.add_child(car)
+	var fx = DriveFXScript.new()
+	fx.name = "DriveFX"
+	car.add_child(fx)
+	fx.carry_splat()
+	t.check(fx._blood_tracks.is_empty(), "blood tracks: shared skidmark cap is strict")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()

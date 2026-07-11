@@ -19,6 +19,10 @@ const SKID_MIN_SPEED := 200.0
 const SKID_SLIP_MIN := 120.0  # sideways px/s that marks an off-road surface
 const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
+const BLOOD_COLOR := Color(0.38, 0.015, 0.02, 0.82)
+const BLOOD_WIDTH := 4.5
+const BLOOD_FADE := 3.0
+const BLOOD_MIN_SPEED := 10.0
 const DUST_MIN_SPEED := 150.0
 const DUST_COLORS := {
 	&"dirt":  Color(0.55, 0.42, 0.28, 0.7),
@@ -40,6 +44,8 @@ var _skids: Array = []  # the active pair of Line2Ds, parented to the level
 var _dust: CPUParticles2D
 var _flame: Polygon2D
 var _burn_fx: CPUParticles2D
+var _blood_tracks: Array = []
+var _blood_t := 0.0
 
 func _ready() -> void:
 	_vehicle = get_parent() as CharacterBody2D
@@ -160,14 +166,22 @@ func _physics_process(_delta: float) -> void:
 		for i in mini(_skids.size(), offs.size()):
 			_skids[i].add_point(_vehicle.global_position + offs[i].rotated(_vehicle.heading))
 
+	if _blood_t > 0.0:
+		_blood_t = maxf(_blood_t - _delta, 0.0)
+		if grounded and speed >= BLOOD_MIN_SPEED:
+			_append_blood_points()
+		if _blood_t <= 0.0:
+			_end_blood_tracks()
+
 func _start_skid() -> void:
 	var host := get_tree().current_scene
-	if host == null or get_tree().get_nodes_in_group(&"skidmarks").size() >= MAX_SKID_NODES:
+	if host == null:
 		return
+	var available := MAX_SKID_NODES - get_tree().get_nodes_in_group(&"skidmarks").size()
 	# One color for the whole mark, picked from the surface it started on.
 	var terrain: StringName = _vehicle.current_terrain
 	var color: Color = SKID_COLORS.get(terrain, SKID_COLOR)
-	for i in _skid_offsets().size():
+	for i in mini(_skid_offsets().size(), maxi(available, 0)):
 		var line := Line2D.new()
 		line.width = SKID_WIDTH
 		line.default_color = color
@@ -185,5 +199,47 @@ func _end_skid() -> void:
 			tween.tween_callback(line.queue_free)
 	_skids.clear()
 
+## Called by a live AmbientSplat. Pure presentation: it never reaches the
+## controller or changes traction, and repeated stains only refresh the clock.
+func carry_splat(seconds := 1.25) -> void:
+	_blood_t = maxf(_blood_t, seconds)
+	if _blood_tracks.is_empty():
+		_start_blood_tracks()
+
+func _start_blood_tracks() -> void:
+	var host := get_tree().current_scene
+	if host == null:
+		return
+	var available := MAX_SKID_NODES - get_tree().get_nodes_in_group(&"skidmarks").size()
+	for i in mini(_skid_offsets().size(), maxi(available, 0)):
+		var line := Line2D.new()
+		line.width = BLOOD_WIDTH
+		line.default_color = BLOOD_COLOR
+		line.add_to_group(&"skidmarks")
+		host.add_child(line)
+		host.move_child(line, mini(2, host.get_child_count() - 1))
+		_blood_tracks.append(line)
+
+func _append_blood_points() -> void:
+	var offs: Array = _skid_offsets()
+	for i in mini(_blood_tracks.size(), offs.size()):
+		var line: Line2D = _blood_tracks[i]
+		var point: Vector2 = _vehicle.global_position + offs[i].rotated(_vehicle.heading)
+		if line.get_point_count() == 0 or line.get_point_position(line.get_point_count() - 1).distance_to(point) >= 2.0:
+			line.add_point(point)
+
+func _end_blood_tracks() -> void:
+	for line in _blood_tracks:
+		if is_instance_valid(line):
+			var tween: Tween = line.create_tween()
+			tween.tween_property(line, "modulate:a", 0.0, BLOOD_FADE)
+			tween.tween_callback(line.queue_free)
+	_blood_tracks.clear()
+
+func clear_splat_tracks() -> void:
+	_blood_t = 0.0
+	_end_blood_tracks()
+
 func _exit_tree() -> void:
 	_end_skid()
+	clear_splat_tracks()

@@ -250,6 +250,10 @@ func _die() -> void:
 	if _dead:
 		return
 	_dead = true
+	set_deferred(&"monitoring", false)
+	call_deferred(&"_finish_die")
+
+func _finish_die() -> void:
 	var host := get_tree().current_scene
 	if host == null:
 		host = get_parent()
