@@ -68,6 +68,14 @@ if echo "$MP_OUT" | grep -qiE "$ERR_RE" || ! echo "$MP_OUT" | grep -q '^\[boot\]
   echo "== smoke: FAIL (mp menu)"; exit 1
 fi
 
+# Garage lobby: cold-boot with no session (must render the dark-garage path).
+echo "== smoke: mp lobby"
+LOBBY_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://ui/mp_lobby.tscn --quit-after 10 2>&1)"
+if echo "$LOBBY_OUT" | grep -qiE "$ERR_RE" || ! echo "$LOBBY_OUT" | grep -q '^\[boot\] mp lobby ready'; then
+  echo "$LOBBY_OUT" | grep -iE "$ERR_RE" || true
+  echo "== smoke: FAIL (mp lobby)"; exit 1
+fi
+
 # Campaign levels: boot each hand-authored scene cold (parse errors, broken
 # instances, and load cycles in level content all surface here).
 for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn levels/depot/depot.tscn levels/dock/dock.tscn levels/chase/buzzard_run.tscn levels/stadium/stadium.tscn; do

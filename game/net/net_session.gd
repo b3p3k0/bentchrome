@@ -13,9 +13,12 @@ const Auth := preload("res://game/net/net_auth.gd")
 const Manifest := preload("res://game/net/net_manifest.gd")
 const Banlist := preload("res://game/net/net_banlist.gd")
 const Discovery := preload("res://game/net/net_discovery.gd")
+const Roster := preload("res://game/net/net_roster.gd")
+const Config := preload("res://game/net/match_config.gd")
 
 signal session_changed()
 signal peers_changed()
+signal lobby_changed()
 signal join_failed(reason: String)
 signal kicked(reason: String)
 
@@ -24,6 +27,9 @@ enum Mode { OFF, HOSTING, JOINING, JOINED }
 var mode: int = Mode.OFF
 var peers := {}  # peer_id -> {name, modded, ip} — ip is host-side only ("" on clients)
 var game_port: int = 0
+var roster: RefCounted = null  # NetRoster — host-authoritative, clients mirror
+var match_config := {}         # MatchConfig-normalized; host edits, all mirror
+var _notice := ""              # one-shot message for the next menu screen
 
 var _enet: ENetMultiplayerPeer = null
 var _discovery: RefCounted = null  # NetDiscovery beacon while hosting
@@ -80,6 +86,8 @@ func host(port: int, password: String, server_name: String, strict_mods: bool) -
 	_server_name = server_name
 	_banlist = Banlist.new()
 	peers = {1: {"name": display_name(), "modded": false, "ip": "local"}}
+	roster = Roster.new(Proto.MAX_PLAYERS)
+	match_config = Config.defaults()
 	_discovery = Discovery.new()
 	_discovery.start_beacon(_beacon_info())
 	set_process(true)
@@ -116,6 +124,8 @@ func leave() -> void:
 	mode = Mode.OFF
 	peers = {}
 	game_port = 0
+	roster = null
+	match_config = {}
 	_banlist = null
 	_nonces.clear()
 	_verdicts.clear()
@@ -154,6 +164,121 @@ func display_name() -> String:
 	var n: String = String(gs.player_name) if gs else ""
 	n = n.strip_edges()
 	return n if not n.is_empty() else "Wastelander"
+
+## One-shot notice (kick reason, session end) for whichever menu loads next.
+func take_notice() -> String:
+	var n := _notice
+	_notice = ""
+	return n
+
+# -------------------------------------------------------------- lobby plane
+# One public request_* per verb: the host applies directly, clients relay to
+# peer 1. Hosts validate every relayed request against the peers table — a
+# fuzzing client can't seat ghosts, pick off-roster cars, or queue twice.
+
+func request_claim_seat(idx: int) -> void:
+	if is_host():
+		_apply_claim_seat(1, idx)
+	elif mode == Mode.JOINED:
+		rpc_claim_seat.rpc_id(1, idx)
+
+func request_leave_seat() -> void:
+	if is_host():
+		_apply_leave_seat(1)
+	elif mode == Mode.JOINED:
+		rpc_leave_seat.rpc_id(1)
+
+func request_set_pick(car: String) -> void:
+	if is_host():
+		_apply_set_pick(1, car)
+	elif mode == Mode.JOINED:
+		rpc_set_pick.rpc_id(1, car)
+
+## on=true joins the got-next queue with a locked car pick; opting in while
+## already queued is the pick change — structurally the back of the line.
+func request_opt_next(on: bool, car: String) -> void:
+	if is_host():
+		_apply_opt_next(1, on, car)
+	elif mode == Mode.JOINED:
+		rpc_opt_next.rpc_id(1, on, car)
+
+## Host-only: patch + normalize + broadcast the ruleset.
+func set_match_config(patch: Dictionary) -> void:
+	if mode != Mode.HOSTING:
+		return
+	var merged := match_config.duplicate()
+	for k in patch:
+		merged[k] = patch[k]
+	match_config = Config.normalize(merged, SceneFlow.MP_MAPS.size())
+	_lobby_dirty()
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_claim_seat(idx: int) -> void:
+	if mode == Mode.HOSTING:
+		_apply_claim_seat(multiplayer.get_remote_sender_id(), idx)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_leave_seat() -> void:
+	if mode == Mode.HOSTING:
+		_apply_leave_seat(multiplayer.get_remote_sender_id())
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_set_pick(car: String) -> void:
+	if mode == Mode.HOSTING:
+		_apply_set_pick(multiplayer.get_remote_sender_id(), car)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_opt_next(on: bool, car: String) -> void:
+	if mode == Mode.HOSTING:
+		_apply_opt_next(multiplayer.get_remote_sender_id(), on, car)
+
+func _apply_claim_seat(id: int, idx: int) -> void:
+	if roster == null or not peers.has(id):
+		return
+	if roster.claim_seat(id, idx):
+		if roster.pick_of(id).is_empty():
+			var ids: Array = Config.car_ids()
+			roster.set_pick(id, String(ids[0]) if not ids.is_empty() else "")
+		_lobby_dirty()
+
+func _apply_leave_seat(id: int) -> void:
+	if roster and roster.leave_seat(id):
+		_lobby_dirty()
+
+func _apply_set_pick(id: int, car: String) -> void:
+	if roster == null or not peers.has(id) or not roster.seated(id):
+		return
+	if not Config.car_ids().has(car):
+		return
+	roster.set_pick(id, car)
+	_lobby_dirty()
+
+func _apply_opt_next(id: int, on: bool, car: String) -> void:
+	if roster == null or not peers.has(id) or roster.seated(id):
+		return
+	if on:
+		if not Config.car_ids().has(car):
+			return
+		roster.opt_in(id, car)
+	elif not roster.opt_out(id):
+		return
+	_lobby_dirty()
+
+## Host: rebroadcast the lobby truth (and refresh the beacon card).
+func _lobby_dirty() -> void:
+	if mode == Mode.HOSTING:
+		_sync_lobby.rpc({"roster": roster.to_dict(), "config": match_config})
+	lobby_changed.emit()
+	if _discovery:
+		_discovery.update_beacon(_beacon_info())
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_lobby(state: Dictionary) -> void:
+	if roster == null:
+		roster = Roster.new(Proto.MAX_PLAYERS)
+	roster.from_dict(state.get("roster", {}))
+	match_config = state.get("config", {})
+	lobby_changed.emit()
 
 # ---------------------------------------------------------------- handshake
 
@@ -240,17 +365,27 @@ func _on_peer_connected(id: int) -> void:
 	var name := String(verdict.get("name", ""))
 	if name.is_empty():
 		name = "Wastelander %d" % id
+	var taken := []
+	for pid in peers:
+		taken.append(String(peers[pid].name))
+	name = Roster.unique_name(name, taken)  # second Hotrod -> "Hotrod #2"
 	peers[id] = {
 		"name": name,
 		"modded": bool(verdict.get("modded", false)),
 		"ip": _peer_ip(id),
 	}
 	_broadcast_peers()
+	# Newcomers get the lobby truth directly; everyone else already has it.
+	if roster:
+		_sync_lobby.rpc_id(id, {"roster": roster.to_dict(), "config": match_config})
 
 func _on_peer_disconnected(id: int) -> void:
 	if mode != Mode.HOSTING:
 		return
 	peers.erase(id)
+	if roster:
+		roster.drop_peer(id)  # no place-holding: seat freed, queue spot gone
+		_lobby_dirty()
 	_broadcast_peers()
 
 func _broadcast_peers() -> void:
@@ -291,6 +426,8 @@ func _settle_server_gone() -> void:
 		return
 	var kick_reason := _last_kick
 	leave()
+	_notice = ("you got the boot: " + kick_reason) if not kick_reason.is_empty() \
+		else "the host closed the garage"
 	if not kick_reason.is_empty():
 		kicked.emit(kick_reason)
 
@@ -317,6 +454,10 @@ func _beacon_info() -> Dictionary:
 	var label := _server_name.strip_edges()
 	if label.is_empty():
 		label = display_name() + "'s garage"
+	var map_name := "lobby"
+	var map_idx := int(match_config.get("map", -1))
+	if map_idx >= 0 and map_idx < SceneFlow.MP_MAPS.size():
+		map_name = String(SceneFlow.MP_MAPS[map_idx].name)
 	return {
 		"name": label,
 		"proto": Proto.PROTOCOL_VERSION,
@@ -324,5 +465,5 @@ func _beacon_info() -> Dictionary:
 		"max": Proto.MAX_PEERS,
 		"has_password": not _password.is_empty(),
 		"game_port": game_port,
-		"map": "lobby",
+		"map": map_name,
 	}

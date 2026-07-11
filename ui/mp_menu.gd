@@ -1,8 +1,8 @@
 extends Control
-## Multiplayer front door: callsign, host setup, LAN browser + direct dial,
-## and a live session roster with host kick/ban. Batch-1 grade — the proper
-## lobby (seats, queue, match config) replaces the session panel in C4; the
-## plumbing this screen exercises is the keeper.
+## Multiplayer front door: callsign, host setup, LAN browser + direct dial.
+## A session opening (host or join) routes straight to the garage lobby
+## (ui/mp_lobby.tscn); this screen also displays the one-shot notice a dying
+## session leaves behind (kick reason, host quit).
 
 const IR := preload("res://game/input_router.gd")  # consts, not the autoload
 const Proto := preload("res://game/net/net_protocol.gd")
@@ -34,10 +34,6 @@ var _join_port_edit: LineEdit
 var _join_pass_edit: LineEdit
 var _join_status: Label
 
-var _session_head: Label
-var _session_rows: VBoxContainer
-var _session_status: Label
-
 func _ready() -> void:
 	print("[boot] mp menu ready")
 	_build_panels()
@@ -45,10 +41,13 @@ func _ready() -> void:
 	if gs:
 		_name_edit.text = String(gs.player_name)
 	Net.session_changed.connect(_on_session_changed)
-	Net.peers_changed.connect(_refresh_session)
 	Net.join_failed.connect(_on_join_failed)
-	Net.kicked.connect(_on_kicked)
-	_show(&"session" if Net.is_active() else &"home")
+	_show(&"home")
+	var notice: String = Net.take_notice()
+	if not notice.is_empty():
+		_alert(_home_status, notice)
+	if Net.is_active():
+		SceneFlow.to_mp_lobby.call_deferred()
 
 func _exit_tree() -> void:
 	_stop_browse()
@@ -71,7 +70,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			SceneFlow.to_title()
 		&"host", &"join":
 			_show(&"home")
-		# &"session": ESC is inert — leaving a live session takes the button.
 
 # ------------------------------------------------------------------- panels
 
@@ -83,15 +81,12 @@ func _show(panel: StringName) -> void:
 		_start_browse()
 	else:
 		_stop_browse()
-	if panel == &"session":
-		_refresh_session()
 
 func _build_panels() -> void:
 	var center := $Center as CenterContainer
 	_panels[&"home"] = _build_home()
 	_panels[&"host"] = _build_host()
 	_panels[&"join"] = _build_join()
-	_panels[&"session"] = _build_session()
 	for key in _panels:
 		center.add_child(_panels[key])
 		_panels[key].visible = false
@@ -141,20 +136,6 @@ func _build_join() -> Control:
 	_button(vbox, "BACK", func() -> void: _show(&"home"))
 	return _wrap(vbox)
 
-func _build_session() -> Control:
-	var vbox := _panel_vbox("GARAGE FLOOR")
-	_session_head = Label.new()
-	_session_head.add_theme_font_size_override("font_size", 18)
-	_session_head.modulate = DIM_TEXT
-	vbox.add_child(_session_head)
-	_session_rows = VBoxContainer.new()
-	_session_rows.custom_minimum_size = Vector2(560, 0)
-	_session_rows.add_theme_constant_override("separation", 6)
-	vbox.add_child(_session_rows)
-	_session_status = _status_label(vbox)
-	_button(vbox, "LEAVE", _do_leave)
-	return _wrap(vbox)
-
 # ------------------------------------------------------------------ actions
 
 func _do_host() -> void:
@@ -162,10 +143,9 @@ func _do_host() -> void:
 	var port := _to_port(_port_edit.text)
 	var err: String = Net.host(port, _host_pass_edit.text, _garage_edit.text,
 		_strict_check.button_pressed)
-	if err.is_empty():
-		_show(&"session")
-	else:
+	if not err.is_empty():
 		_alert(_host_status, err)
+	# Success routes via session_changed -> lobby.
 
 func _do_join() -> void:
 	_persist_name()
@@ -186,10 +166,6 @@ func _do_join() -> void:
 	else:
 		_alert(_join_status, err)
 
-func _do_leave() -> void:
-	Net.leave()
-	_show(&"home")
-
 func _persist_name() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs and String(gs.player_name) != _name_edit.text:
@@ -201,59 +177,12 @@ func _persist_name() -> void:
 func _on_session_changed() -> void:
 	if not is_inside_tree():
 		return
-	match Net.mode:
-		Net.Mode.JOINED, Net.Mode.HOSTING:
-			_show(&"session")
-		Net.Mode.OFF:
-			if _active == &"session":
-				_show(&"home")
-				_home_status.modulate = DIM_TEXT
-				_home_status.text = "session ended"
+	if Net.mode == Net.Mode.JOINED or Net.mode == Net.Mode.HOSTING:
+		SceneFlow.to_mp_lobby()
 
 func _on_join_failed(reason: String) -> void:
 	if _active == &"join":
 		_alert(_join_status, "no dice: " + reason)
-
-func _on_kicked(reason: String) -> void:
-	_show(&"home")
-	_alert(_home_status, "you got the boot: " + reason)
-
-func _refresh_session() -> void:
-	if _active != &"session" or not Net.is_active():
-		return
-	_session_head.text = ("HOSTING on port %d" % Net.game_port) if Net.is_host() \
-		else "RIDING AS PEER %d" % Net.my_id()
-	for child in _session_rows.get_children():
-		child.queue_free()
-	var ids: Array = Net.peers.keys()
-	ids.sort()
-	for id in ids:
-		_session_rows.add_child(_peer_row(int(id), Net.peers[id]))
-	_session_status.modulate = DIM_TEXT
-	_session_status.text = "%d/%d in the garage" % [Net.peers.size(), Proto.MAX_PEERS]
-
-func _peer_row(id: int, info: Dictionary) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", 17)
-	var tags := " (host)" if id == 1 else ""
-	if id == Net.my_id():
-		tags += " (you)"
-	label.text = "%s%s" % [String(info.get("name", "?")), tags]
-	label.modulate = AMBER if id == Net.my_id() else Color.WHITE
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(label)
-	if bool(info.get("modded", false)):
-		var badge := Label.new()
-		badge.text = "MODDED"
-		badge.add_theme_font_size_override("font_size", 14)
-		badge.modulate = ALERT
-		row.add_child(badge)
-	if Net.is_host() and id != 1:
-		row.add_child(_small_button("KICK", func() -> void: Net.kick(id)))
-		row.add_child(_small_button("BAN", func() -> void: Net.ban(id)))
-	return row
 
 # ---------------------------------------------------------------- discovery
 
@@ -351,13 +280,6 @@ func _button(vbox: VBoxContainer, caption: String, action: Callable) -> Button:
 	btn.add_theme_font_size_override("font_size", 18)
 	btn.pressed.connect(action)
 	vbox.add_child(btn)
-	return btn
-
-func _small_button(caption: String, action: Callable) -> Button:
-	var btn := Button.new()
-	btn.text = caption
-	btn.add_theme_font_size_override("font_size", 13)
-	btn.pressed.connect(action)
 	return btn
 
 func _status_label(vbox: VBoxContainer) -> Label:

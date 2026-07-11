@@ -52,6 +52,8 @@ const SUITES := [
 	preload("res://tests/test_net_auth.gd"),
 	preload("res://tests/test_net_manifest.gd"),
 	preload("res://tests/test_net_banlist.gd"),
+	preload("res://tests/test_net_roster.gd"),
+	preload("res://tests/test_match_config.gd"),
 ]
 
 var _checks := 0

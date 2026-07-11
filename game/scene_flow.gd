@@ -10,6 +10,18 @@ const CUSTOM := "res://levels/custom_level.tscn"
 const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 const MP_MENU := "res://ui/mp_menu.tscn"
+const MP_LOBBY := "res://ui/mp_lobby.tscn"
+
+## The versus map pool: the five standard arenas. Boss yards (Depot, Coliseum)
+## join in a later batch once their boss scripting learns to stand down; the
+## chase course and custom JSON levels stay campaign-side.
+const MP_MAPS := [
+	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown"},
+	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Loop"},
+	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs"},
+	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass"},
+	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks"},
+]
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the
 ## freeway, through the suburbs, into the mountains, down to the harbor, and
@@ -52,6 +64,9 @@ func to_settings() -> void:
 
 func to_mp_menu() -> void:
 	goto_scene(MP_MENU)
+
+func to_mp_lobby() -> void:
+	goto_scene(MP_LOBBY)
 
 func to_custom_level(path: String) -> void:
 	GameState.pending_level_path = path
