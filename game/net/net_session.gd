@@ -1,0 +1,328 @@
+extends Node
+## NetSession (autoload "Net"): peer lifecycle for LAN multiplayer. Owns the
+## ENet peer, runs the pre-admit auth handshake (banlist -> nonce challenge ->
+## proof/checksum verdict via NetAuth), maintains the admitted-peer table, and
+## beacons the session card while hosting. Dormant until host()/join() — boot,
+## tests, and single-player never touch a socket.
+##
+## Control-plane RPCs live here (reliable, channel 0). The state/input planes
+## (snapshots, intents) arrive with the match shell in later cards.
+
+const Proto := preload("res://game/net/net_protocol.gd")
+const Auth := preload("res://game/net/net_auth.gd")
+const Manifest := preload("res://game/net/net_manifest.gd")
+const Banlist := preload("res://game/net/net_banlist.gd")
+const Discovery := preload("res://game/net/net_discovery.gd")
+
+signal session_changed()
+signal peers_changed()
+signal join_failed(reason: String)
+signal kicked(reason: String)
+
+enum Mode { OFF, HOSTING, JOINING, JOINED }
+
+var mode: int = Mode.OFF
+var peers := {}  # peer_id -> {name, modded, ip} — ip is host-side only ("" on clients)
+var game_port: int = 0
+
+var _enet: ENetMultiplayerPeer = null
+var _discovery: RefCounted = null  # NetDiscovery beacon while hosting
+var _banlist: RefCounted = null    # NetBanlist, host-side
+var _password := ""
+var _strict_mods := false
+var _server_name := ""
+var _nonces := {}    # peer_id -> single-use challenge nonce
+var _verdicts := {}  # peer_id -> admit verdict, held until peer_connected
+var _join_password := ""
+var _last_reject := ""  # client: reason from a pre-disconnect reject packet
+var _last_kick := ""    # client: reason from a kick notice
+
+func _ready() -> void:
+	set_process(false)
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	multiplayer.connected_to_server.connect(_on_connected_ok)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	var sm := multiplayer as SceneMultiplayer
+	if sm:
+		sm.auth_callback = _on_auth_packet
+		sm.auth_timeout = 8.0
+		sm.peer_authenticating.connect(_on_peer_authenticating)
+		sm.peer_authentication_failed.connect(_on_peer_auth_failed)
+
+func _process(delta: float) -> void:
+	if _discovery:
+		_discovery.beacon_tick(delta)
+
+func is_host() -> bool:
+	return mode == Mode.HOSTING
+
+func is_active() -> bool:
+	return mode != Mode.OFF
+
+func my_id() -> int:
+	return multiplayer.get_unique_id() if is_active() else 0
+
+## Opens the garage doors. Returns "" on success, a human reason otherwise.
+func host(port: int, password: String, server_name: String, strict_mods: bool) -> String:
+	leave()
+	_enet = ENetMultiplayerPeer.new()
+	# max clients = budget minus the host's own seat at the table.
+	if _enet.create_server(port, Proto.MAX_PEERS - 1, Proto.ENET_CHANNELS) != OK:
+		_enet = null
+		return "port %d refused — already in use?" % port
+	multiplayer.multiplayer_peer = _enet
+	mode = Mode.HOSTING
+	game_port = port
+	_password = password
+	_strict_mods = strict_mods
+	_server_name = server_name
+	_banlist = Banlist.new()
+	peers = {1: {"name": display_name(), "modded": false, "ip": "local"}}
+	_discovery = Discovery.new()
+	_discovery.start_beacon(_beacon_info())
+	set_process(true)
+	session_changed.emit()
+	peers_changed.emit()
+	return ""
+
+## Dials a host. Async: success lands as session_changed (mode JOINED),
+## failure as join_failed(reason). Returns "" unless the dial itself failed.
+func join(ip: String, port: int, password: String) -> String:
+	leave()
+	_enet = ENetMultiplayerPeer.new()
+	if _enet.create_client(ip, port, Proto.ENET_CHANNELS) != OK:
+		_enet = null
+		return "could not dial %s:%d" % [ip, port]
+	multiplayer.multiplayer_peer = _enet
+	mode = Mode.JOINING
+	_join_password = password
+	_last_reject = ""
+	_last_kick = ""
+	session_changed.emit()
+	return ""
+
+## Hangs up whatever this session was — host or client — and goes dark.
+func leave() -> void:
+	if _discovery:
+		_discovery.stop()
+		_discovery = null
+	if _enet:
+		_enet.close()
+		_enet = null
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	var was_active := mode != Mode.OFF
+	mode = Mode.OFF
+	peers = {}
+	game_port = 0
+	_banlist = null
+	_nonces.clear()
+	_verdicts.clear()
+	_password = ""
+	_join_password = ""
+	set_process(false)
+	if was_active:
+		session_changed.emit()
+		peers_changed.emit()
+
+## Host boots a peer. peer_disconnect_later flushes the queued reason first,
+## then cuts the line — no timers, no race.
+func kick(id: int, reason := "kicked by host") -> void:
+	if mode != Mode.HOSTING or id == 1 or not peers.has(id):
+		return
+	_notify_kick.rpc_id(id, reason)
+	_drop_peer(id)
+
+## Kick + remember the IP. The ban outlives the session (user://banlist.json).
+func ban(id: int, reason := "banned by host") -> void:
+	if mode != Mode.HOSTING or id == 1 or not peers.has(id):
+		return
+	if _banlist:
+		_banlist.ban(String(peers[id].get("ip", "")))
+	kick(id, reason)
+
+func banned_ips() -> Array:
+	return _banlist.all() if _banlist else []
+
+func unban_ip(ip: String) -> void:
+	if _banlist:
+		_banlist.unban(ip)
+
+func display_name() -> String:
+	var gs := get_node_or_null(^"/root/GameState")
+	var n: String = String(gs.player_name) if gs else ""
+	n = n.strip_edges()
+	return n if not n.is_empty() else "Wastelander"
+
+# ---------------------------------------------------------------- handshake
+
+func _on_peer_authenticating(id: int) -> void:
+	var sm := multiplayer as SceneMultiplayer
+	if sm == null:
+		return
+	if mode == Mode.HOSTING:
+		var ip := _peer_ip(id)
+		if _banlist and _banlist.is_banned(ip):
+			_reject_peer(id, "banned")
+			return
+		var nonce: PackedByteArray = Auth.make_nonce()
+		_nonces[id] = nonce
+		sm.send_auth(id, Auth.pack(Auth.challenge(nonce, not _password.is_empty())))
+	# Clients wait for the challenge packet; _on_auth_packet answers it.
+
+func _on_auth_packet(id: int, bytes: PackedByteArray) -> void:
+	var sm := multiplayer as SceneMultiplayer
+	if sm == null:
+		return
+	var msg: Dictionary = Auth.unpack(bytes)
+	if mode == Mode.HOSTING:
+		if not _nonces.has(id):
+			_reject_peer(id, "no challenge outstanding")
+			return
+		var ctx := {
+			"nonce": _nonces[id],
+			"password": _password,
+			"needs_password": not _password.is_empty(),
+			"host_checksum": Manifest.cached(),
+			"strict_mods": _strict_mods,
+			"peers": peers.size(),
+		}
+		_nonces.erase(id)  # single-use, replay-proof
+		var verdict: Dictionary = Auth.decide(msg, ctx)
+		if not bool(verdict.admit):
+			_reject_peer(id, String(verdict.reason))
+			return
+		_verdicts[id] = verdict
+		sm.complete_auth(id)
+	else:
+		if msg.has("reject"):
+			# The server is about to cut the line; act on the reason now.
+			_last_reject = String(msg.reject)
+			_fail_join(_last_reject)
+			return
+		if msg.has("nonce"):
+			var resp: Dictionary = Auth.response(
+				msg, _join_password, display_name(), Manifest.cached())
+			sm.send_auth(1, Auth.pack(resp))
+			sm.complete_auth(1)
+
+func _reject_peer(id: int, reason: String) -> void:
+	var sm := multiplayer as SceneMultiplayer
+	if sm:
+		sm.send_auth(id, Auth.pack({"reject": reason}))
+	_nonces.erase(id)
+	_drop_peer(id)
+
+## Flush-then-cut disconnect via the ENet peer handle (works mid-auth, when
+## the peer isn't in multiplayer.get_peers() yet).
+func _drop_peer(id: int) -> void:
+	if _enet == null:
+		return
+	var pp: ENetPacketPeer = _enet.get_peer(id)
+	if pp and pp.get_state() != ENetPacketPeer.STATE_DISCONNECTED:
+		pp.peer_disconnect_later()
+
+func _on_peer_auth_failed(id: int) -> void:
+	if mode == Mode.HOSTING:
+		_nonces.erase(id)
+		_verdicts.erase(id)
+	elif id == 1:
+		_fail_join(_last_reject if not _last_reject.is_empty() else "handshake failed")
+
+# ------------------------------------------------------------------- peers
+
+func _on_peer_connected(id: int) -> void:
+	if mode != Mode.HOSTING:
+		return  # clients learn the table via _sync_peers
+	var verdict: Dictionary = _verdicts.get(id, {})
+	_verdicts.erase(id)
+	var name := String(verdict.get("name", ""))
+	if name.is_empty():
+		name = "Wastelander %d" % id
+	peers[id] = {
+		"name": name,
+		"modded": bool(verdict.get("modded", false)),
+		"ip": _peer_ip(id),
+	}
+	_broadcast_peers()
+
+func _on_peer_disconnected(id: int) -> void:
+	if mode != Mode.HOSTING:
+		return
+	peers.erase(id)
+	_broadcast_peers()
+
+func _broadcast_peers() -> void:
+	# Clients get names and mod flags; IPs stay the host's business.
+	var pub := {}
+	for id in peers:
+		pub[id] = {"name": peers[id].name, "modded": peers[id].modded, "ip": ""}
+	_sync_peers.rpc(pub)
+	peers_changed.emit()
+	if _discovery:
+		_discovery.update_beacon(_beacon_info())
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_peers(pub: Dictionary) -> void:
+	peers = pub
+	peers_changed.emit()
+
+@rpc("authority", "call_remote", "reliable")
+func _notify_kick(reason: String) -> void:
+	_last_kick = reason
+
+# ---------------------------------------------------------- client outcomes
+
+func _on_connected_ok() -> void:
+	mode = Mode.JOINED
+	session_changed.emit()
+
+func _on_connection_failed() -> void:
+	_fail_join(_last_reject if not _last_reject.is_empty() else "no answer at that address")
+
+func _on_server_disconnected() -> void:
+	# Deferred: fires from inside a multiplayer callback — tearing the peer
+	# down mid-callback is how you core-dump on exit.
+	_settle_server_gone.call_deferred()
+
+func _settle_server_gone() -> void:
+	if mode == Mode.OFF:
+		return
+	var kick_reason := _last_kick
+	leave()
+	if not kick_reason.is_empty():
+		kicked.emit(kick_reason)
+
+func _fail_join(reason: String) -> void:
+	# Same deferral rule as above; reject-packet and auth-failed can both fire
+	# for one doomed join — the settle guard keeps it to a single emit.
+	_settle_fail.call_deferred(reason)
+
+func _settle_fail(reason: String) -> void:
+	if mode != Mode.JOINING:
+		return
+	leave()
+	join_failed.emit(reason)
+
+# ------------------------------------------------------------------ helpers
+
+func _peer_ip(id: int) -> String:
+	if _enet == null:
+		return ""
+	var pp: ENetPacketPeer = _enet.get_peer(id)
+	return pp.get_remote_address() if pp else ""
+
+func _beacon_info() -> Dictionary:
+	var label := _server_name.strip_edges()
+	if label.is_empty():
+		label = display_name() + "'s garage"
+	return {
+		"name": label,
+		"proto": Proto.PROTOCOL_VERSION,
+		"players": peers.size(),
+		"max": Proto.MAX_PEERS,
+		"has_password": not _password.is_empty(),
+		"game_port": game_port,
+		"map": "lobby",
+	}

@@ -19,9 +19,9 @@ var _quit: Control
 var _quit_index := 1  # NO
 var _quit_entries: Array[Label] = []
 
-const ENTRY_NAMES := ["START", "STORY", "SETTINGS"]
+const ENTRY_NAMES := ["START", "MULTIPLAYER", "STORY", "SETTINGS"]
 
-@onready var _entries: Array[Label] = [$Menu/Start, $Menu/Story, $Menu/Settings]
+@onready var _entries: Array[Label] = [$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Settings]
 
 func _ready() -> void:
 	var bg := $Bg as TextureRect
@@ -73,8 +73,11 @@ func _activate() -> void:
 			_done = true
 			SceneFlow.to_difficulty()
 		1:
-			_open_story()
+			_done = true
+			SceneFlow.to_mp_menu()
 		2:
+			_open_story()
+		3:
 			_done = true
 			SceneFlow.to_settings()
 

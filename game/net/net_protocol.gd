@@ -16,6 +16,10 @@ const CH_CONTROL := 0  # reliable — auth, lobby, seats, match flow
 const CH_STATE := 1    # unreliable — host->all snapshots
 const CH_INPUT := 2    # unreliable — client->host intent frames
 
+# Channel count baked into the ENet handshake (both ends must agree). Sized
+# past CH_* + Godot's reserved channels so later cards never re-shake hands.
+const ENET_CHANNELS := 8
+
 # Defaults + live tunables (static var per house rules; const is frozen).
 # The host-setup screen can override the game port per session.
 static var default_game_port := 42998

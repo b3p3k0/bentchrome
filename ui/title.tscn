@@ -32,6 +32,12 @@ theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 text = "START"
 
+[node name="Multiplayer" type="Label" parent="Menu"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "MULTIPLAYER"
+
 [node name="Story" type="Label" parent="Menu"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
