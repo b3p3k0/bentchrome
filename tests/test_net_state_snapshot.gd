@@ -61,6 +61,18 @@ func test_events_round_trip() -> void:
 	t.check(absf(float(e.turn_rate) - 3.5) < 0.002, "snap: homing rate survives")
 	t.check(int(e.target_actor) == 2, "snap: target actor survives")
 
+func test_hit_event_round_trip() -> void:
+	var ev := {"kind": &"hit", "attacker_actor": 1, "victim_actor": 4}
+	var back: Dictionary = Snap.unpack_snapshot(Snap.pack_snapshot(8, [], [ev]))
+	t.check(back.events.size() == 1, "snap: hit event count survives")
+	var hit: Dictionary = back.events[0]
+	t.check(int(hit.kind) == Snap.EV_HIT, "snap: hit event kind survives")
+	t.check(int(hit.attacker_actor) == 1 and int(hit.victim_actor) == 4,
+		"snap: hit actor pair survives")
+	var cut := Snap.pack_snapshot(8, [], [ev])
+	cut.resize(cut.size() - 1)
+	t.check(Snap.unpack_snapshot(cut).is_empty(), "snap: truncated hit event rejected")
+
 func test_junk_rejected() -> void:
 	t.check(Snap.unpack_snapshot(PackedByteArray([9, 9])).is_empty(),
 		"snap: truncated header parses to nothing")

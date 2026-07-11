@@ -20,6 +20,7 @@ const F_BRAKE := 64
 
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
+const EV_HIT := 2
 const NO_TARGET := 255
 
 const INPUT_FRAME_SIZE := 7  # u32 tick | i8 throttle | i8 steer | u8 buttons
@@ -116,17 +117,22 @@ static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteAr
 	buf.put_u8(mini(events.size(), 255))
 	for i in mini(events.size(), 255):
 		var ev: Dictionary = events[i]
-		buf.put_u8(EV_PROJECTILE)
-		buf.put_utf8_string(String(ev.get("path", "")))
-		var epos: Vector2 = ev.get("pos", Vector2.ZERO)
-		buf.put_16(clampi(roundi(epos.x), -32768, 32767))
-		buf.put_16(clampi(roundi(epos.y), -32768, 32767))
-		var dir: Vector2 = ev.get("dir", Vector2.RIGHT)
-		buf.put_u16(int(wrapf(dir.angle(), 0.0, TAU) / TAU * 65535.0))
-		buf.put_u16(clampi(roundi(float(ev.get("speed", 0.0))), 0, 65535))
-		buf.put_u16(clampi(roundi(float(ev.get("lifetime", 0.0)) * 1000.0), 0, 65535))
-		buf.put_u16(clampi(roundi(float(ev.get("turn_rate", 0.0)) * 1000.0), 0, 65535))
-		buf.put_u8(clampi(int(ev.get("target_actor", NO_TARGET)), 0, 255))
+		if ev.get("kind", &"projectile") == &"hit":
+			buf.put_u8(EV_HIT)
+			buf.put_u8(clampi(int(ev.get("attacker_actor", NO_TARGET)), 0, 255))
+			buf.put_u8(clampi(int(ev.get("victim_actor", NO_TARGET)), 0, 255))
+		else:
+			buf.put_u8(EV_PROJECTILE)
+			buf.put_utf8_string(String(ev.get("path", "")))
+			var epos: Vector2 = ev.get("pos", Vector2.ZERO)
+			buf.put_16(clampi(roundi(epos.x), -32768, 32767))
+			buf.put_16(clampi(roundi(epos.y), -32768, 32767))
+			var dir: Vector2 = ev.get("dir", Vector2.RIGHT)
+			buf.put_u16(int(wrapf(dir.angle(), 0.0, TAU) / TAU * 65535.0))
+			buf.put_u16(clampi(roundi(float(ev.get("speed", 0.0))), 0, 65535))
+			buf.put_u16(clampi(roundi(float(ev.get("lifetime", 0.0)) * 1000.0), 0, 65535))
+			buf.put_u16(clampi(roundi(float(ev.get("turn_rate", 0.0)) * 1000.0), 0, 65535))
+			buf.put_u8(clampi(int(ev.get("target_actor", NO_TARGET)), 0, 255))
 	return buf.data_array
 
 ## {} on junk (bad proto, truncated). Rows come back as apply_net_state-ready
@@ -178,6 +184,12 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 		if buf.get_available_bytes() < 1:
 			return {}
 		var kind := buf.get_u8()
+		if kind == EV_HIT:
+			if buf.get_available_bytes() < 2:
+				return {}
+			events.append({"kind": EV_HIT, "attacker_actor": buf.get_u8(),
+				"victim_actor": buf.get_u8()})
+			continue
 		if kind != EV_PROJECTILE:
 			return {}
 		var path := buf.get_utf8_string()

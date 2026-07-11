@@ -362,9 +362,9 @@ func _flame_tick(delta: float) -> void:
 			continue  # the torch doesn't reach up to roofs or down to the shore
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body.has_method("apply_effect"):
 			for spec in _flame_def.on_hit_effects:

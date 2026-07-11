@@ -79,9 +79,9 @@ func _trigger(body: CharacterBody2D) -> void:
 		var belly: float = float(soft) if soft is float else 1.0
 		for child in body.get_children():
 			if child is Health:
-				child.take_damage(damage * belly * Combat.scale(dropper, body))
 				if "last_attacker" in body and is_instance_valid(dropper) and dropper is Node2D:
 					body.last_attacker = dropper
+				child.take_damage(damage * belly * Combat.scale(dropper, body))
 				break
 	var scene := get_tree().current_scene
 	if scene:

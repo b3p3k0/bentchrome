@@ -24,6 +24,11 @@ static func projectile_spawned(scene_path: String, pos: Vector2, dir: Vector2,
 		"target": target,  # resolved to an actor index at drain time
 	})
 
+static func hit_landed(attacker: Node2D, victim: Node2D) -> void:
+	if not armed or not is_instance_valid(attacker) or not is_instance_valid(victim):
+		return
+	queue.append({"kind": &"hit", "attacker": attacker, "victim": victim})
+
 static func drain() -> Array:
 	var out := queue
 	queue = []

@@ -97,11 +97,11 @@ func _on_body_entered(body: Node) -> void:
 			var facing := Vector2.RIGHT.rotated(body.heading)
 			if facing.dot(velocity.normalized()) > 0.4:
 				hit *= body.rear_weakspot
+		# Stamp BEFORE Health emits damaged: vehicle feedback and the MP hit tap
+		# must see the trigger in the same synchronous call. Multi-body rigs point
+		# their plates at the owning cab through part_of; remain duck-typed here.
+		_stamp_attacker(body)
 		health.take_damage(hit)
-		# Validity first: the shooter can die while this shot is in flight, and
-		# stamping a freed instance into a typed property is a script error.
-		if is_instance_valid(shooter) and shooter is Node2D and "last_attacker" in body:
-			body.last_attacker = shooter  # AI holds a grudge against the trigger
 		var status := _find_status(body)
 		if status:
 			for spec in on_hit_effects:
@@ -140,6 +140,18 @@ func _find_health(body: Node) -> Health:
 		if child is Health:
 			return child
 	return null
+
+func _stamp_attacker(body: Node) -> void:
+	if not is_instance_valid(shooter) or not shooter is Node2D:
+		return
+	var victim: Node = body
+	if body.has_meta(&"part_of"):
+		var owner_path: NodePath = body.get_meta(&"part_of")
+		var owner: Node = body.get_node_or_null(owner_path)
+		if owner:
+			victim = owner
+	if "last_attacker" in victim:
+		victim.last_attacker = shooter
 
 func _find_status(body: Node) -> StatusReceiver:
 	for child in body.get_children():

@@ -6,6 +6,7 @@ extends Node2D
 ## calls — no per-frame Control churn as opponents cross the boundary.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+const ExplosionScene := preload("res://environment/explosion.tscn")
 
 const PLAY_RECT := Rect2(280.0, 0.0, 720.0, 720.0)
 const EDGE_INSET := 14.0
@@ -13,9 +14,12 @@ const HYSTERESIS := 6.0
 const MARKER_GAP := 18.0
 const TIP := 9.0
 const WING := 6.0
+const HIT_BURST_SCALE := 0.22
+const HIT_BURST_COOLDOWN_MS := 250
 
 var _states: Dictionary = {}  # instance id -> {ref, visible, pos, angle, color, outline}
 var _draw_records: Array = []
+var _last_burst_ms: Dictionary = {}  # victim instance id -> last confirmation
 
 func _ready() -> void:
 	z_index = 20
@@ -44,6 +48,9 @@ func _process(_delta: float) -> void:
 		seen[id] = true
 		var screen := world_to_screen(canvas, car.global_position)
 		var state: Dictionary = _states.get(id, {"ref": car, "visible": false})
+		if not state.get("hit_connected", false) and car.has_signal(&"combat_hit"):
+			car.connect(&"combat_hit", _on_combat_hit.bind(car))
+			state.hit_connected = true
 		var was_visible: bool = state.get("visible", false)
 		var visible_now := not PLAY_RECT.grow(HYSTERESIS).has_point(screen)
 		if was_visible:
@@ -65,6 +72,7 @@ func _process(_delta: float) -> void:
 	for id in _states.keys():
 		if not seen.has(id):
 			_states.erase(id)
+			_last_burst_ms.erase(id)
 	separate_overlaps(_draw_records, PLAY_RECT.grow(-EDGE_INSET))
 	queue_redraw()
 
@@ -92,6 +100,25 @@ func tracked_position(car: Node) -> Vector2:
 	if not is_tracking(car):
 		return Vector2.INF
 	return _states[car.get_instance_id()].pos
+
+func _on_combat_hit(attacker: Node2D, victim: Node2D) -> void:
+	var viewer := VehiclesHelper.local(get_tree()) as Node2D
+	if viewer == null or attacker != viewer or not is_tracking(victim):
+		return
+	var id := victim.get_instance_id()
+	var now := Time.get_ticks_msec()
+	if now - int(_last_burst_ms.get(id, -HIT_BURST_COOLDOWN_MS)) < HIT_BURST_COOLDOWN_MS:
+		return
+	_last_burst_ms[id] = now
+	var boom := ExplosionScene.instantiate()
+	boom.name = "HitBurst"
+	boom.position = tracked_position(victim)
+	var paint: Variant = victim.get("body_color")
+	boom.tint = paint if paint is Color else Color.WHITE
+	boom.size_scale = HIT_BURST_SCALE
+	boom.allow_camera_shake = false
+	boom.allow_night_light = false
+	add_child(boom)
 
 static func world_to_screen(canvas: Transform2D, world: Vector2) -> Vector2:
 	return canvas * world

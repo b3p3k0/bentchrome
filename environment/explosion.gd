@@ -11,6 +11,8 @@ const SHAKE_RANGE := 500.0
 
 var tint := Color(0.8, 0.3, 0.2)   # debris color — set to the car's paint job
 var size_scale := 1.0              # 0.6 for crates, 1.0 for cars
+var allow_camera_shake := true     # false for screen-space HUD confirmations
+var allow_night_light := true      # CanvasLayer bursts must not grow world bloom
 
 const NIGHT_LIGHT_ENERGY := 1.6    # bloom strength in a darkened arena
 
@@ -39,14 +41,14 @@ func _ready() -> void:
 	var player := get_tree().get_first_node_in_group(&"local_player")
 	if player == null:
 		player = get_tree().get_first_node_in_group(&"player")
-	if player is Node2D and player.has_method(&"add_shake"):
+	if allow_camera_shake and player is Node2D and player.has_method(&"add_shake"):
 		var d: float = global_position.distance_to(player.global_position)
 		if d < SHAKE_RANGE:
 			player.add_shake(7.0 * size_scale * (1.0 - d / SHAKE_RANGE))
 	# In a night arena (group marker, duck-typed) the blast BLOOMS: a light
 	# whose energy dies with the flash. Absent the marker this costs nothing —
 	# and this file stays dependency-free, so the texture is built inline.
-	if get_tree().get_first_node_in_group(&"night_arena") != null:
+	if allow_night_light and get_tree().get_first_node_in_group(&"night_arena") != null:
 		var grad := Gradient.new()
 		grad.set_color(0, Color(1, 1, 1, 1))
 		grad.set_color(1, Color(1, 1, 1, 0))

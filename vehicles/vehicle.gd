@@ -34,6 +34,9 @@ const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependen
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 const TurretScript := preload("res://weapons/turret.gd")
+const NetEvents := preload("res://game/net/net_events.gd")
+
+signal combat_hit(attacker: Node2D)
 
 @export_group("Identity")
 @export var stats: VehicleStats
@@ -192,6 +195,9 @@ func _ready() -> void:
 func _on_damaged(amount: float, _hp: float) -> void:
 	if amount < 1.0:
 		return
+	if not net_puppet and is_instance_valid(last_attacker):
+		combat_hit.emit(last_attacker)
+		NetEvents.hit_landed(last_attacker, self)
 	if _visual:
 		_visual.modulate = Color(2.2, 2.2, 2.2)
 		var tween := create_tween()
@@ -775,6 +781,12 @@ func take_ram_damage(amount: float, source: Node2D = null) -> void:
 		last_attacker = source
 	if _health:
 		_health.take_damage(amount)
+
+## Client-side replay of the host's attacker/victim event. This is presentation
+## only: streamed HP remains the sole damage authority on a puppet.
+func present_combat_hit(attacker: Node2D) -> void:
+	if is_instance_valid(attacker):
+		combat_hit.emit(attacker)
 
 ## Speed-based collision damage after move_and_slide: other vehicles, plus any
 ## Health-bearing body (destructible blocks, dummies). The rammer takes nothing

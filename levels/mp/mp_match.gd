@@ -324,17 +324,25 @@ func _collect_rows() -> Array:
 		})
 	return rows
 
-## NetEvents drainage with node targets resolved to actor indices.
+## NetEvents drainage with node references resolved to compact actor indices.
 func _drain_events() -> Array:
 	var out: Array = []
 	for ev in NetEvents.drain():
-		var target_actor := Snapshot.NO_TARGET
-		var target: Node2D = ev.get("target")
-		if target != null and is_instance_valid(target):
-			var idx := _actor_cars.find(target)
-			if idx >= 0:
-				target_actor = idx
-		ev["target_actor"] = target_actor
+		if ev.get("kind") == &"hit":
+			var attacker_idx := _actor_cars.find(ev.get("attacker"))
+			var victim_idx := _actor_cars.find(ev.get("victim"))
+			if attacker_idx < 0 or victim_idx < 0:
+				continue
+			ev["attacker_actor"] = attacker_idx
+			ev["victim_actor"] = victim_idx
+		else:
+			var target_actor := Snapshot.NO_TARGET
+			var target: Node2D = ev.get("target")
+			if target != null and is_instance_valid(target):
+				var idx := _actor_cars.find(target)
+				if idx >= 0:
+					target_actor = idx
+			ev["target_actor"] = target_actor
 		out.append(ev)
 	return out
 
@@ -374,7 +382,21 @@ func _on_snapshot(data: Dictionary) -> void:
 		row["t"] = now
 		car.apply_net_state(row)
 	for ev in data.events:
-		_spawn_visual_projectile(ev)
+		if int(ev.get("kind", 0)) == Snapshot.EV_HIT:
+			_present_hit_event(ev)
+		else:
+			_spawn_visual_projectile(ev)
+
+func _present_hit_event(ev: Dictionary) -> void:
+	var attacker_idx := int(ev.get("attacker_actor", Snapshot.NO_TARGET))
+	var victim_idx := int(ev.get("victim_actor", Snapshot.NO_TARGET))
+	if attacker_idx < 0 or attacker_idx >= _actor_cars.size() \
+			or victim_idx < 0 or victim_idx >= _actor_cars.size():
+		return
+	var attacker: Node2D = _actor_cars[attacker_idx] if is_instance_valid(_actor_cars[attacker_idx]) else null
+	var victim: Vehicle = _actor_cars[victim_idx] if is_instance_valid(_actor_cars[victim_idx]) else null
+	if attacker and victim:
+		victim.present_combat_hit(attacker)
 
 ## A cosmetic twin of the host's shot: zero damage, zero collision, same pool.
 ## Dead-reckons on its own lifetime; homing tracks the target's puppet.

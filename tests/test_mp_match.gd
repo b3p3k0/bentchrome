@@ -8,6 +8,8 @@ extends RefCounted
 
 const MatchScene := preload("res://levels/mp/mp_match.tscn")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+const NetEvents := preload("res://game/net/net_events.gd")
+const Snapshot := preload("res://game/net/net_snapshot.gd")
 
 var t
 var net: Node
@@ -64,6 +66,26 @@ func test_grudge_spawns_no_ai() -> void:
 	var vehicles: Array = t.root.get_tree().get_nodes_in_group(&"vehicles")
 	t.check(vehicles.size() == 1,
 		"shell: grudge match seats humans only — no AI backfill")
+	_teardown(shell)
+
+func test_hit_events_map_actor_pairs_and_reject_bad_indices() -> void:
+	var shell := _boot_match({"map": 0, "mode": "melee"})
+	await t.process_frame
+	var attacker: Vehicle = shell._actor_cars[0]
+	var victim: Vehicle = shell._actor_cars[1]
+	var seen: Array = []
+	victim.combat_hit.connect(func(source: Node2D) -> void: seen.append(source))
+	shell._present_hit_event({"attacker_actor": 0, "victim_actor": 1})
+	t.check(seen == [attacker], "shell: client hit event resolves actor pair")
+	shell._present_hit_event({"attacker_actor": 99, "victim_actor": 1})
+	t.check(seen.size() == 1, "shell: invalid hit actor index is ignored")
+	NetEvents.queue = []
+	NetEvents.hit_landed(attacker, victim)
+	var drained: Array = shell._drain_events()
+	t.check(drained.size() == 1 and int(drained[0].attacker_actor) == 0
+		and int(drained[0].victim_actor) == 1 and drained[0].kind == &"hit",
+		"shell: host hit refs drain as compact actor indices")
+	t.check(Snapshot.EV_HIT == 2, "shell: hit wire kind stays stable")
 	_teardown(shell)
 
 func _no_tree_pausers(root: Node) -> bool:

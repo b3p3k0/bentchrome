@@ -7,10 +7,13 @@ const TrackerScript := preload("res://ui/offscreen_tracker.gd")
 var t
 
 class StubCar extends Node2D:
+	signal combat_hit(attacker: Node2D)
 	var hp := 100.0
 	var body_color := Color(0.2, 0.6, 0.9)
 	func get_hp() -> float:
 		return hp
+	func present_hit(attacker: Node2D) -> void:
+		combat_hit.emit(attacker)
 
 func _init(runner) -> void:
 	t = runner
@@ -81,4 +84,48 @@ func test_live_roster_hides_onscreen_and_cleans_dead() -> void:
 	t.root.remove_child(viewer)
 	tracker.free()
 	enemy.free()
+	viewer.free()
+
+func test_personal_hit_burst_filters_and_rate_limits() -> void:
+	var viewer := StubCar.new()
+	viewer.position = TrackerScript.PLAY_RECT.get_center()
+	viewer.add_to_group(&"local_player")
+	viewer.add_to_group(&"vehicles")
+	var other := StubCar.new()
+	other.add_to_group(&"vehicles")
+	var enemy := StubCar.new()
+	enemy.position = Vector2(1400, 360)
+	enemy.add_to_group(&"vehicles")
+	var tracker = TrackerScript.new()
+	t.root.add_child(viewer)
+	t.root.add_child(other)
+	t.root.add_child(enemy)
+	t.root.add_child(tracker)
+	tracker._process(0.0)
+	enemy.present_hit(other)
+	t.check(tracker.get_node_or_null("HitBurst") == null,
+		"hit cue: somebody else's hit stays quiet")
+	enemy.present_hit(viewer)
+	var burst = tracker.get_node_or_null("HitBurst")
+	t.check(burst != null, "hit cue: local hit on tracked enemy bursts")
+	if burst:
+		t.check(is_equal_approx(float(burst.size_scale), TrackerScript.HIT_BURST_SCALE),
+			"hit cue: explosion reuses the small HUD scale")
+		t.check(not burst.allow_camera_shake and not burst.allow_night_light,
+			"hit cue: screen-space explosion cannot shake or bloom the world")
+	var before := tracker.get_child_count()
+	enemy.present_hit(viewer)
+	t.check(tracker.get_child_count() == before, "hit cue: rapid repeats are rate-limited")
+	enemy.position = TrackerScript.PLAY_RECT.get_center()
+	tracker._process(0.0)
+	tracker._last_burst_ms.clear()
+	enemy.present_hit(viewer)
+	t.check(tracker.get_child_count() == before, "hit cue: onscreen victim gets no edge burst")
+	t.root.remove_child(tracker)
+	t.root.remove_child(enemy)
+	t.root.remove_child(other)
+	t.root.remove_child(viewer)
+	tracker.free()
+	enemy.free()
+	other.free()
 	viewer.free()
