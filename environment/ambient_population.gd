@@ -11,6 +11,7 @@ const Floors := preload("res://game/floors.gd")
 @export var movement := AmbientActor.Movement.WANDER
 @export var bounds := Vector2(240, 160)
 @export var route: Curve2D
+@export var route_points := PackedVector2Array()
 @export var floor_index := -1
 @export var speed := 55.0
 @export var speed_jitter := 0.15
@@ -25,6 +26,10 @@ func _ready() -> void:
 func spawn_population() -> void:
 	if kinds.is_empty() or count <= 0:
 		return
+	if route == null and route_points.size() >= 2:
+		route = Curve2D.new()
+		for point in route_points:
+			route.add_point(point)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = population_seed()
 	var length := route.get_baked_length() if route else 0.0

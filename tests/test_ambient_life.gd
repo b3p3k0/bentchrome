@@ -139,3 +139,72 @@ func test_splat_lifetime_is_five_seconds() -> void:
 	t.check(splat.is_queued_for_deletion(), "ambient splat: cleans up after five seconds")
 	t.root.remove_child(splat)
 	splat.free()
+
+func test_downtown_population_budget_and_kinds() -> void:
+	var level: Node = load("res://levels/arena/arena.tscn").instantiate()
+	var life: Node = level.get_node("AmbientLife")
+	var figures := 0
+	var carts := 0
+	var found := {}
+	for pop in life.get_children():
+		for kind in pop.kinds:
+			found[kind] = true
+		if pop.kinds.has(&"hotdog_cart"):
+			carts += pop.count
+		else:
+			figures += pop.count
+	t.check(figures == 22, "downtown ambience: exact 22 living figures authored")
+	t.check(carts == 3, "downtown ambience: three separate carts authored")
+	for kind in AmbientActor.DOWNTOWN_KINDS:
+		t.check(found.has(kind), "downtown ambience: kind present %s" % kind)
+	level.free()
+
+func test_police_round_is_harmless_and_ignores_ambient() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var officer = ActorScene.instantiate()
+	officer.kind = &"police"
+	container.add_child(officer)
+	officer._fire_police(Vector2.RIGHT)
+	var shot: Projectile = null
+	for child in container.get_children():
+		if child is Projectile:
+			shot = child
+	t.check(shot != null and is_zero_approx(shot.damage),
+		"downtown police: single tracer carries zero damage")
+	t.check(shot != null and not shot.harms_ambient
+		and (shot.collision_mask & AmbientActor.SOFT_TARGET_LAYER) == 0,
+		"downtown police: tracer cannot kill ambient figures")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_police_range_and_line_of_sight_gate() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var officer = ActorScene.instantiate()
+	officer.kind = &"police"
+	container.add_child(officer)
+	var car := FloorCar.new()
+	car.add_to_group(&"player")
+	car.add_to_group(&"vehicles")
+	car.position = Vector2(600, 0)
+	container.add_child(car)
+	t.check(officer.police_target() == null, "downtown police: ignores players beyond range")
+	car.position = Vector2(300, 0)
+	await t.physics_frame
+	t.check(officer.police_target() == car, "downtown police: acquires in-range same-floor player")
+	var wall := StaticBody2D.new()
+	wall.collision_layer = 2
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(20, 120)
+	col.shape = shape
+	wall.add_child(col)
+	wall.position = Vector2(150, 0)
+	container.add_child(wall)
+	await t.physics_frame
+	t.check(not officer._police_los(car), "downtown police: wall blocks harmless fire")
+	t.root.remove_child(container)
+	container.free()
