@@ -6,9 +6,15 @@ extends "res://levels/combat_level.gd"
 ## a button is pressed. The lose path is untouched.
 
 const VictoryDriver := preload("res://vehicles/goliath/victory_lap_driver.gd")
+const Deco := preload("res://levels/stadium/stadium_deco.gd")  # _make_light
 
+static var NIGHT_TINT := Color(0.5, 0.56, 0.82)  # the dusk over the bowl —
+	# mild by design: combat readability first, the lights do the drama
+static var PLAYER_GLOW_RADIUS := 340.0  # the car stays readable even after
+static var PLAYER_GLOW_ENERGY := 0.55   # every tower has been shot out
 static var FIREWORK_GAP := 0.9      # seconds between bursts
 static var FIREWORK_DOUBLE := 0.3   # chance a burst brings a friend
+static var FIREWORK_LIGHT := 1.1    # each shell blooms in the dark
 static var FIREWORK_COLORS := [Color(1.0, 0.75, 0.2), Color(0.9, 0.3, 0.25),
 	Color(0.4, 0.75, 0.95), Color(0.7, 0.95, 0.5), Color(0.95, 0.9, 0.85)]
 
@@ -23,6 +29,18 @@ func _ready() -> void:
 	for child in get_children():  # the end screen combat_level just added
 		if child.get("win_keeps_rolling") != null:
 			child.win_keeps_rolling = true
+	# Night game: the authored CanvasModulate gets its tint (code = the knob)
+	# and the group marker other systems duck-check (explosion blooms).
+	var night := get_node_or_null(^"NightTint")
+	if night:
+		night.color = NIGHT_TINT
+		night.add_to_group(&"night_arena")
+	# The player carries their own glow — the bowl stays playable even with
+	# all four floodlights shot dark.
+	if _player and is_instance_valid(_player):
+		var glow := Deco._make_light(PLAYER_GLOW_RADIUS, PLAYER_GLOW_ENERGY,
+			Color(0.85, 0.9, 1.0))
+		_player.add_child(glow)
 
 func _process(delta: float) -> void:
 	super(delta)
@@ -82,3 +100,7 @@ func _firework() -> void:
 	burst.finished.connect(burst.queue_free)
 	add_child(burst)
 	burst.global_position = at
+	var flash := Deco._make_light(360.0, FIREWORK_LIGHT, burst.color)
+	burst.add_child(flash)  # rides the shell, dies with it
+	var tw := flash.create_tween()
+	tw.tween_property(flash, "energy", 0.0, 0.9)

@@ -65,6 +65,10 @@ const FADE_SPEED := 6.0
 
 static var FLOOD_HP := 30.0    # fragile by design: one committed ram at speed
 							   # or a ~1s concentrated MG burst blows it out
+static var FLOOD_LIGHT_RADIUS := 520.0  # the REAL light thrown into the dark
+static var FLOOD_LIGHT_ENERGY := 0.9
+static var SCREEN_GLOW_RADIUS := 300.0  # jumbotron wash below the screen
+static var SCREEN_GLOW_ENERGY := 0.55
 
 @export var kind: StringName = &"seating"
 @export var size := Vector2(1746, 448)
@@ -81,10 +85,37 @@ func _ready() -> void:
 		_build_confetti()
 	elif kind == &"floodlight":
 		_build_flood_base()
+		var beam := _make_light(FLOOD_LIGHT_RADIUS, FLOOD_LIGHT_ENERGY, LAMP_WARM)
+		beam.position = (Vector2.ZERO - global_position).normalized() * 380.0
+		add_child(beam)  # a CHILD: the tower dies, the corner goes dark
 	elif kind == &"jumbotron":
 		_build_under_fade()
+		var glow := _make_light(SCREEN_GLOW_RADIUS, SCREEN_GLOW_ENERGY, SCREEN_AMBER)
+		glow.position = Vector2(0.0, 140.0)
+		add_child(glow)
 	set_process(kind == &"floodlight" or kind == &"jumbotron")
 	queue_redraw()
+
+## Runtime radial light — the Coliseum debuts Godot's 2D lighting: a soft
+## white->transparent disc PointLight2D that only READS as light because the
+## level's CanvasModulate (group night_arena) darkens the world around it.
+static func _make_light(radius: float, energy: float, color: Color) -> PointLight2D:
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	tex.width = 256
+	tex.height = 256
+	var light := PointLight2D.new()
+	light.texture = tex
+	light.texture_scale = radius / 128.0
+	light.energy = energy
+	light.color = color
+	return light
 
 func _process(delta: float) -> void:
 	_t += delta

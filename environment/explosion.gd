@@ -12,7 +12,10 @@ const SHAKE_RANGE := 500.0
 var tint := Color(0.8, 0.3, 0.2)   # debris color — set to the car's paint job
 var size_scale := 1.0              # 0.6 for crates, 1.0 for cars
 
+const NIGHT_LIGHT_ENERGY := 1.6    # bloom strength in a darkened arena
+
 var _t := 0.0
+var _light: PointLight2D = null
 
 func _ready() -> void:
 	var debris := CPUParticles2D.new()
@@ -36,10 +39,33 @@ func _ready() -> void:
 		var d: float = global_position.distance_to(player.global_position)
 		if d < SHAKE_RANGE:
 			player.add_shake(7.0 * size_scale * (1.0 - d / SHAKE_RANGE))
+	# In a night arena (group marker, duck-typed) the blast BLOOMS: a light
+	# whose energy dies with the flash. Absent the marker this costs nothing —
+	# and this file stays dependency-free, so the texture is built inline.
+	if get_tree().get_first_node_in_group(&"night_arena") != null:
+		var grad := Gradient.new()
+		grad.set_color(0, Color(1, 1, 1, 1))
+		grad.set_color(1, Color(1, 1, 1, 0))
+		var tex := GradientTexture2D.new()
+		tex.gradient = grad
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(0.5, 0.0)
+		tex.width = 256
+		tex.height = 256
+		_light = PointLight2D.new()
+		_light.texture = tex
+		_light.texture_scale = 2.4 * size_scale
+		_light.energy = NIGHT_LIGHT_ENERGY * size_scale
+		_light.color = Color(1.0, 0.8, 0.5)
+		add_child(_light)
 
 func _process(delta: float) -> void:
 	_t += delta
 	queue_redraw()
+	if _light:
+		_light.energy = NIGHT_LIGHT_ENERGY * size_scale \
+			* maxf(1.0 - _t / LIFETIME, 0.0)
 	if _t >= LIFETIME:
 		queue_free()
 
