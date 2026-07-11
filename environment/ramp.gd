@@ -25,7 +25,10 @@ const SHADOW_A := 0.16  # extra dark at the low end
 const RAIL_W := 12.0
 const ROW_DEPTH := 44.0  # tier cadence for stairs — matches stadium seating rows
 
-static var STAIR_SHAKE := 1.2  # per-tier camera kick for the player
+static var STAIR_SHAKE := 2.2       # per-tier camera kick for the player
+static var STAIR_SPEED_NICK := 0.9  # climbing: each tier eats a bite of speed;
+									# re-accelerating between rows = the bumpy
+									# climb. Descending stays clean (it reads).
 
 @export var low_floor := 2
 @export var high_floor := 3
@@ -98,13 +101,17 @@ func _physics_process(delta: float) -> void:
 			_tier_tick(body)
 
 ## Tier bumps: bucket each body's travel along the slope axis; every row line
-## crossed kicks the player's camera a little — you FEEL the seating.
+## crossed kicks the player's camera AND — climbing only — nicks the speed,
+## so the ascent bounces row by row while the descent stays a clean run.
 func _tier_tick(body: CharacterBody2D) -> void:
 	var bucket := int(floorf(to_local(body.global_position).y / ROW_DEPTH))
 	var id := body.get_instance_id()
-	if _tier_bucket.has(id) and int(_tier_bucket[id]) != bucket \
-			and body.is_in_group(&"player") and body.has_method(&"add_shake"):
-		body.add_shake(STAIR_SHAKE)
+	if _tier_bucket.has(id) and int(_tier_bucket[id]) != bucket:
+		var downhill := Vector2.DOWN.rotated(global_rotation)
+		if body.velocity.dot(downhill) < 0.0:  # fighting the grade
+			body.velocity *= STAIR_SPEED_NICK
+		if body.is_in_group(&"player") and body.has_method(&"add_shake"):
+			body.add_shake(STAIR_SHAKE)
 	_tier_bucket[id] = bucket
 
 func _on_grade_exit(body: Node) -> void:

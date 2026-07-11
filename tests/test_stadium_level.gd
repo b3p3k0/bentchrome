@@ -114,15 +114,15 @@ func test_stadium_structure() -> void:
 		t.check(ring_floor == 2, "stadium: crown ring covers the corner at %s (got %d)"
 			% [pc, ring_floor])
 
-	# Four raised 45° chamfer walls cap the bleacher ends (floor-1 cars deflect
-	# along them; rim cars dive off over them).
+	# Four SOLID 45° triangle buttresses finish the bleacher ends: both terrace
+	# bits, so floor-1 cars deflect off the face and rim cars wall out cleanly.
 	var chamfers := 0
 	for child in stadium.get_children():
 		if String(child.name).begins_with("Chamfer") and child is StaticBody2D:
 			chamfers += 1
-			t.check((child as StaticBody2D).collision_layer == 12,
-				"stadium: %s wears obstacle + floor-1 bits" % child.name)
-	t.check(chamfers == 4, "stadium: four corner chamfers (got %d)" % chamfers)
+			t.check((child as StaticBody2D).collision_layer == 28,
+				"stadium: %s wears obstacle + BOTH terrace bits" % child.name)
+	t.check(chamfers == 4, "stadium: four corner buttresses (got %d)" % chamfers)
 
 	# Every spawn's start_floor has a matching tag zone under it (highest wins,
 	# same rule as the sensor).

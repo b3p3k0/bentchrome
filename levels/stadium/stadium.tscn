@@ -52,8 +52,6 @@ size = Vector2(2432, 1408)
 [sub_resource type="RectangleShape2D" id="R_pad"]
 size = Vector2(224, 224)
 
-[sub_resource type="RectangleShape2D" id="R_chamfer"]
-size = Vector2(544, 28)
 
 
 [node name="Stadium" type="Node2D"]
@@ -256,60 +254,59 @@ kind = &"ledge_shadow"
 size = Vector2(2304, 36)
 
 [node name="ChamferNE" type="StaticBody2D" parent="."]
-position = Vector2(1856, -1344)
-rotation = 0.7854
-collision_layer = 12
+position = Vector2(1664, -1152)
+collision_layer = 28
 collision_mask = 0
 
 [node name="Paint" type="Node2D" parent="ChamferNE"]
 script = ExtResource("30_sdeco")
 kind = &"chamfer"
-size = Vector2(544, 28)
+size = Vector2(384, 384)
 
-[node name="Col" type="CollisionShape2D" parent="ChamferNE"]
-shape = SubResource("R_chamfer")
-
-[node name="ChamferNW" type="StaticBody2D" parent="."]
-position = Vector2(-1856, -1344)
-rotation = -0.7854
-collision_layer = 12
-collision_mask = 0
-
-[node name="Paint" type="Node2D" parent="ChamferNW"]
-script = ExtResource("30_sdeco")
-kind = &"chamfer"
-size = Vector2(544, 28)
-
-[node name="Col" type="CollisionShape2D" parent="ChamferNW"]
-shape = SubResource("R_chamfer")
+[node name="Col" type="CollisionPolygon2D" parent="ChamferNE"]
+polygon = PackedVector2Array(0, 0, 0, -384, 384, 0)
 
 [node name="ChamferSE" type="StaticBody2D" parent="."]
-position = Vector2(1856, 1344)
-rotation = 2.3562
-collision_layer = 12
+position = Vector2(1664, 1152)
+rotation = 1.5708
+collision_layer = 28
 collision_mask = 0
 
 [node name="Paint" type="Node2D" parent="ChamferSE"]
 script = ExtResource("30_sdeco")
 kind = &"chamfer"
-size = Vector2(544, 28)
+size = Vector2(384, 384)
 
-[node name="Col" type="CollisionShape2D" parent="ChamferSE"]
-shape = SubResource("R_chamfer")
+[node name="Col" type="CollisionPolygon2D" parent="ChamferSE"]
+polygon = PackedVector2Array(0, 0, 0, -384, 384, 0)
 
 [node name="ChamferSW" type="StaticBody2D" parent="."]
-position = Vector2(-1856, 1344)
-rotation = -2.3562
-collision_layer = 12
+position = Vector2(-1664, 1152)
+rotation = 3.14159
+collision_layer = 28
 collision_mask = 0
 
 [node name="Paint" type="Node2D" parent="ChamferSW"]
 script = ExtResource("30_sdeco")
 kind = &"chamfer"
-size = Vector2(544, 28)
+size = Vector2(384, 384)
 
-[node name="Col" type="CollisionShape2D" parent="ChamferSW"]
-shape = SubResource("R_chamfer")
+[node name="Col" type="CollisionPolygon2D" parent="ChamferSW"]
+polygon = PackedVector2Array(0, 0, 0, -384, 384, 0)
+
+[node name="ChamferNW" type="StaticBody2D" parent="."]
+position = Vector2(-1664, -1152)
+rotation = -1.5708
+collision_layer = 28
+collision_mask = 0
+
+[node name="Paint" type="Node2D" parent="ChamferNW"]
+script = ExtResource("30_sdeco")
+kind = &"chamfer"
+size = Vector2(384, 384)
+
+[node name="Col" type="CollisionPolygon2D" parent="ChamferNW"]
+polygon = PackedVector2Array(0, 0, 0, -384, 384, 0)
 
 [node name="ConNGradeUp" type="Node2D" parent="."]
 position = Vector2(0, -1344)
@@ -374,38 +371,6 @@ from_floor = 2
 to_floor = 1
 approach_dir = Vector2(-1, 0)
 kind = &"grade"
-
-[node name="ConNEEdgeDown" type="Node2D" parent="."]
-position = Vector2(1920, -1410)
-script = ExtResource("27_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(-1, 1)
-kind = &"edge"
-
-[node name="ConSWEdgeDown" type="Node2D" parent="."]
-position = Vector2(-1920, 1410)
-script = ExtResource("27_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(1, -1)
-kind = &"edge"
-
-[node name="ConNWEdgeDown" type="Node2D" parent="."]
-position = Vector2(-1920, -1410)
-script = ExtResource("27_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(1, 1)
-kind = &"edge"
-
-[node name="ConSEEdgeDown" type="Node2D" parent="."]
-position = Vector2(1920, 1410)
-script = ExtResource("27_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(-1, -1)
-kind = &"edge"
 
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2

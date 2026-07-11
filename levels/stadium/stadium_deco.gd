@@ -13,10 +13,13 @@ extends Node2D
 ##            darkening throat, concrete frame, striped apron. Local +y is
 ##            the OPENING direction; author the node on the wall's inner
 ##            face, after the Boundary in the tree so the maw paints over it.
-##   chamfer: the 45° corner cut capping the bleacher ends — a raised
-##            black/yellow caution band with a lit top lip and a drop shadow
-##            spilling toward the track. Local +y is the TRACK side; ride it
-##            as a child of the corner's StaticBody2D so paint = collision.
+##   chamfer: the SOLID corner triangle capping the bleacher ends — right
+##            angle at the local origin, legs along local -y and +x
+##            (size.x long), hypotenuse = the 45° face the track sees. One
+##            continuous black/yellow pattern across the whole block, lit
+##            lip + drop shadow along the hypotenuse. Ride it as a child of
+##            the corner's StaticBody2D (CollisionPolygon2D triangle) so
+##            paint = collision; rotate the body to fit each corner.
 ##   floodlight: a corner light tower — mast, crossbar, four lamps with glow
 ##            halos, and a translucent light pool washing toward the ARENA
 ##            CENTER (computed from position — no authored rotation), swaying
@@ -256,27 +259,35 @@ func _draw_seating() -> void:
 	draw_rect(Rect2(Vector2(-half.x, half.y - RAIL_D), Vector2(size.x, RAIL_D)), RAIL)
 	draw_rect(Rect2(-half, size), CONCRETE_DARK, false, 2.0)
 
-## The corner cut: caution stripes across the 45° band, a lit lip on the rim
-## side, a drop shadow toward the track — reads raised, deflects the eye the
-## same way the collision deflects the car.
+## The solid corner block: one continuous run of caution bands parallel to
+## the hypotenuse (never three beams stacked), a drop shadow spilling past
+## the 45° face toward the track, a lit lip on the face itself — reads as a
+## single raised buttress finishing the bleacher ends.
 func _draw_chamfer() -> void:
-	var half := size * 0.5
-	draw_rect(Rect2(Vector2(-half.x, half.y), Vector2(size.x, 26.0)),
-		Color(0.0, 0.0, 0.0, 0.3))  # the drop shadow spills toward the track
-	var stripe := 36.0
+	var leg := size.x  # triangle: (0,0) right angle, legs to (0,-leg) and (leg,0)
+	# drop shadow beyond the hypotenuse, toward the track
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(0, -leg), Vector2(leg, 0), Vector2(leg + 16, 16), Vector2(16, -leg + 16),
+	]), Color(0.0, 0.0, 0.0, 0.3))
+	# caution bands: parallel cuts x - y = c walking from the corner to the face
+	var band := 42.0
+	var c := 0.0
 	var i := 0
-	var x0 := -half.x
-	while x0 < half.x:
-		var w := minf(stripe, half.x - x0)
-		draw_rect(Rect2(Vector2(x0, -half.y), Vector2(w, size.y)),
-			SEAT_B.lightened(0.25) if i % 2 == 0 else Color(0.12, 0.12, 0.14))
-		x0 += stripe
+	while c < leg:
+		var c1 := minf(c + band, leg)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(0, -c), Vector2(c, 0), Vector2(c1, 0), Vector2(0, -c1),
+		]) if c > 0.0 else PackedVector2Array([
+			Vector2(0, 0), Vector2(c1, 0), Vector2(0, -c1),
+		]), SEAT_B.lightened(0.25) if i % 2 == 0 else Color(0.12, 0.12, 0.14))
+		c = c1
 		i += 1
-	draw_rect(Rect2(Vector2(-half.x, -half.y - 6.0), Vector2(size.x, 6.0)),
-		Color(1.0, 1.0, 1.0, 0.22))  # lit top lip (rim side)
-	draw_rect(Rect2(Vector2(-half.x, half.y - 3.0), Vector2(size.x, 3.0)),
-		Color(0.0, 0.0, 0.0, 0.35))  # dark base line (track side)
-	draw_rect(Rect2(-half, size), CONCRETE_DARK, false, 2.0)
+	# lit lip along the hypotenuse + hard outline
+	draw_line(Vector2(0, -leg), Vector2(leg, 0), Color(1.0, 1.0, 1.0, 0.25), 5.0)
+	var outline := PackedVector2Array([
+		Vector2(0, 0), Vector2(0, -leg), Vector2(leg, 0), Vector2(0, 0),
+	])
+	draw_polyline(outline, CONCRETE_DARK, 2.5)
 
 ## The corner maw: throat darkens away from the opening (+y), concrete frame
 ## and lintel, hazard-striped apron spilling onto the pocket floor.
