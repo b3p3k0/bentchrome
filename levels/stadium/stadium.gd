@@ -10,13 +10,13 @@ const Deco := preload("res://levels/stadium/stadium_deco.gd")  # _make_light
 
 static var NIGHT_TINT := Color(0.5, 0.56, 0.82)  # the dusk over the bowl —
 	# mild by design: combat readability first, the lights do the drama
-static var PLAYER_GLOW_RADIUS := 340.0  # the car stays readable even after
-static var PLAYER_GLOW_ENERGY := 0.55   # every tower has been shot out
-static var HEADLIGHT_AHEAD := 150.0     # Visual-local px the pool is thrown
-										# forward — glow becomes HEADLIGHTS
-static var GOLIATH_LIGHT_RADIUS := 320.0  # under his 1.6 Visual scale the
-static var GOLIATH_LIGHT_ENERGY := 0.7    # king's throw reads BIG — you see
-										  # him coming before you hear him
+static var HEADLIGHT_SPREAD := 56.0     # beam cone angle (degrees, total)
+static var PLAYER_BEAM_LENGTH := 480.0  # Visual-local throw past the nose
+static var PLAYER_BEAM_ENERGY := 0.7
+static var PLAYER_NOSE := 38.0          # lamp line, Visual-local px
+static var GOLIATH_BEAM_LENGTH := 420.0 # rides his 1.6 Visual scale — the
+static var GOLIATH_BEAM_ENERGY := 0.75  # king's throw reads BIG: you see
+static var GOLIATH_NOSE := 44.0         # him coming before you hear him
 static var FIREWORK_GAP := 0.9      # seconds between bursts
 static var FIREWORK_DOUBLE := 0.3   # chance a burst brings a friend
 static var FIREWORK_LIGHT := 1.1    # each shell blooms in the dark
@@ -40,24 +40,28 @@ func _ready() -> void:
 	if night:
 		night.color = NIGHT_TINT
 		night.add_to_group(&"night_arena")
-	# Headlights: the pools ride each car's Visual (they turn with the 16-step
-	# facing) and are thrown forward of the nose. The player's keeps the bowl
-	# playable at zero towers; Goliath's warm beam telegraphs his approach.
-	_attach_headlights(_player, PLAYER_GLOW_RADIUS, PLAYER_GLOW_ENERGY,
-		Color(0.85, 0.9, 1.0))
-	_attach_headlights(get_node_or_null(^"Enemy1"), GOLIATH_LIGHT_RADIUS,
-		GOLIATH_LIGHT_ENERGY, Color(1.0, 0.9, 0.7))
+	# Headlights: true beam cones (truncated at the lamp line — light never
+	# radiates BEHIND the nose), riding each car's Visual so they turn with
+	# the 16-step facing. The player's keeps the bowl playable at zero
+	# towers; Goliath's warm throw telegraphs his approach.
+	_attach_headlights(_player, PLAYER_NOSE, PLAYER_BEAM_LENGTH,
+		PLAYER_BEAM_ENERGY, Color(0.85, 0.9, 1.0))
+	_attach_headlights(get_node_or_null(^"Enemy1"), GOLIATH_NOSE,
+		GOLIATH_BEAM_LENGTH, GOLIATH_BEAM_ENERGY, Color(1.0, 0.9, 0.7))
 
-func _attach_headlights(car: Node, radius: float, energy: float, color: Color) -> void:
+func _attach_headlights(car: Node, nose: float, length: float,
+		energy: float, color: Color) -> void:
 	if car == null or not is_instance_valid(car):
 		return
-	var glow := Deco._make_light(radius, energy, color)
+	var beam := Deco._make_beam(length, HEADLIGHT_SPREAD, energy, color)
 	var visual: Node = car.get_node_or_null(^"Visual")
 	if visual:
-		glow.position = Vector2(HEADLIGHT_AHEAD, 0.0)
-		visual.add_child(glow)
+		# pin the beam's lamp line to the nose (the texture center sits
+		# center_ahead px past it)
+		beam.position = Vector2(nose + float(beam.get_meta(&"center_ahead")), 0.0)
+		visual.add_child(beam)
 	else:
-		car.add_child(glow)  # bare fixtures: centered glow beats no glow
+		car.add_child(beam)  # bare fixtures: a beam somewhere beats none
 
 func _process(delta: float) -> void:
 	super(delta)
