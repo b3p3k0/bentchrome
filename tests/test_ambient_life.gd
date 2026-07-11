@@ -208,3 +208,48 @@ func test_police_range_and_line_of_sight_gate() -> void:
 	t.check(not officer._police_los(car), "downtown police: wall blocks harmless fire")
 	t.root.remove_child(container)
 	container.free()
+
+func _authored_kind_counts(scene_path: String) -> Dictionary:
+	var level: Node = load(scene_path).instantiate()
+	var out := {}
+	var floors := {}
+	var life: Node = level.get_node("AmbientLife")
+	for pop in life.get_children():
+		for kind in pop.kinds:
+			out[kind] = int(out.get(kind, 0)) + pop.count
+		floors[pop.name] = pop.floor_index
+	out[&"_floors"] = floors
+	level.free()
+	return out
+
+func test_regional_population_budgets_and_floor_authorship() -> void:
+	var suburbs := _authored_kind_counts("res://levels/suburbs/suburbs.tscn")
+	t.check(suburbs.get(&"jogger", 0) == 5 and suburbs.get(&"cyclist", 0) == 4,
+		"regional ambience: Suburbs runners and cyclists hit budget")
+	t.check(suburbs.get(&"dog", 0) == 2 and suburbs.get(&"skateboarder", 0) == 2
+		and suburbs.get(&"mower", 0) == 3 and suburbs.get(&"police", 0) == 2,
+		"regional ambience: Suburbs exact 18 actors authored")
+	var snowy := _authored_kind_counts("res://levels/snowy/snowy.tscn")
+	t.check(snowy.get(&"skier", 0) == 3 and snowy.get(&"deer", 0) == 6,
+		"regional ambience: Snowy exact three skiers and six deer")
+	t.check(snowy[&"_floors"].Skiers == 2 and snowy[&"_floors"].DeerHerd == 3,
+		"regional ambience: skiers stay low and deer herd owns plateau")
+	var docks := _authored_kind_counts("res://levels/dock/dock.tscn")
+	t.check(docks.get(&"dock_worker", 0) == 19 and docks.get(&"police", 0) == 3,
+		"regional ambience: Docks exact 22 actors authored")
+	t.check(docks[&"_floors"].LowlandWorkers == 1 and docks[&"_floors"].QuayWorkers == 2
+		and docks[&"_floors"].DeckWorkers == 3,
+		"regional ambience: Docks workers explicitly span all terraces")
+
+func test_mowers_are_route_locked_and_actor_scale_stays_below_bike() -> void:
+	var level: Node = load("res://levels/suburbs/suburbs.tscn").instantiate()
+	var life: Node = level.get_node("AmbientLife")
+	for name in [&"MowerA", &"MowerB", &"MowerC"]:
+		var mower = life.get_node(String(name))
+		t.check(mower.movement == AmbientActor.Movement.ROUTE and not mower.reacts_to_cars,
+			"regional ambience: %s stays on its yard loop" % name)
+	level.free()
+	var actor = ActorScene.instantiate()
+	var radius: float = actor.get_node("CollisionShape2D").shape.radius
+	t.check(radius < 12.0, "regional ambience: soft target is smaller than Mr Ghastly's bike")
+	actor.free()

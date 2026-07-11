@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="26_curb"]
 [ext_resource type="Script" path="res://environment/floor_connector.gd" id="27_conn"]
 [ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
+[ext_resource type="Script" path="res://environment/ambient_population.gd" id="29_ambient"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -1296,6 +1297,64 @@ polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(2580, 0)
 shape = SubResource("R_wall_v")
+
+[node name="AmbientLife" type="Node2D" parent="."]
+
+[node name="LowlandWorkers" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"dock_worker"])
+count = 4
+movement = 1
+route_points = PackedVector2Array(-2450, -1350, -1550, -1350, -1550, 1200, -2450, 1200, -2450, -1350)
+floor_index = 1
+speed = 48.0
+lane_spread = 20.0
+seed_offset = 41
+
+[node name="QuayWorkers" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"dock_worker"])
+count = 6
+movement = 1
+route_points = PackedVector2Array(-1200, 920, 1000, 920, 1000, 1040, -1200, 1040, -1200, 920)
+floor_index = 2
+speed = 52.0
+lane_spread = 12.0
+seed_offset = 42
+
+[node name="YardWorkers" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"dock_worker"])
+count = 4
+movement = 1
+route_points = PackedVector2Array(-1250, -650, -1250, 700, 1050, 700, 1050, -650, -1250, -650)
+floor_index = 2
+speed = 50.0
+lane_spread = 18.0
+seed_offset = 43
+
+[node name="DeckWorkers" type="Node2D" parent="AmbientLife"]
+position = Vector2(1644, 1375)
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"dock_worker"])
+count = 5
+movement = 1
+route_points = PackedVector2Array(-650, -120, 650, -120, 650, 120, -650, 120, -650, -120)
+floor_index = 3
+speed = 47.0
+lane_spread = 18.0
+seed_offset = 44
+
+[node name="PolicePatrol" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"police"])
+count = 3
+movement = 1
+route_points = PackedVector2Array(-1300, 800, 1200, 800, 1200, -720, -1300, -720, -1300, 800)
+floor_index = 2
+speed = 46.0
+lane_spread = 16.0
+seed_offset = 45
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-1150, -200)

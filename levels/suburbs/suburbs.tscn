@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
 [ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
 [ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="23_wreck"]
+[ext_resource type="Script" path="res://environment/ambient_population.gd" id="29_ambient"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -814,6 +815,89 @@ rotation = 0.0
 [node name="Wreck2" parent="." instance=ExtResource("23_wreck")]
 position = Vector2(400, -1442)
 rotation = 1.5708
+
+[node name="AmbientLife" type="Node2D" parent="."]
+
+[node name="Joggers" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"jogger"])
+count = 5
+movement = 1
+route_points = PackedVector2Array(-1600, -1560, 1500, -1560, 1500, 1520, -1600, 1520, -1600, -1560)
+speed = 84.0
+lane_spread = 18.0
+seed_offset = 21
+
+[node name="Cyclists" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"cyclist"])
+count = 4
+movement = 1
+route_points = PackedVector2Array(-1680, -1480, 1420, -1480, 1420, 1440, -1680, 1440, -1680, -1480)
+speed = 125.0
+lane_spread = 24.0
+seed_offset = 22
+
+[node name="LooseDogs" type="Node2D" parent="AmbientLife"]
+position = Vector2(-1180, 600)
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"dog"])
+count = 2
+bounds = Vector2(420, 420)
+speed = 90.0
+seed_offset = 23
+
+[node name="Skateboarders" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"skateboarder"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(-850, -760, 900, -760, 900, 700, -850, 700, -850, -760)
+speed = 102.0
+lane_spread = 16.0
+seed_offset = 24
+
+[node name="MowerA" type="Node2D" parent="AmbientLife"]
+position = Vector2(-1216, -1216)
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"mower"])
+movement = 1
+route_points = PackedVector2Array(-80, -80, 80, -80, 80, 80, -80, 80, -80, -80)
+speed = 34.0
+lane_spread = 0.0
+reacts_to_cars = false
+seed_offset = 25
+
+[node name="MowerB" type="Node2D" parent="AmbientLife"]
+position = Vector2(-1216, 320)
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"mower"])
+movement = 1
+route_points = PackedVector2Array(-80, -80, 80, -80, 80, 80, -80, 80, -80, -80)
+speed = 36.0
+lane_spread = 0.0
+reacts_to_cars = false
+seed_offset = 26
+
+[node name="MowerC" type="Node2D" parent="AmbientLife"]
+position = Vector2(-320, 1088)
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"mower"])
+movement = 1
+route_points = PackedVector2Array(-80, -80, 80, -80, 80, 80, -80, 80, -80, -80)
+speed = 35.0
+lane_spread = 0.0
+reacts_to_cars = false
+seed_offset = 27
+
+[node name="PolicePatrol" type="Node2D" parent="AmbientLife"]
+script = ExtResource("29_ambient")
+kinds = Array[StringName]([&"police"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(-1500, -900, 1200, -900, 1200, 900, -1500, 900, -1500, -900)
+speed = 46.0
+seed_offset = 28
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(-320, 1536)

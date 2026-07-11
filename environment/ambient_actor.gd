@@ -24,6 +24,8 @@ const POLICE_BULLET_LIFE := 0.7
 
 const DOWNTOWN_KINDS := [&"business_suit", &"business_dress", &"vagrant",
 	&"police", &"vendor", &"hotdog_cart"]
+const REGIONAL_KINDS := [&"jogger", &"cyclist", &"dog", &"skateboarder", &"mower",
+	&"skier", &"deer", &"dock_worker"]
 const SUIT_COLORS := [Color(0.38, 0.4, 0.44), Color(0.12, 0.24, 0.48), Color(0.08, 0.09, 0.11)]
 const DRESS_COLORS := [Color(0.12, 0.32, 0.68), Color(0.12, 0.52, 0.25), Color(0.72, 0.12, 0.16)]
 const SKIN_COLORS := [Color(0.78, 0.59, 0.43), Color(0.56, 0.36, 0.25), Color(0.88, 0.69, 0.52)]
@@ -171,7 +173,7 @@ func _position_blocked(at: Vector2) -> bool:
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
 	params.transform = Transform2D(0.0, at)
-	params.collision_mask = 2 | 4 | (Floors.floor_bit(floor_index) if floor_index >= 1 else 0)
+	params.collision_mask = Floors.ground_mask(floor_index)
 	params.collide_with_areas = false
 	for hit in get_world_2d().direct_space_state.intersect_shape(params, 32):
 		var collider: Node = hit.collider
@@ -273,6 +275,22 @@ func _draw() -> void:
 			_draw_vendor(stride)
 		&"hotdog_cart":
 			_draw_hotdog_cart()
+		&"jogger":
+			_draw_jogger(stride)
+		&"cyclist":
+			_draw_cyclist(stride)
+		&"dog":
+			_draw_dog(stride)
+		&"skateboarder":
+			_draw_skateboarder(stride)
+		&"mower":
+			_draw_mower(stride)
+		&"skier":
+			_draw_skier(stride)
+		&"deer":
+			_draw_deer(stride)
+		&"dock_worker":
+			_draw_dock_worker(stride)
 		_:
 			_draw_business(stride, false)
 
@@ -335,3 +353,94 @@ func _draw_hotdog_cart() -> void:
 	draw_line(Vector2(-8, -6), Vector2(7, 6), Color(0.85, 0.12, 0.1), 3.0)
 	draw_circle(Vector2(-10, -11), 3.5, Color(0.08, 0.08, 0.09))
 	draw_circle(Vector2(-10, 11), 3.5, Color(0.08, 0.08, 0.09))
+
+func _draw_jogger(stride: float) -> void:
+	_shadow()
+	var suits := [Color(0.75, 0.14, 0.18), Color(0.12, 0.38, 0.75), Color(0.18, 0.62, 0.28)]
+	var suit: Color = suits[palette_index % 3]
+	_legs(stride * 1.35, suit.darkened(0.25))
+	draw_rect(Rect2(-6, -4.5, 12, 9), suit)
+	draw_line(Vector2(-1, -4), Vector2(-1, 4), Color(0.9, 0.9, 0.86), 1.0)
+	draw_line(Vector2(-1, -4), Vector2(4, -8 - stride), _skin(), 2.0)
+	draw_line(Vector2(-1, 4), Vector2(4, 8 + stride), _skin(), 2.0)
+	draw_circle(Vector2(7, 0), 4.0, _skin())
+
+func _draw_cyclist(stride: float) -> void:
+	_shadow(8.0)
+	var frame: Color = [Color(0.15, 0.55, 0.8), Color(0.85, 0.2, 0.15), Color(0.25, 0.7, 0.32)][palette_index % 3]
+	for x in [-9.0, 9.0]:
+		draw_arc(Vector2(x, 0), 5.0, 0.0, TAU, 12, Color(0.06, 0.06, 0.07), 1.8)
+	draw_line(Vector2(-9, 0), Vector2(1, -4), frame, 2.0)
+	draw_line(Vector2(1, -4), Vector2(9, 0), frame, 2.0)
+	draw_line(Vector2(-9, 0), Vector2(1, 4), frame, 2.0)
+	draw_circle(Vector2(1 + stride * 0.15, 0), 4.5, _skin())
+	draw_rect(Rect2(-4, -4, 9, 8), frame.darkened(0.15))
+
+func _draw_dog(stride: float) -> void:
+	_shadow(6.5)
+	var fur: Color = [Color(0.55, 0.33, 0.17), Color(0.72, 0.62, 0.46), Color(0.2, 0.18, 0.16)][palette_index % 3]
+	draw_colored_polygon(PackedVector2Array([Vector2(-8, -5), Vector2(5, -4),
+		Vector2(7, 4), Vector2(-8, 5)]), fur)
+	draw_circle(Vector2(8, 0), 4.0, fur.lightened(0.08))
+	draw_colored_polygon(PackedVector2Array([Vector2(8, -3), Vector2(5, -8), Vector2(11, -5)]), fur.darkened(0.2))
+	draw_line(Vector2(-7, -3), Vector2(-10, -7 + stride), fur.darkened(0.25), 2.0)
+	draw_line(Vector2(-7, 3), Vector2(-10, 7 - stride), fur.darkened(0.25), 2.0)
+	draw_line(Vector2(-8, 0), Vector2(-14, sin(_anim_t * 8.0) * 4.0), fur, 2.0)
+
+func _draw_skateboarder(stride: float) -> void:
+	_shadow()
+	draw_line(Vector2(-11, 5), Vector2(10, 5), Color(0.62, 0.25, 0.12), 3.0)
+	draw_circle(Vector2(-8, 7), 1.8, Color(0.05, 0.05, 0.06))
+	draw_circle(Vector2(8, 7), 1.8, Color(0.05, 0.05, 0.06))
+	var shirt: Color = [Color(0.65, 0.2, 0.7), Color(0.15, 0.62, 0.7), Color(0.85, 0.5, 0.12)][palette_index % 3]
+	draw_rect(Rect2(-4, -5, 10, 9), shirt)
+	draw_line(Vector2(-3, -2), Vector2(-9, -6 + stride), Color(0.15, 0.16, 0.18), 2.5)
+	draw_line(Vector2(-2, 2), Vector2(-10, 4 - stride), Color(0.15, 0.16, 0.18), 2.5)
+	draw_circle(Vector2(7, -1), 4.0, _skin())
+
+func _draw_mower(stride: float) -> void:
+	_shadow(9.0)
+	draw_rect(Rect2(-13, -8, 15, 16), Color(0.12, 0.5, 0.18))
+	draw_circle(Vector2(-9, -9), 3.0, Color(0.05, 0.06, 0.05))
+	draw_circle(Vector2(-9, 9), 3.0, Color(0.05, 0.06, 0.05))
+	draw_line(Vector2(0, -6), Vector2(7, -5), Color(0.25, 0.25, 0.22), 2.0)
+	draw_line(Vector2(0, 6), Vector2(7, 5), Color(0.25, 0.25, 0.22), 2.0)
+	draw_rect(Rect2(4, -5, 9, 10), Color(0.42, 0.34, 0.2))
+	draw_circle(Vector2(13 + stride * 0.08, 0), 4.0, _skin())
+	draw_circle(Vector2(-5, 0), 4.0 + sin(_anim_t * 18.0) * 0.5, Color(0.75, 0.78, 0.68, 0.45))
+
+func _draw_skier(stride: float) -> void:
+	_shadow()
+	var coat: Color = [Color(0.75, 0.18, 0.16), Color(0.12, 0.42, 0.7), Color(0.65, 0.58, 0.16)][palette_index % 3]
+	draw_line(Vector2(-12, -6), Vector2(12, -6), Color(0.78, 0.82, 0.88), 1.7)
+	draw_line(Vector2(-12, 6), Vector2(12, 6), Color(0.78, 0.82, 0.88), 1.7)
+	draw_rect(Rect2(-6, -4, 12, 8), coat)
+	draw_circle(Vector2(7, 0), 4.0, _skin())
+	draw_line(Vector2(0, -4), Vector2(-5 + stride, -11), Color(0.28, 0.25, 0.2), 1.3)
+	draw_line(Vector2(0, 4), Vector2(-5 - stride, 11), Color(0.28, 0.25, 0.2), 1.3)
+
+func _draw_deer(stride: float) -> void:
+	_shadow(8.0)
+	var hide: Color = [Color(0.48, 0.28, 0.14), Color(0.58, 0.38, 0.2), Color(0.38, 0.25, 0.16)][palette_index % 3]
+	draw_colored_polygon(PackedVector2Array([Vector2(-9, -6), Vector2(5, -5),
+		Vector2(9, 0), Vector2(5, 5), Vector2(-9, 6)]), hide)
+	draw_line(Vector2(-6, -4), Vector2(-11, -8 + stride), hide.darkened(0.25), 2.0)
+	draw_line(Vector2(-6, 4), Vector2(-11, 8 - stride), hide.darkened(0.25), 2.0)
+	draw_line(Vector2(4, -4), Vector2(0, -9 - stride), hide.darkened(0.25), 2.0)
+	draw_line(Vector2(4, 4), Vector2(0, 9 + stride), hide.darkened(0.25), 2.0)
+	draw_circle(Vector2(10, 0), 4.0, hide.lightened(0.08))
+	draw_line(Vector2(11, -2), Vector2(15, -6), hide.darkened(0.2), 1.5)
+	draw_line(Vector2(11, 2), Vector2(15, 6), hide.darkened(0.2), 1.5)
+
+func _draw_dock_worker(stride: float) -> void:
+	_shadow()
+	_legs(stride, Color(0.12, 0.12, 0.13))
+	var jump: Color = [Color(0.38, 0.4, 0.42), Color(0.12, 0.3, 0.58), Color(0.55, 0.46, 0.3)][palette_index % 3]
+	draw_rect(Rect2(-7, -5, 13, 10), jump)
+	draw_line(Vector2(-1, -5), Vector2(-1, 5), jump.lightened(0.25), 1.0)
+	draw_circle(Vector2(7, 0), 4.2, _skin())
+	draw_rect(Rect2(7, -5, 5, 10), Color(0.85, 0.68, 0.16))
+	if palette_index % 2 == 0:
+		draw_line(Vector2(-2, 5), Vector2(7, 9), Color(0.25, 0.2, 0.14), 2.0)
+	else:
+		draw_rect(Rect2(-5, 6, 7, 5), Color(0.75, 0.72, 0.58))
