@@ -131,6 +131,8 @@ high_floor = 2
 size = Vector2(3328, 384)
 surface_paint = false
 rails = false
+downhill_pull = 170.0
+stairs = true
 
 [node name="SlopeS" type="Node2D" parent="."]
 position = Vector2(0, 1344)
@@ -141,6 +143,8 @@ high_floor = 2
 size = Vector2(3328, 384)
 surface_paint = false
 rails = false
+downhill_pull = 170.0
+stairs = true
 
 [node name="SlopeW" type="Node2D" parent="."]
 position = Vector2(-1856, 0)
@@ -151,6 +155,8 @@ high_floor = 2
 size = Vector2(2304, 384)
 surface_paint = false
 rails = false
+downhill_pull = 170.0
+stairs = true
 
 [node name="SlopeE" type="Node2D" parent="."]
 position = Vector2(1856, 0)
@@ -161,6 +167,8 @@ high_floor = 2
 size = Vector2(2304, 384)
 surface_paint = false
 rails = false
+downhill_pull = 170.0
+stairs = true
 
 [node name="SeatN" type="Node2D" parent="."]
 position = Vector2(0, -1344)
@@ -266,6 +274,60 @@ high_floor = 2
 size = Vector2(256, 128)
 surface_color = Color(0.3, 0.3, 0.34, 1)
 rails = false
+
+[node name="ShadeBaseN" type="Node2D" parent="."]
+position = Vector2(0, -1152)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(3328, 54)
+
+[node name="ShadeBaseS" type="Node2D" parent="."]
+position = Vector2(0, 1152)
+rotation = 3.14159
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(3328, 54)
+
+[node name="ShadeBaseW" type="Node2D" parent="."]
+position = Vector2(-1664, 0)
+rotation = -1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2304, 54)
+
+[node name="ShadeBaseE" type="Node2D" parent="."]
+position = Vector2(1664, 0)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2304, 54)
+
+[node name="ShadeStepN" type="Node2D" parent="."]
+position = Vector2(0, -1536)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(3328, 36)
+
+[node name="ShadeStepS" type="Node2D" parent="."]
+position = Vector2(0, 1536)
+rotation = 3.14159
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(3328, 36)
+
+[node name="ShadeStepW" type="Node2D" parent="."]
+position = Vector2(-2048, 0)
+rotation = -1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2304, 36)
+
+[node name="ShadeStepE" type="Node2D" parent="."]
+position = Vector2(2048, 0)
+rotation = 1.5708
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(2304, 36)
 
 [node name="ConNGradeUp" type="Node2D" parent="."]
 position = Vector2(0, -1344)

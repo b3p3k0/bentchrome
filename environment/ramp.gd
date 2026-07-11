@@ -23,6 +23,9 @@ const SHADE_STEPS := 6
 const HILITE_A := 0.14  # extra light at the high end
 const SHADOW_A := 0.16  # extra dark at the low end
 const RAIL_W := 12.0
+const ROW_DEPTH := 44.0  # tier cadence for stairs — matches stadium seating rows
+
+static var STAIR_SHAKE := 1.2  # per-tier camera kick for the player
 
 @export var low_floor := 2
 @export var high_floor := 3
@@ -36,6 +39,14 @@ const RAIL_W := 12.0
 @export var rails := true  # false = no built side rails; the level authors its
 	# own guards (stadium slope ends wear light DESTRUCTIBLE guardrails so a
 	# beached rig can smash out instead of pinning on indestructible geometry)
+@export var downhill_pull := 0.0  # px/s² bias along local +y (toward the low
+	# end): climbing fights it, descending rides it. Environment-side force —
+	# controller gains and the test-locked feel bands stay untouched. 0 = off.
+@export var stairs := false  # tiered seating: a light per-tier camera bump for
+	# the player while crossing rows — the grade is stairs, not tarmac
+
+var _grade_area: Area2D = null
+var _tier_bucket: Dictionary = {}  # body instance id -> last row bucket
 
 func _ready() -> void:
 	for cfg in [{"floor": high_floor, "y": -size.y * 0.25}, {"floor": low_floor, "y": size.y * 0.25}]:
@@ -58,7 +69,46 @@ func _ready() -> void:
 			col.shape = shape
 			rail.add_child(col)
 			add_child(rail)
+	if downhill_pull > 0.0 or stairs:
+		_grade_area = Area2D.new()
+		_grade_area.collision_layer = 0
+		_grade_area.collision_mask = 1  # cars always keep the ground bit
+		var gcol := CollisionShape2D.new()
+		var gshape := RectangleShape2D.new()
+		gshape.size = size
+		gcol.shape = gshape
+		_grade_area.add_child(gcol)
+		add_child(_grade_area)
+		_grade_area.body_exited.connect(_on_grade_exit)
+	set_physics_process(_grade_area != null)
 	queue_redraw()
+
+func _physics_process(delta: float) -> void:
+	if _grade_area == null:
+		return
+	var downhill := Vector2.DOWN.rotated(global_rotation)  # local +y = low end
+	for body in _grade_area.get_overlapping_bodies():
+		if not (body is CharacterBody2D):
+			continue
+		if body.get("height") != 0.0:
+			continue  # airborne cars aren't on the grade
+		if downhill_pull > 0.0:
+			body.velocity += downhill * downhill_pull * delta
+		if stairs:
+			_tier_tick(body)
+
+## Tier bumps: bucket each body's travel along the slope axis; every row line
+## crossed kicks the player's camera a little — you FEEL the seating.
+func _tier_tick(body: CharacterBody2D) -> void:
+	var bucket := int(floorf(to_local(body.global_position).y / ROW_DEPTH))
+	var id := body.get_instance_id()
+	if _tier_bucket.has(id) and int(_tier_bucket[id]) != bucket \
+			and body.is_in_group(&"player") and body.has_method(&"add_shake"):
+		body.add_shake(STAIR_SHAKE)
+	_tier_bucket[id] = bucket
+
+func _on_grade_exit(body: Node) -> void:
+	_tier_bucket.erase(body.get_instance_id())
 
 func _draw() -> void:
 	var half := size * 0.5

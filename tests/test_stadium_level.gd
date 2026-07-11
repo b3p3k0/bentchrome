@@ -26,6 +26,38 @@ func _body_rect(n: Node2D) -> Rect2:
 		return Rect2(n.position + col.position - col.shape.size * 0.5, col.shape.size)
 	return Rect2()
 
+## The grade is physical: coasting DOWN the stands retains more speed than
+## coasting UP at the same entry speed (Ramp.downhill_pull — an environment-
+## side force; controller gains and the feel bands stay untouched).
+func test_grade_bias_reads_downhill() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var ramp := Ramp.new()
+	ramp.low_floor = 1
+	ramp.high_floor = 2
+	ramp.size = Vector2(256, 800)
+	ramp.rails = false
+	ramp.surface_paint = false
+	ramp.downhill_pull = 400.0
+	container.add_child(ramp)
+	var speeds: Array[float] = []
+	for dir in [1.0, -1.0]:  # +y = downhill, -y = uphill (high end at -y)
+		var car = preload("res://vehicles/vehicle.tscn").instantiate()
+		container.add_child(car)
+		car.global_position = Vector2(0, -dir * 250.0)
+		car.heading = PI / 2.0 * dir  # nose along the travel line
+		car.velocity = Vector2(0, dir * 300.0)
+		for i in 25:
+			await t.physics_frame
+		speeds.append(car.velocity.length())
+		container.remove_child(car)
+		car.free()
+	t.check(speeds[0] > speeds[1] + 60.0,
+		"grade: downhill coast keeps speed, uphill bleeds it (%.0f vs %.0f)"
+		% [speeds[0], speeds[1]])
+	t.root.remove_child(container)
+	container.free()
+
 func test_stadium_structure() -> void:
 	var scene: PackedScene = load("res://levels/stadium/stadium.tscn")
 	var stadium: Node = scene.instantiate()
