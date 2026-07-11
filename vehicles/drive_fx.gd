@@ -21,9 +21,19 @@ const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
 const DUST_MIN_SPEED := 150.0
 const DUST_COLORS := {
-	&"dirt": Color(0.55, 0.42, 0.28, 0.7),
+	&"dirt":  Color(0.55, 0.42, 0.28, 0.7),
 	&"grass": Color(0.35, 0.5, 0.3, 0.6),
+	&"snow":  Color(0.9, 0.94, 1.0, 0.85),   # kicked-up powder
+	&"water": Color(0.6, 0.78, 0.88, 0.7),   # blue-white spray
 }
+# Fling amplification: a light kick at a cruise, a fat rooster tail under a
+# hard drift. Driven by sideways slip (lat), so it fattens the same on a
+# network puppet; handbrake just pins it to full.
+const FLING_SLIP_FULL := 260.0  # sideways px/s that maxes the tail
+const FLING_VEL_CALM := 55.0    # backward launch speed, gentle
+const FLING_VEL_HARD := 190.0   # backward launch speed, full drift
+const FLING_SCALE_CALM := 3.0
+const FLING_SCALE_HARD := 6.0
 
 var _vehicle: CharacterBody2D
 var _skids: Array = []  # the active pair of Line2Ds, parented to the level
@@ -37,13 +47,13 @@ func _ready() -> void:
 	_dust.emitting = false
 	_dust.amount = 24
 	_dust.lifetime = 0.5
-	_dust.local_coords = false  # puffs stay where they were kicked up
-	_dust.spread = 180.0
+	_dust.local_coords = false  # debris stays where it was flung, in world space
+	_dust.spread = 55.0  # a backward rooster-tail arc, not an omni puff
 	_dust.initial_velocity_min = 20.0
 	_dust.initial_velocity_max = 60.0
 	_dust.scale_amount_min = 2.0
 	_dust.scale_amount_max = 4.0
-	_dust.gravity = Vector2.ZERO
+	_dust.gravity = Vector2(0, 90)  # debris arcs and settles back down
 	add_child(_dust)
 	# Burning: licks of fire riding the hull so a burn is never invisible.
 	_burn_fx = CPUParticles2D.new()
@@ -73,6 +83,16 @@ func _skid_offsets() -> Array:
 		if m.has("skid_points"):
 			return m.skid_points
 	return [Vector2(-20, -14), Vector2(-20, 14)]
+
+## Average of the rear tire contacts — where the fling debris streams from.
+func _rear_midpoint() -> Vector2:
+	var offs: Array = _skid_offsets()
+	if offs.is_empty():
+		return Vector2(-20, 0)
+	var sum: Vector2 = Vector2.ZERO
+	for p in offs:
+		sum += p as Vector2
+	return sum / offs.size()
 
 func _flame_poly() -> PackedVector2Array:
 	var tail := 26.0
@@ -113,6 +133,14 @@ func _physics_process(_delta: float) -> void:
 	_dust.emitting = dusty
 	if dusty:
 		_dust.color = DUST_COLORS[terrain]
+		# Fling backward off the rear tires, in world space.
+		var rear_mid: Vector2 = _rear_midpoint()
+		_dust.global_position = _vehicle.global_position + rear_mid.rotated(_vehicle.heading)
+		_dust.direction = -_vehicle.velocity / speed  # already > DUST_MIN_SPEED
+		# Fatter tail the harder the slide; handbrake pins it to full.
+		var f: float = 1.0 if ctrl.handbraking else clampf(lat / FLING_SLIP_FULL, 0.0, 1.0)
+		_dust.initial_velocity_max = lerpf(FLING_VEL_CALM, FLING_VEL_HARD, f)
+		_dust.scale_amount_max = lerpf(FLING_SCALE_CALM, FLING_SCALE_HARD, f)
 
 	# Handbrake skids anywhere; off-road surfaces also scar on a hard slide.
 	var off_road_slide: bool = SKID_COLORS.has(terrain) and lat > SKID_SLIP_MIN
