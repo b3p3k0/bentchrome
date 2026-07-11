@@ -224,6 +224,13 @@ func test_stadium_structure() -> void:
 		elif child is Area2D and child.get_script() != null \
 				and (child.get_script() as Script).resource_path.ends_with("jump_pad.gd"):
 			pads.append(child)
+	# EVERY prop on a terraced level must carry its floor bit — bare layer 4 is
+	# a ghost to cars AND straight shots (grounded masks are wall + own floor).
+	for child in stadium.get_children():
+		if child.get("deco") != null or child.get("footprint") != null:
+			t.check(int(child.get("floor_index")) >= 1,
+				"stadium: %s carries a terrace bit (floor_index %d)"
+				% [child.name, int(child.get("floor_index"))])
 	for i in solids.size():
 		for j in range(i + 1, solids.size()):
 			t.check(not _body_rect(solids[i]).intersects(_body_rect(solids[j])),

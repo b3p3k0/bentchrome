@@ -444,12 +444,14 @@ position = Vector2(1780, -1680)
 size = Vector2(180, 32)
 max_hp = 60.0
 deco = &"barrier"
+floor_index = 1
 
 [node name="BarrierSW" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-1780, 1680)
 size = Vector2(180, 32)
 max_hp = 60.0
 deco = &"barrier"
+floor_index = 1
 
 [node name="BarrierNW" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-2184, -1300)
@@ -457,6 +459,7 @@ rotation = 1.5708
 size = Vector2(180, 32)
 max_hp = 60.0
 deco = &"barrier"
+floor_index = 1
 
 [node name="BarrierSE" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(2184, 1300)
@@ -464,6 +467,7 @@ rotation = 1.5708
 size = Vector2(180, 32)
 max_hp = 60.0
 deco = &"barrier"
+floor_index = 1
 
 [node name="ContainerW" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-896, -512)
@@ -472,6 +476,7 @@ size = Vector2(448, 112)
 max_hp = 140.0
 deco = &"container"
 livery = 2
+floor_index = 1
 
 [node name="ContainerE" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(832, 448)
@@ -480,30 +485,35 @@ size = Vector2(448, 112)
 max_hp = 140.0
 deco = &"container"
 livery = 0
+floor_index = 1
 
 [node name="JunkA" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(192, -576)
 size = Vector2(120, 120)
 max_hp = 55.0
 deco = &"junk"
+floor_index = 1
 
 [node name="JunkB" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-512, 576)
 size = Vector2(120, 120)
 max_hp = 55.0
 deco = &"junk"
+floor_index = 1
 
 [node name="CrateA" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(640, -448)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
+floor_index = 1
 
 [node name="CrateB" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(752, -368)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
+floor_index = 1
 
 [node name="FanRailN1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-900, -1166)
@@ -578,43 +588,52 @@ floor_index = 1
 [node name="ConeNE" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(1740, -1460)
 kind = &"cone"
+floor_index = 1
 
 [node name="ConeNW" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-1740, -1460)
 kind = &"cone"
+floor_index = 1
 
 [node name="ConeSE" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(1740, 1460)
 kind = &"cone"
+floor_index = 1
 
 [node name="ConeSW" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-1740, 1460)
 kind = &"cone"
+floor_index = 1
 
 [node name="TrashA" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-380, -560)
 kind = &"trash"
 footprint = 46.0
+floor_index = 1
 
 [node name="TrashB" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(850, -120)
 kind = &"trash"
 footprint = 42.0
+floor_index = 1
 
 [node name="TrashC" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-980, 400)
 kind = &"trash"
 footprint = 46.0
+floor_index = 1
 
 [node name="ScrapPile" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-660, -640)
 kind = &"trash"
 footprint = 52.0
+floor_index = 1
 
 [node name="PalletA" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(1000, 560)
 kind = &"pallet"
 footprint = 44.0
+floor_index = 1
 
 [node name="TrashRimW" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-400, 1680)
