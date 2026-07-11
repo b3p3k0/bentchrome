@@ -54,6 +54,16 @@ func has_effect(kind: StringName) -> bool:
 			return true
 	return false
 
+## Network-puppet FX injection: a physics-off mirror still shows burn licks.
+## Long-duration marker, cleared explicitly by the next snapshot — never ticks
+## DoT (puppet StatusReceivers have _physics_process disabled).
+func set_cosmetic(kind: StringName, on: bool) -> void:
+	if on:
+		if not has_effect(kind):
+			_active.append({"kind": kind, "remaining": 3600.0, "magnitude": 0.0})
+	else:
+		clear_kind(kind)
+
 ## Removes every effect of one kind (boost blows out a burn, etc.).
 func clear_kind(kind: StringName) -> void:
 	var i := _active.size() - 1

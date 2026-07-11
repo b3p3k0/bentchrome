@@ -90,6 +90,17 @@ var _fire_lock := false   # selection changed while fire held — release to re-
 						   # same press instantly fires the next weapon)
 var last_attacker: Node2D = null  # whoever hurt us last — AI holds a grudge
 
+# --- Network puppet (LAN clients render EVERY car through this; the host runs
+# the real sim). The whole _physics_process body is bypassed; state arrives as
+# snapshot slices and the puppet interpolates between the two newest, then
+# runs the same visual tail as the sim (16-step snap, shadow, depth paint).
+var net_puppet := false
+static var NET_INTERP_MS := 50.0  # render-behind buffer; the MP shell syncs
+								  # this from NetProtocol.interp_delay_ms
+var _net_a := {}          # older sample {t, pos, vel, heading, height}
+var _net_b := {}          # newer sample
+var _net_prev_hp := -1.0  # local hit feedback: flash/shake on streamed drops
+
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
 @onready var _visual: Node2D = $Visual
@@ -271,6 +282,9 @@ func set_driver(driver: Driver) -> void:
 	_driver = driver
 
 func _physics_process(delta: float) -> void:
+	if net_puppet:
+		_puppet_physics(delta)
+		return
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
 	_update_floor()
@@ -330,6 +344,11 @@ func _update_depth(delta: float) -> void:
 			vz = 0.0
 			_resolve_landing_floor()
 			_set_airborne(false)
+	_paint_depth()
+
+## The height/lift paint, physics-free — the sim integrates then paints; a
+## network puppet paints its STREAMED height directly (never integrates).
+func _paint_depth() -> void:
 	_visual.position.y = -(height + _floor_lift)
 	if _shadow:
 		# The shadow RIDES the terrace lift (tight under a driving car) and only
@@ -338,6 +357,86 @@ func _update_depth(delta: float) -> void:
 		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
 		_shadow.scale = Vector2(s, s)
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
+
+# ------------------------------------------------------------ network puppet
+
+## Flips this car between simulated and mirrored. Puppets are visual-only:
+## collision drops to nothing (snapshot positions are wall-valid — the host
+## simulated them against real geometry) and every host-authoritative
+## subsystem stops ticking locally (heat, ammo recharge, status DoT, special
+## beams — their state arrives in slices instead).
+func set_net_puppet(on: bool) -> void:
+	net_puppet = on
+	var secondary := get_node_or_null(^"SecondaryMount")
+	for node in [_mg_mount, secondary, _rack, _special, _status]:
+		if node:
+			(node as Node).set_physics_process(not on)
+	if on:
+		collision_layer = 0
+		collision_mask = 0
+		_net_a = {}
+		_net_b = {}
+		_net_prev_hp = get_hp()
+	else:
+		_apply_ground_collision()
+
+## One snapshot slice for this car. Motion fields buffer for interpolation;
+## authoritative fields land immediately — hp straight onto Health (never
+## take_damage: a mirror must not re-run death/damage side effects), status
+## and control FLAGS driving the existing cosmetics (boost flame, skids, burn
+## licks). The viewer's own car keeps its hit feedback via _on_damaged.
+func apply_net_state(slice: Dictionary) -> void:
+	if not net_puppet:
+		return
+	_net_a = _net_b
+	_net_b = {
+		"t": int(slice.get("t", Time.get_ticks_msec())),
+		"pos": slice.get("pos", global_position),
+		"vel": slice.get("vel", Vector2.ZERO),
+		"heading": float(slice.get("heading", heading)),
+		"height": float(slice.get("height", 0.0)),
+	}
+	if slice.has("floor"):
+		var f := int(slice.floor)
+		if f >= 1 and f != floor_index:
+			_adopt_floor(f)  # the existing tween carries the lift/size cue
+	if _health and slice.has("hp"):
+		var new_hp := float(slice.hp)
+		if _net_prev_hp >= 0.0 and new_hp < _net_prev_hp - 0.5:
+			_on_damaged(_net_prev_hp - new_hp, new_hp)  # flash (+shake if viewer's)
+		_health.hp = new_hp
+		_net_prev_hp = new_hp
+	if _controller:
+		_controller.boosting = bool(slice.get("boost", _controller.boosting))
+		_controller.handbraking = bool(slice.get("handbrake", _controller.handbraking))
+	if _status and slice.has("burn"):
+		_status.set_cosmetic(&"burn", bool(slice.burn))
+
+## The puppet's whole physics tick: interpolate the two newest samples at
+## (now - NET_INTERP_MS), then the sim's visual tail — identical read.
+func _puppet_physics(_delta: float) -> void:
+	if not _net_b.is_empty():
+		if _net_a.is_empty() or int(_net_b.t) <= int(_net_a.t):
+			global_position = _net_b.pos
+			velocity = _net_b.vel
+			heading = float(_net_b.heading)
+			height = float(_net_b.height)
+		else:
+			var render_t := float(Time.get_ticks_msec()) - NET_INTERP_MS
+			var span := float(int(_net_b.t) - int(_net_a.t))
+			# Up to 1.25 samples of extrapolation rides out one dropped packet
+			# without freezing; anything staler holds the last known state.
+			var f := clampf((render_t - float(int(_net_a.t))) / span, 0.0, 1.25)
+			global_position = (_net_a.pos as Vector2).lerp(_net_b.pos, f)
+			velocity = (_net_a.vel as Vector2).lerp(_net_b.vel, f)
+			heading = lerp_angle(float(_net_a.heading), float(_net_b.heading), f)
+			height = lerpf(float(_net_a.height), float(_net_b.height), f)
+	var visual_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
+	_visual.rotation = visual_heading
+	if _shadow:
+		_shadow.rotation = visual_heading
+	_paint_depth()
+	_update_draw_order(height > 0.0)
 
 ## Grounded floor bookkeeping. Adopting happens on first zone contact; driving
 ## past a lower zone's edge is a ledge hop down (floor resolves at touchdown).
