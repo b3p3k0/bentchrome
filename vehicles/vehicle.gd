@@ -258,6 +258,15 @@ func body_metrics() -> Dictionary:
 func get_controller() -> DrivingController:
 	return _controller
 
+## Runtime driver swap (the victory lap): frees the seated driver, seats the
+## new one, and re-points the cached reference — @onready never re-runs.
+func set_driver(driver: Driver) -> void:
+	if _driver and is_instance_valid(_driver):
+		_driver.queue_free()
+	driver.name = "Driver"
+	add_child(driver)
+	_driver = driver
+
 func _physics_process(delta: float) -> void:
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain

@@ -17,8 +17,14 @@ const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't cl
 ## chase host sets this and calls _show(true) itself when the clock runs out.
 @export var suppress_group_win := false
 
+## Victory-lap mode (the Coliseum): a WIN shows the card WITHOUT pausing the
+## tree — the level keeps animating behind it (auto-lap, fireworks) and the
+## dim veil thins so the show reads. Losses still freeze the world.
+@export var win_keeps_rolling := false
+
 var _seen_enemies := false
 var _over := false
+var _dim: ColorRect
 var _title: Label
 var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
@@ -36,6 +42,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if _over or get_tree().paused:  # nothing ends while the world is frozen
+		# (an unpaused rolling win still parks here — _over holds the state)
 		return
 	var enemies := get_tree().get_nodes_in_group(&"enemies")
 	if not enemies.is_empty():
@@ -70,7 +77,10 @@ func _show(win: bool) -> void:
 	_panel_style.border_color = accent
 	for i in _trim_blocks.size():
 		_trim_blocks[i].color = accent if i % 2 == 0 else accent.darkened(0.55)
-	get_tree().paused = true
+	if win and win_keeps_rolling:
+		_dim.color.a = 0.2  # thin the veil — the lap and fireworks are the show
+	else:
+		get_tree().paused = true
 	visible = true
 	if next >= 0:
 		# Mid-campaign win: a beat of glory instead of a hard cut — any key
@@ -121,10 +131,10 @@ func _leave(action: Callable) -> void:
 	action.call()
 
 func _build_ui() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0.0, 0.0, 0.0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0.0, 0.0, 0.0, 0.55)
+	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_dim)
 
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)

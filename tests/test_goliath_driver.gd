@@ -195,6 +195,34 @@ func test_retreat_laps_then_lines_up() -> void:
 	t.check(f.driver._mode == DriverScript.Mode.LINE_UP, "retreat: hands back to the line-up")
 	_done(f)
 
+## The winner's parade: loop-follow only, guns holstered.
+func test_victory_lap_driver_parades() -> void:
+	var f := _fixture(Vector2(2000, 0))
+	var lap = preload("res://vehicles/goliath/victory_lap_driver.gd").new()
+	f.rig.add_child(lap)
+	lap.set_loop(PackedVector2Array([Vector2(10000, 0)]))
+	var intent: Dictionary = lap.get_intent(f.rig, 1.0 / 60.0)
+	t.check(float(intent.get("throttle", 0.0)) > 0.5, "lap: the parade rolls")
+	t.check(not bool(intent.get("fire_mg", true)), "lap: no guns on a victory lap")
+	_done(f)
+
+## Vehicle.set_driver re-points the cached reference — the swapped-in driver
+## takes the wheel the very next physics tick.
+func test_runtime_driver_swap_takes_the_wheel() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var car = VehicleScene.instantiate()
+	container.add_child(car)
+	var stub = preload("res://tests/stub_driver.gd").new()
+	stub.intent = {"throttle": 1.0}
+	car.set_driver(stub)
+	for i in 8:
+		await t.physics_frame
+	t.check(car.velocity.length() > 20.0,
+		"swap: the new driver's throttle bites (%.0f px/s)" % car.velocity.length())
+	t.root.remove_child(container)
+	container.free()
+
 func test_pinned_rig_recovers_in_reverse() -> void:
 	var f := _fixture(Vector2(2000, 0))
 	f.rig.fake_vel = Vector2.ZERO  # pinned: real displacement reads nothing

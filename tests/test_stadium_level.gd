@@ -80,6 +80,8 @@ func test_stadium_structure() -> void:
 		elif str(child.name).begins_with("Enemy"):
 			enemies.append(child)
 
+	t.check((stadium.get_script() as Script).resource_path.ends_with("stadium.gd"),
+		"stadium: the coliseum shell script drives the level")
 	t.check(stations == 1, "stadium: boss arena earns one station (got %d)" % stations)
 	t.check(zones.size() >= 5, "stadium: field plate + rim ring tagged (got %d zones)" % zones.size())
 
