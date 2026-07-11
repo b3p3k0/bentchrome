@@ -1,8 +1,11 @@
 extends CanvasLayer
 ## Gameplay HUD. The 1280x720 frame is a centered 720x720 play square with a
 ## 280px opaque gutter each side: left = dash (vitals, MG heat, weapon slots,
-## keyguide), right = radar (ui/radar.gd). Poll-driven — reads the player each
-## frame via the "player" group; survives player death/restart by re-binding.
+## keyguide), right = radar (ui/radar.gd). Poll-driven — reads the viewer's
+## car each frame (Vehicles.local: "local_player" group with a "player"
+## fallback); survives player death/restart by re-binding.
+
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const GUTTER := 280
 const VIEW_H := 720
@@ -93,7 +96,7 @@ func _process(_delta: float) -> void:
 			lbl.modulate = SELECTED if i == _rack.selected_index() else Color.WHITE
 
 func _bind_player() -> void:
-	_player = get_tree().get_first_node_in_group(&"player") as Vehicle
+	_player = VehiclesHelper.local(get_tree()) as Vehicle
 	_rack = _player.get_rack() if _player else null
 
 func _build_ui() -> void:

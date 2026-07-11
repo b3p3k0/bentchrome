@@ -6,6 +6,8 @@ extends Control
 ## script properties (no class references), snapshotted once the level's
 ## Boundary exists; the static rects are trivial to redraw every frame.
 
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+
 const RANGE := 1500.0
 const MIN_BLIP := 48.0  # breakables smaller than this (clutter) stay off the map
 const BG := Color(0.03, 0.08, 0.05)
@@ -58,7 +60,7 @@ func _draw() -> void:
 		draw_line(p + Vector2(-3, 0), p + Vector2(3, 0), STATION, 2.0)
 		draw_line(p + Vector2(0, -3), p + Vector2(0, 3), STATION, 2.0)
 
-	var player := get_tree().get_first_node_in_group(&"player") as Node2D
+	var player := VehiclesHelper.local(get_tree()) as Node2D
 	if player == null or not is_instance_valid(player):
 		return
 	for d in get_tree().get_nodes_in_group(&"dummies"):

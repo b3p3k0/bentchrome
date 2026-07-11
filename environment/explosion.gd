@@ -34,7 +34,11 @@ func _ready() -> void:
 	debris.gravity = Vector2.ZERO
 	debris.color = tint
 	add_child(debris)
-	var player := get_tree().get_first_node_in_group(&"player")
+	# The VIEWER's camera shakes (local_player group; "player" fallback keeps
+	# unmarked scenes working). Inline — this file stays dependency-free.
+	var player := get_tree().get_first_node_in_group(&"local_player")
+	if player == null:
+		player = get_tree().get_first_node_in_group(&"player")
 	if player is Node2D and player.has_method(&"add_shake"):
 		var d: float = global_position.distance_to(player.global_position)
 		if d < SHAKE_RANGE:

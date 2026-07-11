@@ -6,6 +6,7 @@ extends Node2D
 ## it. Level geometry is pure scene content; this script never assumes any.
 
 const Loader := preload("res://levels/level_loader.gd")
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const RESPAWN_DELAY := 1.6
 const SHIELD_TIME := 2.0
@@ -28,6 +29,9 @@ func _ready() -> void:
 	if dev and dev.enabled:
 		add_child(load("res://ui/dev_dashboard.tscn").instantiate())
 		add_child(load("res://ui/tuning_editor.tscn").instantiate())  # F2
+	# This screen belongs to the solo player — presentation reads it via
+	# Vehicles.local() from here on (the MP shell marks per-peer instead).
+	VehiclesHelper.mark_local(_player)
 	_spawn_point = _player.global_position
 	_spawn_heading = _player.heading
 	# Level-start gets the same blink shield as a respawn — no spawn ambushes.

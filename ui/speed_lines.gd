@@ -3,6 +3,8 @@ extends Control
 ## square once the run gets properly fast — density and reach ramp from
 ## THRESHOLD to a full-tilt read at FULL. Pure overlay, ignores the mouse.
 
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+
 static var THRESHOLD := 480.0   # px/s where the streaks fade in
 static var FULL := 640.0        # px/s of maximum streak intensity
 
@@ -16,7 +18,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var player := get_tree().get_first_node_in_group(&"player")
+	var player := VehiclesHelper.local(get_tree())
 	if player == null or not player.has_method(&"get_speed"):
 		return
 	var speed: float = player.get_speed()
