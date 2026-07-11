@@ -19,8 +19,14 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 The game starts with a splash screen offering Start 1P to enter character selection, Story to view background lore, or Settings. The story screen shows game background with 'Press any key to return'. Settings covers zoom depth, screen shake, a campaign start-level picker for practice runs, and the DEVGOD/developer toggles for playtesting — choices persist between sessions.
 
+### Pick Your License
+Start 1P sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:
+- **LEARNER'S PERMIT** — soft hits, lazy trigger fingers, bosses that let you breathe. The Rustbelt, with training wheels.
+- **ROAD RAGING COMMUTER** — they mean it out there, but you'll get a word in edgewise.
+- **REVOKED LICENSE** — the ride as intended. Full damage, full cadence, bosses off the leash.
+
 ### Player Selection
-When you first boot up Bent Chrome, you'll land in the Player Selection screen where you can browse through 9 hardened drivers and their combat-ready rides. Each character has unique stats and backstory that affect their performance in the arena.
+License in hand, you'll land in the Player Selection screen where you can browse through 9 hardened drivers and their combat-ready rides. Each character has unique stats and backstory that affect their performance in the arena.
 
 **Player Selection Controls:**
 - Navigate: `A/D`, `Left/Right arrows`, `D-pad Left/Right`, or `left stick X-axis` to scroll through characters
