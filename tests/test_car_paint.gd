@@ -62,3 +62,15 @@ func test_vehicle_syncs_style_metrics() -> void:
 			"muzzle rides the scaled nose: %s" % id)
 	t.root.remove_child(v)
 	v.free()
+
+func test_brake_light_state_and_palette() -> void:
+	var paint = PaintScript.new()
+	paint.apply(&"ghost", Color.RED, Color.WHITE)
+	t.check(not paint.brake_lights_on(), "brake paint: lamps boot dark")
+	paint.set_service_braking(true)
+	t.check(paint.brake_lights_on(), "brake paint: service state illuminates")
+	t.check(PaintScript.BRAKE_OFF == Color(0.32, 0.03, 0.04),
+		"brake paint: off state is dark crimson")
+	t.check(PaintScript.BRAKE_ON == Color(1.0, 0.08, 0.04),
+		"brake paint: on state is bright red")
+	paint.free()

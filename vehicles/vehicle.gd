@@ -325,6 +325,9 @@ func _physics_process(delta: float) -> void:
 		_controller.apply(self, intent, delta)
 		if _controller.boosting and _status:
 			_status.clear_kind(&"burn")  # nitro wind blows the fire out
+	elif _controller:
+		_controller.service_braking = false
+	_sync_brake_lights()
 	# Captured before move_and_slide: a head-on hit on a static body zeroes
 	# velocity during the slide, so post-slide speed under-reads the impact.
 	var pre_slide_vel := velocity
@@ -438,6 +441,8 @@ func apply_net_state(slice: Dictionary) -> void:
 	if _controller:
 		_controller.boosting = bool(slice.get("boost", _controller.boosting))
 		_controller.handbraking = bool(slice.get("handbrake", _controller.handbraking))
+		_controller.service_braking = bool(slice.get("brake", _controller.service_braking))
+	_sync_brake_lights()
 	if _status and slice.has("burn"):
 		_status.set_cosmetic(&"burn", bool(slice.burn))
 	if slice.has("alive"):
@@ -461,6 +466,10 @@ func apply_net_state(slice: Dictionary) -> void:
 	if _rack and slice.has("ammo"):
 		_rack.net_mirror(int(slice.get("slot", 0)), slice.ammo,
 			float(slice.get("recharge", 1.0)))
+
+func _sync_brake_lights() -> void:
+	if _paint and _paint.has_method(&"set_service_braking"):
+		_paint.set_service_braking(_controller != null and _controller.service_braking)
 
 ## The puppet's whole physics tick: interpolate the two newest samples at
 ## (now - NET_INTERP_MS), then the sim's visual tail — identical read.

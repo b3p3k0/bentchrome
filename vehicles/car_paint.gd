@@ -20,6 +20,8 @@ const CLOTH := Color(0.93, 0.91, 0.86)   # bumper's convertible roof
 const LIVERY := Color(0.88, 0.9, 0.92)   # smoky's white door panels
 const LIGHT_RED := Color(1.0, 0.18, 0.12)
 const LIGHT_BLUE := Color(0.25, 0.45, 1.0)
+const BRAKE_OFF := Color(0.32, 0.03, 0.04)
+const BRAKE_ON := Color(1.0, 0.08, 0.04)
 const BAR_PERIOD := 0.35  # smoky light-bar flip (seconds)
 
 # half_len/half_wid = true footprint halves (px); radius = collision circle;
@@ -132,6 +134,7 @@ var _bar_t := 0.0        # smoky light-bar timer
 var _bar_phase := false
 var _steer := 0.0        # smoothed front-wheel pivot
 var _prev_heading := 0.0
+var _service_braking := false
 
 func _ready() -> void:
 	scale = Vector2.ONE * FLEET_SCALE  # visual child only — never the physics body
@@ -143,6 +146,15 @@ func apply(id: StringName, primary_color: Color, accent_color: Color) -> void:
 	scale = Vector2.ONE * FLEET_SCALE  # standalone uses (turntable) may apply pre-ready
 	set_process(_animated())
 	queue_redraw()
+
+func set_service_braking(on: bool) -> void:
+	if _service_braking == on:
+		return
+	_service_braking = on
+	queue_redraw()
+
+func brake_lights_on() -> bool:
+	return _service_braking
 
 ## Style metrics at fleet scale for every cosmetic consumer (shadow, muzzle,
 ## skids, flame anchors). `radius` is the exception: collision stays at the
@@ -244,6 +256,7 @@ func _draw() -> void:
 			_draw_buzz_technical()
 		_:
 			_draw_box()
+	_taillights()
 
 ## The placeholder square — dummies and unknown ids keep the classic look.
 func _draw_box() -> void:
@@ -274,6 +287,19 @@ func _wheel(center: Vector2, size: Vector2, angle := 0.0) -> void:
 func _headlights(nose_x: float, w: float) -> void:
 	draw_rect(Rect2(nose_x - 3, -w + 1, 3, 3), NOSE_ACCENT)
 	draw_rect(Rect2(nose_x - 3, w - 4, 3, 3), NOSE_ACCENT)
+
+## One shared rear-light language across the procedural fleet. Bikes carry a
+## single centered lamp; every wider body gets a pair at its authored corners.
+func _taillights() -> void:
+	var raw: Dictionary = STYLES[style_id]
+	var tail_x := -float(raw.half_len)
+	var color := BRAKE_ON if _service_braking else BRAKE_OFF
+	if style_id in [&"mrghastly", &"buzz_bike"]:
+		draw_rect(Rect2(tail_x - 1.0, -2.0, 3.0, 4.0), color)
+		return
+	var y := maxf(float(raw.half_wid) - 5.0, 2.0)
+	draw_rect(Rect2(tail_x - 1.0, -y - 2.0, 3.0, 4.0), color)
+	draw_rect(Rect2(tail_x - 1.0, y - 2.0, 3.0, 4.0), color)
 
 # --- the sedans --------------------------------------------------------------
 

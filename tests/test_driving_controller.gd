@@ -126,6 +126,25 @@ func test_handbrake_is_gentler_than_pedal() -> void:
 	t.check(elapsed > pedal * 1.15, "handbrake: stops slower than the pedal (%.2f vs %.2f)" % [elapsed, pedal])
 	mid.free()
 
+func test_service_brake_state_tracks_opposing_travel() -> void:
+	var c = _ctrl(5.0, 207.0)
+	var stub := StubVehicle.new()
+	stub.velocity = Vector2(200.0, 0.0)
+	c.apply(stub, {"throttle": -1.0, "steer": 0.0}, DT)
+	t.check(c.service_braking, "brake lights: S illuminates while rolling forward")
+	stub.velocity = Vector2(-120.0, 0.0)
+	c.apply(stub, {"throttle": 1.0, "steer": 0.0}, DT)
+	t.check(c.service_braking, "brake lights: W illuminates while reversing")
+	stub.velocity = Vector2(5.0, 0.0)
+	c.apply(stub, {"throttle": -1.0, "steer": 0.0}, DT)
+	t.check(not c.service_braking, "brake lights: dark at the forward-to-reverse crawl")
+	stub.velocity = Vector2(200.0, 0.0)
+	c.apply(stub, {"throttle": -1.0, "steer": 0.0, "handbrake": true}, DT)
+	t.check(not c.service_braking, "brake lights: handbrake does not impersonate service brake")
+	c.apply(stub, {"throttle": 1.0, "steer": 0.0}, DT)
+	t.check(not c.service_braking, "brake lights: same-direction throttle stays dark")
+	c.free()
+
 func test_handbrake_kills_lateral_grip() -> void:
 	var mid = _ctrl(5.0, 207.0)
 	# Same sideways velocity, one tick: with the handbrake the lateral

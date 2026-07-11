@@ -94,12 +94,16 @@ func test_puppet_hp_stream_has_no_side_effects() -> void:
 func test_puppet_flags_drive_cosmetics() -> void:
 	var v := _spawn()
 	v.set_net_puppet(true)
-	v.apply_net_state({"boost": true, "handbrake": true, "burn": true})
+	v.apply_net_state({"boost": true, "handbrake": true, "brake": true, "burn": true})
 	var ctrl: DrivingController = v.get_controller()
 	t.check(ctrl.boosting, "puppet: boost flag reaches the flame FX flag")
 	t.check(ctrl.handbraking, "puppet: handbrake flag reaches the skid paint")
+	var paint = v.get_node("Visual/Body")
+	t.check(ctrl.service_braking and paint.brake_lights_on(),
+		"puppet: service-brake flag reaches the rear lamps")
 	t.check(v.is_burning(), "puppet: burn flag lights the hull licks")
-	v.apply_net_state({"boost": false, "handbrake": false, "burn": false})
-	t.check(not ctrl.boosting and not ctrl.handbraking and not v.is_burning(),
+	v.apply_net_state({"boost": false, "handbrake": false, "brake": false, "burn": false})
+	t.check(not ctrl.boosting and not ctrl.handbraking and not ctrl.service_braking
+		and not paint.brake_lights_on() and not v.is_burning(),
 		"puppet: flags clear on the next slice")
 	_free(v)

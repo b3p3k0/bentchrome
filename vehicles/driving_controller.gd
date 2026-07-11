@@ -45,6 +45,7 @@ extends Node
 var boost_fuel := 100.0  # 0..100; no recharge — resets with the scene
 var boosting := false    # state flags for cosmetic FX (drive_fx.gd) — set each apply()
 var handbraking := false
+var service_braking := false  # opposing pedal while still rolling; brake-light paint
 var _no_steer_t := 0.0   # time since the last steer/handbrake input
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
@@ -85,6 +86,11 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var forward := Vector2.RIGHT.rotated(vehicle.heading)
 	var fwd_speed: float = vehicle.velocity.dot(forward)
 	var speed: float = vehicle.velocity.length()
+	# Service brakes speak in signed travel, not key names: S while rolling
+	# forward, W while reversing. At the crawl threshold the pedal becomes drive
+	# in the other direction, so the lamps go dark before acceleration crosses 0.
+	service_braking = not handbrake and ((throttle < 0.0 and fwd_speed > 10.0)
+		or (throttle > 0.0 and fwd_speed < -10.0))
 
 	# Straighten assist: hands off the wheel long enough -> recenter. The slip
 	# gets its grace period first (corner exits still breathe), then the crab

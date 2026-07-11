@@ -313,6 +313,7 @@ func _collect_rows() -> Array:
 			"alive": car.get_hp() > 0.0,
 			"boost": ctrl.boosting if ctrl else false,
 			"handbrake": ctrl.handbraking if ctrl else false,
+			"brake": ctrl.service_braking if ctrl else false,
 			"burn": car.is_burning(), "shield": car.is_shielded(),
 			"mg_locked": mount.is_locked() if mount else false,
 			"heat": mount.heat_fraction() if mount else 0.0,
