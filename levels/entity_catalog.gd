@@ -34,6 +34,7 @@ const PICKUP_COLORS := {
 	"standard": Color(0.25, 0.8, 0.35),
 	"homing": Color(0.25, 0.7, 0.9),
 	"power": Color(0.9, 0.45, 0.2),
+	"rear": Color(0.18, 0.5, 1.0),
 	"mine": Color(0.75, 0.25, 0.2),
 	"jump": Color(0.6, 0.4, 0.9),
 }
@@ -104,6 +105,18 @@ const ENTRIES := [
 			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
 		],
 		"ghost": {"color": PICKUP_COLORS["power"], "half_size": Vector2(14, 14), "tag": "P"},
+	},
+	{
+		"id": "pickup_rear",
+		"list_key": "pickups",
+		"display": "Rear-Missile Crate",
+		"scene": "res://environment/ammo_pickup.tscn",
+		"preset": {"kind": "rear"},
+		"props": [
+			{"key": "amount", "display": "Missiles", "min": Schema.AMOUNT_MIN, "max": Schema.AMOUNT_MAX, "step": 1.0, "default": 2.0},
+			{"key": "respawn_seconds", "display": "Respawn (s)", "min": Schema.RESPAWN_MIN, "max": Schema.RESPAWN_MAX, "step": 5.0, "default": 20.0},
+		],
+		"ghost": {"color": PICKUP_COLORS["rear"], "half_size": Vector2(14, 14), "tag": "R"},
 	},
 	{
 		"id": "pickup_mine",

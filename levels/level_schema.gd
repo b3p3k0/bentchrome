@@ -18,7 +18,7 @@ const SPAWN_MARGIN := 128.0  # vehicles need extra clearance
 const SPAWN_SEPARATION := 192.0
 
 const TERRAIN_TYPES := ["dirt", "grass", "ice", "snow", "water"]  # road is the unpainted floor
-const PICKUP_KINDS := ["standard", "homing", "power", "mine", "jump"]
+const PICKUP_KINDS := ["standard", "homing", "power", "rear", "mine", "jump"]
 
 const BLOCK_SIDE_MIN := 64.0
 const BLOCK_SIDE_MAX := 1024.0

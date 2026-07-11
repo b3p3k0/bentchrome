@@ -18,7 +18,7 @@ func _row_a() -> Dictionary:
 		"alive": true, "boost": true, "handbrake": false, "burn": true,
 		"shield": false, "mg_locked": true,
 		"heat": 0.66, "boost_fuel": 73.0, "slot": 3,
-		"ammo": [2, 5, 0, 1, 3, 0], "recharge": 0.4,
+		"ammo": [2, 5, 0, 1, 4, 3, 0], "recharge": 0.4,
 	}
 
 func test_rows_round_trip() -> void:
@@ -38,7 +38,7 @@ func test_rows_round_trip() -> void:
 		and not a.handbrake and not a.shield, "snap: flag bits survive")
 	t.check(absf(float(a.heat) - 0.66) < 0.005 and is_equal_approx(float(a.boost_fuel), 73.0),
 		"snap: HUD mirrors survive")
-	t.check(int(a.slot) == 3 and a.ammo == [2, 5, 0, 1, 3, 0],
+	t.check(int(a.slot) == 3 and a.ammo == [2, 5, 0, 1, 4, 3, 0],
 		"snap: rack mirror survives")
 	t.check(absf(float(a.recharge) - 0.4) < 0.005, "snap: recharge survives")
 	var d: Dictionary = back.rows[1]

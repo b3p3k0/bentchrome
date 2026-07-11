@@ -53,6 +53,8 @@ func test_for_entity_resolves_presets() -> void:
 	t.check(homing.id == "pickup_homing", "homing crate resolves by preset")
 	var standard := Catalog.for_entity("pickups", {"pos": [0.0, 0.0], "kind": "standard"})
 	t.check(standard.id == "pickup_standard", "standard crate resolves by preset")
+	var rear := Catalog.for_entity("pickups", {"pos": [0.0, 0.0], "kind": "rear"})
+	t.check(rear.id == "pickup_rear", "rear crate resolves by preset")
 	var ice := Catalog.for_entity("terrain", {"type": "ice", "rect": [0.0, 0.0, 128.0, 128.0]})
 	t.check(ice.id == "terrain_ice", "terrain resolves by type")
 	var player := Catalog.for_entity("player_spawn", {"pos": [0.0, 0.0], "heading_deg": 0.0})

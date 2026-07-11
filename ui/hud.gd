@@ -84,6 +84,8 @@ func _process(_delta: float) -> void:
 					name_txt = "Homing"
 				WeaponRack.Slot.POWER:
 					name_txt = "Power Missile"
+				WeaponRack.Slot.REAR:
+					name_txt = "Rear Missile"
 				WeaponRack.Slot.MINE:
 					name_txt = "Mine"
 				WeaponRack.Slot.JUMP_MINE:
@@ -205,7 +207,7 @@ func _build_dash() -> void:
 
 	var weapons_hdr := _label(vbox, "WEAPONS  (wheel)", 14)
 	weapons_hdr.modulate = DIM_TEXT
-	for i in 6:
+	for i in 7:
 		_slot_labels.append(_label(vbox, "", 15))
 
 	var fill := Control.new()

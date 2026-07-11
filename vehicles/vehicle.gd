@@ -120,6 +120,7 @@ var _net_shield := false  # streamed blink-shield flag (visual pulse only)
 @onready var _mg_mount: WeaponMount = $MachineGunMount
 @onready var _special: SpecialController = $SpecialController
 @onready var _muzzle: Marker2D = $Visual/Muzzle
+@onready var _rear_muzzle: Marker2D = $Visual/RearMuzzle
 @onready var _health: Health = $Health
 @onready var _status: StatusReceiver = $Status
 @onready var _rack: WeaponRack = $WeaponRack
@@ -270,6 +271,8 @@ func _sync_body_metrics() -> void:
 		(_shadow as Polygon2D).polygon = _paint.shadow_polygon()
 	if _muzzle:
 		_muzzle.position = Vector2(float(m.half_len) + 4.0, 0.0)
+	if _rear_muzzle:
+		_rear_muzzle.position = Vector2(-float(m.half_len) - 4.0, 0.0)
 	var col := get_node_or_null(^"CollisionShape2D") as CollisionShape2D
 	if col and col.shape is CircleShape2D:
 		var shape: CircleShape2D = col.shape.duplicate()  # never resize the shared resource
@@ -293,6 +296,16 @@ func set_driver(driver: Driver) -> void:
 	driver.name = "Driver"
 	add_child(driver)
 	_driver = driver
+
+## Projectile secondaries choose their authored bumper and bearing here. Keeping
+## the decision on the vehicle lets every ordinary weapon stay pure data while
+## the mount continues to receive the same origin/direction pair it always has.
+func secondary_launch(def: WeaponDef) -> Dictionary:
+	var forward := Vector2.RIGHT.rotated(heading)
+	if def and def.launch_side == WeaponDef.LaunchSide.REAR and _rear_muzzle:
+		return {"origin": _rear_muzzle.global_position, "direction": -forward}
+	return {"origin": _muzzle.global_position if _muzzle else global_position,
+		"direction": forward}
 
 func _physics_process(delta: float) -> void:
 	if net_puppet:
@@ -340,7 +353,8 @@ func _physics_process(delta: float) -> void:
 			wants_fire = wants_fire and _rack.can_consume()
 		# Def captured BEFORE the shot: consume() can auto-cycle the selection.
 		var firing_def: WeaponDef = _rack.selected_def() if _rack else null
-		if _special.activate(wants_fire, _muzzle.global_position, aim, self) and _rack:
+		var launch: Dictionary = secondary_launch(firing_def)
+		if _special.activate(wants_fire, launch.origin, launch.direction, self) and _rack:
 			_rack.consume()
 			# Mines announce the drop; projectile fire is voiced by the mount.
 			if is_in_group(&"player") and firing_def and firing_def.kind == WeaponDef.Kind.DROP:

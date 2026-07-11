@@ -720,6 +720,7 @@ position = Vector2(-1088, -256)
 
 [node name="AmmoStandard2" parent="." instance=ExtResource("8_ammo")]
 position = Vector2(1088, 256)
+kind = "rear"
 
 [node name="AmmoHoming1" parent="." instance=ExtResource("8_ammo")]
 position = Vector2(0, -320)

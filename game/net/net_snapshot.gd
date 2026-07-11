@@ -17,7 +17,7 @@ const F_BURN := 8
 const F_SHIELD := 16
 const F_MG_LOCKED := 32
 
-const AMMO_SLOTS := 6  # WeaponRack's fixed loadout width
+const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
 const NO_TARGET := 255
 

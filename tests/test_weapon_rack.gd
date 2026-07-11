@@ -25,6 +25,8 @@ func test_configure_defaults() -> void:
 	t.check(r.ammo(RackScript.Slot.STANDARD) == 2, "rack: 2 standard to start")
 	t.check(r.ammo(RackScript.Slot.HOMING) == 1, "rack: 1 homing to start")
 	t.check(r.ammo(RackScript.Slot.POWER) == 1, "rack: 1 power to start")
+	t.check(r.ammo(RackScript.Slot.REAR) == 0, "rack: rear missiles start empty")
+	t.check(r.cap(RackScript.Slot.REAR) == 6, "rack: rear missile cap mirrors fire")
 	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mines start empty (pickup-fed)")
 	t.check(r.ammo(RackScript.Slot.JUMP_MINE) == 0, "rack: jump mines start empty")
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
@@ -130,6 +132,15 @@ func test_mines_join_rotation_after_pickup() -> void:
 	t.check(r.add_ammo(RackScript.Slot.MINE, 2) == 2, "mines: crate fills the slot")
 	r.select_next()  # from POWER: mine now armed
 	t.check(r.selected_index() == RackScript.Slot.MINE, "mines: armed mine joins the rotation")
+	r.free()
+
+func test_rear_missile_joins_rotation_after_pickup() -> void:
+	var r = _rack()
+	r.select_prev()  # rear + mines are empty -> wraps to POWER
+	t.check(r.selected_index() == RackScript.Slot.POWER, "rear: empty slot is skipped")
+	t.check(r.add_ammo(RackScript.Slot.REAR, 2) == 2, "rear: blue crate fills slot")
+	r.select_next()
+	t.check(r.selected_index() == RackScript.Slot.REAR, "rear: armed slot joins rotation")
 	r.free()
 
 func test_select_first_armed() -> void:

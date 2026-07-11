@@ -7,9 +7,11 @@ extends Resource
 ## collision-trigger) are marked stub = true and fire nothing until built.
 
 enum Kind { PROJECTILE, BEAM, DASH, TRIGGER, FLAME, DROP }
+enum LaunchSide { FORWARD, REAR }
 
 @export var display_name: String = "Special"
 @export var kind := Kind.PROJECTILE     # dispatched by SpecialController
+@export var launch_side := LaunchSide.FORWARD  # projectile origin + initial direction
 @export var on_hit_effects: Array[StatusEffectSpec] = []  # applied to what a projectile hits
 @export var cooldown := 1.0             # seconds between uses (recharge)
 @export var damage := 25.0

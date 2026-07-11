@@ -85,7 +85,7 @@ const DEFS := {
 		],
 		"pickups": [
 			{"kind": &"heal", "at": [400.0, -130.0]},
-			{"kind": &"standard", "at": [640.0, 130.0]},
+			{"kind": &"rear", "at": [640.0, 130.0]},
 			{"kind": &"boost", "at": [860.0, -100.0]},
 		],
 	},

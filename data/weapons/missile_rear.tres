@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/missile.tscn" id="2_proj"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Rear Missile"
+launch_side = 1
+cooldown = 0.6
+damage = 26.0
+projectile_speed = 1100.0
+projectile_lifetime = 4.0
+turn_rate_deg = 165.0
+acquisition_radius = 1200.0
+projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(0.18, 0.5, 1, 1)
+note = "The workhorse fired backward: medium damage, moderate homing, scavenged from blue R crates."

@@ -138,6 +138,9 @@ func test_block_rules() -> void:
 
 func test_pickup_rules() -> void:
 	var level := _valid()
+	level.pickups.append({"pos": [640.0, -128.0], "kind": "rear", "amount": 2.0, "respawn_seconds": 20.0})
+	t.check(Schema.validate(level).is_empty(), "rear pickup kind accepted")
+	level = _valid()
 	level.pickups.append({"pos": [640.0, -128.0], "kind": "nuke", "amount": 2.0, "respawn_seconds": 20.0})
 	_expect_error(level, "kind", "unknown pickup kind rejected")
 	level = _valid()

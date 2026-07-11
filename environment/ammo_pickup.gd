@@ -3,7 +3,7 @@ extends Area2D
 ## and respawns after a delay. Grabs nothing when the slot is full (crate stays).
 ## Any vehicle can collect; AI just doesn't use missiles yet.
 
-@export_enum("standard", "homing", "power", "mine", "jump") var kind := "standard"
+@export_enum("standard", "homing", "power", "rear", "mine", "jump") var kind := "standard"
 @export var amount := 2
 @export var respawn_seconds := 20.0
 
@@ -11,6 +11,7 @@ const STYLE := {
 	"standard": {"tag": "M", "color": Color(0.25, 0.8, 0.35), "slot": WeaponRack.Slot.STANDARD},
 	"homing": {"tag": "H", "color": Color(0.25, 0.7, 0.9), "slot": WeaponRack.Slot.HOMING},
 	"power": {"tag": "P", "color": Color(0.9, 0.45, 0.2), "slot": WeaponRack.Slot.POWER},
+	"rear": {"tag": "R", "color": Color(0.18, 0.5, 1.0), "slot": WeaponRack.Slot.REAR},
 	"mine": {"tag": "X", "color": Color(0.75, 0.25, 0.2), "slot": WeaponRack.Slot.MINE},
 	"jump": {"tag": "J", "color": Color(0.6, 0.4, 0.9), "slot": WeaponRack.Slot.JUMP_MINE},
 }

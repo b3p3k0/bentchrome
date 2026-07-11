@@ -44,6 +44,9 @@ script = ExtResource("13_paint")
 [node name="Muzzle" type="Marker2D" parent="Visual"]
 position = Vector2(30, 0)
 
+[node name="RearMuzzle" type="Marker2D" parent="Visual"]
+position = Vector2(-30, 0)
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_veh")
 
