@@ -1,7 +1,36 @@
-[gd_resource type="Resource" script_class="VehicleStats" format=3]
+[gd_resource type="Resource" script_class="VehicleStats" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_nbqo3"]
 [ext_resource type="Resource" path="res://data/weapons/toe_jam.tres" id="2_dd6xq"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_terrain"]
+
+[sub_resource type="Resource" id="Terrain_hammer_grass"]
+script = ExtResource("3_terrain")
+terrain = &"grass"
+accel = 1.0777777
+top = 1.0777777
+grip = 1.1
+
+[sub_resource type="Resource" id="Terrain_hammer_snow"]
+script = ExtResource("3_terrain")
+terrain = &"snow"
+accel = 1.1058824
+top = 1.0555556
+grip = 1.2444445
+
+[sub_resource type="Resource" id="Terrain_hammer_dirt"]
+script = ExtResource("3_terrain")
+terrain = &"dirt"
+accel = 1.175
+top = 1.117647
+grip = 1.2
+
+[sub_resource type="Resource" id="Terrain_hammer_water"]
+script = ExtResource("3_terrain")
+terrain = &"water"
+accel = 1.65
+top = 1.5555556
+grip = 1.1
 
 [resource]
 script = ExtResource("1_nbqo3")
@@ -19,3 +48,4 @@ primary_color = Color(0.5411765, 0.25882354, 1, 1)
 accent_color = Color(0.32156864, 0.07058824, 0.6431373, 1)
 special = ExtResource("2_dd6xq")
 special_recharge_seconds = 8.0
+terrain_modifiers = Array[ExtResource("3_terrain")]([SubResource("Terrain_hammer_grass"), SubResource("Terrain_hammer_snow"), SubResource("Terrain_hammer_dirt"), SubResource("Terrain_hammer_water")])

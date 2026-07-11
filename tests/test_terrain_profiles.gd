@@ -6,6 +6,7 @@ const ModifierScript := preload("res://resources/vehicle_terrain_modifier.gd")
 const StatsScript := preload("res://resources/vehicle_stats.gd")
 const CtrlScript := preload("res://vehicles/driving_controller.gd")
 const Importer := preload("res://tools/import_roster.gd")
+const Dashboard := preload("res://ui/dev_dashboard.gd")
 
 const DT := 1.0 / 60.0
 
@@ -63,6 +64,67 @@ func test_effective_surface_composes_global_and_profile() -> void:
 		"terrain profile: top multiplies global surface")
 	t.check_approx(effective.grip, CtrlScript.TERRAIN[&"dirt"].grip,
 		"terrain profile: omitted property stays global")
+
+func test_authored_vehicle_profiles_hit_effective_targets() -> void:
+	var expected := {
+		&"cricket": {
+			&"dirt": [1.12, 1.08, 0.81, 1.15],
+			&"grass": [1.01, 1.01, 0.92, 1.08],
+		},
+		&"hammertoe": {
+			&"grass": [0.97, 0.97, 0.88, 1.0],
+			&"snow": [0.94, 0.95, 0.56, 1.0],
+			&"dirt": [0.94, 0.95, 0.72, 1.0],
+			&"water": [0.66, 0.70, 0.77, 1.0],
+		},
+		&"smoky": {
+			&"grass": [0.95, 0.95, 0.86, 1.0],
+			&"snow": [0.90, 0.94, 0.53, 1.0],
+			&"dirt": [0.88, 0.92, 0.67, 1.0],
+			&"water": [0.50, 0.55, 0.74, 1.0],
+		},
+		&"razorback": {
+			&"grass": [0.95, 0.95, 0.86, 1.0],
+			&"snow": [0.90, 0.94, 0.53, 1.0],
+			&"dirt": [0.88, 0.92, 0.67, 1.0],
+			&"water": [0.50, 0.55, 0.74, 1.0],
+		},
+	}
+	for car_id in expected:
+		var stats: VehicleStats = load("res://data/vehicles/%s.tres" % String(car_id))
+		var vehicle := StubVehicle.new()
+		vehicle.stats = stats
+		for surface in expected[car_id]:
+			var got: Dictionary = CtrlScript.effective_terrain(vehicle, surface)
+			var want: Array = expected[car_id][surface]
+			for i in 4:
+				var property: String = ["accel", "top", "grip", "steer"][i]
+				t.check(absf(float(got[property]) - float(want[i])) < 0.0002,
+					"terrain profile: %s %s %s effective target" % [car_id, surface, property])
+		t.check_approx(stats.terrain_factor(&"ice", &"accel"), 1.0,
+			"terrain profile: %s gets no ice exemption" % car_id)
+
+func test_unconfigured_car_and_driver_identity_stay_neutral() -> void:
+	var ghost: VehicleStats = load("res://data/vehicles/ghost.tres")
+	var player := StubVehicle.new()
+	var ai := StubVehicle.new()
+	player.stats = ghost
+	ai.stats = ghost
+	var player_mod: Dictionary = CtrlScript.effective_terrain(player, &"dirt")
+	var ai_mod: Dictionary = CtrlScript.effective_terrain(ai, &"dirt")
+	t.check(player_mod == CtrlScript.TERRAIN[&"dirt"],
+		"terrain profile: ordinary ride keeps global modifiers")
+	t.check(player_mod == ai_mod, "terrain profile: driver identity cannot change composition")
+
+func test_dashboard_reports_current_effective_surface() -> void:
+	var cricket: VehicleStats = load("res://data/vehicles/cricket.tres")
+	var vehicle := StubVehicle.new()
+	vehicle.stats = cricket
+	vehicle.current_terrain = &"dirt"
+	var text := Dashboard.terrain_readout(vehicle)
+	t.check(text.contains("dirt") and text.contains("accel 1.12")
+		and text.contains("top 1.08") and text.contains("steer 1.15"),
+		"terrain profile: dashboard exposes current effective values")
 
 func test_ice_straight_entry_stays_on_line_and_spins_tires() -> void:
 	var ice := CtrlScript.new()

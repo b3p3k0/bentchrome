@@ -40,9 +40,13 @@
         "accent": "#0a8a2c"
       },
       "portrait": "res://assets/img/bios/cricket.png",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 10.0,
-      "mass": 2
+	  "special_ammo_cap": 1,
+	  "special_recharge_seconds": 10.0,
+	  "terrain_modifiers": {
+		"dirt": {"accel": 1.4, "top": 1.2705882353, "grip": 1.35, "steer": 1.15},
+		"grass": {"accel": 1.1222222222, "top": 1.1222222222, "grip": 1.15, "steer": 1.08}
+	  },
+	  "mass": 2
     },
     {
       "id": "ghost",
@@ -82,9 +86,15 @@
         "accent": "#5212a4"
       },
       "portrait": "res://assets/img/bios/hammertoe.png",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 8.0,
-      "mass": 8
+	  "special_ammo_cap": 1,
+	  "special_recharge_seconds": 8.0,
+	  "terrain_modifiers": {
+		"grass": {"accel": 1.0777777778, "top": 1.0777777778, "grip": 1.1},
+		"snow": {"accel": 1.1058823529, "top": 1.0555555556, "grip": 1.2444444444},
+		"dirt": {"accel": 1.175, "top": 1.1176470588, "grip": 1.2},
+		"water": {"accel": 1.65, "top": 1.5555555556, "grip": 1.1}
+	  },
+	  "mass": 8
     },
     {
       "id": "kandykane",
@@ -143,8 +153,14 @@
         "primary": "#1f6f3a",
         "accent": "#0d4020"
       },
-      "portrait": "res://assets/img/bios/razorback.png",
-      "mass": 7
+	  "portrait": "res://assets/img/bios/razorback.png",
+	  "terrain_modifiers": {
+		"grass": {"accel": 1.0555555556, "top": 1.0555555556, "grip": 1.075},
+		"snow": {"accel": 1.0588235294, "top": 1.0444444444, "grip": 1.1777777778},
+		"dirt": {"accel": 1.1, "top": 1.0823529412, "grip": 1.1166666667},
+		"water": {"accel": 1.25, "top": 1.2222222222, "grip": 1.0571428571}
+	  },
+	  "mass": 7
     },
     {
       "id": "smoky",
@@ -164,9 +180,15 @@
         "accent": "#0a203c"
       },
       "portrait": "res://assets/img/bios/smoky.png",
-      "special_ammo_cap": 3,
-      "special_recharge_seconds": 8.0,
-      "mass": 6
+	  "special_ammo_cap": 3,
+	  "special_recharge_seconds": 8.0,
+	  "terrain_modifiers": {
+		"grass": {"accel": 1.0555555556, "top": 1.0555555556, "grip": 1.075},
+		"snow": {"accel": 1.0588235294, "top": 1.0444444444, "grip": 1.1777777778},
+		"dirt": {"accel": 1.1, "top": 1.0823529412, "grip": 1.1166666667},
+		"water": {"accel": 1.25, "top": 1.2222222222, "grip": 1.0571428571}
+	  },
+	  "mass": 6
     },
     {
       "id": "splatcat",

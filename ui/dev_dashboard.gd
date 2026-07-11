@@ -33,6 +33,7 @@ var _cars: Array = []
 var _panel: PanelContainer
 var _car_picker: OptionButton
 var _status: Label
+var _terrain_status: Label
 var _sliders := {}
 var _value_labels := {}
 
@@ -68,7 +69,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _player == null or not is_instance_valid(_player):
 				_bind_player()
 			else:
-				_refresh()
+					_refresh()
+
+func _process(_delta: float) -> void:
+	if _panel and _panel.visible:
+		_refresh_terrain_status()
 
 func _refresh() -> void:
 	if _player == null or not is_instance_valid(_player):
@@ -84,6 +89,20 @@ func _refresh() -> void:
 	for i in _cars.size():
 		if _cars[i].id == sid:
 			_car_picker.select(i)
+	_refresh_terrain_status()
+
+func _refresh_terrain_status() -> void:
+	if _terrain_status and _player and is_instance_valid(_player):
+		_terrain_status.text = terrain_readout(_player)
+
+static func terrain_readout(vehicle) -> String:
+	if vehicle == null:
+		return "surface —"
+	var surface_v: Variant = vehicle.get("current_terrain")
+	var surface := StringName(surface_v)
+	var effective: Dictionary = DrivingController.effective_terrain(vehicle, surface)
+	return "surface %-5s  accel %.2f  top %.2f  grip %.2f  steer %.2f" % [
+		String(surface), effective.accel, effective.top, effective.grip, effective.steer]
 
 func _on_knob_changed(value: float, knob: String) -> void:
 	if _player and is_instance_valid(_player):
@@ -146,6 +165,10 @@ func _build_ui() -> void:
 	_car_picker = OptionButton.new()
 	_car_picker.item_selected.connect(_on_car_picked)
 	vbox.add_child(_car_picker)
+
+	_terrain_status = Label.new()
+	_terrain_status.modulate = Color(0.65, 0.82, 0.95)
+	vbox.add_child(_terrain_status)
 
 	for knob in TUNABLE:
 		var row := HBoxContainer.new()
