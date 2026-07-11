@@ -38,6 +38,13 @@ func test_terrain_override_and_reset() -> void:
 	t.check(is_equal_approx(DrivingController.TERRAIN[&"grass"]["grip"], 1.2), "deck: terrain override lands")
 	deck.reset_terrain()
 	t.check(is_equal_approx(DrivingController.TERRAIN[&"grass"]["grip"], base_grip), "deck: terrain reset restores")
+	var base_steer: float = DrivingController.TERRAIN[&"ice"]["steer"]
+	deck.set_terrain(&"ice", "steer", 1.35)
+	t.check(is_equal_approx(DrivingController.TERRAIN[&"ice"]["steer"], 1.35),
+		"deck: terrain steering override lands")
+	deck.reset_terrain()
+	t.check(is_equal_approx(DrivingController.TERRAIN[&"ice"]["steer"], base_steer),
+		"deck: terrain steering reset restores")
 
 func test_save_load_round_trip() -> void:
 	var deck = DeckScript.new()

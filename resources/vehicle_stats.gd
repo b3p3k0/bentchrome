@@ -31,7 +31,17 @@ extends Resource
 								  # SpecialController picks per activation.
 @export var no_mines := false  # this car never arms mines, crates included
 
+## Optional, multiplicative surface identity. The shared DrivingController
+## composes these over its global terrain table; missing entries stay neutral.
+@export var terrain_modifiers: Array[VehicleTerrainModifier] = []
+
 # Per-car raw handling-knob overrides (knob name -> value) applied after
 # StatCurves, so hand-tuning wins while StatCurves stays the default. Written by
 # the dev dashboard's Export.
 @export var handling_overrides: Dictionary = {}
+
+func terrain_factor(surface: StringName, property: StringName) -> float:
+	for modifier in terrain_modifiers:
+		if modifier != null and modifier.terrain == surface:
+			return modifier.factor(property)
+	return 1.0

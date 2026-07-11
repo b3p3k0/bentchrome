@@ -40,6 +40,7 @@ const TERRAIN_PROPS := {
 	"accel": [0.05, 1.5, 0.05],
 	"top": [0.05, 1.5, 0.05],
 	"grip": [0.05, 1.5, 0.05],
+	"steer": [0.05, 1.5, 0.05],
 }
 const VEHICLE_PROPS := {
 	"ram_damage_scale": [0.01, 0.2, 0.005],

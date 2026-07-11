@@ -52,20 +52,36 @@ var _no_steer_t := 0.0   # time since the last steer/handbrake input
 ## static var (not const): const dictionaries are deep-frozen in Godot 4, and
 ## the dev tuning deck mutates these values live. Same class-level access.
 static var TERRAIN := {
-	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0},
-	&"grass": {"accel": 0.9, "top": 0.9, "grip": 0.8},
-	&"snow": {"accel": 0.85, "top": 0.9, "grip": 0.45},
-	&"dirt": {"accel": 0.8, "top": 0.85, "grip": 0.6},
-	&"ice": {"accel": 0.9, "top": 1.0, "grip": 0.16},
-	&"water": {"accel": 0.4, "top": 0.45, "grip": 0.7},
-}
+	&"road": {"accel": 1.0, "top": 1.0, "grip": 1.0, "steer": 1.0},
+	&"grass": {"accel": 0.9, "top": 0.9, "grip": 0.8, "steer": 1.0},
+	&"snow": {"accel": 0.85, "top": 0.9, "grip": 0.45, "steer": 1.0},
+	&"dirt": {"accel": 0.8, "top": 0.85, "grip": 0.6, "steer": 1.0},
+	&"ice": {"accel": 0.55, "top": 1.0, "grip": 0.08, "steer": 1.2},
+	&"water": {"accel": 0.4, "top": 0.45, "grip": 0.7, "steer": 1.0},
+	}
+
+## The one composition seam for every driver and every ride. Vehicle-specific
+## identity is data; the controller never branches on roster ids or factions.
+static func effective_terrain(vehicle, surface: StringName) -> Dictionary:
+	var base: Dictionary = TERRAIN.get(surface, TERRAIN[&"road"])
+	var out := {
+		"accel": float(base.get("accel", 1.0)),
+		"top": float(base.get("top", 1.0)),
+		"grip": float(base.get("grip", 1.0)),
+		"steer": float(base.get("steer", 1.0)),
+	}
+	var stats: Variant = vehicle.get("stats") if vehicle != null and "stats" in vehicle else null
+	if stats is VehicleStats:
+		for property in [&"accel", &"top", &"grip", &"steer"]:
+			out[property] *= stats.terrain_factor(surface, property)
+	return out
 
 func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var throttle: float = clampf(intent.get("throttle", 0.0), -1.0, 1.0)
 	var steer: float = clampf(intent.get("steer", 0.0), -1.0, 1.0)
 	var handbrake: bool = intent.get("handbrake", false)
 
-	var mod: Dictionary = TERRAIN.get(vehicle.current_terrain, TERRAIN[&"road"])
+	var mod: Dictionary = effective_terrain(vehicle, vehicle.current_terrain)
 	var accel: float = acceleration * mod["accel"]
 	var top: float = max_speed * mod["top"]
 	var grip: float = lateral_grip * mod["grip"]
@@ -106,7 +122,8 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	# Steering authority grows with speed (you must roll to turn).
 	var authority := clampf(speed / turn_authority_speed, min_turn_authority, 1.0)
 	var dir_sign := signf(fwd_speed) if absf(fwd_speed) > 5.0 else 1.0
-	vehicle.heading += deg_to_rad(turn_rate_deg) * scale * steer * authority * dir_sign * delta
+	vehicle.heading += deg_to_rad(turn_rate_deg) * float(mod["steer"]) * scale \
+		* steer * authority * dir_sign * delta
 	if straightening and "HEADING_STEPS" in vehicle and vehicle.HEADING_STEPS > 0:
 		var step: float = TAU / vehicle.HEADING_STEPS
 		vehicle.heading = rotate_toward(vehicle.heading, snappedf(vehicle.heading, step),

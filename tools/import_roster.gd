@@ -15,6 +15,9 @@ const SPECIALS := {
 	"splatcat": "res://data/weapons/splat_effect.tres",
 }
 
+const TERRAIN_NAMES := ["road", "grass", "snow", "dirt", "ice", "water"]
+const TERRAIN_FIELDS := ["accel", "top", "grip", "steer", "dash_damage"]
+
 func _init() -> void:
 	var f := FileAccess.open("res://assets/data/roster.json", FileAccess.READ)
 	if f == null:
@@ -26,6 +29,16 @@ func _init() -> void:
 	if typeof(data) != TYPE_DICTIONARY or not data.has("characters"):
 		push_error("import_roster: malformed roster.json")
 		quit()
+		return
+	var profile_errors := PackedStringArray()
+	for c in data["characters"]:
+		var car_id := String(c.get("id", "?"))
+		for issue in terrain_profile_errors(c.get("terrain_modifiers", {})):
+			profile_errors.append("%s: %s" % [car_id, issue])
+	if not profile_errors.is_empty():
+		for issue in profile_errors:
+			printerr("import_roster: " + issue)
+		quit(1)
 		return
 
 	var count := 0
@@ -58,6 +71,7 @@ func _init() -> void:
 		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
 		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
 		vs.mass = int(c.get("mass", 5))
+		vs.terrain_modifiers = build_terrain_modifiers(c.get("terrain_modifiers", {}))
 
 		var sid := String(c.get("id", ""))
 		if SPECIALS.has(sid):
@@ -70,3 +84,37 @@ func _init() -> void:
 
 	print("import_roster: wrote %d vehicles" % count)
 	quit()
+
+static func terrain_profile_errors(raw: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if typeof(raw) != TYPE_DICTIONARY:
+		errors.append("terrain_modifiers must be an object")
+		return errors
+	for surface_v in raw:
+		var surface := String(surface_v)
+		if surface not in TERRAIN_NAMES:
+			errors.append("unknown terrain '%s'" % surface)
+			continue
+		var fields: Variant = raw[surface_v]
+		if typeof(fields) != TYPE_DICTIONARY:
+			errors.append("terrain '%s' must contain an object" % surface)
+			continue
+		for property_v in fields:
+			var property := String(property_v)
+			if property not in TERRAIN_FIELDS:
+				errors.append("terrain '%s' has unknown property '%s'" % [surface, property])
+			elif typeof(fields[property_v]) not in [TYPE_INT, TYPE_FLOAT] \
+					or float(fields[property_v]) <= 0.0:
+				errors.append("terrain '%s' property '%s' must be a positive number" % [surface, property])
+	return errors
+
+static func build_terrain_modifiers(raw: Dictionary) -> Array[VehicleTerrainModifier]:
+	var out: Array[VehicleTerrainModifier] = []
+	for surface_v in raw:
+		var modifier := VehicleTerrainModifier.new()
+		modifier.terrain = StringName(surface_v)
+		var fields: Dictionary = raw[surface_v]
+		for property_v in fields:
+			modifier.set(String(property_v), float(fields[property_v]))
+		out.append(modifier)
+	return out
