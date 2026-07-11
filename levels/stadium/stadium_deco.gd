@@ -23,11 +23,15 @@ extends Node2D
 ##   floodlight: a corner light tower — mast, crossbar, four lamps with glow
 ##            halos, and a translucent light pool washing toward the ARENA
 ##            CENTER (computed from position — no authored rotation), swaying
-##            slowly on a seeded phase so the four towers never sync.
+##            slowly on a seeded phase so the four towers never sync. The
+##            tower is REAL: a small Health-bearing base (FLOOD_HP) — shoot
+##            it out and the lamps die in a shower of sparks, pool and all.
 ##   jumbotron: the big screen on the rim — dark bezel, scanlines, pixel
-##            noise, and a scrolling marquee that WATCHES THE FIGHT (duck-
+##            noise, and a per-char marquee that WATCHES THE FIGHT (duck-
 ##            typed, null-safe, 1 Hz): GOLIATH -> RAMPAGE at the phase flip,
-##            NEW KING when the throne empties.
+##            NEW KING when the throne empties. Author it at z_index 1: it's
+##            an OVERHEAD sign — cars drive UNDER it and it fades while they
+##            do (the dock bridge idiom).
 ##   confetti: wind-caught confetti/trash flecks drifting across the field in
 ##            lazy tumbling gusts — the crowd never came, the litter stayed.
 ##            size = emission extents; pre-filled so the field is never bare.
@@ -56,6 +60,10 @@ const POOL_A := 0.07           # light-pool wash alpha
 const SCREEN_AMBER := Color(1.0, 0.8, 0.25)
 const CONFETTI_COLORS := [Color(0.85, 0.25, 0.2), Color(0.95, 0.8, 0.2),
 	Color(0.25, 0.65, 0.7), Color(0.9, 0.88, 0.84)]
+const UNDER_FADE := 0.45       # jumbotron alpha while a car is beneath it
+const FADE_SPEED := 6.0
+
+static var FLOOD_HP := 70.0    # a tower takes a medium beating before dark
 
 @export var kind: StringName = &"seating"
 @export var size := Vector2(1746, 448)
@@ -64,11 +72,16 @@ var _t := 0.0
 var _phase_seed := 0.0
 var _poll_t := 0.0
 var _marquee := "GOLIATH"
+var _under_area: Area2D = null
 
 func _ready() -> void:
 	_phase_seed = float(hash(Vector2i(global_position)) % 628) / 100.0
 	if kind == &"confetti":
 		_build_confetti()
+	elif kind == &"floodlight":
+		_build_flood_base()
+	elif kind == &"jumbotron":
+		_build_under_fade()
 	set_process(kind == &"floodlight" or kind == &"jumbotron")
 	queue_redraw()
 
@@ -79,7 +92,69 @@ func _process(delta: float) -> void:
 		if _poll_t <= 0.0:
 			_poll_t = 1.0
 			_poll_fight()
+		if _under_area != null:
+			var target := 1.0
+			for body in _under_area.get_overlapping_bodies():
+				if body is CanvasItem and (body as CanvasItem).z_index < z_index:
+					target = UNDER_FADE  # someone's driving under the sign
+					break
+			modulate.a = move_toward(modulate.a, target, FADE_SPEED * delta)
 	queue_redraw()
+
+## The underpass sensor (dock bridge idiom): compares z directly, so the fade
+## can never disagree with what's rendered.
+func _build_under_fade() -> void:
+	_under_area = Area2D.new()
+	_under_area.collision_layer = 0
+	_under_area.collision_mask = 1  # cars always keep the ground bit
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = size + Vector2(24.0, 24.0)
+	col.shape = shape
+	_under_area.add_child(col)
+	add_child(_under_area)
+
+## The tower is shootable: a small Health-bearing base on the rim's bits.
+func _build_flood_base() -> void:
+	var base := StaticBody2D.new()
+	base.collision_layer = 4 | 16  # obstacle + floor-2: towers stand on the rim
+	base.collision_mask = 0
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(36.0, 36.0)
+	col.shape = shape
+	base.add_child(col)
+	var hp := Health.new()
+	hp.name = "Health"
+	hp.max_hp = FLOOD_HP
+	base.add_child(hp)
+	add_child(base)
+	hp.died.connect(_flood_out)
+
+## Lights out: a shower of sparks raining off the dying lamps, then the whole
+## tower — pool and all — goes dark.
+func _flood_out() -> void:
+	var scene := get_tree().current_scene
+	if scene:
+		var sparks := CPUParticles2D.new()
+		sparks.one_shot = true
+		sparks.emitting = true
+		sparks.amount = 46
+		sparks.lifetime = 0.8
+		sparks.explosiveness = 0.9
+		sparks.spread = 180.0
+		sparks.initial_velocity_min = 180.0
+		sparks.initial_velocity_max = 420.0
+		sparks.damping_min = 120.0
+		sparks.damping_max = 260.0
+		sparks.gravity = Vector2(0, 260)  # sparks arc and rain
+		sparks.scale_amount_min = 1.2
+		sparks.scale_amount_max = 2.4
+		sparks.color = Color(1.0, 0.9, 0.55)
+		sparks.finished.connect(sparks.queue_free)
+		scene.add_child(sparks)
+		sparks.global_position = global_position
+	queue_free()
 
 ## The screen watches the fight — duck-typed and null-safe, so the deco can
 ## exist on any level (or in a bare test tree) without ever erroring.
@@ -143,15 +218,24 @@ func _draw_jumbotron() -> void:
 	draw_rect(Rect2(Vector2(half.x * 0.7 - 14.0, half.y), Vector2(14, 26)), CONCRETE_DARK)
 	draw_rect(Rect2(Vector2(-half.x + 10, -half.y + 10), size), Color(0.0, 0.0, 0.0, 0.3))
 	draw_rect(Rect2(-half, size), Color(0.05, 0.05, 0.07))  # screen base
-	# marquee: two copies for a seamless wrap
-	var text := "%s   %s   " % [_marquee, _marquee]
-	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x
-	var scroll := fmod(_t * 110.0, tw * 0.5)
+	# marquee: rendered CHAR BY CHAR so it clips at the screen edges like a
+	# real dot-matrix board — characters pop in and out column-wise
+	var seq := "%s   " % _marquee
+	var seq_w := maxf(font.get_string_size(seq, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x, 1.0)
+	var scroll := fmod(_t * 110.0, seq_w)
 	var flicker := 0.75 + 0.25 * sin(_t * 21.0 + sin(_t * 3.7) * 4.0)
 	var ink := Color(SCREEN_AMBER.r, SCREEN_AMBER.g, SCREEN_AMBER.b, flicker)
-	for rep in 2:
-		draw_string(font, Vector2(-scroll + tw * 0.5 * float(rep) - half.x + 16.0, 22.0),
-			text, HORIZONTAL_ALIGNMENT_LEFT, -1, 64, ink)
+	var clip_l := -half.x + 10.0
+	var clip_r := half.x - 10.0
+	var x := clip_l - scroll
+	while x < clip_r:
+		for ch in seq:
+			var cw := font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x
+			if x >= clip_l and x + cw <= clip_r:
+				draw_char(font, Vector2(x, 22.0), ch, 64, ink)
+			x += cw
+			if x >= clip_r:
+				break
 	for i in int(size.y / 6.0):  # scanlines
 		draw_rect(Rect2(Vector2(-half.x, -half.y + float(i) * 6.0), Vector2(size.x, 2.0)),
 			Color(0.0, 0.0, 0.0, 0.28))
@@ -161,10 +245,10 @@ func _draw_jumbotron() -> void:
 		draw_rect(Rect2(Vector2(rng.randf_range(-half.x, half.x - 20.0),
 			rng.randf_range(-half.y, half.y - 8.0)), Vector2(20, 8)),
 			Color(1.0, 1.0, 1.0, 0.05))
-	# the wide bezel frame clips the marquee overflow
+	# slim bezel frame — the marquee clips itself per-char now
 	var frame := Color(0.14, 0.14, 0.17)
-	draw_rect(Rect2(Vector2(-half.x - 400.0, -half.y - 8.0), Vector2(400.0, size.y + 16.0)), frame)
-	draw_rect(Rect2(Vector2(half.x, -half.y - 8.0), Vector2(400.0, size.y + 16.0)), frame)
+	draw_rect(Rect2(Vector2(-half.x - 8.0, -half.y - 8.0), Vector2(8.0, size.y + 16.0)), frame)
+	draw_rect(Rect2(Vector2(half.x, -half.y - 8.0), Vector2(8.0, size.y + 16.0)), frame)
 	draw_rect(Rect2(Vector2(-half.x - 8.0, -half.y - 8.0), Vector2(size.x + 16.0, 8.0)), frame)
 	draw_rect(Rect2(Vector2(-half.x - 8.0, half.y), Vector2(size.x + 16.0, 8.0)), frame)
 	draw_rect(Rect2(Vector2(-half.x - 8.0, -half.y - 8.0), Vector2(size.x + 16.0, size.y + 16.0)),

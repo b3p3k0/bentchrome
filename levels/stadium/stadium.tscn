@@ -648,6 +648,7 @@ kind = &"floodlight"
 
 [node name="Jumbotron" type="Node2D" parent="."]
 position = Vector2(0, -1680)
+z_index = 1
 script = ExtResource("30_sdeco")
 kind = &"jumbotron"
 size = Vector2(520, 150)
