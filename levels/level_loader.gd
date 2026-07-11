@@ -190,11 +190,15 @@ static func _add_enemies(level: Dictionary, parent: Node2D, rng_seed: int) -> vo
 		parent.add_child(enemy)
 
 ## Up to `count` roster ids — always distinct, never `exclude_id` (the player's
-## car). If the roster can't cover the ask, returns fewer picks and warns;
-## callers spawn that many enemies.
-static func pick_cars(count: int, exclude_id: String, rng: RandomNumberGenerator) -> Array:
+## car) nor anything in `also_exclude` (LAN matches reserve every claimed ride
+## — seats + queue — so the battlefield never fields two of one car). If the
+## roster can't cover the ask, returns fewer picks and warns; callers spawn
+## that many enemies — fewer bots always beats duplicates.
+static func pick_cars(count: int, exclude_id: String, rng: RandomNumberGenerator,
+		also_exclude: Array = []) -> Array:
 	_load_car_data()
-	var pool := _car_ids.filter(func(id: String) -> bool: return id != exclude_id)
+	var pool := _car_ids.filter(func(id: String) -> bool:
+		return id != exclude_id and not also_exclude.has(id))
 	if pool.size() < count:
 		push_warning("pick_cars: %d enemies asked, only %d distinct cars — spawning fewer" % [count, pool.size()])
 	# Fisher-Yates with the caller's RNG — Array.shuffle() isn't seedable.

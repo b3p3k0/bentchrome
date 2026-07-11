@@ -88,6 +88,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"select_confirm"):
 		if _bio and _bio.visible:
 			return  # reading, not racing — close the bio first
+		if _mp_taken().has(String(_cars[_index].id)):
+			return  # somebody's already in it — the [TAKEN] tag says so
 		_done = true
 		GameState.selected_vehicle_id = _cars[_index].id
 		if _mp_session():
@@ -104,6 +106,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func _mp_session() -> bool:
 	var net := get_node_or_null(^"/root/Net")
 	return net != null and net.is_active()
+
+## Rides claimed by OTHER drivers (seats + queue) — one of each on the floor.
+func _mp_taken() -> Array:
+	var net := get_node_or_null(^"/root/Net")
+	if net == null or not net.is_active():
+		return []
+	return net.taken_cars(net.my_id())
 
 func _toggle_bio() -> void:
 	if _bio == null:
@@ -196,7 +205,12 @@ func _show() -> void:
 	if _turntable:
 		_turntable.apply(car.id, car.primary_color, car.accent_color)
 	_portrait.texture = TextureLoader.load_texture("res://assets/img/bios/%s.png" % car.id)
-	_name.text = car.car_name
+	if _mp_taken().has(String(car.id)):
+		_name.text = "%s  [ TAKEN ]" % car.car_name
+		_name.modulate = Color(1.0, 0.42, 0.32)
+	else:
+		_name.text = car.car_name
+		_name.modulate = Color.WHITE
 	_driver.text = car.driver_name
 	_stats.text = "ACCEL %d    TOP %d    HANDLING %d    ARMOR %d    SPECIAL %d" % [
 		car.acceleration, car.top_speed, car.handling, car.armor, car.special_power]

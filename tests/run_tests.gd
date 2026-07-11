@@ -61,6 +61,7 @@ const SUITES := [
 	preload("res://tests/test_net_state_snapshot.gd"),
 	preload("res://tests/test_match_director.gd"),
 	preload("res://tests/test_spectator_rig.gd"),
+	preload("res://tests/test_unique_rides.gd"),
 ]
 
 var _checks := 0

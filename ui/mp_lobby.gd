@@ -198,6 +198,8 @@ func _refresh() -> void:
 			_my_car = pick
 	elif Net.roster.queue_position(me) >= 0:
 		_my_car = Net.roster.queue_car(me)
+	elif Net.taken_cars(me).has(_my_car):
+		_my_car = _shift_car(_my_car, 1)  # browsing a claimed ride — slide off it
 
 	_refresh_seats()
 	_rig_row.visible = seated
@@ -459,14 +461,20 @@ func _cycle_queue_car(dir: int, queued: bool) -> void:
 			_my_car = next_car
 			Net.request_opt_next(true, _my_car))
 
+## Next ride in dir, skipping every claimed one — one of each on the floor.
 func _shift_car(car: String, dir: int) -> String:
 	var ids: Array = Config.car_ids()
 	if ids.is_empty():
 		return car
+	var taken: Array = Net.taken_cars(Net.my_id())
 	var idx := ids.find(car)
 	if idx < 0:
 		idx = 0
-	return String(ids[wrapi(idx + dir, 0, ids.size())])
+	for step in range(1, ids.size() + 1):
+		var cand := String(ids[wrapi(idx + dir * step, 0, ids.size())])
+		if not taken.has(cand):
+			return cand
+	return car  # everything's claimed — more chassis are on the way
 
 ## Host's finger is the clock: broadcast the locked table, everyone rolls.
 func _do_start() -> void:

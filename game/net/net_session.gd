@@ -108,7 +108,7 @@ func host(port: int, password: String, server_name: String, strict_mods: bool) -
 	match_config = Config.defaults()
 	# The host always drives by default: SEAT 1 is theirs until they stand up.
 	roster.claim_seat(1, 0)
-	roster.set_pick(1, _default_pick())
+	roster.set_pick(1, _default_pick(1))
 	_discovery = Discovery.new()
 	_discovery.start_beacon(_beacon_info())
 	set_process(true)
@@ -267,8 +267,10 @@ func _apply_claim_seat(id: int, idx: int) -> void:
 	if roster == null or not peers.has(id):
 		return
 	if roster.claim_seat(id, idx):
-		if roster.pick_of(id).is_empty():
-			roster.set_pick(id, _default_pick())
+		# A stale or newly-conflicting pick re-rolls to the first free ride.
+		var pick: String = roster.pick_of(id)
+		if pick.is_empty() or taken_cars(id).has(pick):
+			roster.set_pick(id, _default_pick(id))
 		_lobby_dirty()
 
 func _apply_leave_seat(id: int) -> void:
@@ -278,8 +280,8 @@ func _apply_leave_seat(id: int) -> void:
 func _apply_set_pick(id: int, car: String) -> void:
 	if roster == null or not peers.has(id) or not roster.seated(id):
 		return
-	if not Config.car_ids().has(car):
-		return
+	if not Config.car_ids().has(car) or taken_cars(id).has(car):
+		return  # off-roster or already claimed — first come, first serve
 	roster.set_pick(id, car)
 	_lobby_dirty()
 
@@ -287,8 +289,8 @@ func _apply_opt_next(id: int, on: bool, car: String) -> void:
 	if roster == null or not peers.has(id) or roster.seated(id):
 		return
 	if on:
-		if not Config.car_ids().has(car):
-			return
+		if not Config.car_ids().has(car) or taken_cars(id).has(car):
+			return  # the queue reserves rides too — no rotation collisions
 		roster.opt_in(id, car)
 	elif not roster.opt_out(id):
 		return
@@ -311,10 +313,12 @@ func start_match() -> void:
 		var idx := clampi(int(match_config.get("map", 0)), 0, SceneFlow.MP_MAPS.size() - 1)
 		var want := int(SceneFlow.MP_MAPS[idx].get("cars", actors.size())) - actors.size()
 		if want > 0:
-			# Host-only RNG: under host authority the table IS the truth.
+			# Host-only RNG: under host authority the table IS the truth. The
+			# AI pool excludes every claimed ride (seats + queue) — the pool
+			# running short means FEWER bots, never a duplicate car.
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
-			for pick in LoaderScript.pick_cars(want, "", rng):
+			for pick in LoaderScript.pick_cars(want, "", rng, taken_cars(0)):
 				actors.append({"peer": 0, "car": String(pick),
 					"name": Config.car_name(String(pick))})
 	rpc_start_match.rpc(match_config, actors)
@@ -663,14 +667,37 @@ func _settle_fail(reason: String) -> void:
 func _effective_cap() -> int:
 	return Proto.MAX_PEERS if bool(match_config.get("observers", true)) else Proto.MAX_PLAYERS
 
-## A fresh seat inherits the SP picker's car when it's a real roster slug.
-func _default_pick() -> String:
+## Every claimed ride — seated picks plus queue picks — minus exclude_peer's
+## own. ONE of each car on the battlefield is the law; the queue pre-reserves
+## so a rotation can never collide.
+func taken_cars(exclude_peer := 0) -> Array:
+	var taken: Array = []
+	if roster == null:
+		return taken
+	for id_v in roster.seated_ids():
+		var id := int(id_v)
+		if id != exclude_peer:
+			var pick: String = roster.pick_of(id)
+			if not pick.is_empty():
+				taken.append(pick)
+	for entry in roster.queue:
+		if int(entry.id) != exclude_peer and not String(entry.car).is_empty():
+			taken.append(String(entry.car))
+	return taken
+
+## A fresh seat inherits the SP picker's car when it's a real, UNCLAIMED
+## roster slug; otherwise the first free ride on the floor.
+func _default_pick(for_peer: int) -> String:
+	var taken := taken_cars(for_peer)
 	var gs := get_node_or_null(^"/root/GameState")
 	var pick: String = String(gs.selected_vehicle_id) if gs else ""
 	var ids: Array = Config.car_ids()
-	if not pick.is_empty() and ids.has(pick):
+	if not pick.is_empty() and ids.has(pick) and not taken.has(pick):
 		return pick
-	return String(ids[0]) if not ids.is_empty() else ""
+	for id in ids:
+		if not taken.has(String(id)):
+			return String(id)
+	return ""
 
 func _peer_ip(id: int) -> String:
 	if _enet == null:
