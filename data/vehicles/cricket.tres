@@ -11,6 +11,7 @@ accel = 1.4
 top = 1.2705882
 grip = 1.35
 steer = 1.15
+dash_damage = 1.15
 
 [sub_resource type="Resource" id="Terrain_cricket_grass"]
 script = ExtResource("3_terrain")

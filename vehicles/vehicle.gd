@@ -681,6 +681,8 @@ func sink_into_water() -> void:
 		_falling = false)
 
 func _on_died() -> void:
+	if _special:
+		_special.cancel_dash()
 	if not _falling:
 		_spawn_explosion()
 	var audio_d := get_node_or_null(^"/root/AudioDirector")
@@ -724,6 +726,11 @@ func get_mg_mount() -> WeaponMount:
 func get_speed_scale() -> float:
 	return _status.speed_scale() if _status else 1.0
 
+## Generic surface-profile lookup for vehicle-side systems beyond driving
+## (currently DASH impact). Callers never need roster ids or resource internals.
+func terrain_factor(property: StringName, surface: StringName = current_terrain) -> float:
+	return stats.terrain_factor(surface, property) if stats else 1.0
+
 func apply_effect(spec: StatusEffectSpec) -> void:
 	if _status:
 		_status.apply(spec)
@@ -737,6 +744,8 @@ func is_shielded() -> bool:
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.
 func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
+	if _special:
+		_special.cancel_dash()
 	if is_in_group(&"player"):
 		var audio_s := get_node_or_null(^"/root/AudioDirector")
 		if audio_s:
@@ -805,6 +814,8 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 				# An armed Toe Jam charge replaces the speed-scaled hit.
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
+				if _special:
+					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)
 				other.take_ram_damage(hit, self)
 				_ram_cd = ram_cooldown

@@ -126,6 +126,15 @@ func test_dashboard_reports_current_effective_surface() -> void:
 		and text.contains("top 1.08") and text.contains("steer 1.15"),
 		"terrain profile: dashboard exposes current effective values")
 
+func test_cricket_dash_damage_is_authored_as_a_generic_terrain_factor() -> void:
+	var cricket: VehicleStats = load("res://data/vehicles/cricket.tres")
+	t.check_approx(cricket.terrain_factor(&"dirt", &"dash_damage"), 1.15,
+		"terrain profile: Cricket dirt authors the generic dash factor")
+	t.check_approx(cricket.terrain_factor(&"road", &"dash_damage"), 1.0,
+		"terrain profile: road dash damage remains neutral")
+	t.check_approx(cricket.terrain_factor(&"grass", &"dash_damage"), 1.0,
+		"terrain profile: omitted grass dash damage remains neutral")
+
 func test_ice_straight_entry_stays_on_line_and_spins_tires() -> void:
 	var ice := CtrlScript.new()
 	var straight := StubVehicle.new()

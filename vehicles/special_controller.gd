@@ -45,6 +45,7 @@ var _beam_sparks: CPUParticles2D = null
 var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
+var _dash_damage_mult := 1.0  # terrain snapshot; consumed by first landed ram
 var _armed := false
 var _armed_t := 0.0               # Toe Jam use-it-or-lose-it countdown
 var _armed_fx: CPUParticles2D = null
@@ -258,6 +259,9 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 func _exit_tree() -> void:
 	_end_beam()   # don't leave an orphaned beam line if the car dies mid-zap
 	_end_flame()  # same etiquette for the torch
+	_dash_t = 0.0
+	_dash_target = null
+	_dash_damage_mult = 1.0
 
 ## Leap: lock the nearest vehicle in range and full-throttle body-check it
 ## (straight ahead when nothing is in range). The dash overrides normal driving,
@@ -270,12 +274,36 @@ func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -
 	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE, shooter)
 	_dash_dir = direction
 	_dash_t = DASH_DURATION
+	_dash_damage_mult = 1.0
+	if shooter.has_method(&"terrain_factor"):
+		_dash_damage_mult = float(shooter.terrain_factor(&"dash_damage"))
 	if shooter is CollisionObject2D:
 		shooter.collision_mask &= ~4  # ignore obstacles mid-leap
 	return true
 
 func is_dashing() -> bool:
 	return _dash_t > 0.0
+
+func dash_damage_multiplier() -> float:
+	return _dash_damage_mult if _dash_t > 0.0 else 1.0
+
+## Vehicle's ram authority calls this only on a real vehicle impact. Consuming
+## prevents one dash from pricing multiple cars in the same physics frame.
+func take_dash_ram_multiplier() -> float:
+	if _dash_t <= 0.0:
+		return 1.0
+	var value := _dash_damage_mult
+	_dash_damage_mult = 1.0
+	return value
+
+func cancel_dash() -> void:
+	var vehicle := get_parent() as CharacterBody2D
+	if _dash_t > 0.0 and vehicle:
+		_end_dash(vehicle)
+	else:
+		_dash_t = 0.0
+		_dash_target = null
+		_dash_damage_mult = 1.0
 
 func _dash_tick(delta: float) -> void:
 	var vehicle := get_parent() as CharacterBody2D
@@ -308,6 +336,7 @@ func _dash_tick(delta: float) -> void:
 func _end_dash(vehicle: CharacterBody2D) -> void:
 	_dash_t = 0.0
 	_dash_target = null
+	_dash_damage_mult = 1.0
 	# Restore the mask to match the car's air state, same split as
 	# Vehicle._set_airborne. Grounded values come from the car's own mask
 	# authority (floor-aware); duck-typed — never name Vehicle here.

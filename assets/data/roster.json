@@ -43,7 +43,7 @@
 	  "special_ammo_cap": 1,
 	  "special_recharge_seconds": 10.0,
 	  "terrain_modifiers": {
-		"dirt": {"accel": 1.4, "top": 1.2705882353, "grip": 1.35, "steer": 1.15},
+		"dirt": {"accel": 1.4, "top": 1.2705882353, "grip": 1.35, "steer": 1.15, "dash_damage": 1.15},
 		"grass": {"accel": 1.1222222222, "top": 1.1222222222, "grip": 1.15, "steer": 1.08}
 	  },
 	  "mass": 2

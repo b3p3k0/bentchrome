@@ -8,6 +8,11 @@ const DefScript := preload("res://resources/weapon_def.gd")
 
 var t
 
+class DashShooter extends CharacterBody2D:
+	var dash_terrain_factor := 1.0
+	func terrain_factor(property: StringName, _surface: StringName = &"") -> float:
+		return dash_terrain_factor if property == &"dash_damage" else 1.0
+
 func _init(runner) -> void:
 	t = runner
 
@@ -87,6 +92,49 @@ func test_taser_def() -> void:
 func test_leap_def() -> void:
 	var d := _def("res://data/weapons/leap.tres")
 	t.check(not d.stub and d.kind == 2, "leap: live DASH")
+
+func test_dash_snapshots_terrain_damage_until_impact() -> void:
+	var shooter := DashShooter.new()
+	shooter.dash_terrain_factor = 1.15
+	t.root.add_child(shooter)
+	var sc = ControllerScript.new()
+	shooter.add_child(sc)
+	var def = DefScript.new()
+	def.kind = 2  # DASH
+	sc.set_weapon(def)
+	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
+		"dash terrain: activation consumes on configured surface")
+	t.check_approx(sc.dash_damage_multiplier(), 1.15,
+		"dash terrain: activation snapshots the surface factor")
+	shooter.dash_terrain_factor = 1.0
+	t.check_approx(sc.dash_damage_multiplier(), 1.15,
+		"dash terrain: crossing surfaces does not re-price a live dash")
+	t.check_approx(sc.take_dash_ram_multiplier(), 1.15,
+		"dash terrain: first landed ram receives the snapshot")
+	t.check_approx(sc.take_dash_ram_multiplier(), 1.0,
+		"dash terrain: snapshot pays out only once")
+	t.root.remove_child(shooter)
+	shooter.free()
+
+func test_dash_terrain_snapshot_resets_on_miss_and_cancel() -> void:
+	var shooter := DashShooter.new()
+	shooter.dash_terrain_factor = 1.15
+	t.root.add_child(shooter)
+	var sc = ControllerScript.new()
+	shooter.add_child(sc)
+	var def = DefScript.new()
+	def.kind = 2  # DASH
+	sc.set_weapon(def)
+	sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter)
+	sc._physics_process(ControllerScript.DASH_DURATION + 0.1)
+	t.check(not sc.is_dashing() and is_equal_approx(sc.dash_damage_multiplier(), 1.0),
+		"dash terrain: a missed dash expires back to neutral")
+	sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter)
+	sc.cancel_dash()
+	t.check(not sc.is_dashing() and is_equal_approx(sc.take_dash_ram_multiplier(), 1.0),
+		"dash terrain: cancellation clears the snapshot")
+	t.root.remove_child(shooter)
+	shooter.free()
 
 func test_toe_jam_def() -> void:
 	var d := _def("res://data/weapons/toe_jam.tres")
