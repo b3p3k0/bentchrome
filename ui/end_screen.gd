@@ -25,6 +25,10 @@ const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't cl
 var _seen_enemies := false
 var _over := false
 var _dim: ColorRect
+var _center: CenterContainer
+var _rolling_title: Label
+var _rolling_hint: Label
+var _claim_armed := false
 var _title: Label
 var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
@@ -70,6 +74,9 @@ func _campaign_next_index() -> int:
 
 func _show(win: bool) -> void:
 	_over = true
+	if win and win_keeps_rolling:
+		_show_rolling_win()
+		return
 	var next := _campaign_next_index() if win else -1
 	var accent := AMBER if win else RED
 	_title.text = "YOU WIN" if win else "YOU LOSE"
@@ -77,10 +84,7 @@ func _show(win: bool) -> void:
 	_panel_style.border_color = accent
 	for i in _trim_blocks.size():
 		_trim_blocks[i].color = accent if i % 2 == 0 else accent.darkened(0.55)
-	if win and win_keeps_rolling:
-		_dim.color.a = 0.2  # thin the veil — the lap and fireworks are the show
-	else:
-		get_tree().paused = true
+	get_tree().paused = true
 	visible = true
 	if next >= 0:
 		# Mid-campaign win: a beat of glory instead of a hard cut — any key
@@ -98,6 +102,50 @@ func _show(win: bool) -> void:
 		b.disabled = true
 	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_buttons, CONNECT_ONE_SHOT)
 
+## The rolling win frames the shot on the 3x3: the parading car holds the
+## center cell (the camera follows it), YOU WIN! rides the top-center cell,
+## and the prize hint fades into the bottom-center cell after a beat. No
+## panel, no freeze — the lap and the fireworks ARE the screen.
+func _show_rolling_win() -> void:
+	visible = true
+	_dim.color.a = 0.15
+	_center.visible = false  # the classic panel waits behind the stub
+	_rolling_title = Label.new()
+	_rolling_title.text = "YOU WIN!"
+	_rolling_title.add_theme_font_size_override("font_size", 56)
+	_rolling_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rolling_title.modulate = AMBER
+	_rolling_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_rolling_title.offset_top = 84.0
+	add_child(_rolling_title)
+	_rolling_hint = Label.new()
+	_rolling_hint.text = "Press any key to claim your prize..."
+	_rolling_hint.add_theme_font_size_override("font_size", 20)
+	_rolling_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rolling_hint.modulate = AMBER
+	_rolling_hint.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_rolling_hint.offset_top = -150.0
+	_rolling_hint.visible = false  # the short beat before the ask
+	add_child(_rolling_hint)
+	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_claim, CONNECT_ONE_SHOT)
+
+func _arm_claim() -> void:
+	_claim_armed = true
+	if _rolling_hint:
+		_rolling_hint.visible = true
+
+## Close-sequence STUB: the real prize ceremony is still on the drawing
+## board — reveal the classic panel so every road stays open.
+func _claim_prize() -> void:
+	print("[coliseum] prize sequence TBD — enjoy the fireworks")
+	if _rolling_hint:
+		_rolling_hint.visible = false
+	_center.visible = true
+	for b in _buttons:
+		b.disabled = false
+	if _restart_btn:
+		_restart_btn.grab_focus()
+
 func _arm_buttons() -> void:
 	for b in _buttons:
 		b.disabled = false
@@ -110,12 +158,17 @@ func _arm_continue() -> void:
 	_hint.modulate = AMBER
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _continue_armed:
+	if not _continue_armed and not _claim_armed:
 		return
 	var pressed: bool = (event is InputEventKey and event.pressed and not event.echo) \
 		or (event is InputEventJoypadButton and event.pressed) \
 		or (event is InputEventMouseButton and event.pressed)
 	if not pressed:
+		return
+	if _claim_armed:
+		get_viewport().set_input_as_handled()
+		_claim_armed = false
+		_claim_prize()
 		return
 	get_viewport().set_input_as_handled()
 	_continue_armed = false
@@ -136,9 +189,9 @@ func _build_ui() -> void:
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_dim)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	_center = CenterContainer.new()
+	_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_center)
 
 	var panel := PanelContainer.new()
 	_panel_style = StyleBoxFlat.new()
@@ -146,7 +199,7 @@ func _build_ui() -> void:
 	for side in ["left", "right", "top", "bottom"]:
 		_panel_style.set("border_width_" + side, 6)  # fat square border — blocky
 	panel.add_theme_stylebox_override("panel", _panel_style)
-	center.add_child(panel)
+	_center.add_child(panel)
 
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
