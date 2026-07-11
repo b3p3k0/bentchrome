@@ -44,6 +44,8 @@ const CONTAINER_PALETTES := [
 ]
 const LINK := Color(0.55, 0.6, 0.58)       # galvanized chain-link
 const LINK_DARK := Color(0.36, 0.4, 0.39)
+const FAN_BLUE := Color(0.2, 0.42, 0.7)    # stadium crowd-control rail
+const FAN_BLUE_DARK := Color(0.12, 0.26, 0.46)
 
 const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
@@ -117,6 +119,8 @@ func _boom_tint() -> Color:
 			return Color(0.9, 0.88, 0.82)  # splinters fly white
 		&"chainlink":
 			return Color(0.7, 0.74, 0.72)  # mesh crumples gray
+		&"fan_rail":
+			return FAN_BLUE  # crowd-control blue shears off
 		_:
 			return BASE_COLOR
 
@@ -159,6 +163,8 @@ func _draw() -> void:
 			_draw_barrier()
 		&"rail":
 			_draw_rail()
+		&"fan_rail":
+			_draw_fan_rail()
 		&"log":
 			_draw_log()
 		&"junk":
@@ -245,19 +251,27 @@ func _draw_barrier() -> void:
 
 ## Guardrail segment: W-beam channels along the long axis, post dots.
 func _draw_rail() -> void:
+	_draw_rail_bar(METAL, METAL_DARK)
+
+## Stadium fan rail: the same guardrail bones in event-crew blue — built to
+## keep fans back, never to keep a car in.
+func _draw_fan_rail() -> void:
+	_draw_rail_bar(FAN_BLUE, FAN_BLUE_DARK)
+
+func _draw_rail_bar(steel: Color, dark: Color) -> void:
 	var half := size * 0.5
-	draw_rect(Rect2(-half, size), _shade(METAL))
+	draw_rect(Rect2(-half, size), _shade(steel))
 	var tall := size.y > size.x
 	if tall:
-		draw_line(Vector2(-half.x * 0.4, -half.y + 2), Vector2(-half.x * 0.4, half.y - 2), _shade(METAL_DARK), 2.5)
-		draw_line(Vector2(half.x * 0.4, -half.y + 2), Vector2(half.x * 0.4, half.y - 2), _shade(METAL_DARK), 2.5)
-		draw_circle(Vector2(0, -half.y + 8), 3.0, _shade(METAL_DARK))
-		draw_circle(Vector2(0, half.y - 8), 3.0, _shade(METAL_DARK))
+		draw_line(Vector2(-half.x * 0.4, -half.y + 2), Vector2(-half.x * 0.4, half.y - 2), _shade(dark), 2.5)
+		draw_line(Vector2(half.x * 0.4, -half.y + 2), Vector2(half.x * 0.4, half.y - 2), _shade(dark), 2.5)
+		draw_circle(Vector2(0, -half.y + 8), 3.0, _shade(dark))
+		draw_circle(Vector2(0, half.y - 8), 3.0, _shade(dark))
 	else:
-		draw_line(Vector2(-half.x + 2, -half.y * 0.4), Vector2(half.x - 2, -half.y * 0.4), _shade(METAL_DARK), 2.5)
-		draw_line(Vector2(-half.x + 2, half.y * 0.4), Vector2(half.x - 2, half.y * 0.4), _shade(METAL_DARK), 2.5)
-		draw_circle(Vector2(-half.x + 8, 0), 3.0, _shade(METAL_DARK))
-		draw_circle(Vector2(half.x - 8, 0), 3.0, _shade(METAL_DARK))
+		draw_line(Vector2(-half.x + 2, -half.y * 0.4), Vector2(half.x - 2, -half.y * 0.4), _shade(dark), 2.5)
+		draw_line(Vector2(-half.x + 2, half.y * 0.4), Vector2(half.x - 2, half.y * 0.4), _shade(dark), 2.5)
+		draw_circle(Vector2(-half.x + 8, 0), 3.0, _shade(dark))
+		draw_circle(Vector2(half.x - 8, 0), 3.0, _shade(dark))
 
 ## Junk pile: rusty blobs, a dead tire, a pipe poking out.
 ## Fallen trunk (deco = &"log"): bark seams along the long axis, pale sawn

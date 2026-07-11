@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -20,6 +20,7 @@
 [ext_resource type="Resource" path="res://data/vehicles/goliath.tres" id="32_gstats"]
 [ext_resource type="Script" path="res://vehicles/goliath/goliath_driver.gd" id="33_gdrv"]
 [ext_resource type="Script" path="res://vehicles/goliath/goliath_boss.gd" id="34_gboss"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -538,6 +539,127 @@ position = Vector2(752, -368)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
+
+[node name="FanRailN1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-900, -1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailN2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, -1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailN3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(900, -1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailS1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-900, 1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailS2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, 1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailS3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(900, 1166)
+size = Vector2(720, 14)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1650, -500)
+size = Vector2(14, 560)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1650, 500)
+size = Vector2(14, 560)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1650, -500)
+size = Vector2(14, 560)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="FanRailE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1650, 500)
+size = Vector2(14, 560)
+max_hp = 12.0
+deco = &"fan_rail"
+floor_index = 1
+
+[node name="ConeNE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1740, -1460)
+kind = &"cone"
+
+[node name="ConeNW" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1740, -1460)
+kind = &"cone"
+
+[node name="ConeSE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1740, 1460)
+kind = &"cone"
+
+[node name="ConeSW" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1740, 1460)
+kind = &"cone"
+
+[node name="TrashA" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-380, -560)
+kind = &"trash"
+footprint = 46.0
+
+[node name="TrashB" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(850, -120)
+kind = &"trash"
+footprint = 42.0
+
+[node name="TrashC" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-980, 400)
+kind = &"trash"
+footprint = 46.0
+
+[node name="ScrapPile" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-660, -640)
+kind = &"trash"
+footprint = 52.0
+
+[node name="PalletA" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1000, 560)
+kind = &"pallet"
+footprint = 44.0
+
+[node name="TrashRimW" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-400, 1680)
+kind = &"trash"
+floor_index = 2
+
+[node name="TrashRimE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(400, -1680)
+kind = &"trash"
+floor_index = 2
 
 [node name="JumpA" type="Area2D" parent="."]
 position = Vector2(-128, -512)
