@@ -4,9 +4,19 @@ extends Node2D
 ## while boosting. Pure paint — reads the controller's state flags, never
 ## touches physics. Rides on every vehicle (AI boost flames included).
 
-const SKID_COLOR := Color(0.05, 0.05, 0.06, 0.6)
+const SKID_COLOR := Color(0.05, 0.05, 0.06, 0.6)  # rubber on pavement (road/fallback)
+# Off-road surfaces gouge a terrain-colored scar instead of black rubber. Any
+# terrain named here also lays a mark on a hard slide (no handbrake needed);
+# road is absent on purpose, so pavement stays handbrake-only.
+const SKID_COLORS := {
+	&"grass": Color(0.34, 0.26, 0.16, 0.7),   # torn earth under the sod
+	&"dirt":  Color(0.28, 0.2, 0.12, 0.75),   # darker churned dirt
+	&"snow":  Color(0.62, 0.68, 0.78, 0.85),  # compressed bluish-white
+	&"ice":   Color(0.72, 0.8, 0.9, 0.5),     # faint polished streak
+}
 const SKID_WIDTH := 5.0
 const SKID_MIN_SPEED := 200.0
+const SKID_SLIP_MIN := 120.0  # sideways px/s that marks an off-road surface
 const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
 const DUST_MIN_SPEED := 150.0
@@ -93,12 +103,20 @@ func _physics_process(_delta: float) -> void:
 		_burn_fx.emitting = _vehicle.has_method(&"is_burning") and _vehicle.is_burning()
 
 	var terrain: StringName = _vehicle.current_terrain
+	# Sideways slip = how hard the car is sliding, derived from kinematics alone
+	# (velocity + heading) so it reads true on a network puppet with no live
+	# controller. Shared by the off-road skid trigger and the fling amplifier.
+	var forward: Vector2 = Vector2.RIGHT.rotated(_vehicle.heading)
+	var lat: float = absf(_vehicle.velocity.dot(forward.orthogonal()))
+
 	var dusty: bool = grounded and speed > DUST_MIN_SPEED and DUST_COLORS.has(terrain)
 	_dust.emitting = dusty
 	if dusty:
 		_dust.color = DUST_COLORS[terrain]
 
-	var skidding: bool = grounded and ctrl.handbraking and speed > SKID_MIN_SPEED
+	# Handbrake skids anywhere; off-road surfaces also scar on a hard slide.
+	var off_road_slide: bool = SKID_COLORS.has(terrain) and lat > SKID_SLIP_MIN
+	var skidding: bool = grounded and speed > SKID_MIN_SPEED and (ctrl.handbraking or off_road_slide)
 	if skidding and _skids.is_empty():
 		_start_skid()
 	elif not skidding and not _skids.is_empty():
@@ -118,10 +136,13 @@ func _start_skid() -> void:
 	var host := get_tree().current_scene
 	if host == null or get_tree().get_nodes_in_group(&"skidmarks").size() >= MAX_SKID_NODES:
 		return
+	# One color for the whole mark, picked from the surface it started on.
+	var terrain: StringName = _vehicle.current_terrain
+	var color: Color = SKID_COLORS.get(terrain, SKID_COLOR)
 	for i in _skid_offsets().size():
 		var line := Line2D.new()
 		line.width = SKID_WIDTH
-		line.default_color = SKID_COLOR
+		line.default_color = color
 		line.add_to_group(&"skidmarks")
 		host.add_child(line)
 		# Early in the draw order: under buildings and cars, over the floor.
