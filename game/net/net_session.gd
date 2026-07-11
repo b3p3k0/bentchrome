@@ -397,6 +397,21 @@ func _apply_match_end(result: Dictionary) -> void:
 	match_ended.emit(result)
 	# Same -s guard as match start; real boots always have a scene.
 	if get_tree().current_scene != null:
+		SceneFlow.to_mp_scoreboard()
+
+## Host rolls everyone from the scoreboard back to the garage.
+func return_to_lobby() -> void:
+	if mode != Mode.HOSTING:
+		return
+	rpc_return_to_lobby.rpc()
+	_apply_return()
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_return_to_lobby() -> void:
+	_apply_return()
+
+func _apply_return() -> void:
+	if get_tree().current_scene != null:
 		SceneFlow.to_mp_lobby()
 
 # -------------------------------------------------------------- state plane

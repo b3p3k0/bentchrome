@@ -85,6 +85,14 @@ if echo "$MATCH_OUT" | grep -qiE "$ERR_RE" || ! echo "$MATCH_OUT" | grep -q '^\[
   echo "== smoke: FAIL (mp match)"; exit 1
 fi
 
+# Scoreboard: cold-boot with no verdict (must render the empty-record path).
+echo "== smoke: mp scoreboard"
+SCORE_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://ui/mp_scoreboard.tscn --quit-after 10 2>&1)"
+if echo "$SCORE_OUT" | grep -qiE "$ERR_RE" || ! echo "$SCORE_OUT" | grep -q '^\[boot\] mp scoreboard ready'; then
+  echo "$SCORE_OUT" | grep -iE "$ERR_RE" || true
+  echo "== smoke: FAIL (mp scoreboard)"; exit 1
+fi
+
 # Campaign levels: boot each hand-authored scene cold (parse errors, broken
 # instances, and load cycles in level content all surface here).
 for LEVEL in levels/freeway/freeway.tscn levels/suburbs/suburbs.tscn levels/snowy/snowy.tscn levels/depot/depot.tscn levels/dock/dock.tscn levels/chase/buzzard_run.tscn levels/stadium/stadium.tscn; do
