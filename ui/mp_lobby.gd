@@ -20,6 +20,11 @@ const TIME_STEP := 60
 const BRAWL_FRAG_CAPS := [0, 10, 15, 20, 25]
 const BRAWL_TIME_CAPS := [0, 300, 600, 900]
 
+## Headroom baked into the locked panel height: a few observer rows can join
+## before the border has any reason to move.
+const OBSERVER_RESERVE := 96.0
+
+var _panel: PanelContainer
 var _head: Label
 var _seat_rows: VBoxContainer
 var _rig_row: HBoxContainer
@@ -45,10 +50,19 @@ func _ready() -> void:
 	_refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(IR.ACTION_PAUSE) and _confirm:
-		get_viewport().set_input_as_handled()
+	if not event.is_action_pressed(IR.ACTION_PAUSE):
+		return
+	get_viewport().set_input_as_handled()
+	if _confirm:
 		_close_confirm()
-	# ESC is otherwise inert here — leaving a live lobby takes the button.
+		return
+	# ESC backs out cleanly — but a live session deserves one honest question.
+	if not Net.is_active():
+		SceneFlow.to_mp_menu()
+		return
+	var prompt := "Close the garage and boot everyone?" if Net.is_host() \
+		else "Leave the garage?"
+	_open_confirm(prompt, "LEAVE", "STAY", _do_leave)
 
 func _on_session_changed() -> void:
 	if Net.mode == Net.Mode.OFF:
@@ -128,19 +142,25 @@ func _build() -> void:
 	_status.modulate = DIM_TEXT
 	vbox.add_child(_status)
 
-	var panel := PanelContainer.new()
+	_panel = PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.07, 0.09)
 	style.border_color = AMBER
 	for side in ["left", "right", "top", "bottom"]:
 		style.set("border_width_" + side, 6)
-	panel.add_theme_stylebox_override("panel", style)
+	_panel.add_theme_stylebox_override("panel", style)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
-	panel.add_child(margin)
+	_panel.add_child(margin)
 	margin.add_child(vbox)
-	($Center as CenterContainer).add_child(panel)
+	($Center as CenterContainer).add_child(_panel)
+	# Lock the amber border to the worst case: every rule row is still visible
+	# right now, so this measurement IS the maximum the rules board ever needs.
+	# Row visibility changes then shrink the content from the top, never the
+	# frame — no jump when the host steps mode or format.
+	var worst := _panel.get_combined_minimum_size()
+	_panel.custom_minimum_size = Vector2(worst.x, worst.y + OBSERVER_RESERVE)
 
 # ---------------------------------------------------------------- refresh
 
@@ -400,6 +420,7 @@ func _cycle_queue_car(dir: int, queued: bool) -> void:
 	# Changing wheels while queued: the warned trip to the back of the line.
 	_open_confirm(
 		"Hey %s — changing wheels mid-queue\nsends you to the back. You sure?" % Net.display_name(),
+		"SEND ME BACK", "KEEP MY SPOT",
 		func() -> void:
 			_my_car = next_car
 			Net.request_opt_next(true, _my_car))
@@ -455,7 +476,7 @@ func _peer_modded(id: int) -> bool:
 	return bool(Net.peers[id].modded) if Net.peers.has(id) else false
 
 # The house confirm overlay (title.gd's quit-confirm pattern, mouse-driven).
-func _open_confirm(text: String, on_yes: Callable) -> void:
+func _open_confirm(text: String, yes_label: String, no_label: String, on_yes: Callable) -> void:
 	_close_confirm()
 	_confirm = Control.new()
 	_confirm.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -493,14 +514,14 @@ func _open_confirm(text: String, on_yes: Callable) -> void:
 	row.add_theme_constant_override("separation", 40)
 	vbox.add_child(row)
 	var yes := Button.new()
-	yes.text = "SEND ME BACK"
+	yes.text = yes_label
 	yes.add_theme_font_size_override("font_size", 16)
 	yes.pressed.connect(func() -> void:
 		_close_confirm()
 		on_yes.call())
 	row.add_child(yes)
 	var no := Button.new()
-	no.text = "KEEP MY SPOT"
+	no.text = no_label
 	no.add_theme_font_size_override("font_size", 16)
 	no.pressed.connect(_close_confirm)
 	row.add_child(no)
