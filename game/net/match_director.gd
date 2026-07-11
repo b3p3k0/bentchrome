@@ -284,6 +284,41 @@ func _finish(verdict: Dictionary) -> void:
 	ended.emit({"reason": String(verdict.get("reason", "")),
 		"winners": winners, "scores": scores})
 
+## A driver vanished mid-match (disconnect/kick/ban). Creditless by policy:
+## no death tally, the scoreboard row freezes flagged; LIVES forfeits the
+## seat outright. The unified seat-fill rule still applies — a waiting queue
+## member takes the wheel WHERE IT SITS. Returns true when a swap was emitted
+## (the shell rewires the live car), false when the slot goes ghost (the
+## shell neutralizes the node).
+func vacate_actor(idx: int) -> bool:
+	if finished or idx < 0 or idx >= actors.size():
+		return false
+	var peer := int(actors[idx].peer)
+	_prev_alive[idx] = false  # never tallied as a death
+	if scores.has(peer):
+		scores[peer]["gone"] = true
+	if _format() == &"lives":
+		eliminated[peer] = true
+	feed_line.emit("%s vanished into the dust" % String(actors[idx].name))
+	if not eliminated.get(peer, false) and _rotation_allowed() \
+			and roster and not roster.queue.is_empty():
+		var open: int = roster.open_seat()  # drop_peer already freed theirs
+		var next: Dictionary = roster.pop_next()
+		if open >= 0 and not next.is_empty():
+			var to_peer := int(next.id)
+			roster.claim_seat(to_peer, open)
+			roster.set_pick(to_peer, String(next.car))
+			actors[idx] = {"peer": to_peer, "car": String(next.car), "name": ""}
+			if not scores.has(to_peer):
+				scores[to_peer] = {"kills": 0, "deaths": 0, "name": ""}
+			status_changed.emit()
+			seat_swap.emit(idx, peer, to_peer, String(next.car))
+			return true
+	actors[idx] = {"peer": 0, "car": String(actors[idx].car),
+		"name": String(actors[idx].name)}
+	status_changed.emit()
+	return false
+
 ## The locked respawn rule: the derived spawn farthest from every living
 ## combatant — no spawning into someone's crosshairs.
 func farthest_spawn() -> Dictionary:

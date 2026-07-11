@@ -136,6 +136,9 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	var tgt := Targeting.nearest_other(origin, shooter, def.acquisition_radius, shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
+	var fx_scene := get_tree().current_scene
+	if fx_scene == null:
+		return false  # headless fixtures may not set one — same guard as the mount
 	_beam_def = def
 	_beam_target = tgt
 	_beam_t = BEAM_DURATION
@@ -144,11 +147,11 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	_beam_glow = Line2D.new()
 	_beam_glow.width = 7.0
 	_beam_glow.default_color = Color(0.35, 0.75, 1.0, 0.25)
-	get_tree().current_scene.add_child(_beam_glow)
+	fx_scene.add_child(_beam_glow)
 	_beam_line = Line2D.new()
 	_beam_line.width = 2.5
 	_beam_line.default_color = Color(0.75, 0.95, 1.0, 0.95)
-	get_tree().current_scene.add_child(_beam_line)
+	fx_scene.add_child(_beam_line)
 	_beam_sparks = CPUParticles2D.new()
 	_beam_sparks.amount = 10
 	_beam_sparks.lifetime = 0.25
@@ -160,7 +163,7 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	_beam_sparks.scale_amount_max = 2.5
 	_beam_sparks.gravity = Vector2.ZERO
 	_beam_sparks.color = Color(0.7, 0.92, 1.0, 0.9)
-	get_tree().current_scene.add_child(_beam_sparks)
+	fx_scene.add_child(_beam_sparks)
 	return true
 
 ## Jagged bolt between two points: subdivide every ~BOLT_SEG px and offset the

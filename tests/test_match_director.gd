@@ -1,9 +1,11 @@
 extends RefCounted
-## MatchDirector.end_check — the four formats' pure truth table. Every locked
-## edge-case policy that fits in data lives here: caps, joint winners, draws,
-## THE WASTELAND, and the solo-melee elimination.
+## MatchDirector: the four formats' pure end_check truth table (caps, joint
+## winners, draws, THE WASTELAND, solo-melee elimination) plus the vacate
+## policy — a vanished driver is creditless, LIVES forfeits, and the unified
+## seat-fill hands the live car to the queue's front.
 
 const Director := preload("res://game/net/match_director.gd")
+const Roster := preload("res://game/net/net_roster.gd")
 
 var t
 
@@ -71,3 +73,54 @@ func test_end_beats_everything() -> void:
 	var cfg := {"format": "frag", "frag_target": 5}
 	var verdict: Dictionary = Director.end_check(cfg, _scores({1: 5}), 2, 2, [], 1.0)
 	t.check(not verdict.is_empty(), "order: the cap-hitting kill ends it immediately")
+
+# Untyped on purpose: class_name lookups die under a stale -s cache.
+func _director(format: String, gotnext := true) -> Node:
+	var d: Node = Director.new()
+	var roster = Roster.new(4)
+	roster.claim_seat(10, 0)
+	roster.set_pick(10, "bumper")
+	roster.claim_seat(11, 1)
+	roster.set_pick(11, "ghost")
+	d.setup({"format": format, "lives": 2, "gotnext": gotnext, "observers": true},
+		[{"peer": 10, "car": "bumper", "name": "Ten"},
+			{"peer": 11, "car": "ghost", "name": "Eleven"}],
+		[], roster, [])
+	return d
+
+func test_vacate_ghost_slot() -> void:
+	var d := _director("brawl")
+	var feed := [""]
+	d.feed_line.connect(func(text: String) -> void: feed[0] = text)
+	var swapped: bool = d.vacate_actor(0)
+	t.check(not swapped, "vacate: empty queue means a ghost slot, no swap")
+	t.check(int(d.actors[0].peer) == 0, "vacate: the slot goes unmanned")
+	t.check(String(d.actors[0].name) == "Ten", "vacate: the frozen callsign survives")
+	t.check(bool(d.scores[10].get("gone", false)), "vacate: the row freezes flagged")
+	t.check(int(d.scores[10].deaths) == 0, "vacate: creditless — never a death tally")
+	t.check(feed[0].contains("vanished"), "vacate: the feed says so")
+	d.free()
+
+func test_vacate_hands_wheel_to_queue() -> void:
+	var d := _director("brawl")
+	d.roster.opt_in(30, "kandykane")
+	d.roster.drop_peer(10)  # what Net does on disconnect, before the shell reacts
+	var swap := [-1, -1]
+	d.seat_swap.connect(func(_idx: int, from_p: int, to_p: int, _car: String) -> void:
+		swap[0] = from_p
+		swap[1] = to_p)
+	t.check(d.vacate_actor(0), "vacate: the queue's front takes the wheel")
+	t.check(swap[0] == 10 and swap[1] == 30, "vacate: swap wires old -> new driver")
+	t.check(int(d.actors[0].peer) == 30 and String(d.actors[0].car) == "kandykane",
+		"vacate: the slot re-crews in the entrant's locked ride")
+	t.check(d.roster.seated(30), "vacate: the entrant holds the freed seat")
+	d.free()
+
+func test_vacate_lives_forfeits() -> void:
+	var d := _director("lives")
+	d.roster.opt_in(30, "kandykane")
+	d.roster.drop_peer(11)
+	t.check(not d.vacate_actor(1),
+		"vacate: LIVES locks the roster — no reseat even with a queue")
+	t.check(bool(d.eliminated.get(11, false)), "vacate: LIVES forfeits the seat")
+	d.free()

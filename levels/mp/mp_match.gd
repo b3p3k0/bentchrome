@@ -54,9 +54,11 @@ func _ready() -> void:
 	_build_kill_feed()
 	_net.kill_feed.connect(_on_feed_line)
 	_net.match_status_changed.connect(_on_status_changed)
+	_net.session_changed.connect(_on_session_gone)
 	if _net.is_host():
 		NetEvents.armed = true
 		NetEvents.queue = []
+		_net.peers_changed.connect(_on_peers_changed_host)
 		_spawn_host_side()
 	else:
 		_net.actor_swapped.connect(_on_actor_swapped_client)
@@ -155,6 +157,41 @@ func _spawn_host_side() -> void:
 func _push_status() -> void:
 	_net.push_match_status(_director.scores, _director.time_remaining(),
 		_director.eliminated.keys())
+
+## The session died under us (host loss, kick) — home to the front door,
+## where the one-shot notice explains what happened.
+func _on_session_gone() -> void:
+	if not _net.is_active():
+		_flow.to_mp_menu()
+
+## Host: somebody's cable got pulled mid-match. Vacate their actor slot —
+## either the queue's front takes the wheel where it sits (seat_swap wires
+## it) or the slot goes ghost and the car is silently switched off.
+func _on_peers_changed_host() -> void:
+	if _director == null or not _net.match_live:
+		return
+	var actors: Array = _net.match_actors
+	for i in actors.size():
+		var peer := int(actors[i].peer)
+		if peer > 1 and not _net.peers.has(peer):
+			_net.unregister_net_driver(peer)
+			if not _director.vacate_actor(i):
+				_neutralize_car(i)
+				_net.notify_actor_swap(i, 0, String(actors[i].car))
+
+## Ghost slot: silent off-switch — no boom, no tally, the row's already
+## frozen. Direct hp set so died never fires.
+func _neutralize_car(idx: int) -> void:
+	var car: Vehicle = _actor_cars[idx] if is_instance_valid(_actor_cars[idx]) else null
+	if car == null:
+		return
+	var health := car.get_node_or_null(^"Health")
+	if health:
+		health.hp = 0.0
+	car.visible = false
+	car.set_physics_process(false)
+	car.collision_layer = 0
+	car.collision_mask = 0
 
 # ---------------------------------------------------------------- the bench
 

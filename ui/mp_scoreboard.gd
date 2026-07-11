@@ -15,7 +15,12 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 
 func _ready() -> void:
 	print("[boot] mp scoreboard ready")
+	_net.session_changed.connect(_on_session_changed)
 	_build()
+
+func _on_session_changed() -> void:
+	if not _net.is_active():
+		_flow.to_mp_menu()  # host gone — the front door holds the notice
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(IR.ACTION_PAUSE):

@@ -373,7 +373,10 @@ func rpc_kill_feed(text: String) -> void:
 func notify_actor_swap(actor_idx: int, peer: int, car: String) -> void:
 	if mode != Mode.HOSTING or actor_idx < 0 or actor_idx >= match_actors.size():
 		return
-	var name := String(peers.get(peer, {}).get("name", "?"))
+	var name := String(peers.get(peer, {}).get("name", ""))
+	if name.is_empty():
+		# Ghost slots (peer 0) keep the departed driver's frozen callsign.
+		name = String(match_actors[actor_idx].get("name", "?"))
 	match_actors[actor_idx] = {"peer": peer, "car": car, "name": name}
 	rpc_actor_swap.rpc(actor_idx, peer, car, name)
 	actor_swapped.emit(actor_idx, peer, car, name)
@@ -649,6 +652,10 @@ func _settle_server_gone() -> void:
 		else "the host closed the garage"
 	if not kick_reason.is_empty():
 		kicked.emit(kick_reason)
+	# Wherever the session died under us — lobby, match, scoreboard — the
+	# front door shows the notice. (-s harnesses have no scene to swap.)
+	if get_tree().current_scene != null:
+		SceneFlow.to_mp_menu()
 
 func _fail_join(reason: String) -> void:
 	# Same deferral rule as above; reject-packet and auth-failed can both fire
