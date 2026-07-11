@@ -1,5 +1,5 @@
 extends Control
-## Title screen: splash art + START/STORY menu. START -> car select;
+## Title screen: splash art + START/STORY menu. START -> difficulty select;
 ## STORY -> full-screen story art (placeholder copy until the real text lands).
 ## ESC pops the quit confirm ("Awww, giving up so soon?") — NO is the default;
 ## quitting takes intent.
@@ -71,7 +71,7 @@ func _activate() -> void:
 	match _index:
 		0:
 			_done = true
-			SceneFlow.to_select()
+			SceneFlow.to_difficulty()
 		1:
 			_open_story()
 		2:

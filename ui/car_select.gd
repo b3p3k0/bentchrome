@@ -62,14 +62,14 @@ func _load_cars() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:
 		return
-	# ESC steps back one layer: dossier -> carousel -> title. Once gameplay
-	# starts, ESC belongs to the pause menu instead.
+	# ESC steps back one layer: dossier -> carousel -> difficulty select. Once
+	# gameplay starts, ESC belongs to the pause menu instead.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		if _bio and _bio.visible:
 			_bio.visible = false
 		else:
-			SceneFlow.to_title()
+			SceneFlow.to_difficulty()
 		return
 	if _cars.is_empty():
 		return

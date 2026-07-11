@@ -39,6 +39,15 @@ if echo "$BOOT_OUT" | grep -qiE "$ERR_RE"; then
   echo "== smoke: FAIL (boot)"; exit 1
 fi
 
+# Difficulty select: the DMV window between title and the roster — a new
+# .tscn gets zero cold-load coverage from the import stage alone.
+echo "== smoke: difficulty select"
+DIFF_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://ui/difficulty_select.tscn --quit-after 10 2>&1)"
+if echo "$DIFF_OUT" | grep -qiE "$ERR_RE"; then
+  echo "$DIFF_OUT" | grep -iE "$ERR_RE"
+  echo "== smoke: FAIL (difficulty select)"; exit 1
+fi
+
 # Cold roster load: car_select pulls every vehicle .tres -> weapon defs ->
 # projectile scenes. This entry path exposes circular resource loads (the
 # boot stage never touches the roster, and the test runner warms the class

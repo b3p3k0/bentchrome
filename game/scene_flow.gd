@@ -3,6 +3,7 @@ extends Node
 ## later. Scene paths live here so callers just say where they want to go.
 
 const TITLE := "res://ui/title.tscn"
+const DIFFICULTY := "res://ui/difficulty_select.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const ARENA := "res://levels/arena/arena.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
@@ -26,6 +27,9 @@ const CAMPAIGN := [
 
 func to_title() -> void:
 	goto_scene(TITLE)
+
+func to_difficulty() -> void:
+	goto_scene(DIFFICULTY)
 
 func to_select() -> void:
 	goto_scene(SELECT)
