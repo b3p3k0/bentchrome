@@ -56,6 +56,7 @@ const SUITES := [
 	preload("res://tests/test_net_roster.gd"),
 	preload("res://tests/test_match_config.gd"),
 	preload("res://tests/test_local_player.gd"),
+	preload("res://tests/test_offscreen_tracker.gd"),
 	preload("res://tests/test_net_puppet.gd"),
 	preload("res://tests/test_network_driver.gd"),
 	preload("res://tests/test_mp_match.gd"),

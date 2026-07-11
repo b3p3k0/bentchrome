@@ -31,6 +31,7 @@ var _heat_bar: ProgressBar
 var _heat_label: Label
 var _boost_bar: ProgressBar
 var _slot_labels: Array = []
+var _trackers: OffscreenTracker
 
 func _ready() -> void:
 	layer = 10
@@ -107,6 +108,8 @@ func _build_ui() -> void:
 	_build_dash()
 	_build_radar()
 	_build_opponents()
+	_trackers = preload("res://ui/offscreen_tracker.gd").new()
+	add_child(_trackers)
 
 ## Names snapshot once from the first non-empty "enemies" frame (after the
 ## arena's car re-roll); freed nodes then flip their label to DEAD_TEXT and
