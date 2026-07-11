@@ -661,6 +661,44 @@ position = Vector2(400, -1680)
 kind = &"trash"
 floor_index = 2
 
+[node name="FloodNE" type="Node2D" parent="."]
+position = Vector2(2150, -1650)
+script = ExtResource("30_sdeco")
+kind = &"floodlight"
+
+[node name="FloodNW" type="Node2D" parent="."]
+position = Vector2(-2150, -1650)
+script = ExtResource("30_sdeco")
+kind = &"floodlight"
+
+[node name="FloodSE" type="Node2D" parent="."]
+position = Vector2(2150, 1650)
+script = ExtResource("30_sdeco")
+kind = &"floodlight"
+
+[node name="FloodSW" type="Node2D" parent="."]
+position = Vector2(-2150, 1650)
+script = ExtResource("30_sdeco")
+kind = &"floodlight"
+
+[node name="Jumbotron" type="Node2D" parent="."]
+position = Vector2(0, -1680)
+script = ExtResource("30_sdeco")
+kind = &"jumbotron"
+size = Vector2(520, 150)
+
+[node name="ConfettiW" type="Node2D" parent="."]
+position = Vector2(-650, 0)
+script = ExtResource("30_sdeco")
+kind = &"confetti"
+size = Vector2(1300, 1300)
+
+[node name="ConfettiE" type="Node2D" parent="."]
+position = Vector2(650, 0)
+script = ExtResource("30_sdeco")
+kind = &"confetti"
+size = Vector2(1300, 1300)
+
 [node name="JumpA" type="Area2D" parent="."]
 position = Vector2(-128, -512)
 collision_layer = 0
