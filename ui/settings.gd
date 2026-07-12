@@ -82,7 +82,7 @@ func _adj_dev_options(_d: int) -> void:
 	_open_dev_dialog()
 
 func _val_open() -> Array:
-	return ["OPEN", DIM_TEXT]
+	return ["-->", DIM_TEXT]
 
 func _adj_dev(_d: int) -> void:
 	_gs.dev_mode = not _gs.dev_mode

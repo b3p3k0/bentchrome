@@ -83,6 +83,8 @@ func test_developer_options_menu_contract() -> void:
 		main_names.append(String(row.name))
 	t.check(main_names == ["ZOOM DEPTH", "SCREEN SHAKE", "DEVELOPER OPTIONS",
 		"RESET TO DEFAULTS", "BACK"], "settings menu: developer controls collapse to one entry")
+	t.check(screen._val_open()[0] == "-->",
+		"settings menu: developer entry reads as a submenu")
 	var dev_names: Array[String] = []
 	for row in screen._dev_rows:
 		dev_names.append(String(row.name))
