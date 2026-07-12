@@ -3,13 +3,14 @@ extends RefCounted
 ## Wire codecs — StreamPeerBuffer over var_to_bytes for explicit byte widths,
 ## no per-element Variant tags, and testable round-trips. Two payloads: the
 ## client->host INTENT FRAME (7 bytes @ 60Hz) and the host->all STATE
-## SNAPSHOT (~25 bytes/car + events @ snapshot_hz). Rows ride in fixed actor
+## SNAPSHOT (~26 bytes/car + events @ snapshot_hz). Rows ride in fixed actor
 ## order — the seat table IS the index, no per-row ids. Format changes bump
 ## NetProtocol.PROTOCOL_VERSION.
 
 const Proto := preload("res://game/net/net_protocol.gd")
 
-# Row flags — puppet-facing state bits.
+# Row flags — puppet-facing state bits. The first byte is FULL; new bits go
+# in flags2 (added for disarm, protocol 7).
 const F_ALIVE := 1
 const F_BOOST := 2
 const F_HANDBRAKE := 4
@@ -18,6 +19,7 @@ const F_SHIELD := 16
 const F_MG_LOCKED := 32
 const F_BRAKE := 64
 const F_REPAIR := 128
+const F2_DISARM := 1
 
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
@@ -101,6 +103,10 @@ static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteAr
 		if row.get("repairing", false):
 			flags |= F_REPAIR
 		buf.put_u8(flags)
+		var flags2 := 0
+		if row.get("disarm", false):
+			flags2 |= F2_DISARM
+		buf.put_u8(flags2)
 		buf.put_8(int(row.get("floor", -1)))
 		var pos: Vector2 = row.get("pos", Vector2.ZERO)
 		buf.put_16(clampi(roundi(pos.x), -32768, 32767))
@@ -162,9 +168,10 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 	var row_count := buf.get_u8()
 	var rows: Array = []
 	for r in row_count:
-		if buf.get_available_bytes() < 19 + AMMO_SLOTS:
+		if buf.get_available_bytes() < 20 + AMMO_SLOTS:
 			return {}
 		var flags := buf.get_u8()
+		var flags2 := buf.get_u8()
 		var floor_i := buf.get_8()
 		var px := buf.get_16()
 		var py := buf.get_16()
@@ -188,6 +195,7 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			"shield": (flags & F_SHIELD) != 0, "mg_locked": (flags & F_MG_LOCKED) != 0,
 			"brake": (flags & F_BRAKE) != 0,
 			"repairing": (flags & F_REPAIR) != 0,
+			"disarm": (flags2 & F2_DISARM) != 0,
 			"heat": heat, "boost_fuel": boost_fuel, "slot": slot, "ammo": ammo,
 			"recharge": recharge,
 		})

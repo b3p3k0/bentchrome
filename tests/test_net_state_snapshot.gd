@@ -17,13 +17,13 @@ func _row_a() -> Dictionary:
 		"pos": Vector2(-1234, 2500), "vel": Vector2(410, -220),
 		"heading": 2.35, "height": 42.0, "floor": 2, "hp": 87.5,
 		"alive": true, "boost": true, "handbrake": false, "brake": true, "burn": true,
-		"shield": false, "mg_locked": true, "repairing": true,
+		"shield": false, "mg_locked": true, "repairing": true, "disarm": true,
 		"heat": 0.66, "boost_fuel": 73.0, "slot": 3,
 		"ammo": [2, 5, 0, 1, 4, 3, 0], "recharge": 0.4,
 	}
 
 func test_rows_round_trip() -> void:
-	t.check(Proto.PROTOCOL_VERSION == 6, "snap: repair state ships behind protocol 6")
+	t.check(Proto.PROTOCOL_VERSION == 7, "snap: the disarm flags2 byte ships behind protocol 7")
 	var dead := {"alive": false, "hp": 0.0}
 	var bytes: PackedByteArray = Snap.pack_snapshot(99, [_row_a(), dead], [])
 	var back: Dictionary = Snap.unpack_snapshot(bytes)
@@ -38,6 +38,9 @@ func test_rows_round_trip() -> void:
 		"snap: floor and height survive")
 	t.check(a.alive and a.boost and a.burn and a.mg_locked and a.repairing
 			and a.brake and not a.handbrake and not a.shield, "snap: flag bits survive")
+	t.check(a.disarm, "snap: the flags2 disarm bit survives")
+	var d0: Dictionary = back.rows[1]
+	t.check(not d0.disarm, "snap: absent disarm stays false")
 	t.check(absf(float(a.heat) - 0.66) < 0.005 and is_equal_approx(float(a.boost_fuel), 73.0),
 		"snap: HUD mirrors survive")
 	t.check(int(a.slot) == 3 and a.ammo == [2, 5, 0, 1, 4, 3, 0],
