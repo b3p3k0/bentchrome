@@ -7,6 +7,7 @@ const Floors := preload("res://game/floors.gd")
 const ArenaState := preload("res://game/net/arena_state.gd")
 const ArcScene := preload("res://environment/electric_arc_fx.tscn")
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const ImpactScene := preload("res://weapons/impact_fx.tscn")
 
 const SIZE := Vector2(256, 192)
 const MAX_HP := 450.0
@@ -25,6 +26,13 @@ const BLAST_SHOVE_NEAR := 420.0
 const BLAST_SHOVE_FAR := 140.0
 const ARC_ANCHOR := Vector2(76, -58)
 const SOFT_TARGET_LAYER := 1 << 9
+## Visual-only distress tiers (fractions of MAX_HP): first sparks tell the
+## player the cabinet is damageable long before the 25% arming point.
+const DISTRESS_LIGHT := 0.9
+const DISTRESS_HEAVY := 0.75
+const SPARK_GAP_LIGHT := Vector2(2.5, 5.0)
+const SPARK_GAP_HEAVY := Vector2(0.9, 2.2)
+const CAP_OFFSETS: Array[Vector2] = [Vector2(48, -58), Vector2(76, -58), Vector2(104, -58)]
 
 enum Phase { SAFE, WARNING, ACTIVE, COOLDOWN, DEAD }
 
@@ -40,6 +48,9 @@ var _dead := false
 var _authority := true
 var _base_collision_layer := 0
 var _danger_col: CollisionShape2D
+var _spark_timer := 0.0
+var _distress_smoke: CPUParticles2D
+var _distress_rng := RandomNumberGenerator.new()
 @onready var _health: Health = $Health
 
 func _ready() -> void:
@@ -79,6 +90,66 @@ func _build_ai_danger() -> void:
 func _physics_process(delta: float) -> void:
 	if _authority:
 		tick(delta)
+
+## Visual-only distress FX, deliberately NOT authority-gated: host and LAN
+## puppet both mirror _health.hp (the puppet via apply_arena_state), so tiered
+## sparks/smoke converge with zero wire state and never touch the FSM.
+func _process(delta: float) -> void:
+	if _dead or _health == null:
+		return
+	var hp_f := clampf(_health.hp / MAX_HP, 0.0, 1.0)
+	var heavy := hp_f <= DISTRESS_HEAVY
+	_sync_distress_smoke(hp_f <= DISTRESS_LIGHT, heavy)
+	if hp_f > DISTRESS_LIGHT:
+		return
+	_spark_timer -= delta
+	if _spark_timer > 0.0:
+		return
+	var gap := SPARK_GAP_HEAVY if heavy else SPARK_GAP_LIGHT
+	_spark_timer = _distress_rng.randf_range(gap.x, gap.y)
+	var pops := 1
+	if heavy and _distress_rng.randf() < 0.35:
+		pops = _distress_rng.randi_range(2, 3)
+	for i in pops:
+		var cap: Vector2 = CAP_OFFSETS[_distress_rng.randi_range(0, CAP_OFFSETS.size() - 1)]
+		var jitter := Vector2(_distress_rng.randf_range(-10.0, 10.0),
+			_distress_rng.randf_range(-8.0, 4.0))
+		_pop_spark(to_global(cap + jitter))
+
+func _pop_spark(at: Vector2) -> void:
+	var host := get_tree().current_scene
+	if host == null:
+		host = get_parent()
+	if host == null:
+		return
+	var spawner := get_node_or_null(^"/root/Spawner")
+	var fx := (spawner.acquire(ImpactScene) if spawner else ImpactScene.instantiate()) as ImpactFX
+	host.add_child(fx)
+	fx.setup(at, ImpactFX.SPARK)
+
+func _sync_distress_smoke(on: bool, heavy: bool) -> void:
+	if not on:
+		if _distress_smoke:
+			_distress_smoke.emitting = false
+		return
+	if _distress_smoke == null:
+		_distress_smoke = CPUParticles2D.new()
+		_distress_smoke.lifetime = 2.2
+		_distress_smoke.local_coords = false
+		_distress_smoke.position = ARC_ANCHOR
+		_distress_smoke.direction = Vector2(0, -1)
+		_distress_smoke.spread = 24.0
+		_distress_smoke.initial_velocity_min = 8.0
+		_distress_smoke.initial_velocity_max = 22.0
+		_distress_smoke.gravity = Vector2(4, -12)
+		_distress_smoke.scale_amount_min = 3.0
+		_distress_smoke.scale_amount_max = 7.0
+		_distress_smoke.color = Color(0.10, 0.12, 0.15, 0.4)
+		add_child(_distress_smoke)
+	var want := 12 if heavy else 7
+	if _distress_smoke.amount != want:
+		_distress_smoke.amount = want
+	_distress_smoke.emitting = true
 
 func tick(delta: float) -> void:
 	if _dead:
