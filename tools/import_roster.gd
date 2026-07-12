@@ -142,7 +142,7 @@ static func character_errors(c: Variant) -> PackedStringArray:
 				if typeof(raw) != TYPE_STRING or not Color.html_is_valid(raw):
 					errors.append("colors.%s must be a valid html color" % slot)
 
-	if c.has("portrait") and not ResourceLoader.exists(String(c["portrait"])):
+	if c.has("portrait") and not FileAccess.file_exists(String(c["portrait"])):
 		errors.append("portrait '%s' not found" % c["portrait"])
 	if c.has("special_def") and not ResourceLoader.exists(special_def_path(String(c["special_def"]))):
 		errors.append("special_def '%s' has no %s" % [c["special_def"], special_def_path(String(c["special_def"]))])

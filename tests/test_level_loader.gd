@@ -141,9 +141,11 @@ func test_archetype_mix_shim() -> void:
 func test_pick_cars_distinct_and_excludes() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	# 9-car roster minus the excluded one = 8 distinct picks, exactly the ask.
-	var picks: Array = Loader.pick_cars(8, "kandykane", rng)
-	t.check(picks.size() == 8, "full pool ask returns 8 picks")
+	# The roster minus the excluded car = the full pool, exactly the ask —
+	# derived from roster.json so new cars never re-break this.
+	var full := _roster_size() - 1
+	var picks: Array = Loader.pick_cars(full, "kandykane", rng)
+	t.check(picks.size() == full, "full pool ask returns %d picks" % full)
 	t.check(not picks.has("kandykane"), "excluded car never picked")
 	var unique := {}
 	for id in picks:
@@ -155,10 +157,16 @@ func test_pick_cars_clamps_over_ask() -> void:
 	rng.seed = 7
 	# Asking past the pool clamps — never wraps into duplicates or the
 	# excluded car. (Warns; expected here.)
-	var picks: Array = Loader.pick_cars(20, "kandykane", rng)
-	t.check(picks.size() == 8, "over-ask clamps to pool size")
+	var full := _roster_size() - 1
+	var picks: Array = Loader.pick_cars(full + 12, "kandykane", rng)
+	t.check(picks.size() == full, "over-ask clamps to pool size")
 	t.check(not picks.has("kandykane"), "excluded car stays out on over-ask")
 	var unique := {}
 	for id in picks:
 		unique[id] = true
 	t.check(unique.size() == picks.size(), "clamped picks still distinct")
+
+func _roster_size() -> int:
+	var data: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://assets/data/roster.json"))
+	return (data.characters as Array).size()

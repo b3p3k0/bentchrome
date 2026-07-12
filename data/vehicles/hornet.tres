@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_1mr0y"]
+[ext_resource type="Resource" path="res://data/weapons/molotov.tres" id="2_0vqvj"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_mn2v2"]
+
+[resource]
+script = ExtResource("1_1mr0y")
+id = &"hornet"
+car_name = "Hornet"
+driver_name = "Jimmy Kane"
+flavor = "A classic checker cab that outlived the city that painted it. Jimmy drove nights for twenty years and never once turned off the meter. The cab launches clean, corners honest, and shrugs off fender taps like Tuesday traffic. Nothing about it is special, which is exactly what makes it dependable. He swears the ice-cream clown is no relation."
+special_name = "Molotov Cocktail"
+special_desc = "a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Jimmy says the recipe fell off a truck."
+acceleration = 6
+top_speed = 6
+handling = 6
+armor = 6
+special_power = 6
+primary_color = Color(1, 0.7764706, 0.101960786, 1)
+accent_color = Color(0.0627451, 0.0627451, 0.078431375, 1)
+special = ExtResource("2_0vqvj")

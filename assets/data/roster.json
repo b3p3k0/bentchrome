@@ -105,6 +105,28 @@
 	  "mass": 8
     },
     {
+      "id": "hornet",
+      "car_name": "Hornet",
+      "driver_name": "Jimmy Kane",
+      "flavor": "A classic checker cab that outlived the city that painted it. Jimmy drove nights for twenty years and never once turned off the meter. The cab launches clean, corners honest, and shrugs off fender taps like Tuesday traffic. Nothing about it is special, which is exactly what makes it dependable. He swears the ice-cream clown is no relation.",
+      "special_weapon": "Molotov Cocktail: a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Jimmy says the recipe fell off a truck.",
+      "special_def": "molotov",
+      "stats": {
+        "acceleration": 6,
+        "top_speed": 6,
+        "handling": 6,
+        "armor": 6,
+        "special_power": 6
+      },
+      "colors": {
+        "primary": "#ffc61a",
+        "accent": "#101014"
+      },
+      "portrait": "res://assets/img/bios/hornet.png",
+      "ai_archetype": "aggressor",
+      "mass": 5
+    },
+    {
       "id": "kandykane",
       "car_name": "Kandy Kane",
       "driver_name": "Kandy Kane",
