@@ -21,6 +21,7 @@ const F_BRAKE := 64
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
 const EV_HIT := 2
+const EV_IMPACT := 3
 const NO_TARGET := 255
 
 const INPUT_FRAME_SIZE := 7  # u32 tick | i8 throttle | i8 steer | u8 buttons
@@ -117,12 +118,22 @@ static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteAr
 	buf.put_u8(mini(events.size(), 255))
 	for i in mini(events.size(), 255):
 		var ev: Dictionary = events[i]
-		if ev.get("kind", &"projectile") == &"hit":
+		var kind: StringName = ev.get("kind", &"projectile")
+		if kind == &"hit":
 			buf.put_u8(EV_HIT)
 			buf.put_u8(clampi(int(ev.get("attacker_actor", NO_TARGET)), 0, 255))
 			buf.put_u8(clampi(int(ev.get("victim_actor", NO_TARGET)), 0, 255))
+		elif kind == &"impact":
+			buf.put_u8(EV_IMPACT)
+			buf.put_u32(int(ev.get("shot_id", 0)))
+			var impact_pos: Vector2 = ev.get("pos", Vector2.ZERO)
+			buf.put_16(clampi(roundi(impact_pos.x), -32768, 32767))
+			buf.put_16(clampi(roundi(impact_pos.y), -32768, 32767))
+			buf.put_u8(clampi(int(ev.get("style", 0)), 0, 255))
+			buf.put_u8(1 if ev.get("terminal", false) else 0)
 		else:
 			buf.put_u8(EV_PROJECTILE)
+			buf.put_u32(int(ev.get("shot_id", 0)))
 			buf.put_utf8_string(String(ev.get("path", "")))
 			var epos: Vector2 = ev.get("pos", Vector2.ZERO)
 			buf.put_16(clampi(roundi(epos.x), -32768, 32767))
@@ -190,8 +201,20 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			events.append({"kind": EV_HIT, "attacker_actor": buf.get_u8(),
 				"victim_actor": buf.get_u8()})
 			continue
+		if kind == EV_IMPACT:
+			if buf.get_available_bytes() < 10:
+				return {}
+			events.append({
+				"kind": EV_IMPACT, "shot_id": buf.get_u32(),
+				"pos": Vector2(buf.get_16(), buf.get_16()),
+				"style": buf.get_u8(), "terminal": buf.get_u8() != 0,
+			})
+			continue
 		if kind != EV_PROJECTILE:
 			return {}
+		if buf.get_available_bytes() < 4:
+			return {}
+		var shot_id := buf.get_u32()
 		var path := buf.get_utf8_string()
 		if buf.get_available_bytes() < 13:
 			return {}
@@ -203,7 +226,7 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 		var turn_rate := float(buf.get_u16()) / 1000.0
 		var target := buf.get_u8()
 		events.append({
-			"kind": EV_PROJECTILE, "path": path, "pos": Vector2(ex, ey),
+			"kind": EV_PROJECTILE, "shot_id": shot_id, "path": path, "pos": Vector2(ex, ey),
 			"dir": Vector2.RIGHT.rotated(angle), "speed": speed,
 			"lifetime": lifetime, "turn_rate": turn_rate, "target_actor": target,
 		})

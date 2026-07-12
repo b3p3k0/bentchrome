@@ -21,6 +21,7 @@ const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const PauseOverlayScene := preload("res://ui/mp_pause_overlay.tscn")
 const RigScene := preload("res://levels/mp/spectator_rig.tscn")
+const ImpactScene := preload("res://weapons/impact_fx.tscn")
 
 const FEED_LINES := 4
 const FEED_TTL := 4.0
@@ -35,6 +36,7 @@ var _my_driver: Driver = null    # client: local PlayerDriver, sampled for the w
 var _my_car: Vehicle = null
 var _stream_accum := 0
 var _snap_tick := 0
+var _visual_shots: Dictionary = {}  # u32 host shot id -> pooled client twin
 
 # Autoloads by path, never bare identifier — this script rides the test
 # runner's preload chain, where -s compilation can't bind autoload names.
@@ -335,7 +337,7 @@ func _drain_events() -> Array:
 				continue
 			ev["attacker_actor"] = attacker_idx
 			ev["victim_actor"] = victim_idx
-		else:
+		elif ev.get("kind") == &"projectile":
 			var target_actor := Snapshot.NO_TARGET
 			var target: Node2D = ev.get("target")
 			if target != null and is_instance_valid(target):
@@ -382,10 +384,13 @@ func _on_snapshot(data: Dictionary) -> void:
 		row["t"] = now
 		car.apply_net_state(row)
 	for ev in data.events:
-		if int(ev.get("kind", 0)) == Snapshot.EV_HIT:
-			_present_hit_event(ev)
-		else:
-			_spawn_visual_projectile(ev)
+		match int(ev.get("kind", 0)):
+			Snapshot.EV_HIT:
+				_present_hit_event(ev)
+			Snapshot.EV_IMPACT:
+				_present_impact_event(ev)
+			Snapshot.EV_PROJECTILE:
+				_spawn_visual_projectile(ev)
 
 func _present_hit_event(ev: Dictionary) -> void:
 	var attacker_idx := int(ev.get("attacker_actor", Snapshot.NO_TARGET))
@@ -397,6 +402,21 @@ func _present_hit_event(ev: Dictionary) -> void:
 	var victim: Vehicle = _actor_cars[victim_idx] if is_instance_valid(_actor_cars[victim_idx]) else null
 	if attacker and victim:
 		victim.present_combat_hit(attacker)
+
+func _present_impact_event(ev: Dictionary) -> void:
+	var style := int(ev.get("style", Projectile.ImpactStyle.NONE))
+	if style > Projectile.ImpactStyle.NONE and style <= Projectile.ImpactStyle.SPATTER \
+			and _arena and _pool:
+		var fx := _pool.acquire(ImpactScene) as ImpactFX
+		_arena.add_child(fx)
+		fx.setup(ev.get("pos", Vector2.ZERO), style)
+	if not ev.get("terminal", false):
+		return
+	var shot_id := int(ev.get("shot_id", 0))
+	var shot: Node = _visual_shots.get(shot_id)
+	if shot != null and is_instance_valid(shot):
+		shot.call(&"_despawn")
+	_visual_shots.erase(shot_id)
 
 ## A cosmetic twin of the host's shot: zero damage, zero collision, same pool.
 ## Dead-reckons on its own lifetime; homing tracks the target's puppet.
@@ -418,6 +438,15 @@ func _spawn_visual_projectile(ev: Dictionary) -> void:
 	_arena.add_child(shot)
 	shot.setup(ev.pos, ev.dir, float(ev.speed), 0.0, float(ev.lifetime),
 		null, float(ev.turn_rate), target)
+	var shot_id := int(ev.get("shot_id", 0))
+	if shot_id > 0:
+		shot.net_shot_id = shot_id
+		_visual_shots[shot_id] = shot
+		shot.retired.connect(_on_visual_projectile_retired.bind(shot), CONNECT_ONE_SHOT)
+
+func _on_visual_projectile_retired(shot_id: int, shot: Node) -> void:
+	if _visual_shots.get(shot_id) == shot:
+		_visual_shots.erase(shot_id)
 
 # ---------------------------------------------------------------- kill feed
 

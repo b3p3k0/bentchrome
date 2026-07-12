@@ -5,6 +5,7 @@ extends RefCounted
 ## PROTOCOL_VERSION bump, on purpose.
 
 const Snap := preload("res://game/net/net_snapshot.gd")
+const Proto := preload("res://game/net/net_protocol.gd")
 
 var t
 
@@ -22,6 +23,7 @@ func _row_a() -> Dictionary:
 	}
 
 func test_rows_round_trip() -> void:
+	t.check(Proto.PROTOCOL_VERSION == 5, "snap: impact wire ships behind protocol 5")
 	var dead := {"alive": false, "hp": 0.0}
 	var bytes: PackedByteArray = Snap.pack_snapshot(99, [_row_a(), dead], [])
 	var back: Dictionary = Snap.unpack_snapshot(bytes)
@@ -46,13 +48,14 @@ func test_rows_round_trip() -> void:
 
 func test_events_round_trip() -> void:
 	var ev := {
-		"path": "res://weapons/missile.tscn", "pos": Vector2(100, -50),
+		"shot_id": 4123, "path": "res://weapons/missile.tscn", "pos": Vector2(100, -50),
 		"dir": Vector2.RIGHT.rotated(1.1), "speed": 900.0,
 		"lifetime": 2.4, "turn_rate": 3.5, "target_actor": 2,
 	}
 	var back: Dictionary = Snap.unpack_snapshot(Snap.pack_snapshot(7, [], [ev]))
 	t.check(back.events.size() == 1, "snap: event count survives")
 	var e: Dictionary = back.events[0]
+	t.check(int(e.shot_id) == 4123, "snap: projectile shot id survives")
 	t.check(String(e.path) == "res://weapons/missile.tscn", "snap: scene path survives")
 	t.check(e.pos == Vector2(100, -50), "snap: event origin survives")
 	t.check(absf((e.dir as Vector2).angle() - 1.1) < 0.001, "snap: direction survives")
@@ -72,6 +75,20 @@ func test_hit_event_round_trip() -> void:
 	var cut := Snap.pack_snapshot(8, [], [ev])
 	cut.resize(cut.size() - 1)
 	t.check(Snap.unpack_snapshot(cut).is_empty(), "snap: truncated hit event rejected")
+
+func test_impact_event_round_trip() -> void:
+	var ev := {"kind": &"impact", "shot_id": 0xfedcba98, "pos": Vector2(-77, 205),
+		"style": 2, "terminal": true}
+	var bytes := Snap.pack_snapshot(9, [], [ev])
+	var back: Dictionary = Snap.unpack_snapshot(bytes)
+	t.check(back.events.size() == 1, "snap: impact event count survives")
+	var impact: Dictionary = back.events[0]
+	t.check(int(impact.kind) == Snap.EV_IMPACT and int(impact.shot_id) == 0xfedcba98,
+		"snap: impact kind and u32 shot id survive")
+	t.check(impact.pos == Vector2(-77, 205) and int(impact.style) == 2 and impact.terminal,
+		"snap: impact position, style, and terminal bit survive")
+	bytes.resize(bytes.size() - 1)
+	t.check(Snap.unpack_snapshot(bytes).is_empty(), "snap: truncated impact event rejected")
 
 func test_junk_rejected() -> void:
 	t.check(Snap.unpack_snapshot(PackedByteArray([9, 9])).is_empty(),

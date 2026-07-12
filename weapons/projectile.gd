@@ -9,14 +9,20 @@ extends Area2D
 const HOMING_CONE := deg_to_rad(90.0)
 const Combat := preload("res://game/combat.gd")  # NEVER name Vehicle here — load cycle
 const NetEvents := preload("res://game/net/net_events.gd")  # host-armed tap, leaf like Combat
+const ImpactScene := preload("res://weapons/impact_fx.tscn")
 # Every weapons/*.tscn projectile authors collision_mask = 7 (ground|wall|
 # obstacle); per-fire stamps (cover-pierce, floor masks) are applied by the
 # mount after acquire, so pool_reset restores this baseline between shooters.
 const BASE_MASK := 7
 const SOFT_TARGET_LAYER := 1 << 9
 
+enum ImpactStyle { NONE, SPARK, MISSILE, SPATTER }
+
+signal retired(shot_id: int)
+
 @export var spin_deg := 0.0  # visual spin of the Vis child (thrown weapons);
 							  # the node itself keeps facing travel for homing
+@export var impact_style: ImpactStyle = ImpactStyle.SPARK
 
 var velocity := Vector2.ZERO
 var damage := 2.0
@@ -31,6 +37,7 @@ var _age := 0.0
 var _spent := false   # hit landed or lifetime up — inert until reset/setup
 var _vis: Node2D = null
 var harms_ambient := true  # false for deliberately harmless cosmetic rounds
+var net_shot_id := 0
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
@@ -55,7 +62,7 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 		# Every live shot passes through here (mounts, specials, turrets) — the
 		# one tap the MP host needs. Visual-only client shots carry damage 0,
 		# so a mirror can never echo. pool_key = the Spawner's scene path.
-		NetEvents.projectile_spawned(String(get_meta(&"pool_key", scene_file_path)),
+		net_shot_id = NetEvents.projectile_spawned(String(get_meta(&"pool_key", scene_file_path)),
 			p_pos, p_dir, p_speed, p_lifetime, p_turn_rate, p_target)
 
 func _physics_process(delta: float) -> void:
@@ -111,6 +118,7 @@ func _on_body_entered(body: Node) -> void:
 		if status:
 			for spec in on_hit_effects:
 				status.apply(spec)
+	_spawn_impact(impact_style, true)
 	_despawn()
 
 ## Soft targets are atmosphere, never cover: a real projectile pops them but
@@ -126,6 +134,20 @@ func _on_area_entered(area: Area2D) -> void:
 	var health := _find_health(area)
 	if health:
 		health.take_damage(1.0)
+		_spawn_impact(ImpactStyle.SPATTER, false)
+
+func _spawn_impact(style: int, terminal: bool) -> void:
+	if style == ImpactStyle.NONE:
+		return
+	var host := get_tree().current_scene
+	if host == null:
+		host = get_parent()
+	if host:
+		var spawner := get_node_or_null(^"/root/Spawner")
+		var fx := (spawner.acquire(ImpactScene) if spawner else ImpactScene.instantiate()) as ImpactFX
+		host.add_child(fx)
+		fx.setup(global_position, style)
+	NetEvents.projectile_impact(net_shot_id, global_position, style, terminal)
 
 ## Return to the Spawner pool when it exists; queue_free otherwise (headless
 ## fixtures, pool disabled). _spent freezes the shot for its removal frame.
@@ -133,6 +155,7 @@ func _despawn() -> void:
 	if _spent:
 		return
 	_spent = true
+	retired.emit(net_shot_id)
 	var spawner := get_node_or_null(^"/root/Spawner")
 	if spawner and spawner.has_method(&"release"):
 		spawner.release(self)
@@ -153,6 +176,7 @@ func pool_reset() -> void:
 	modulate = Color.WHITE
 	hit_sfx = &"hit_weapon"
 	harms_ambient = true
+	net_shot_id = 0
 	collision_mask = BASE_MASK
 
 func _find_health(body: Node) -> Health:

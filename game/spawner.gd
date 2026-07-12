@@ -37,12 +37,12 @@ func release(node: Node) -> void:
 		return
 	_bank.call_deferred(node, key)
 
-func _bank(node: Node, key: String) -> void:
+func _bank(node, key: String) -> void:
 	if not is_instance_valid(node):
 		return
 	if node.get_meta(&"pool_idle", false):
 		return  # double release — already banked; re-appending would alias it
-	var parent := node.get_parent()
+	var parent: Node = node.get_parent()
 	if parent:
 		parent.remove_child(node)
 	if node.has_method(&"pool_reset"):

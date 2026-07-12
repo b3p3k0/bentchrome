@@ -108,6 +108,17 @@ func test_double_release_banks_once() -> void:
 		"pool: double release never aliases (got %d)" % f.pool.idle_count(ProjectileScene))
 	_done(f)
 
+func test_released_node_may_die_before_deferred_bank() -> void:
+	var f := _fixture()
+	var p = f.pool.acquire(ProjectileScene)
+	f.container.add_child(p)
+	f.pool.release(p)
+	p.free()  # level teardown can beat the deferred pool bank
+	await t.process_frame
+	t.check(f.pool.idle_count(ProjectileScene) == 0,
+		"pool: teardown-freed node is ignored by deferred bank")
+	_done(f)
+
 func test_mount_fires_pooled_and_expiry_rebanks() -> void:
 	var auto := _autoload()
 	t.check(auto != null, "pool: Spawner autoload present in test runs")

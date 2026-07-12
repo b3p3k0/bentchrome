@@ -88,6 +88,35 @@ func test_hit_events_map_actor_pairs_and_reject_bad_indices() -> void:
 	t.check(Snapshot.EV_HIT == 2, "shell: hit wire kind stays stable")
 	_teardown(shell)
 
+func test_impact_events_map_and_retire_visual_shots() -> void:
+	var shell := _boot_match({"map": 0, "mode": "melee"})
+	await t.process_frame
+	var spawn := {
+		"shot_id": 77, "path": "res://weapons/projectile.tscn",
+		"pos": Vector2(10, 12), "dir": Vector2.RIGHT, "speed": 200.0,
+		"lifetime": 2.0, "turn_rate": 0.0, "target_actor": Snapshot.NO_TARGET,
+	}
+	shell._spawn_visual_projectile(spawn)
+	t.check(shell._visual_shots.has(77), "shell: client maps visual projectile by host shot id")
+	shell._present_impact_event({"shot_id": 77, "pos": Vector2(20, 22),
+		"style": Projectile.ImpactStyle.SPARK, "terminal": true})
+	t.check(not shell._visual_shots.has(77),
+		"shell: terminal impact retires and forgets the mapped visual shot")
+	var before := _impact_count(shell._arena)
+	shell._present_impact_event({"shot_id": 9999, "pos": Vector2(30, 32),
+		"style": Projectile.ImpactStyle.MISSILE, "terminal": true})
+	t.check(_impact_count(shell._arena) == before + 1,
+		"shell: missing shot id still presents the authoritative impact safely")
+	t.check(Snapshot.EV_IMPACT == 3, "shell: impact wire kind follows projectile and hit")
+	_teardown(shell)
+
+func _impact_count(root: Node) -> int:
+	var count := 0
+	for child in root.get_children():
+		if child is ImpactFX:
+			count += 1
+	return count
+
 func _no_tree_pausers(root: Node) -> bool:
 	for node in root.get_children():
 		var script: Script = node.get_script()

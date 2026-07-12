@@ -233,6 +233,7 @@ func _fire_police(direction: Vector2) -> void:
 	var origin := global_position + direction * 12.0
 	var shot := ProjectileScene.instantiate() as Projectile
 	shot.harms_ambient = false
+	shot.impact_style = Projectile.ImpactStyle.NONE
 	shot.modulate = Color(1.0, 0.82, 0.28)
 	shot.hit_sfx = &""
 	shot.collision_mask = Floors.projectile_mask(floor_index, false)

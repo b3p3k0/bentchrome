@@ -231,6 +231,7 @@ func test_police_round_is_harmless_and_ignores_ambient() -> void:
 	t.check(shot != null and is_zero_approx(shot.damage),
 		"downtown police: single tracer carries zero damage")
 	t.check(shot != null and not shot.harms_ambient
+		and shot.impact_style == Projectile.ImpactStyle.NONE
 		and (shot.collision_mask & AmbientActor.SOFT_TARGET_LAYER) == 0,
 		"downtown police: tracer cannot kill ambient figures")
 	t.current_scene = null
