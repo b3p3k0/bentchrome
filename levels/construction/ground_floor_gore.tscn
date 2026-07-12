@@ -1,0 +1,494 @@
+[gd_scene load_steps=23 format=3]
+
+[ext_resource type="Script" path="res://levels/combat_level.gd" id="1_level"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="3_vehicle"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="4_enemy"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="6_terrain"]
+[ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="7_floor"]
+[ext_resource type="Script" path="res://levels/construction/foundation_deck.gd" id="8_foundation"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="9_ramp"]
+[ext_resource type="PackedScene" path="res://environment/scaffold_deck.tscn" id="10_scaffold"]
+[ext_resource type="Script" path="res://environment/floor_connector.gd" id="11_connector"]
+[ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="12_curb"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="13_station"]
+[ext_resource type="PackedScene" path="res://environment/rain_squall.tscn" id="14_rain"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="15_speckle"]
+
+[sub_resource type="ShaderMaterial" id="SM_dirt"]
+shader = ExtResource("15_speckle")
+shader_parameter/base_color = Color(0.43, 0.31, 0.19, 1)
+shader_parameter/speckle_color = Color(0.24, 0.16, 0.09, 1)
+shader_parameter/density = 0.32
+shader_parameter/intensity = 0.48
+shader_parameter/scale = 8.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_mud"]
+shader = ExtResource("15_speckle")
+shader_parameter/base_color = Color(0.24, 0.16, 0.1, 0.94)
+shader_parameter/speckle_color = Color(0.08, 0.05, 0.03, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 11.0
+shader_parameter/shimmer = 0.25
+shader_parameter/rain_ripples = true
+shader_parameter/rain_ripple_strength = 0.14
+
+[sub_resource type="ShaderMaterial" id="SM_water"]
+shader = ExtResource("15_speckle")
+shader_parameter/base_color = Color(0.16, 0.24, 0.3, 0.82)
+shader_parameter/speckle_color = Color(0.42, 0.58, 0.68, 1)
+shader_parameter/density = 0.24
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 14.0
+shader_parameter/shimmer = 1.1
+shader_parameter/rain_ripples = true
+shader_parameter/rain_ripple_strength = 0.18
+
+[sub_resource type="RectangleShape2D" id="Shape_floor"]
+size = Vector2(4608, 3840)
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_h"]
+size = Vector2(4648, 40)
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_v"]
+size = Vector2(40, 3880)
+
+[sub_resource type="RectangleShape2D" id="Shape_mud_a"]
+size = Vector2(900, 560)
+
+[sub_resource type="RectangleShape2D" id="Shape_mud_b"]
+size = Vector2(700, 500)
+
+[sub_resource type="RectangleShape2D" id="Shape_mud_c"]
+size = Vector2(900, 500)
+
+[sub_resource type="RectangleShape2D" id="Shape_water_a"]
+size = Vector2(420, 260)
+
+[sub_resource type="RectangleShape2D" id="Shape_water_b"]
+size = Vector2(400, 260)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_w_n"]
+size = Vector2(24, 576)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_w_s"]
+size = Vector2(24, 832)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_s_w"]
+size = Vector2(576, 24)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_s_e"]
+size = Vector2(1088, 24)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_n"]
+size = Vector2(2048, 24)
+
+[sub_resource type="RectangleShape2D" id="Shape_found_e"]
+size = Vector2(24, 1792)
+
+[node name="GroundFloorGore" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="DirtSurface" type="Polygon2D" parent="."]
+material = SubResource("SM_dirt")
+polygon = PackedVector2Array(-2304, -1920, 2304, -1920, 2304, 1920, -2304, 1920)
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("2_grid")
+extent = Vector2(2304, 1920)
+
+[node name="Floor1" parent="." instance=ExtResource("7_floor")]
+floor_index = 1
+size = Vector2(4608, 3840)
+
+[node name="DirtTerrain" type="Area2D" parent="."]
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"dirt"
+
+[node name="Col" type="CollisionShape2D" parent="DirtTerrain"]
+shape = SubResource("Shape_floor")
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="North" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -1920)
+shape = SubResource("Shape_wall_h")
+
+[node name="South" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 1920)
+shape = SubResource("Shape_wall_h")
+
+[node name="West" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-2304, 0)
+shape = SubResource("Shape_wall_v")
+
+[node name="East" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(2304, 0)
+shape = SubResource("Shape_wall_v")
+
+[node name="MudSouthwest" type="Area2D" parent="."]
+position = Vector2(-1100, 800)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"mud"
+terrain_priority = 10
+
+[node name="Vis" type="Polygon2D" parent="MudSouthwest"]
+material = SubResource("SM_mud")
+polygon = PackedVector2Array(-450, -280, 450, -280, 450, 280, -450, 280)
+
+[node name="Col" type="CollisionShape2D" parent="MudSouthwest"]
+shape = SubResource("Shape_mud_a")
+
+[node name="MudWestCut" type="Area2D" parent="."]
+position = Vector2(-650, -300)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"mud"
+terrain_priority = 10
+
+[node name="Vis" type="Polygon2D" parent="MudWestCut"]
+material = SubResource("SM_mud")
+polygon = PackedVector2Array(-350, -250, 350, -250, 350, 250, -350, 250)
+
+[node name="Col" type="CollisionShape2D" parent="MudWestCut"]
+shape = SubResource("Shape_mud_b")
+
+[node name="MudSoutheast" type="Area2D" parent="."]
+position = Vector2(1250, 1150)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"mud"
+terrain_priority = 10
+
+[node name="Vis" type="Polygon2D" parent="MudSoutheast"]
+material = SubResource("SM_mud")
+polygon = PackedVector2Array(-450, -250, 450, -250, 450, 250, -450, 250)
+
+[node name="Col" type="CollisionShape2D" parent="MudSoutheast"]
+shape = SubResource("Shape_mud_c")
+
+[node name="WaterNorthwest" type="Area2D" parent="."]
+position = Vector2(-1550, -450)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"water"
+terrain_priority = 20
+
+[node name="Vis" type="Polygon2D" parent="WaterNorthwest"]
+material = SubResource("SM_water")
+polygon = PackedVector2Array(-210, -130, 210, -130, 210, 130, -210, 130)
+
+[node name="Col" type="CollisionShape2D" parent="WaterNorthwest"]
+shape = SubResource("Shape_water_a")
+
+[node name="WaterSoutheast" type="Area2D" parent="."]
+position = Vector2(1750, 950)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("6_terrain")
+terrain_type = &"water"
+terrain_priority = 20
+
+[node name="Vis" type="Polygon2D" parent="WaterSoutheast"]
+material = SubResource("SM_water")
+polygon = PackedVector2Array(-200, -130, 200, -130, 200, 130, -200, 130)
+
+[node name="Col" type="CollisionShape2D" parent="WaterSoutheast"]
+shape = SubResource("Shape_water_b")
+
+[node name="Foundation" type="Node2D" parent="."]
+position = Vector2(896, -640)
+script = ExtResource("8_foundation")
+size = Vector2(2048, 1792)
+
+[node name="FoundationLowWalls" type="StaticBody2D" parent="."]
+collision_layer = 8
+collision_mask = 0
+
+[node name="WestNorth" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(-128, -1248)
+shape = SubResource("Shape_found_w_n")
+
+[node name="WestSouth" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(-128, -160)
+shape = SubResource("Shape_found_w_s")
+
+[node name="SouthWest" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(160, 256)
+shape = SubResource("Shape_found_s_w")
+
+[node name="SouthEast" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(1376, 256)
+shape = SubResource("Shape_found_s_e")
+
+[node name="North" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(896, -1536)
+shape = SubResource("Shape_found_n")
+
+[node name="East" type="CollisionShape2D" parent="FoundationLowWalls"]
+position = Vector2(1920, -640)
+shape = SubResource("Shape_found_e")
+
+[node name="FoundationCurbs" type="Node2D" parent="."]
+
+[node name="WestNorth" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(-104, -1248)
+size = Vector2(24, 576)
+
+[node name="WestSouth" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(-104, -160)
+size = Vector2(24, 832)
+
+[node name="SouthWest" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(160, 232)
+size = Vector2(576, 24)
+
+[node name="SouthEast" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(1376, 232)
+size = Vector2(1088, 24)
+
+[node name="North" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(896, -1512)
+size = Vector2(2048, 24)
+
+[node name="East" parent="FoundationCurbs" instance=ExtResource("12_curb")]
+position = Vector2(1896, -640)
+size = Vector2(24, 1792)
+
+[node name="WestEmbankment" type="Node2D" parent="."]
+position = Vector2(-384, -768)
+rotation = 1.570796
+script = ExtResource("9_ramp")
+low_floor = 1
+high_floor = 2
+size = Vector2(384, 512)
+surface_color = Color(0.43, 0.31, 0.19, 1)
+rails = false
+terrain_type = "dirt"
+downhill_pull = 120.0
+
+[node name="SouthConcreteRamp" type="Node2D" parent="."]
+position = Vector2(640, 512)
+script = ExtResource("9_ramp")
+low_floor = 1
+high_floor = 2
+size = Vector2(384, 512)
+surface_color = Color(0.44, 0.46, 0.49, 1)
+terrain_type = "road"
+downhill_pull = 120.0
+
+[node name="Scaffold" type="Node2D" parent="."]
+
+[node name="NorthwestPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(384, -1152)
+size = Vector2(448, 448)
+rail_edges = 9
+
+[node name="RepairPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(1536, -1152)
+size = Vector2(640, 448)
+rail_edges = 2
+
+[node name="CenterPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(960, -640)
+size = Vector2(448, 448)
+
+[node name="SoutheastPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(1536, -128)
+size = Vector2(448, 448)
+rail_edges = 14
+
+[node name="NorthRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(912, -1152)
+size = Vector2(608, 256)
+rail_edges = 5
+
+[node name="NorthwestRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(672, -896)
+rotation = 0.726642
+size = Vector2(770, 256)
+rail_edges = 5
+
+[node name="NortheastRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(1248, -896)
+rotation = 2.414951
+size = Vector2(770, 256)
+rail_edges = 5
+
+[node name="SoutheastRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(1248, -384)
+rotation = 0.726642
+size = Vector2(770, 256)
+rail_edges = 5
+
+[node name="CantileverRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(288, -640)
+size = Vector2(896, 256)
+rail_edges = 5
+
+[node name="CantileverPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
+position = Vector2(-384, -640)
+size = Vector2(448, 448)
+rail_edges = 5
+
+[node name="NorthwestScaffoldRamp" type="Node2D" parent="."]
+position = Vector2(384, -736)
+script = ExtResource("9_ramp")
+low_floor = 2
+high_floor = 3
+size = Vector2(256, 384)
+surface_color = Color(0.4, 0.42, 0.46, 1)
+terrain_type = "road"
+downhill_pull = 120.0
+
+[node name="SoutheastScaffoldRamp" type="Node2D" parent="."]
+position = Vector2(1536, -544)
+rotation = 3.141593
+script = ExtResource("9_ramp")
+low_floor = 2
+high_floor = 3
+size = Vector2(256, 384)
+surface_color = Color(0.4, 0.42, 0.46, 1)
+terrain_type = "road"
+downhill_pull = 120.0
+
+[node name="FloorConnectors" type="Node2D" parent="."]
+
+[node name="WestUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-640, -768)
+script = ExtResource("11_connector")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="WestDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-128, -768)
+script = ExtResource("11_connector")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="SouthUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(640, 768)
+script = ExtResource("11_connector")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(0, -1)
+kind = &"grade"
+
+[node name="SouthDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(640, 256)
+script = ExtResource("11_connector")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(0, 1)
+kind = &"grade"
+
+[node name="ScaffoldNorthUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(384, -544)
+script = ExtResource("11_connector")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, -1)
+kind = &"grade"
+
+[node name="ScaffoldNorthDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(384, -928)
+script = ExtResource("11_connector")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, 1)
+kind = &"grade"
+
+[node name="ScaffoldSouthUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(1536, -736)
+script = ExtResource("11_connector")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, 1)
+kind = &"grade"
+
+[node name="ScaffoldSouthDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(1536, -352)
+script = ExtResource("11_connector")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, -1)
+kind = &"grade"
+
+[node name="RepairDrop" type="Node2D" parent="FloorConnectors"]
+position = Vector2(1536, -1392)
+script = ExtResource("11_connector")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(0, -1)
+kind = &"edge"
+
+[node name="CantileverDrop" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-620, -640)
+script = ExtResource("11_connector")
+from_floor = 3
+to_floor = 1
+approach_dir = Vector2(-1, 0)
+kind = &"edge"
+
+[node name="HealthStationFloor1" parent="." instance=ExtResource("13_station")]
+position = Vector2(-1800, 900)
+floor_index = 1
+
+[node name="HealthStationFloor3" parent="." instance=ExtResource("13_station")]
+position = Vector2(1536, -1152)
+floor_index = 3
+z_index = 2
+
+[node name="RainSquall" parent="." instance=ExtResource("14_rain")]
+bounds = Vector2(4608, 3840)
+intensity = 1.0
+
+[node name="Vehicle" parent="." instance=ExtResource("3_vehicle")]
+position = Vector2(-1792, 1408)
+start_floor = 1
+
+[node name="Enemy1" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(-1792, -1280)
+start_floor = 1
+
+[node name="Enemy2" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(0, 1408)
+start_floor = 1
+
+[node name="Enemy3" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(2112, 768)
+start_floor = 1
+
+[node name="Enemy4" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(128, 128)
+start_floor = 2
+
+[node name="Enemy5" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(1024, -1408)
+start_floor = 2
+
+[node name="Enemy6" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(1792, -256)
+start_floor = 2
+
+[node name="Enemy7" parent="." instance=ExtResource("4_enemy")]
+position = Vector2(384, -896)
+start_floor = 3
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]

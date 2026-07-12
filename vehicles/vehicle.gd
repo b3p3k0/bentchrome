@@ -869,6 +869,8 @@ func _set_net_repairing(on: bool, at: Vector2) -> void:
 		var station := station_v as Node2D
 		if station == null or not station.has_method(&"present_remote_treatment"):
 			continue
+		if not Floors.same_floor(self, station):
+			continue
 		var d2 := station.global_position.distance_squared_to(at)
 		if d2 <= nearest_d2:
 			nearest_d2 = d2

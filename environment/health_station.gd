@@ -10,9 +10,11 @@ const READY_TINT := Color.WHITE
 const COOLING_TINT := Color(0.45, 0.45, 0.52)
 const SPENT_TINT := Color(0.22, 0.22, 0.28)
 const TREATMENT_SECONDS := 2.0
+const Floors := preload("res://game/floors.gd")
 
 @export var uses := 2
 @export var cooldown_seconds := 45.0
+@export var floor_index := -1  # legacy arenas remain ungated; terraces opt in
 
 var _cd := 0.0
 var _patient: CharacterBody2D = null
@@ -52,7 +54,8 @@ func tick(delta: float) -> void:
 ## eligibility gate remains authoritative for overlap-driven play.
 func try_begin_treatment(body: Node) -> bool:
 	if _patient != null or _cd > 0.0 or uses <= 0 or body == null \
-			or not body.is_in_group(&"player") or not body is CharacterBody2D:
+			or not body.is_in_group(&"player") or not body is CharacterBody2D \
+			or not Floors.same_floor(self, body):
 		return false
 	var health := body.get_node_or_null(^"Health") as Health
 	if health == null or health.hp >= health.max_hp or health.hp <= 0.0:

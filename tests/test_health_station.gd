@@ -103,6 +103,24 @@ func test_any_heal_locks_all_stations() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_station_respects_authored_floor() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var station := StationScene.instantiate()
+	station.floor_index = 3
+	container.add_child(station)
+	var player := _car(container, &"player", 40.0)
+	player._adopt_floor(1)
+	t.check(not station.try_begin_treatment(player),
+		"station: floor-1 car cannot dock at overhead floor-3 bay")
+	player._adopt_floor(3)
+	t.check(station.try_begin_treatment(player),
+		"station: matching floor can begin the same treatment")
+	container.remove_child(station)
+	station.free()
+	t.root.remove_child(container)
+	container.free()
+
 func test_eligibility_immunity_and_cleanup() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
