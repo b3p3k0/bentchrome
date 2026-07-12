@@ -335,6 +335,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
+	if current_terrain == &"water" and _status and _status.has_effect(&"burn"):
+		_status.clear_kind(&"burn")  # shallow water douses hull fire on contact
 	_update_floor()
 	if _repairing:
 		# Remain a solid obstacle, but never ask move_and_slide to resolve the

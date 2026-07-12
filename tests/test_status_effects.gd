@@ -136,6 +136,20 @@ func test_clear_kind_targets_one_effect() -> void:
 	t.check_approx(f.status.speed_scale(), 0.5, "clear_kind: slow untouched")
 	_done(f)
 
+func test_water_extinguishes_burn() -> void:
+	var car = preload("res://vehicles/vehicle.tscn").instantiate()
+	t.root.add_child(car)
+	car.apply_effect(_spec(&"burn", 10.0, 4.0))
+	car.get_node("TerrainSensor").current_terrain = &"water"
+	# SceneTree's physics-frame signal resumes before node physics callbacks;
+	# the second frame observes Vehicle consuming the sensor's wet surface.
+	for i in 2:
+		await t.physics_frame
+	t.check(car.current_terrain == &"water", "water-extinguish: vehicle reads the wet surface")
+	t.check(not car.is_burning(), "water-extinguish: shallow water douses hull fire")
+	t.root.remove_child(car)
+	car.free()
+
 func test_stun_holds_then_expires() -> void:
 	var f := _fixture()
 	f.status.apply(_spec(&"stun", 0.5))
