@@ -11,6 +11,9 @@ var _active: Array = []  # each: {kind: StringName, remaining: float, magnitude:
 func apply(spec: StatusEffectSpec) -> void:
 	if spec == null:
 		return
+	# Bosses keep their trigger fingers: fixed_loadout rigs refuse the disarm.
+	if spec.kind == &"disarm" and get_parent() and bool(get_parent().get("fixed_loadout")):
+		return
 	for e in _active:  # same kind refreshes (longest remaining wins)
 		if e.kind == spec.kind:
 			e.remaining = maxf(e.remaining, spec.duration)
@@ -28,7 +31,7 @@ func tick(delta: float) -> void:
 	while i >= 0:
 		var e = _active[i]
 		if e.kind == &"burn" and _health:
-			_health.take_damage(e.magnitude * delta)
+			_health.take_damage(e.magnitude * delta * _burn_taken())
 		e.remaining -= delta
 		if e.remaining <= 0.0:
 			_active.remove_at(i)
@@ -40,6 +43,12 @@ func tick(delta: float) -> void:
 ## zeroes its driver intent while this holds — physics keeps carrying the car.
 func is_stunned() -> bool:
 	return has_effect(&"stun")
+
+## Per-car burn vulnerability (VehicleStats.burn_taken — Lovebug's air-cooled
+## engine runs hot). Read lazily: stats can land after this node's _ready.
+func _burn_taken() -> float:
+	var stats: Variant = get_parent().get("stats") if get_parent() else null
+	return float(stats.burn_taken) if stats is VehicleStats else 1.0
 
 func speed_scale() -> float:
 	var s := 1.0

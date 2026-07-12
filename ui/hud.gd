@@ -96,7 +96,10 @@ func _process(_delta: float) -> void:
 				count += "  %d%%" % int(_rack.recharge_fraction() * 100.0)
 			var marker := "> " if i == _rack.selected_index() else "  "
 			lbl.text = "%s%-18s %s" % [marker, name_txt, count]
-			lbl.modulate = SELECTED if i == _rack.selected_index() else Color.WHITE
+			var tone: Color = SELECTED if i == _rack.selected_index() else Color.WHITE
+			if _player.is_disarmed():  # Chill Out, Man: triggers offline
+				tone = Color(0.5, 0.44, 0.6)
+			lbl.modulate = tone
 
 func _bind_player() -> void:
 	_player = VehiclesHelper.local(get_tree()) as Vehicle

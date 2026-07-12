@@ -30,6 +30,7 @@ extends Resource
 								  # pool — using either barrel depletes both.
 								  # SpecialController picks per activation.
 @export var no_mines := false  # this car never arms mines, crates included
+@export var burn_taken := 1.0  # burn-DoT multiplier (air-cooled engines pay extra)
 
 ## Optional, multiplicative surface identity. The shared DrivingController
 ## composes these over its global terrain table; missing entries stay neutral.

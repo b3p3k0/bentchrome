@@ -39,11 +39,14 @@ const FLING_VEL_HARD := 190.0   # backward launch speed, full drift
 const FLING_SCALE_CALM := 3.0
 const FLING_SCALE_HARD := 6.0
 
+const PeaceMarkerScript := preload("res://vehicles/peace_marker.gd")
+
 var _vehicle: CharacterBody2D
 var _skids: Array = []  # the active pair of Line2Ds, parented to the level
 var _dust: CPUParticles2D
 var _flame: Polygon2D
 var _burn_fx: CPUParticles2D
+var _peace: Node2D
 var _blood_tracks: Array = []
 var _blood_t := 0.0
 
@@ -74,6 +77,11 @@ func _ready() -> void:
 	_burn_fx.gravity = Vector2.ZERO
 	_burn_fx.color = Color(1.0, 0.5, 0.1, 0.85)
 	add_child(_burn_fx)
+	# Disarmed: the peace sign floats over the roof (Chill Out, Man).
+	_peace = PeaceMarkerScript.new()
+	_peace.visible = false
+	_peace.z_index = 3  # over the car, under explosions
+	add_child(_peace)
 	var visual := _vehicle.get_node_or_null(^"Visual") if _vehicle else null
 	if visual:
 		_flame = Polygon2D.new()
@@ -99,6 +107,13 @@ func _rear_midpoint() -> Vector2:
 	for p in offs:
 		sum += p as Vector2
 	return sum / offs.size()
+
+## Longest body reach — how far up-screen the disarm marker floats.
+func _marker_lift() -> float:
+	if _vehicle and _vehicle.has_method("body_metrics"):
+		var m: Dictionary = _vehicle.body_metrics()
+		return maxf(float(m.get("half_len", 26.0)), float(m.get("half_wid", 13.0)))
+	return 26.0
 
 func _flame_poly() -> PackedVector2Array:
 	var tail := 26.0
@@ -127,6 +142,12 @@ func _physics_process(_delta: float) -> void:
 
 	if _burn_fx:
 		_burn_fx.emitting = _vehicle.has_method(&"is_burning") and _vehicle.is_burning()
+
+	if _peace:
+		var disarmed: bool = _vehicle.has_method(&"is_disarmed") and _vehicle.is_disarmed()
+		if disarmed and not _peace.visible:
+			_peace.position = Vector2(0, -(_marker_lift() + 12.0))
+		_peace.visible = disarmed
 
 	var terrain: StringName = _vehicle.current_terrain
 	# Sideways slip = how hard the car is sliding, derived from kinematics alone

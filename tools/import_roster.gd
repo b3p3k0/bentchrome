@@ -13,7 +13,8 @@ const TERRAIN_FIELDS := ["accel", "top", "grip", "steer", "dash_damage"]
 const ARCHETYPES := ["aggressor", "ambusher", "opportunist", "defender", "mini_boss"]
 const REQUIRED_KEYS := ["id", "car_name", "driver_name", "flavor", "special_weapon",
 	"special_def", "ai_archetype", "stats", "colors", "portrait", "mass"]
-const OPTIONAL_KEYS := ["special_ammo_cap", "special_recharge_seconds", "terrain_modifiers"]
+const OPTIONAL_KEYS := ["special_ammo_cap", "special_recharge_seconds", "terrain_modifiers",
+	"burn_taken"]
 const STAT_KEYS := ["acceleration", "top_speed", "handling", "armor", "special_power"]
 
 func _init() -> void:
@@ -61,6 +62,7 @@ func _init() -> void:
 
 		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
 		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
+		vs.burn_taken = float(c.get("burn_taken", 1.0))
 		vs.mass = int(c["mass"])
 		vs.terrain_modifiers = build_terrain_modifiers(c.get("terrain_modifiers", {}))
 
@@ -155,6 +157,9 @@ static func character_errors(c: Variant) -> PackedStringArray:
 	if c.has("special_recharge_seconds") and (typeof(c["special_recharge_seconds"]) not in [TYPE_INT, TYPE_FLOAT]
 			or float(c["special_recharge_seconds"]) <= 0.0):
 		errors.append("special_recharge_seconds must be a positive number")
+	if c.has("burn_taken") and (typeof(c["burn_taken"]) not in [TYPE_INT, TYPE_FLOAT]
+			or float(c["burn_taken"]) <= 0.0):
+		errors.append("burn_taken must be a positive number")
 
 	errors.append_array(terrain_profile_errors(c.get("terrain_modifiers", {})))
 	return errors

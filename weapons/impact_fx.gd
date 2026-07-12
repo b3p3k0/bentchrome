@@ -9,6 +9,7 @@ const NONE := 0
 const SPARK := 1
 const MISSILE := 2
 const SPATTER := 3
+const GLITTER := 4
 
 var style := NONE
 var _age := 0.0
@@ -57,6 +58,14 @@ func _draw() -> void:
 				var at := dir * rng.randf_range(3.0, 9.0) * (0.5 + t)
 				draw_circle(at, rng.randf_range(1.0, 1.8) * fade,
 					Color(0.72, 0.03, 0.04, fade * 0.7))
+		GLITTER:
+			# A peace round evaporating: expanding puff of pink-purple glitter.
+			for i in 9 + rng.randi_range(0, 3):
+				var dir := Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU))
+				var at := dir * rng.randf_range(4.0, 16.0) * (0.4 + t)
+				var hue := 0.78 + rng.randf_range(-0.14, 0.1)
+				draw_circle(at, rng.randf_range(0.8, 1.7) * fade,
+					Color.from_hsv(hue, rng.randf_range(0.35, 0.6), 1.0, fade * 0.85))
 
 func _despawn() -> void:
 	var spawner := get_node_or_null(^"/root/Spawner")

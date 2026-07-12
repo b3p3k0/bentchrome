@@ -16,7 +16,7 @@ const ImpactScene := preload("res://weapons/impact_fx.tscn")
 const BASE_MASK := 7
 const SOFT_TARGET_LAYER := 1 << 9
 
-enum ImpactStyle { NONE, SPARK, MISSILE, SPATTER }
+enum ImpactStyle { NONE, SPARK, MISSILE, SPATTER, GLITTER }
 
 signal retired(shot_id: int)
 
