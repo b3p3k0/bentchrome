@@ -1,14 +1,17 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://environment/ammo_pickup.gd" id="1_pickup"]
+[ext_resource type="PackedScene" path="res://environment/pickup_cue.tscn" id="2_cue"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
-radius = 26.0
+radius = 36.0
 
 [node name="AmmoPickup" type="Area2D"]
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("1_pickup")
+
+[node name="PickupCue" parent="." instance=ExtResource("2_cue")]
 
 [node name="Col" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_pickup")

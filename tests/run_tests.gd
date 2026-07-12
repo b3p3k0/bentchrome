@@ -7,6 +7,7 @@ const SUITES := [
 	preload("res://tests/test_status_effects.gd"),
 	preload("res://tests/test_weapon_rack.gd"),
 	preload("res://tests/test_rear_missile.gd"),
+	preload("res://tests/test_pickup_cue.gd"),
 	preload("res://tests/test_hit_feedback.gd"),
 	preload("res://tests/test_impact_fx.gd"),
 	preload("res://tests/test_mg_heat.gd"),
