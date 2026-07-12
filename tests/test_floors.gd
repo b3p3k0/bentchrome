@@ -280,6 +280,89 @@ func test_corner_grade_transitions_without_a_hop() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_grade_visual_floor_queries_all_faces() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var ramp := Ramp.new()
+	ramp.size = Vector2(200, 240)
+	ramp.low_floor = 2
+	ramp.high_floor = 3
+	container.add_child(ramp)
+	t.check_approx(ramp.visual_floor_at(Vector2(0, 120)), 2.0,
+		"grade visual: cardinal low edge is floor 2")
+	t.check_approx(ramp.visual_floor_at(Vector2.ZERO), 2.5,
+		"grade visual: cardinal midpoint is fractional")
+	t.check_approx(ramp.visual_floor_at(Vector2(0, -120)), 3.0,
+		"grade visual: cardinal high edge is floor 3")
+	t.check(ramp.visual_floor_at(Vector2(140, 0)) == -INF,
+		"grade visual: cardinal outside returns invalid")
+	ramp.stairs = true
+	t.check(ramp.visual_floor_at(Vector2.ZERO) == -INF,
+		"grade visual: Coliseum stairs retain stepped presentation")
+
+	for rot in [0.0, PI * 0.5, PI, -PI * 0.5]:
+		var corner := CornerRamp.new()
+		corner.position = Vector2(400 + rot * 10.0, 0)
+		corner.rotation = rot
+		corner.leg_size = 120.0
+		container.add_child(corner)
+		t.check_approx(corner.visual_floor_at(corner.to_global(Vector2.ZERO)), 3.0,
+			"grade visual: rotated corner high vertex %.2f" % rot)
+		t.check_approx(corner.visual_floor_at(corner.to_global(Vector2(30, 30))), 2.5,
+			"grade visual: rotated corner midpoint %.2f" % rot)
+		t.check_approx(corner.visual_floor_at(corner.to_global(Vector2(60, 60))), 2.0,
+			"grade visual: rotated corner hypotenuse %.2f" % rot)
+	t.root.remove_child(container)
+	container.free()
+
+func test_vehicle_and_puppet_rise_cosmetically_across_grade() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var ramp := Ramp.new()
+	ramp.size = Vector2(200, 240)
+	ramp.low_floor = 2
+	ramp.high_floor = 3
+	container.add_child(ramp)
+	var car := VehicleScene.instantiate() as Vehicle
+	container.add_child(car)
+	car._cache_grade_visuals()
+	var col := car.get_node(^"CollisionShape2D") as CollisionShape2D
+	var radius_before := (col.shape as CircleShape2D).radius
+	var visual := car.get_node(^"Visual") as Node2D
+	var shadow := car.get_node(^"Shadow") as Node2D
+
+	car.global_position = Vector2(0, 120)
+	car._paint_depth()
+	t.check(absf(visual.position.y) < 0.01 and absf(shadow.position.y) < 0.01,
+		"grade visual: low wheels and tight shadow stay at baseline")
+	car.global_position = Vector2.ZERO
+	car._paint_depth()
+	t.check(absf(visual.position.y + 16.0) < 0.01
+			and absf(shadow.position.y + 16.0) < 0.01,
+		"grade visual: car and shadow rise continuously at midpoint")
+	t.check(absf(visual.scale.x - car.body_scale * 1.03) < 0.01,
+		"grade visual: existing size cue interpolates at midpoint")
+	car.global_position = Vector2(0, -120)
+	car._paint_depth()
+	t.check(absf(visual.position.y + 32.0) < 0.01,
+		"grade visual: high edge reaches the authored terrace lift")
+	t.check(is_equal_approx((col.shape as CircleShape2D).radius, radius_before),
+		"grade visual: cosmetic rise never scales the physics body")
+
+	car.set_net_puppet(true)
+	car.global_position = Vector2.ZERO
+	car._puppet_physics(0.0)
+	t.check(absf(visual.position.y + 16.0) < 0.01,
+		"grade visual: network puppet derives the same midpoint lift locally")
+	car.set_net_puppet(false)
+	car._floor_lift = 32.0
+	car.global_position = Vector2(500, 500)
+	car._paint_depth()
+	t.check(absf(visual.position.y + 32.0) < 0.01,
+		"grade visual: leaving a grade reconciles to the discrete floor state")
+	t.root.remove_child(container)
+	container.free()
+
 func test_floor_lift_reads_elevation() -> void:
 	var f := _fixture([
 		{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)},

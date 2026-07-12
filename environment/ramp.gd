@@ -57,6 +57,7 @@ var _grade_area: Area2D = null
 var _tier_bucket: Dictionary = {}  # body instance id -> last row bucket
 
 func _ready() -> void:
+	add_to_group(&"driveable_grades")
 	for cfg in [{"floor": high_floor, "y": -size.y * 0.25}, {"floor": low_floor, "y": size.y * 0.25}]:
 		var zone := FloorZoneScene.instantiate()
 		zone.floor_index = cfg.floor
@@ -150,6 +151,20 @@ static func downhill_vector(world_rotation: float) -> Vector2:
 
 static func grade_impulse(world_rotation: float, pull: float, delta: float) -> Vector2:
 	return downhill_vector(world_rotation) * pull * delta
+
+## Cosmetic elevation query used by every local/AI/network vehicle. Physics
+## floors remain discrete; this float only lets the body and tight shadow rise
+## continuously across an ordinary grade. Coliseum stairs keep their authored
+## stepped presentation and deliberately opt out.
+func visual_floor_at(world_point: Vector2) -> float:
+	if stairs:
+		return -INF
+	var p := to_local(world_point)
+	var half := size * 0.5
+	if absf(p.x) > half.x or absf(p.y) > half.y:
+		return -INF
+	var high_t := clampf(0.5 - p.y / size.y, 0.0, 1.0)
+	return lerpf(float(low_floor), float(high_floor), high_t)
 
 func _draw() -> void:
 	var half := size * 0.5

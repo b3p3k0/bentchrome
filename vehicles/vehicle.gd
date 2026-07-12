@@ -82,6 +82,8 @@ var _takeoff_floor := -1  # floor at the moment we went airborne (fall bookkeepi
 var _floor_tween: Tween = null
 var _shield_tween: Tween = null
 var _floor_lift := 0.0    # visual elevation for upper terraces (see FLOOR_LIFT)
+var _grade_visuals: Array[Node] = []  # duck-typed visual_floor_at providers;
+	# derived locally from world position, including network puppets
 var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never radii
 	set(v):
 		_floor_vis = v
@@ -179,6 +181,7 @@ func _ready() -> void:
 		_health.damaged.connect(_on_damaged)
 	heading = rotation
 	rotation = 0.0
+	call_deferred("_cache_grade_visuals")
 	# DEVGOD (settings): player-only — damage-immune, one of everything, firing
 	# never depletes. Pits still kill; the level's lives loop comps the life.
 	# INERT in a live LAN session (duck-typed off the Net autoload; Mode.OFF
@@ -423,14 +426,47 @@ func _update_depth(delta: float) -> void:
 ## The height/lift paint, physics-free — the sim integrates then paints; a
 ## network puppet paints its STREAMED height directly (never integrates).
 func _paint_depth() -> void:
-	_visual.position.y = -(height + _floor_lift)
+	var grounded_lift := _floor_lift
+	var grounded_scale := _floor_vis
+	var grade_floor := _grade_visual_floor()
+	if grade_floor > -INF:
+		grounded_lift = FLOOR_LIFT * maxf(0.0, grade_floor - 2.0)
+		grounded_scale = _visual_scale_at_floor(grade_floor)
+	_visual.position.y = -(height + grounded_lift)
+	_visual.scale = Vector2.ONE * body_scale * grounded_scale
 	if _shadow:
 		# The shadow RIDES the terrace lift (tight under a driving car) and only
 		# detaches/shrinks with real airtime — floating is for jumps, not roofs.
-		_shadow.position.y = -_floor_lift
-		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * _floor_vis
+		_shadow.position.y = -grounded_lift
+		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * grounded_scale
 		_shadow.scale = Vector2(s, s)
 		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
+
+func _cache_grade_visuals() -> void:
+	_grade_visuals.clear()
+	if is_inside_tree():
+		for grade in get_tree().get_nodes_in_group(&"driveable_grades"):
+			if grade.has_method(&"visual_floor_at"):
+				_grade_visuals.append(grade)
+
+func _grade_visual_floor() -> float:
+	if _grade_visuals.is_empty() and is_inside_tree():
+		_cache_grade_visuals()  # absorbs authoring order and runtime hill builds
+	var best := -INF
+	for grade in _grade_visuals:
+		if not is_instance_valid(grade) or not grade.is_inside_tree():
+			continue
+		var value := float(grade.visual_floor_at(global_position))
+		if value > -INF:
+			best = maxf(best, value)
+	return best
+
+func _visual_scale_at_floor(value: float) -> float:
+	var low := int(floorf(value))
+	var high := int(ceilf(value))
+	var low_scale := float(Floors.VISUAL_SCALE.get(low, 1.0))
+	var high_scale := float(Floors.VISUAL_SCALE.get(high, low_scale))
+	return lerpf(low_scale, high_scale, value - float(low))
 
 # ------------------------------------------------------------ network puppet
 
@@ -490,6 +526,9 @@ func apply_net_state(slice: Dictionary) -> void:
 	_sync_brake_lights()
 	if _status and slice.has("burn"):
 		_status.set_cosmetic(&"burn", bool(slice.burn))
+	if _status and slice.has("disarm"):
+		# Marker + HUD dim read is_disarmed() — the host owns the actual gate.
+		_status.set_cosmetic(&"disarm", bool(slice.disarm))
 	if slice.has("alive"):
 		var alive: bool = slice.alive
 		if _net_alive and not alive:

@@ -22,6 +22,7 @@ const EDGE := Color(0.55, 0.55, 0.62)
 var _grade_area: Area2D = null
 
 func _ready() -> void:
+	add_to_group(&"driveable_grades")
 	_add_floor_zones()
 	_add_terrain_override()
 	_add_grade_area()
@@ -96,6 +97,15 @@ func _physics_process(delta: float) -> void:
 
 static func downhill_vector(world_rotation: float) -> Vector2:
 	return Vector2(1.0, 1.0).normalized().rotated(world_rotation)
+
+## Matches Ramp.visual_floor_at for the triangular facet. Local x+y runs
+## from the high right-angle vertex (0) to the low hypotenuse (leg_size).
+func visual_floor_at(world_point: Vector2) -> float:
+	var p := to_local(world_point)
+	if p.x < 0.0 or p.y < 0.0 or p.x + p.y > leg_size:
+		return -INF
+	var high_t := clampf(1.0 - (p.x + p.y) / leg_size, 0.0, 1.0)
+	return lerpf(float(low_floor), float(high_floor), high_t)
 
 func _draw() -> void:
 	if not surface_paint:
