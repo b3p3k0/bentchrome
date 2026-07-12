@@ -14,7 +14,7 @@ const MP_LOBBY := "res://ui/mp_lobby.tscn"
 const MP_MATCH := "res://levels/mp/mp_match.tscn"
 const MP_SCOREBOARD := "res://ui/mp_scoreboard.tscn"
 
-## The versus map pool: the five standard arenas. Boss yards (Depot, Coliseum)
+## The versus map pool: every MP-ready regular arena. Boss yards (Depot, Coliseum)
 ## join in a later batch once their boss scripting learns to stand down; the
 ## chase course and custom JSON levels stay campaign-side.
 const MP_MAPS := [
@@ -23,6 +23,7 @@ const MP_MAPS := [
 	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburbs", "cars": 7},
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Snowy Pass", "cars": 7},
 	{"scene": "res://levels/dock/dock.tscn", "name": "The Docks", "cars": 8},
+	{"scene": "res://levels/construction/ground_floor_gore.tscn", "name": "Ground Floor Gore", "cars": 8},
 ]
 
 ## The campaign, in order. The fight rolls out of town: downtown brawl, up the
@@ -52,6 +53,9 @@ const CAMPAIGN := [
 	{"scene": "res://levels/chase/buzzard_run.tscn", "name": "The Buzzard Run",
 		"mode": &"specialty", "size_class": &"", "encounter": &"chase",
 		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false},
+	{"scene": "res://levels/construction/ground_floor_gore.tscn", "name": "Ground Floor Gore",
+		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
+		"arena_size": Vector2(4608, 3840), "target_cars": 8, "stations": 2, "mp_ready": true},
 	{"scene": "res://levels/stadium/stadium.tscn", "name": "The Coliseum",
 		"mode": &"arena", "size_class": &"large", "encounter": &"boss",
 		"arena_size": Vector2(4608, 3584), "target_cars": 4, "stations": 1, "mp_ready": false,

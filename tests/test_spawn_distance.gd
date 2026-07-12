@@ -13,6 +13,7 @@ const CAMPAIGN := [
 	"res://levels/depot/depot.tscn",
 	"res://levels/dock/dock.tscn",
 	"res://levels/chase/buzzard_run.tscn",
+	"res://levels/construction/ground_floor_gore.tscn",
 	"res://levels/stadium/stadium.tscn",
 ]
 

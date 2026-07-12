@@ -104,3 +104,25 @@ func test_full_ammo_still_banks_the_larger_pickup() -> void:
 	car.free()
 	t.root.remove_child(pickup)
 	pickup.free()
+
+func test_ammo_pickup_is_floor_gated() -> void:
+	var pickup = AmmoScene.instantiate()
+	pickup.kind = "rear"
+	pickup.floor_index = 3
+	t.root.add_child(pickup)
+	var car := VehicleScene.instantiate() as Vehicle
+	car.start_floor = 1
+	t.root.add_child(car)
+	var rack: WeaponRack = car.get_rack()
+	var before := rack.ammo(WeaponRack.Slot.REAR)
+	pickup._on_body_entered(car)
+	t.check(rack.ammo(WeaponRack.Slot.REAR) == before and pickup.visible,
+		"pickup floor: car underneath an overhead crate cannot collect it")
+	car._adopt_floor(3)
+	pickup._on_body_entered(car)
+	t.check(rack.ammo(WeaponRack.Slot.REAR) > before and not pickup.visible,
+		"pickup floor: matching terrace collects normally")
+	t.root.remove_child(car)
+	car.free()
+	t.root.remove_child(pickup)
+	pickup.free()

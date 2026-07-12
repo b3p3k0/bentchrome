@@ -98,3 +98,43 @@ func test_scene_readies_as_mp_geometry_without_campaign_actors() -> void:
 		"ground floor: scaffold network retains four platforms and six runs")
 	t.root.remove_child(arena)
 	arena.free()
+
+func test_final_pickup_budget_and_traversal_rewards() -> void:
+	var arena := ArenaScene.instantiate()
+	var pickups := arena.get_node(^"AmmoPickups").get_children()
+	var kinds := {}
+	var upper_rewards := 0
+	for pickup in pickups:
+		kinds[pickup.kind] = int(kinds.get(pickup.kind, 0)) + 1
+		if pickup.floor_index == 3 and pickup.kind in ["power", "jump"]:
+			upper_rewards += 1
+	t.check(pickups.size() == 11,
+		"ground floor economy: final arena carries eleven crates")
+	t.check(kinds == {"standard": 2, "rear": 2, "homing": 2,
+		"power": 2, "mine": 2, "jump": 1},
+		"ground floor economy: authored weapon mix matches the contract")
+	t.check(upper_rewards == 2,
+		"ground floor economy: power and jump rewards pay scaffold traversal")
+	var generator := arena.get_node(^"PowerGenerator") as Node2D
+	var outside_blast := true
+	for pickup in pickups:
+		outside_blast = outside_blast \
+			and pickup.global_position.distance_to(generator.global_position) > 420.0
+	t.check(outside_blast,
+		"ground floor economy: no pickup asks a driver to park inside the generator blast")
+	arena.free()
+
+func test_campaign_order_places_site_between_chase_and_coliseum() -> void:
+	var flow: Node = t.root.get_node(^"/root/SceneFlow")
+	var names: Array = []
+	for profile in flow.CAMPAIGN:
+		names.append(String(profile.name))
+	var buzzard := names.find("The Buzzard Run")
+	var ground := names.find("Ground Floor Gore")
+	var stadium := names.find("The Coliseum")
+	t.check(ground == buzzard + 1 and stadium == ground + 1,
+		"ground floor flow: chase detour and normal clear both lead here before Goliath")
+	var profile: Dictionary = flow.CAMPAIGN[ground]
+	t.check(profile.size_class == &"large" and profile.target_cars == 8
+		and profile.stations == 2 and profile.mp_ready,
+		"ground floor flow: large eight-car profile matches scene capacity")

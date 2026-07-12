@@ -6,6 +6,9 @@ extends Area2D
 @export_enum("standard", "homing", "power", "rear", "mine", "jump") var kind := "standard"
 @export var amount := 2
 @export var respawn_seconds := 20.0
+@export var floor_index := -1
+
+const Floors := preload("res://game/floors.gd")
 
 const STYLE := {
 	"standard": {"tag": "M", "color": Color(0.25, 0.8, 0.35), "slot": WeaponRack.Slot.STANDARD},
@@ -18,6 +21,7 @@ const STYLE := {
 
 func _ready() -> void:
 	add_to_group(&"pickups")  # AI scavenging scans this
+	z_index = 2 if floor_index >= 3 else 0
 	body_entered.connect(_on_body_entered)
 	var style: Dictionary = STYLE.get(kind, STYLE["standard"])
 	var tag := get_node_or_null("Tag") as Label
@@ -28,7 +32,7 @@ func _ready() -> void:
 		vis.color = style["color"]
 
 func _on_body_entered(body: Node) -> void:
-	if not body.has_method("get_rack"):
+	if not body.has_method("get_rack") or not Floors.same_floor(self, body):
 		return
 	var rack: WeaponRack = body.get_rack()
 	if rack == null:

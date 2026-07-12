@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -22,6 +22,7 @@
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="20_block"]
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="21_clutter"]
 [ext_resource type="PackedScene" path="res://environment/power_generator.tscn" id="22_generator"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="23_ammo"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -465,6 +466,74 @@ z_index = 2
 [node name="RainSquall" parent="." instance=ExtResource("14_rain")]
 bounds = Vector2(4608, 3840)
 intensity = 1.0
+
+[node name="AmmoPickups" type="Node2D" parent="."]
+
+[node name="StandardFloor1" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(-1200, 1200)
+kind = "standard"
+amount = 2
+floor_index = 1
+
+[node name="StandardFloor2" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1700, -700)
+kind = "standard"
+amount = 2
+floor_index = 2
+
+[node name="RearFloor1" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(2050, 1500)
+kind = "rear"
+amount = 2
+floor_index = 1
+
+[node name="RearFloor3" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(-384, -640)
+kind = "rear"
+amount = 2
+floor_index = 3
+
+[node name="HomingFloor1" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(-1200, -1700)
+kind = "homing"
+amount = 1
+floor_index = 1
+
+[node name="HomingFloor2" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1100, 100)
+kind = "homing"
+amount = 1
+floor_index = 2
+
+[node name="PowerFloor2" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1700, -1000)
+kind = "power"
+amount = 1
+floor_index = 2
+
+[node name="PowerFloor3" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1710, -1250)
+kind = "power"
+amount = 1
+floor_index = 3
+
+[node name="MineWest" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(-600, 1500)
+kind = "mine"
+amount = 2
+floor_index = 1
+
+[node name="MineEast" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1700, 1500)
+kind = "mine"
+amount = 2
+floor_index = 1
+
+[node name="JumpFloor3" parent="AmmoPickups" instance=ExtResource("23_ammo")]
+position = Vector2(1700, -128)
+kind = "jump"
+amount = 1
+floor_index = 3
 
 [node name="HeavyMachines" type="Node2D" parent="."]
 
