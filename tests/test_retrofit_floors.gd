@@ -80,3 +80,40 @@ func test_retrofit_structure() -> void:
 			t.check(_floor_at(zones, entry) == int(c.get("from_floor")),
 				"%s: %s approach run sits on floor %d" % [tag, c.name, int(c.get("from_floor"))])
 		lvl.free()
+
+func test_snowy_hill_has_eight_driveable_faces() -> void:
+	var snowy := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var cardinals: Array = []
+	var corners: Array = []
+	var grade_up := 0
+	var grade_down := 0
+	for child in snowy.get_children():
+		if child is Ramp and String(child.name).begins_with("Ramp"):
+			cardinals.append(child)
+		elif child is CornerRamp:
+			corners.append(child)
+		elif child.get("from_floor") != null and String(child.get("kind")) == "grade":
+			if int(child.get("from_floor")) == 2 and int(child.get("to_floor")) == 3:
+				grade_up += 1
+			elif int(child.get("from_floor")) == 3 and int(child.get("to_floor")) == 2:
+				grade_down += 1
+		t.check(not String(child.name).begins_with("PlateauWall")
+				and not String(child.name).begins_with("Ledge"),
+			"snowy hill: no hard plateau wall/ledge survives (%s)" % child.name)
+	t.check(cardinals.size() == 4 and corners.size() == 4,
+		"snowy hill: four cardinal and four diagonal faces")
+	for ramp in cardinals:
+		t.check(ramp.size == Vector2(896, 240) and not ramp.rails
+				and ramp.terrain_type == "snow" and is_equal_approx(ramp.downhill_pull, 120.0),
+			"snowy hill: %s is a broad seamless snow grade" % ramp.name)
+	for corner in corners:
+		t.check(is_equal_approx(corner.leg_size, 240.0)
+				and corner.terrain_type == "snow"
+				and is_equal_approx(corner.downhill_pull, 120.0),
+			"snowy hill: %s fills its diagonal with the same grade language" % corner.name)
+	t.check(grade_up == 8 and grade_down == 8,
+		"snowy hill: AI has paired routes over all eight faces")
+	t.check(snowy.get_node_or_null(^"AmmoPowerSummit") != null
+			and snowy.get_node_or_null(^"AmmoStandardSummit") != null,
+		"snowy hill: summit traversal rewards stay authored")
+	snowy.free()

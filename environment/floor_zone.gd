@@ -8,6 +8,7 @@ extends Area2D
 
 @export var floor_index := 1
 @export var size := Vector2(512, 512)
+@export var polygon := PackedVector2Array()  # optional convex footprint
 @export var ramp := false  # driveable transition: cars grade to this zone's
 						   # floor at ground level, both directions — no hop,
 						   # no fall bill (see environment/ramp.gd)
@@ -15,9 +16,15 @@ extends Area2D
 func _ready() -> void:
 	collision_layer = 256  # floor_tag channel — only FloorSensors listen
 	collision_mask = 0
-	var col := CollisionShape2D.new()
-	col.name = "Col"
-	var shape := RectangleShape2D.new()
-	shape.size = size
-	col.shape = shape
-	add_child(col)
+	if polygon.size() >= 3:
+		var poly := CollisionPolygon2D.new()
+		poly.name = "Col"
+		poly.polygon = polygon
+		add_child(poly)
+	else:
+		var col := CollisionShape2D.new()
+		col.name = "Col"
+		var shape := RectangleShape2D.new()
+		shape.size = size
+		col.shape = shape
+		add_child(col)

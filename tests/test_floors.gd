@@ -210,6 +210,76 @@ func test_ramp_node_builds_the_recipe() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_corner_grade_and_solid_chamfer_recipes() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var corner := CornerRamp.new()
+	corner.low_floor = 2
+	corner.high_floor = 3
+	corner.leg_size = 240.0
+	corner.terrain_type = "snow"
+	container.add_child(corner)
+	var zones: Array[FloorZone] = []
+	for child in corner.get_children():
+		if child is FloorZone:
+			zones.append(child)
+	t.check(zones.size() == 2, "corner grade: high and low ramp polygons exist")
+	t.check(corner.high_polygon().size() == 3 and corner.low_polygon().size() == 4,
+		"corner grade: triangle splits into high triangle and low trapezoid")
+	t.check(corner.footprint()[0] == Vector2.ZERO
+			and corner.footprint()[1] == Vector2(240, 0)
+			and corner.footprint()[2] == Vector2(0, 240),
+		"corner grade: right-angle vertex is high and hypotenuse is low")
+	var terrain := corner.get_node_or_null(^"TerrainOverride/Terrain") as TerrainZone
+	t.check(terrain != null and terrain.terrain_type == &"snow"
+			and terrain.terrain_priority == Ramp.TERRAIN_PRIORITY,
+		"corner grade: authored terrain owns the triangular slope")
+	t.check(CornerRamp.downhill_vector(0.0).is_equal_approx(Vector2(1, 1).normalized()),
+		"corner grade: pull runs high vertex to hypotenuse midpoint")
+
+	var chamfer := TerraceChamfer.new()
+	chamfer.low_floor = 1
+	chamfer.high_floor = 2
+	chamfer.leg_size = 384.0
+	container.add_child(chamfer)
+	t.check(chamfer.collision_layer == (4 | 8 | 16),
+		"terrace chamfer: solid carries obstacle plus both floor bits")
+	var col := chamfer.get_node_or_null(^"Col") as CollisionPolygon2D
+	t.check(col != null and col.polygon == PackedVector2Array([
+		Vector2.ZERO, Vector2(0, -384), Vector2(384, 0)]),
+		"terrace chamfer: reusable collision matches the Coliseum right triangle")
+	t.root.remove_child(container)
+	container.free()
+
+func test_corner_grade_transitions_without_a_hop() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var plate := FloorZoneScene.instantiate() as FloorZone
+	plate.floor_index = 2
+	plate.size = Vector2(1000, 1000)
+	container.add_child(plate)
+	var corner := CornerRamp.new()
+	corner.low_floor = 2
+	corner.high_floor = 3
+	corner.leg_size = 240.0
+	container.add_child(corner)
+	var car := VehicleScene.instantiate() as Vehicle
+	car.position = Vector2(160, 40)  # low trapezoid (x+y > half leg)
+	container.add_child(car)
+	await _settle(3)
+	t.check(car.floor_index == 2 and car.height == 0.0,
+		"corner grade: low hypotenuse side stays grounded on the low floor")
+	car.global_position = Vector2(20, 20)  # high triangle
+	await _settle(3)
+	t.check(car.floor_index == 3 and car.height == 0.0 and car.vz == 0.0,
+		"corner grade: diagonal climb adopts high floor without a hop")
+	car.global_position = Vector2(160, 40)
+	await _settle(3)
+	t.check(car.floor_index == 2 and car.height == 0.0 and car.vz == 0.0,
+		"corner grade: diagonal descent returns low without fall physics")
+	t.root.remove_child(container)
+	container.free()
+
 func test_floor_lift_reads_elevation() -> void:
 	var f := _fixture([
 		{"floor": 3, "pos": Vector2.ZERO, "size": Vector2(600, 600)},
