@@ -159,8 +159,13 @@ func test_ground_floor_ids_are_unique_and_complete() -> void:
 		var id_v: Variant = node.get("arena_net_id")
 		if id_v is int and int(id_v) > 0:
 			ids[int(id_v)] = true
-	t.check(ids.size() == 13,
-		"generator net: generator, eight portas, and four breakables have unique IDs")
-	for required in [1, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 23]:
-		t.check(ids.has(required), "generator net: stable arena id %d exists" % required)
+	t.check(ids.size() == 30,
+		"generator net: generator, portas, and every synced breakable have unique IDs")
+	var required: Array[int] = [1]
+	for id in range(10, 18):
+		required.append(id)
+	for id in range(20, 41):
+		required.append(id)
+	for id in required:
+		t.check(ids.has(id), "generator net: stable arena id %d exists" % id)
 	arena.free()
