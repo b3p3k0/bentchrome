@@ -17,6 +17,7 @@ const SPECKLE_SHADER := preload("res://shaders/terrain_speckle.gdshader")
 const TERRAIN_SPECKLE := {
 	"grass": {"speckle": Color(0.14, 0.36, 0.11), "density": 0.35, "scale": 10.0, "shimmer": 0.0},
 	"dirt": {"speckle": Color(0.32, 0.22, 0.12), "density": 0.3, "scale": 8.0, "shimmer": 0.0},
+	"mud": {"speckle": Color(0.10, 0.065, 0.04), "density": 0.38, "scale": 11.0, "shimmer": 0.35},
 	"water": {"speckle": Color(0.45, 0.65, 0.9), "density": 0.22, "scale": 14.0, "shimmer": 1.6},
 	"ice": {"speckle": Color(0.85, 0.95, 1.0), "density": 0.18, "scale": 12.0, "shimmer": 0.0},
 	"snow": {"speckle": Color(0.95, 0.97, 1.0), "density": 0.3, "scale": 9.0, "shimmer": 0.0},

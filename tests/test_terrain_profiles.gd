@@ -70,24 +70,28 @@ func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 		&"cricket": {
 			&"dirt": [1.12, 1.08, 0.81, 1.15],
 			&"grass": [1.01, 1.01, 0.92, 1.08],
+			&"mud": [0.62, 0.65, 0.50, 0.98],
 		},
 		&"hammertoe": {
 			&"grass": [0.97, 0.97, 0.88, 1.0],
 			&"snow": [0.94, 0.95, 0.56, 1.0],
 			&"dirt": [0.94, 0.95, 0.72, 1.0],
 			&"water": [0.66, 0.70, 0.77, 1.0],
+			&"mud": [0.80, 0.80, 0.60, 0.98],
 		},
 		&"smoky": {
 			&"grass": [0.95, 0.95, 0.86, 1.0],
 			&"snow": [0.90, 0.94, 0.53, 1.0],
 			&"dirt": [0.88, 0.92, 0.67, 1.0],
 			&"water": [0.50, 0.55, 0.74, 1.0],
+			&"mud": [0.72, 0.74, 0.55, 0.96],
 		},
 		&"razorback": {
 			&"grass": [0.95, 0.95, 0.86, 1.0],
 			&"snow": [0.90, 0.94, 0.53, 1.0],
 			&"dirt": [0.88, 0.92, 0.67, 1.0],
 			&"water": [0.50, 0.55, 0.74, 1.0],
+			&"mud": [0.72, 0.74, 0.55, 0.96],
 		},
 		# The VW commercial was true: shallow water reads as dry road (net 1.0).
 		&"lovebug": {
@@ -97,6 +101,7 @@ func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 		&"cyclone": {
 			&"road": [1.1, 1.05, 1.25, 1.1],
 			&"dirt": [0.6, 0.68, 0.36, 1.0],
+			&"mud": [0.36, 0.40, 0.25, 0.78],
 		},
 	}
 	for car_id in expected:

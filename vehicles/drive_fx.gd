@@ -11,6 +11,7 @@ const SKID_COLOR := Color(0.05, 0.05, 0.06, 0.6)  # rubber on pavement (road/fal
 const SKID_COLORS := {
 	&"grass": Color(0.34, 0.26, 0.16, 0.7),   # torn earth under the sod
 	&"dirt":  Color(0.28, 0.2, 0.12, 0.75),   # darker churned dirt
+	&"mud":   Color(0.12, 0.075, 0.045, 0.82), # wet ruts stay darker than the pool
 	&"snow":  Color(0.62, 0.68, 0.78, 0.85),  # compressed bluish-white
 	&"ice":   Color(0.72, 0.8, 0.9, 0.5),     # faint polished streak
 }
@@ -26,6 +27,7 @@ const BLOOD_MIN_SPEED := 10.0
 const DUST_MIN_SPEED := 150.0
 const DUST_COLORS := {
 	&"dirt":  Color(0.55, 0.42, 0.28, 0.7),
+	&"mud":   Color(0.28, 0.19, 0.12, 0.72),
 	&"grass": Color(0.35, 0.5, 0.3, 0.6),
 	&"snow":  Color(0.9, 0.94, 1.0, 0.85),   # kicked-up powder
 	&"water": Color(0.6, 0.78, 0.88, 0.7),   # blue-white spray

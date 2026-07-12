@@ -56,6 +56,7 @@ static var TERRAIN := {
 	&"grass": {"accel": 0.9, "top": 0.9, "grip": 0.8, "steer": 1.0},
 	&"snow": {"accel": 0.85, "top": 0.9, "grip": 0.45, "steer": 1.0},
 	&"dirt": {"accel": 0.8, "top": 0.85, "grip": 0.6, "steer": 1.0},
+	&"mud": {"accel": 0.55, "top": 0.60, "grip": 0.42, "steer": 0.90},
 	&"ice": {"accel": 0.55, "top": 1.0, "grip": 0.08, "steer": 1.2},
 	&"water": {"accel": 0.4, "top": 0.45, "grip": 0.7, "steer": 1.0},
 	}

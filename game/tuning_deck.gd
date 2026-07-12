@@ -35,7 +35,7 @@ const DEF_PROPS := {
 	"turn_rate_deg": [0.0, 400.0, 5.0],
 	"acquisition_radius": [0.0, 3200.0, 50.0],
 }
-const TERRAIN_TYPES := [&"road", &"grass", &"snow", &"dirt", &"ice", &"water"]
+const TERRAIN_TYPES := [&"road", &"grass", &"snow", &"dirt", &"mud", &"ice", &"water"]
 const TERRAIN_PROPS := {
 	"accel": [0.05, 1.5, 0.05],
 	"top": [0.05, 1.5, 0.05],

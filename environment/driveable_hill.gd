@@ -22,7 +22,7 @@ const DEFAULT_EDGE := Color(0.38, 0.43, 0.53, 0.5)
 @export_range(64.0, 1024.0, 8.0) var grade_length := 240.0
 @export var low_floor := 2
 @export var high_floor := 3
-@export_enum("road", "grass", "snow", "dirt", "ice", "water") \
+@export_enum("road", "grass", "snow", "dirt", "mud", "ice", "water") \
 	var terrain_type := "road"
 @export_range(1.0, 600.0, 1.0) var downhill_pull := DEFAULT_HILL_PULL
 @export var substrate_material: Material

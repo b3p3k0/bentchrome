@@ -34,6 +34,14 @@ grip = 0.6
 
 [sub_resource type="Resource" id="Resource_inaiy"]
 script = ExtResource("3_66o0r")
+terrain = &"mud"
+accel = 0.6545454545
+top = 0.6666666667
+grip = 0.5952380952
+steer = 0.8666666667
+
+[sub_resource type="Resource" id="Resource_tnq4s"]
+script = ExtResource("3_66o0r")
 terrain = &"water"
 accel = 0.7
 top = 0.75
@@ -57,4 +65,4 @@ primary_color = Color(0.101960786, 0.36078432, 1, 1)
 accent_color = Color(0.78431374, 0.8627451, 1, 1)
 special = ExtResource("2_m016v")
 special_recharge_seconds = 30.0
-terrain_modifiers = Array[ExtResource("3_66o0r")]([SubResource("Resource_r5b7f"), SubResource("Resource_q6fmn"), SubResource("Resource_rptkx"), SubResource("Resource_hftt0"), SubResource("Resource_inaiy")])
+terrain_modifiers = Array[ExtResource("3_66o0r")]([SubResource("Resource_r5b7f"), SubResource("Resource_q6fmn"), SubResource("Resource_rptkx"), SubResource("Resource_hftt0"), SubResource("Resource_inaiy"), SubResource("Resource_tnq4s")])

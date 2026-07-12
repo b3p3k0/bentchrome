@@ -57,6 +57,8 @@ func test_for_entity_resolves_presets() -> void:
 	t.check(rear.id == "pickup_rear", "rear crate resolves by preset")
 	var ice := Catalog.for_entity("terrain", {"type": "ice", "rect": [0.0, 0.0, 128.0, 128.0]})
 	t.check(ice.id == "terrain_ice", "terrain resolves by type")
+	var mud := Catalog.for_entity("terrain", {"type": "mud", "rect": [0.0, 0.0, 128.0, 128.0]})
+	t.check(mud.id == "terrain_mud", "mud terrain resolves by type")
 	var player := Catalog.for_entity("player_spawn", {"pos": [0.0, 0.0], "heading_deg": 0.0})
 	t.check(player.id == "player_spawn", "player spawn resolves without preset")
 	t.check(Catalog.for_entity("pickups", {"kind": "nuke"}).is_empty(), "unknown preset misses cleanly")

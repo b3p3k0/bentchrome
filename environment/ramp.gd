@@ -44,7 +44,7 @@ static var STAIR_SPEED_NICK := 0.9  # climbing: each tier eats a bite of speed;
 @export var rails := true  # false = no built side rails; the level authors its
 	# own guards (stadium slope ends wear light DESTRUCTIBLE guardrails so a
 	# beached rig can smash out instead of pinning on indestructible geometry)
-@export_enum("road", "grass", "snow", "dirt", "ice", "water") \
+@export_enum("road", "grass", "snow", "dirt", "mud", "ice", "water") \
 	var terrain_type := "road"
 @export_range(1.0, 600.0, 1.0) var downhill_pull := DEFAULT_DOWNHILL_PULL
 	# px/s² bias along local +y (toward the low end): climbing fights it,

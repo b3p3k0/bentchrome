@@ -1,28 +1,36 @@
-[gd_resource type="Resource" script_class="VehicleStats" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ttjym"]
-[ext_resource type="Resource" path="res://data/weapons/leap.tres" id="2_685h4"]
-[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_terrain"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_685h4"]
+[ext_resource type="Resource" path="res://data/weapons/leap.tres" id="2_vp4pc"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_umdux"]
 
-[sub_resource type="Resource" id="Terrain_cricket_dirt"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_ps52b"]
+script = ExtResource("3_umdux")
 terrain = &"dirt"
 accel = 1.4
-top = 1.2705882
+top = 1.2705882353
 grip = 1.35
 steer = 1.15
 dash_damage = 1.15
 
-[sub_resource type="Resource" id="Terrain_cricket_grass"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_g0a5y"]
+script = ExtResource("3_umdux")
+terrain = &"mud"
+accel = 1.1272727273
+top = 1.0833333333
+grip = 1.1904761905
+steer = 1.0888888889
+
+[sub_resource type="Resource" id="Resource_mmp2x"]
+script = ExtResource("3_umdux")
 terrain = &"grass"
-accel = 1.1222222
-top = 1.1222222
+accel = 1.1222222222
+top = 1.1222222222
 grip = 1.15
 steer = 1.08
 
 [resource]
-script = ExtResource("1_ttjym")
+script = ExtResource("1_685h4")
 id = &"cricket"
 car_name = "Cricket"
 driver_name = "Mae Hemm"
@@ -37,6 +45,6 @@ special_power = 8
 mass = 2
 primary_color = Color(0.19215687, 1, 0.34117648, 1)
 accent_color = Color(0.039215688, 0.5411765, 0.17254902, 1)
-special = ExtResource("2_685h4")
+special = ExtResource("2_vp4pc")
 special_recharge_seconds = 10.0
-terrain_modifiers = Array[ExtResource("3_terrain")]([SubResource("Terrain_cricket_dirt"), SubResource("Terrain_cricket_grass")])
+terrain_modifiers = Array[ExtResource("3_umdux")]([SubResource("Resource_ps52b"), SubResource("Resource_g0a5y"), SubResource("Resource_mmp2x")])

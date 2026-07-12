@@ -7,7 +7,7 @@ extends SceneTree
 ## becoming dead data (same philosophy as the terrain checks).
 ## Run: godot --headless --path . -s res://tools/import_roster.gd
 
-const TERRAIN_NAMES := ["road", "grass", "snow", "dirt", "ice", "water"]
+const TERRAIN_NAMES := ["road", "grass", "snow", "dirt", "mud", "ice", "water"]
 const TERRAIN_FIELDS := ["accel", "top", "grip", "steer", "dash_damage"]
 # Vocabulary the level_loader shim maps onto EnemyDriver.mix weights.
 const ARCHETYPES := ["aggressor", "ambusher", "opportunist", "defender", "mini_boss"]

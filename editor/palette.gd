@@ -9,7 +9,7 @@ const Catalog := preload("res://levels/entity_catalog.gd")
 
 const PLACEABLE := [
 	"player_spawn", "enemy_spawn", "block", "pickup_standard", "pickup_homing", "pickup_rear", "dummy",
-	"terrain_dirt", "terrain_ice", "terrain_water",  # drag-rect tools
+	"terrain_dirt", "terrain_mud", "terrain_ice", "terrain_water",  # drag-rect tools
 ]
 
 var document: EditorDocument

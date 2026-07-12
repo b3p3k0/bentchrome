@@ -1,39 +1,47 @@
-[gd_resource type="Resource" script_class="VehicleStats" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_1uc7n"]
-[ext_resource type="Resource" path="res://data/weapons/taser.tres" id="2_h1gw4"]
-[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_terrain"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_h1gw4"]
+[ext_resource type="Resource" path="res://data/weapons/taser.tres" id="2_xghdd"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_ql8vi"]
 
-[sub_resource type="Resource" id="Terrain_smoky_grass"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_ergjg"]
+script = ExtResource("3_ql8vi")
 terrain = &"grass"
-accel = 1.0555556
-top = 1.0555556
+accel = 1.0555555556
+top = 1.0555555556
 grip = 1.075
 
-[sub_resource type="Resource" id="Terrain_smoky_snow"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_t342p"]
+script = ExtResource("3_ql8vi")
 terrain = &"snow"
-accel = 1.0588236
-top = 1.0444444
-grip = 1.1777778
+accel = 1.0588235294
+top = 1.0444444444
+grip = 1.1777777778
 
-[sub_resource type="Resource" id="Terrain_smoky_dirt"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_gqdbr"]
+script = ExtResource("3_ql8vi")
 terrain = &"dirt"
 accel = 1.1
-top = 1.082353
-grip = 1.1166667
+top = 1.0823529412
+grip = 1.1166666667
 
-[sub_resource type="Resource" id="Terrain_smoky_water"]
-script = ExtResource("3_terrain")
+[sub_resource type="Resource" id="Resource_s4aw8"]
+script = ExtResource("3_ql8vi")
+terrain = &"mud"
+accel = 1.3090909091
+top = 1.2333333333
+grip = 1.3095238095
+steer = 1.0666666667
+
+[sub_resource type="Resource" id="Resource_8veyc"]
+script = ExtResource("3_ql8vi")
 terrain = &"water"
 accel = 1.25
-top = 1.2222222
-grip = 1.0571429
+top = 1.2222222222
+grip = 1.0571428571
 
 [resource]
-script = ExtResource("1_1uc7n")
+script = ExtResource("1_h1gw4")
 id = &"smoky"
 car_name = "Smoky"
 driver_name = "Officer Richard Vepsh"
@@ -48,7 +56,7 @@ special_power = 7
 mass = 6
 primary_color = Color(0.07058824, 0.22745098, 0.41960785, 1)
 accent_color = Color(0.039215688, 0.1254902, 0.23529412, 1)
-special = ExtResource("2_h1gw4")
+special = ExtResource("2_xghdd")
 special_ammo_cap = 3
 special_recharge_seconds = 90.0
-terrain_modifiers = Array[ExtResource("3_terrain")]([SubResource("Terrain_smoky_grass"), SubResource("Terrain_smoky_snow"), SubResource("Terrain_smoky_dirt"), SubResource("Terrain_smoky_water")])
+terrain_modifiers = Array[ExtResource("3_ql8vi")]([SubResource("Resource_ergjg"), SubResource("Resource_t342p"), SubResource("Resource_gqdbr"), SubResource("Resource_s4aw8"), SubResource("Resource_8veyc")])

@@ -9,6 +9,11 @@ uniform float intensity : hint_range(0.0, 1.0) = 0.4;
 uniform float scale : hint_range(2.0, 256.0) = 8.0;
 uniform float shimmer : hint_range(0.0, 4.0) = 0.0;
 
+// Weather is opt-in per material. The rings are world-anchored, sparse, and
+// purely cosmetic; RainSquall owns the streaks while wet terrain owns splashes.
+uniform bool rain_ripples = false;
+uniform float rain_ripple_strength : hint_range(0.0, 0.25) = 0.0;
+
 // Opt-in relief for DriveableHill. Ordinary terrain materials leave this off
 // and remain byte-for-byte equivalent in the fragment path below.
 uniform bool relief_enabled = false;
@@ -75,5 +80,15 @@ void fragment() {
             color *= 1.0 - relief_foot * foot_band;
         }
     }
+	if (rain_ripples) {
+		vec2 rain_cell = floor(world_pos / 96.0);
+		vec2 jitter = vec2(hash(rain_cell + 17.0), hash(rain_cell + 53.0));
+		vec2 center = (rain_cell + jitter) * 96.0;
+		float phase = fract(TIME * 0.72 + hash(rain_cell + 113.0));
+		float radius = phase * 38.0;
+		float dist = length(world_pos - center);
+		float ring = 1.0 - smoothstep(1.2, 3.8, abs(dist - radius));
+		color += vec3(0.32, 0.42, 0.52) * ring * (1.0 - phase) * rain_ripple_strength;
+	}
     COLOR = vec4(clamp(color, 0.0, 1.0), base_color.a);
 }

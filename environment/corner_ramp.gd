@@ -12,7 +12,7 @@ const EDGE := Color(0.55, 0.55, 0.62)
 @export var low_floor := 2
 @export var high_floor := 3
 @export_range(64.0, 1024.0, 8.0) var leg_size := 240.0
-@export_enum("road", "grass", "snow", "dirt", "ice", "water") \
+@export_enum("road", "grass", "snow", "dirt", "mud", "ice", "water") \
 	var terrain_type := "road"
 @export var surface_color := Color(0.16, 0.16, 0.19)
 @export var surface_paint := true  # false when one level-owned skin paints a
