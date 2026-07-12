@@ -12,6 +12,10 @@ const ARM_FRAMES := 70  # past the 1s arm delay
 
 var t
 
+class ProximityCar extends CharacterBody2D:
+	var height := 0.0
+	var heading := 0.0
+
 func _init(runner) -> void:
 	t = runner
 
@@ -23,6 +27,22 @@ func _fixture(mine_scene: PackedScene) -> Dictionary:
 	container.add_child(mine)
 	var car = VehicleScene.instantiate()
 	container.add_child(car)  # parked right on it
+	return {"container": container, "car": car, "mine": mine}
+
+func _proximity_fixture(mine_scene: PackedScene, separation: float) -> Dictionary:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var mine = mine_scene.instantiate()
+	container.add_child(mine)
+	var car := ProximityCar.new()
+	car.collision_layer = 1
+	car.position = Vector2(separation, 0)
+	var col := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = 1.0
+	col.shape = shape
+	car.add_child(col)
+	container.add_child(car)
 	return {"container": container, "car": car, "mine": mine}
 
 func _done(f: Dictionary) -> void:
@@ -48,6 +68,47 @@ func test_jump_mine_pops_airborne_no_damage() -> void:
 	t.check(health.hp >= health.max_hp, "jump mine: no damage")
 	t.check(f.car.height > 0.0 or f.car.vz > 0.0, "jump mine: victim popped airborne")
 	_done(f)
+
+func test_land_proximity_is_wider_but_jump_stays_tight() -> void:
+	var land = LandScene.instantiate()
+	var jump = JumpScene.instantiate()
+	t.root.add_child(land)
+	t.root.add_child(jump)
+	var land_shape := land.get_child(0) as CollisionShape2D
+	var jump_shape := jump.get_child(0) as CollisionShape2D
+	t.check_approx((land_shape.shape as CircleShape2D).radius, 34.0,
+		"mine proximity: land fuse reaches 34px")
+	t.check_approx((jump_shape.shape as CircleShape2D).radius, 26.0,
+		"mine proximity: jump trap keeps its 26px contact range")
+	t.check_approx(land.VISIBLE_RADIUS, 14.0,
+		"mine proximity: painted mine stays at its 14px silhouette")
+	t.root.remove_child(land)
+	land.free()
+	t.root.remove_child(jump)
+	jump.free()
+
+	# A 1px probe car at 30px cleanly isolates the mine surface: the 34px land
+	# fuse overlaps, while the old/jump 26px surface still misses.
+	var near_land := _proximity_fixture(LandScene, 30.0)
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	t.check(not is_instance_valid(near_land.mine),
+		"mine proximity: near pass beyond the old surface detonates land mine")
+	_done(near_land)
+
+	var near_jump := _proximity_fixture(JumpScene, 30.0)
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	t.check(is_instance_valid(near_jump.mine),
+		"mine proximity: same near pass does not trigger the tighter jump mine")
+	_done(near_jump)
+
+	var outside := _proximity_fixture(LandScene, 38.0)
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	t.check(is_instance_valid(outside.mine),
+		"mine proximity: pass beyond expanded land fuse remains safe")
+	_done(outside)
 
 ## Launch-immune rigs (Goliath) crush mines: a jump mine is consumed for no
 ## pop and no spin; a land mine still bills its damage but can't deviate.

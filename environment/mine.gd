@@ -15,6 +15,9 @@ const LAND_DEV_MAX := 45.0
 const JUMP_DEV_MIN := 45.0
 const JUMP_DEV_MAX := 80.0
 const JUMP_VZ := 450.0
+const VISIBLE_RADIUS := 14.0
+const LAND_TRIGGER_RADIUS := 34.0
+const JUMP_TRIGGER_RADIUS := 26.0
 
 @export var jump := false
 
@@ -29,7 +32,7 @@ func _ready() -> void:
 	collision_mask = 1
 	var col := CollisionShape2D.new()
 	var shape := CircleShape2D.new()
-	shape.radius = 26.0
+	shape.radius = JUMP_TRIGGER_RADIUS if jump else LAND_TRIGGER_RADIUS
 	col.shape = shape
 	add_child(col)
 	queue_redraw()
@@ -99,7 +102,7 @@ func _draw() -> void:
 	if not live:
 		base.a = 0.45
 		dot.a = 0.45
-	draw_circle(Vector2.ZERO, 14.0, base)
+	draw_circle(Vector2.ZERO, VISIBLE_RADIUS, base)
 	if jump:
 		# chevron: this one sends you flying
 		draw_colored_polygon(PackedVector2Array([
