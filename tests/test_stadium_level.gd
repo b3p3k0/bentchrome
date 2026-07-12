@@ -61,6 +61,10 @@ func test_grade_bias_reads_downhill() -> void:
 func test_grade_defaults_and_terrain_override() -> void:
 	var ramp := Ramp.new()
 	t.check_approx(ramp.downhill_pull, 120.0, "grade: every ordinary ramp has weight")
+	var hill := DriveableHill.new()
+	t.check_approx(hill.downhill_pull, 180.0,
+		"grade: compact hills own a stronger default without changing standalone ramps")
+	hill.free()
 	t.check(ramp.terrain_type == "road", "grade: asphalt/road is the default surface")
 	var impulse := Ramp.grade_impulse(0.0, ramp.downhill_pull, 1.0)
 	t.check(absf(impulse.x) < 0.001 and is_equal_approx(impulse.y, 120.0),

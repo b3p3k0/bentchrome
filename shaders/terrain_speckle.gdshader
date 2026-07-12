@@ -14,11 +14,14 @@ uniform float shimmer : hint_range(0.0, 4.0) = 0.0;
 uniform bool relief_enabled = false;
 uniform vec2 relief_summit_half = vec2(448.0);
 uniform float relief_grade_half = 120.0;
-uniform float relief_strength : hint_range(0.0, 0.4) = 0.14;
-uniform float relief_projection : hint_range(1.0, 2.0) = 1.35;
+uniform float relief_strength : hint_range(0.0, 0.4) = 0.22;
+uniform float relief_projection : hint_range(1.0, 2.0) = 1.55;
+uniform float relief_slope_darkening : hint_range(0.0, 0.2) = 0.06;
 uniform vec2 relief_light_dir = vec2(-0.70710678, -0.70710678);
-uniform float relief_crest : hint_range(0.0, 0.2) = 0.06;
-uniform float relief_foot : hint_range(0.0, 0.2) = 0.08;
+uniform float relief_crest : hint_range(0.0, 0.2) = 0.10;
+uniform float relief_crest_width : hint_range(1.0, 64.0) = 18.0;
+uniform float relief_foot : hint_range(0.0, 0.2) = 0.12;
+uniform float relief_foot_width : hint_range(1.0, 64.0) = 20.0;
 
 varying vec2 world_pos;
 varying vec2 local_pos;
@@ -60,12 +63,13 @@ void fragment() {
             vec2 projected_pos = world_pos
                 + downhill * slope_dist * (relief_projection - 1.0);
             color = mix(color, speckle_at(projected_pos), smoothstep(0.0, 1.0, slope_t));
+            color *= 1.0 - relief_slope_darkening * smoothstep(0.0, 1.0, slope_t);
 
             float directional = dot(downhill, normalize(relief_light_dir));
             color *= 1.0 + directional * relief_strength * slope_t;
 
-            float crest_band = 1.0 - smoothstep(0.0, 10.0, slope_dist);
-            float foot_band = smoothstep(max(relief_grade_half - 12.0, 0.0),
+            float crest_band = 1.0 - smoothstep(0.0, relief_crest_width, slope_dist);
+            float foot_band = smoothstep(max(relief_grade_half - relief_foot_width, 0.0),
                 relief_grade_half, slope_dist);
             color += vec3(relief_crest * crest_band);
             color *= 1.0 - relief_foot * foot_band;

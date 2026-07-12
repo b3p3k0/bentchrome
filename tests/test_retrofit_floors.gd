@@ -89,7 +89,9 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	t.root.add_child(snowy)  # DriveableHill builds its authored recipe at ready.
 	var hill := snowy.get_node_or_null(^"SnowyHill") as DriveableHill
 	t.check(hill != null and hill.summit_size == Vector2(848, 848)
-			and is_equal_approx(hill.grade_length, 240.0),
+			and is_equal_approx(hill.grade_length, 240.0)
+			and is_equal_approx(hill.downhill_pull, DriveableHill.DEFAULT_HILL_PULL)
+			and is_equal_approx(hill.downhill_pull, 180.0),
 		"snowy hill: one reusable authoring root owns summit and grade depth")
 	var cardinals: Array = []
 	var corners: Array = []
@@ -113,12 +115,12 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 		"snowy hill: four cardinal and four diagonal faces")
 	for ramp in cardinals:
 		t.check(ramp.size == Vector2(848, 240) and not ramp.rails and not ramp.surface_paint
-				and ramp.terrain_type == "snow" and is_equal_approx(ramp.downhill_pull, 120.0),
+				and ramp.terrain_type == "snow" and is_equal_approx(ramp.downhill_pull, 180.0),
 			"snowy hill: %s yields paint to the seamless snow skin" % ramp.name)
 	for corner in corners:
 		t.check(is_equal_approx(corner.leg_size, 120.0) and not corner.surface_paint
 				and corner.terrain_type == "snow"
-				and is_equal_approx(corner.downhill_pull, 120.0),
+				and is_equal_approx(corner.downhill_pull, 180.0),
 			"snowy hill: %s exactly fills its 120px corner gap" % corner.name)
 	var skin := hill.get_node_or_null(^"_Generated/Surface") as Polygon2D
 	var expected_skin := PackedVector2Array([
@@ -130,15 +132,31 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	t.check(skin != null and skin.polygon == expected_skin,
 		"snowy hill: one compact snow-textured octagon owns the complete silhouette")
 	var substrate := hill.get_node_or_null(^"_Generated/Substrate") as Polygon2D
+	var shadow := hill.get_node_or_null(^"_Generated/ContactShadow") as Polygon2D
 	var edge := hill.get_node_or_null(^"_Generated/Edge") as Line2D
 	var surface_mat := skin.material as ShaderMaterial if skin else null
 	t.check(substrate != null and substrate.material != hill.substrate_material
 			and surface_mat != null and surface_mat != hill.terrain_material,
 		"snowy hill: local material copies prevent substrate stacking and shared mutation")
-	t.check(bool(surface_mat.get_shader_parameter("relief_enabled"))
-			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_strength")), 0.14)
-			and edge != null and is_equal_approx(edge.width, 2.0),
-		"snowy hill: restrained opt-in relief owns one crisp edge")
+	t.check(surface_mat.get_shader_parameter("relief_enabled") == true
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_strength")), 0.22)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_projection")), 1.55)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_slope_darkening")), 0.06)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_crest")), 0.10)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_crest_width")), 18.0)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_foot")), 0.12)
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_foot_width")), 20.0),
+		"snowy hill: clearly readable opt-in relief reaches every smooth shader control")
+	t.check(shadow != null and shadow.position == Vector2(12, 14)
+			and is_equal_approx(shadow.color.a, 0.20)
+			and edge != null and is_equal_approx(edge.width, 2.5)
+			and is_equal_approx(edge.default_color.a, 0.5),
+		"snowy hill: stronger contact shadow and perimeter anchor the footprint")
+	t.check((hill.terrain_material as ShaderMaterial).get_shader_parameter("relief_enabled") != true,
+		"snowy hill: source terrain stays relief-disabled after local material tuning")
+	var hill_impulse := Ramp.grade_impulse(0.0, hill.downhill_pull, 1.0)
+	t.check(hill_impulse.is_equal_approx(Vector2(0, 180)),
+		"snowy hill: compact grade applies the selected symmetric 180px/s² pull")
 	t.check(grade_up == 8 and grade_down == 8,
 		"snowy hill: AI has paired routes over all eight faces")
 	t.check(hill.get_node_or_null(^"AmmoPowerSummit") != null

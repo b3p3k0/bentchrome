@@ -15,7 +15,8 @@ const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 
 const GENERATED_NAME := &"_Generated"
 const APPROACH_LENGTH := 220.0
-const DEFAULT_EDGE := Color(0.38, 0.43, 0.53, 0.4)
+const DEFAULT_HILL_PULL := 180.0
+const DEFAULT_EDGE := Color(0.38, 0.43, 0.53, 0.5)
 
 @export var summit_size := Vector2(896, 896)
 @export_range(64.0, 1024.0, 8.0) var grade_length := 240.0
@@ -23,17 +24,20 @@ const DEFAULT_EDGE := Color(0.38, 0.43, 0.53, 0.4)
 @export var high_floor := 3
 @export_enum("road", "grass", "snow", "dirt", "ice", "water") \
 	var terrain_type := "road"
-@export_range(1.0, 600.0, 1.0) var downhill_pull := Ramp.DEFAULT_DOWNHILL_PULL
+@export_range(1.0, 600.0, 1.0) var downhill_pull := DEFAULT_HILL_PULL
 @export var substrate_material: Material
 @export var terrain_material: Material
-@export_range(0.0, 0.4, 0.01) var relief_strength := 0.14
-@export_range(1.0, 2.0, 0.01) var projection_compression := 1.35
+@export_range(0.0, 0.4, 0.01) var relief_strength := 0.22
+@export_range(1.0, 2.0, 0.01) var projection_compression := 1.55
+@export_range(0.0, 0.2, 0.01) var slope_darkening := 0.06
 @export var light_direction := Vector2(-1, -1)
-@export var shadow_offset := Vector2(8, 10)
-@export_range(0.0, 0.4, 0.01) var shadow_alpha := 0.14
-@export_range(0.0, 0.2, 0.01) var crest_highlight := 0.06
-@export_range(0.0, 0.2, 0.01) var foot_darkening := 0.08
-@export_range(0.0, 8.0, 0.5) var edge_width := 2.0
+@export var shadow_offset := Vector2(12, 14)
+@export_range(0.0, 0.4, 0.01) var shadow_alpha := 0.20
+@export_range(0.0, 0.2, 0.01) var crest_highlight := 0.10
+@export_range(1.0, 64.0, 1.0) var crest_width := 18.0
+@export_range(0.0, 0.2, 0.01) var foot_darkening := 0.12
+@export_range(1.0, 64.0, 1.0) var foot_width := 20.0
+@export_range(0.0, 8.0, 0.5) var edge_width := 2.5
 @export var edge_color := DEFAULT_EDGE
 
 var _last_signature := ""
@@ -65,8 +69,9 @@ func outer_polygon() -> PackedVector2Array:
 func _signature() -> String:
 	return str([summit_size, grade_length, low_floor, high_floor, terrain_type,
 		downhill_pull, substrate_material, terrain_material, relief_strength,
-		projection_compression, light_direction, shadow_offset, shadow_alpha,
-		crest_highlight, foot_darkening, edge_width, edge_color])
+		projection_compression, slope_darkening, light_direction, shadow_offset,
+		shadow_alpha, crest_highlight, crest_width, foot_darkening, foot_width,
+		edge_width, edge_color])
 
 func _rebuild() -> void:
 	if not is_inside_tree():
@@ -126,10 +131,13 @@ func _material_copy(source: Material, relief: bool) -> Material:
 			shader_mat.set_shader_parameter("relief_grade_half", corner_leg())
 			shader_mat.set_shader_parameter("relief_strength", relief_strength)
 			shader_mat.set_shader_parameter("relief_projection", projection_compression)
+			shader_mat.set_shader_parameter("relief_slope_darkening", slope_darkening)
 			shader_mat.set_shader_parameter("relief_light_dir",
 				light_direction.normalized() if light_direction != Vector2.ZERO else Vector2(-1, -1).normalized())
 			shader_mat.set_shader_parameter("relief_crest", crest_highlight)
+			shader_mat.set_shader_parameter("relief_crest_width", crest_width)
 			shader_mat.set_shader_parameter("relief_foot", foot_darkening)
+			shader_mat.set_shader_parameter("relief_foot_width", foot_width)
 	return copy
 
 func _build_summit(parent: Node2D) -> void:
