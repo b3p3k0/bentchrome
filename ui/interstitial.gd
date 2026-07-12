@@ -10,6 +10,15 @@ const PANEL_BG := Color(0.07, 0.07, 0.09)
 const INPUT_LOCK := 1.2  # players arrive here still hammering fire
 const CARD_DIR := "res://assets/img/cards"
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
+# Loading-card art keyed by SCENE FILE, not campaign position — reordering or
+# renaming a level can never mismatch its card. Levels without an entry fall to
+# the boss banner (by scene name) or the blocky panel. Add a line per new card.
+const CARDS := {
+	"arena.tscn": "level_1.png",
+	"freeway.tscn": "level_2.png",
+	"suburbs.tscn": "level_3.png",
+	"snowy.tscn": "level_4.png",
+}
 # Temporary skip prompt for the under-construction chase level (The Buzzard
 # Run). Delete the buzzard_run branch in _build_ui() once the level ships.
 const DETOUR_CAPTION := "THIS ROAD IS UNDER CONSTRUCTION"
@@ -102,14 +111,19 @@ func _build_ui() -> void:
 			return
 
 	if next_scene.ends_with("buzzard_run.tscn"):
-		_build_detour(TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1]))
+		_build_detour(_card_for(next_scene))
 		return
 
-	var card := TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1])
+	var card := _card_for(next_scene)
 	if card:
 		_build_card(card, "NEXT STOP:  %s" % next_name.to_upper(), Color.WHITE)
 	else:
 		_build_panel(next_index, next_name)
+
+## The loading-card art for a scene path, or null if the level has none.
+func _card_for(scene: String) -> Texture2D:
+	var file: String = CARDS.get(scene.get_file(), "")
+	return TextureLoader.load_texture("%s/%s" % [CARD_DIR, file]) if file else null
 
 ## Full-screen loading card: letterboxed art over black, caption strip pinned
 ## to the bottom edge.

@@ -1,7 +1,7 @@
 # Arena field manual
 
 This is the authoring contract for Bent Chrome's hand-built campaign and LAN
-combat arenas. Buzzard Run is a specialty chase level and does not inherit this
+combat arenas. Route 666 Roulette is a specialty chase level and does not inherit this
 contract. The suspended custom-level editor is also outside it.
 
 The purpose is consistency without sameness. An arena may be a city grid, a
@@ -132,7 +132,7 @@ those systems room to express themselves.
   `120 px/s²`; uphill loses speed and downhill gains it.
 - **DEFAULT:** compact `DriveableHill` facets use `180 px/s²`. Their short
   240px crossing needs the stronger impulse to register; standalone ramps stay
-  at 120 and Coliseum stairs retain their explicit 170.
+  at 120 and Goliath's Arena stairs retain their explicit 170.
 - **MUST:** terrain composes with grade force. `road` means asphalt; grass,
   snow, dirt, ice, and water retain the shared controller modifiers and vehicle
   terrain profiles.
@@ -148,7 +148,7 @@ those systems room to express themselves.
   the accepted eight-sided approximation of a circular slope.
 - **DEFAULT:** side rails belong on chokepoint ramps. They are disabled where
   cardinal and corner facets must meet as one continuous hill.
-- **EXCEPTION:** Coliseum seating uses explicit `170 px/s²`, `stairs = true`,
+- **EXCEPTION:** Goliath's Arena seating uses explicit `170 px/s²`, `stairs = true`,
   row speed nicks, and camera bumps. It is stadium anatomy, not a gradual hill,
   and must retain its current feel.
 
@@ -181,7 +181,7 @@ paired connectors for both directions; grade commits do not boost.
   bands, normal-map assets, or scene-wide light dependency.
 - **DEFAULT:** ordinary grades interpolate the existing floor lift and visual
   scale continuously from low to high. `stairs = true` opts out so the
-  Coliseum retains its row-by-row visual language.
+  Goliath's Arena retains its row-by-row visual language.
 - **DEFAULT:** place authored summit rewards and ambience beneath the hill root
   so moving the hill cannot strand its content. Keep roads/markings outside the
   footprint and re-run all eight connector approaches after any transform.
@@ -320,22 +320,49 @@ that crosses a grade seam.
   choreography.
 - Gameplay remains host-authoritative. Client-local ambience is allowed only
   when it cannot affect collision, damage, targeting, score, or objectives.
-- **EXCEPTION:** Depot and Coliseum currently bake only player + boss and are not
+- **EXCEPTION:** Lackey's Arena and Goliath's Arena currently bake only player + boss and are not
   in `MP_MAPS`. They are the only grandfathered exceptions; their removal
   condition is a neutral four-plus spawn seam independent of campaign actors.
+
+## Inserting or reordering a campaign level
+
+The campaign order and display names live in one place; almost everything else
+resolves by scene path, so a reorder is a small, safe edit. The recipe:
+
+1. **Order + name:** edit the `CAMPAIGN` array in `game/scene_flow.gd` — the
+   single source of truth for both. Move or insert the level dict; set its
+   `name`.
+2. **Invariants to preserve:** Downtown Derby stays index 0 (campaign start /
+   respawn target), Goliath's Arena stays last (finale), and there must be at
+   least one real arena after Route 666 Roulette — the chase's win/detour
+   advance is relative (`+1`), so it must land on a playable level.
+3. **Loading card:** cards are keyed by scene filename in `ui/interstitial.gd`
+   (`CARDS`), never by position — add a line only if the new level has bespoke
+   art. Boss levels get a `bios/` banner (also by scene name); everything else
+   falls to the blocky panel. No index math is involved, so reordering never
+   mismatches art.
+4. **Versus:** if the level is MP-ready, add it to `MP_MAPS` (same
+   `game/scene_flow.gd`) with a `cars` count and a matching `name`, and keep the
+   duplicate scene list in `tests/test_spawn_distance.gd` in membership sync.
+5. **Docs:** update the Shipped-precedents table below, the Campaign table in
+   `docs/matrices.md`, the Level-progression list in `CLAUDE.md`, and the
+   player-facing walkthrough in `README.md`.
+6. **Verify:** `tools/smoke.sh` (boots every level) and `tools/test.sh`
+   (`test_ground_floor.gd` and `test_mp_maps.gd` assert order/placement by scene
+   path, so they survive renames and catch a broken sequence).
 
 ## Shipped precedents
 
 | Arena | Class / target | Dominant topology | Signature pressure | Reusable lesson |
 |---|---:|---|---|---|
-| Downtown | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
-| Freeway | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
-| Suburbs | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
-| Snowy Pass | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
-| Depot | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
-| Docks | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
+| Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
+| Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
+| Suburban Slaughter | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
+| Mountainside Mayhem | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
+| Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
+| Piers of Pain | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
 | Ground Floor Gore | Large / 8 | dirt loop + foundation + scaffold network | mud, voluntary drops, wounded generator | a dry recovery ring can frame layered risk; stateful landmarks need explicit LAN identity and counterplay |
-| Coliseum | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
+| Goliath's Arena | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
 
 ## Copy-paste level/change brief
 

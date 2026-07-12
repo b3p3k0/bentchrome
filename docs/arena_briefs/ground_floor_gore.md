@@ -2,7 +2,7 @@
 
 Ground Floor Gore is the campaign's construction-site melee and the first arena
 to exercise mud, a sparse floor-3 scaffold network, and a networked signature
-destructible together. It follows Buzzard Run and precedes the Coliseum. The
+destructible together. It follows Piers of Pain and precedes Goliath's Arena. The
 same scene supports campaign and eight-car LAN play.
 
 ## Profile

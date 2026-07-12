@@ -12,9 +12,9 @@ This document condenses the master design specs into quick-reference points we c
 - Minimum four fielded cars, including boss arenas' underlying MP capacity.
 - Small / medium / large = 4 / 5–7 / 7–8 target cars.
 - Gross interior budget ≥1,600,000 px² per target car; short side ≥2048px.
-- One authored scene serves campaign and LAN; Buzzard Run is the specialty exception.
-- Depot and Coliseum are named temporary MP exceptions until neutral four-plus spawn data is separated from their boss actors.
-- Every grade slows ascent and assists descent; surface terrain still composes. Standalone pull =120 px/s², compact `DriveableHill` pull =180, and Coliseum stairs retain 170 + row bumps.
+- One authored scene serves campaign and LAN; Route 666 Roulette is the specialty exception.
+- Lackey's Arena and Goliath's Arena are named temporary MP exceptions until neutral four-plus spawn data is separated from their boss actors.
+- Every grade slows ascent and assists descent; surface terrain still composes. Standalone pull =120 px/s², compact `DriveableHill` pull =180, and Goliath's Arena stairs retain 170 + row bumps.
 - Four cardinal grades plus four triangular corner grades are the standard eight-sided hill approximation; solid top-side gaps use a two-floor triangular chamfer.
 - Regular hills use one `DriveableHill` root and one continuous clipped-octagon skin; corner leg is derived as half the grade length, never hand-sized.
 - Hill terrain repaints its substrate and applies the matching surface once, then uses restrained northwest relief and continuous cosmetic vehicle/shadow lift. No physics body scales.

@@ -33,7 +33,7 @@ Stats are design-scale 1-10; HP derives from Armor via StatCurves (see mapping b
 | Splat Cat | Juan Dough | 6 | 7 | 7 | 5 | 8 | 5 | 119 | Splat Effect | 2 | 6s | ambusher |
 | **Lackey** (miniboss) | Lackey | 7 | 6 | 6 | 10 | 10 | 9 | **360**¹ | Blaze & Bolt twin + Breach Turret | 2 (shared) | 120s | — |
 
-¹ 180 base × `hp_scale 2.0` (Depot scene). Lackey also carries: `body_scale 1.5`, `rear_weakspot 1.5` (projectiles from behind ×1.5), `ai_cooldown_scale 1.5` (fires at 2× a normal AI's rate), a `relentless` driver (runs the boss valve instead of mook RELENT; full-length BREAK arcs now), `no_mines` (crate-proof), and the LIVE Breach Turret.
+¹ 180 base × `hp_scale 2.0` (Lackey's Arena scene). Lackey also carries: `body_scale 1.5`, `rear_weakspot 1.5` (projectiles from behind ×1.5), `ai_cooldown_scale 1.5` (fires at 2× a normal AI's rate), a `relentless` driver (runs the boss valve instead of mook RELENT; full-length BREAK arcs now), `no_mines` (crate-proof), and the LIVE Breach Turret.
 
 ### The Buzzardz (chase mode, roster-external)
 
@@ -169,10 +169,10 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 
 | District | Population | Authored mix |
 |---|---:|---|
-| Downtown | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
-| Suburbs | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
-| Snowy Pass | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
-| Docks | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
+| Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
+| Suburban Slaughter | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Mountainside Mayhem | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
+| Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
 | Ground Floor Gore | 16 baseline | 10 floor-1 workers, 4 floor-2 workers, 2 floor-3 carriers; up to 8 porta escapees |
 
 | Rule | Value |
@@ -234,11 +234,11 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | Boost | 100 tank, −5/s held | ×2.0 accel, ×1.5 top; extinguishes burn; no refill — except chase nitro bottles (+35, `boost_pickup.tscn`) |
 | Handbrake | grip ×0.15, decel 400 | the drift tool |
 | Jump-pad launch | vz 760, gravity 1300 | needs ≥120 px/s; airborne = wall-collisions only; pads are square 224 omnidirectional caution pyramids, floor-locked on terrace levels (`floor_index`) |
-| Driveable grades | grounded transition both ways | `Ramp`: rectangular halves, standalone downhill pull 120; `CornerRamp`: high right-angle triangle + low trapezoid, 45° low edge; ordinary grades interpolate visual floor lift/scale continuously; local priority-100 terrain composes road/grass/snow/dirt/ice/water/mud; Coliseum stairs opt out and retain pull 170 + row nicks/bumps |
+| Driveable grades | grounded transition both ways | `Ramp`: rectangular halves, standalone downhill pull 120; `CornerRamp`: high right-angle triangle + low trapezoid, 45° low edge; ordinary grades interpolate visual floor lift/scale continuously; local priority-100 terrain composes road/grass/snow/dirt/ice/water/mud; Goliath's Arena stairs opt out and retain pull 170 + row nicks/bumps |
 | Scaffold network | 256px runs / 448px platforms | multiple connected routes; paired grades; explicit `edge` drops; 640×448 repair platform; floor-gated rewards; visible rails + AI curbs; under-fade |
 | Signature arena state | protocol 8 repeated rows | u16 stable ID + flags + HP fraction + phase timer + 8-actor target mask; host authority; dead props persist as hidden/noncolliding tombstones |
 | Driveable hill | one root / one skin / eight faces | `DriveableHill`: compact pull 180; footprint = summit size + grade length; corner leg = grade length ÷ 2; substrate-reset + terrain skin; NW relief 0.22, projection 1.55, slope darkening 0.06, crest 0.10/18px, foot 0.12/20px, shadow (12,14)/0.20; all connector pairs generated; seam props carry both floor bits |
-| Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Coliseum buttress convention |
+| Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Goliath's Arena buttress convention |
 | DEVGOD (settings) | immune, ∞ ammo, all-seeing radar | pits/deep water still kill but the life is comped; radar range gate off |
 | Jump-mine pop | vz 450 | ~0.7s air |
 | Mine sensing | land 52px / jump 26px | land paint remains 14px; only the damaging mine has proximity reach |
@@ -287,23 +287,23 @@ Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGA
 
 ## Campaign
 
-Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Buzzard Run is excluded. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4.
+Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette is excluded. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4.
 
 | # | Level | Size (interior px) | Target cars | Campaign enemies | Stations | Signature hazards |
 |---|---|---|---:|---:|---:|---|
-| 1 | Downtown | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
-| 2 | Freeway Loop | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
-| 3 | Suburbs | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
-| 4 | Snowy Pass | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
-| 5 | The Depot | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
-| 6 | The Docks | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
-| 7 | The Buzzard Run | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract |
+| 1 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
+| 2 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
+| 3 | Suburban Slaughter | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
+| 4 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 5 | Lackey's Arena | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
+| 6 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract |
+| 7 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
 | 8 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; foundation + scaffold circuit; 16 workers; stateful 450-HP generator; MP ready |
-| 9 | The Coliseum | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+| 9 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
 
 ---
 
-## The Buzzard Run (chase mode knobs)
+## Route 666 Roulette (chase mode knobs)
 
 Sources: `levels/chase/*.gd` static vars, `ui/hud_chase.gd`, `ui/speed_lines.gd`. Course distance d = −world_y; north is up.
 
@@ -327,7 +327,7 @@ Sources: `levels/chase/*.gd` static vars, `ui/hud_chase.gd`, `ui/speed_lines.gd`
 
 ---
 
-## Goliath (The Coliseum boss knobs)
+## Goliath (Goliath's Arena boss knobs)
 
 Sources: `vehicles/goliath/*.gd` static vars, `data/vehicles/goliath.tres` / `goliath_ph2.tres`, `data/weapons/goliath_turret.tres` (F2-editable), boss instance exports in `levels/stadium/stadium.tscn`.
 

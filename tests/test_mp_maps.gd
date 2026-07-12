@@ -60,7 +60,7 @@ func test_campaign_arena_profiles_are_complete() -> void:
 			t.check((object.collision_layer & ~Contract.NAMED_COLLISION_MASK) == 0,
 				"%s: %s uses named collision bits" % [profile.name, object.name])
 		arena.free()
-	t.check(specialty == 1, "arena contract: Buzzard Run is the sole specialty exclusion")
+	t.check(specialty == 1, "arena contract: Route 666 Roulette is the sole specialty exclusion")
 
 func test_campaign_and_mp_profiles_match_exactly() -> void:
 	var mp_by_scene := {}
@@ -110,7 +110,7 @@ func test_every_map_hosts() -> void:
 		var fielded: int = t.root.get_tree().get_nodes_in_group(&"vehicles").size()
 		t.check(fielded == want, "%s: melee fields the full car count" % map_name)
 
-		if map_name == "The Docks":
+		if String(maps[i].scene).ends_with("dock.tscn"):
 			var roof_spawns := 0
 			for spot in spawns:
 				if int(spot.floor) == 3:

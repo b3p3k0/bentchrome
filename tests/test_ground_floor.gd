@@ -124,17 +124,36 @@ func test_final_pickup_budget_and_traversal_rewards() -> void:
 		"ground floor economy: no pickup asks a driver to park inside the generator blast")
 	arena.free()
 
-func test_campaign_order_places_site_between_chase_and_coliseum() -> void:
+## Keyed by scene path, not display name, so renames can't break it.
+func _scene_index(flow: Node, tail: String) -> int:
+	for i in flow.CAMPAIGN.size():
+		if String(flow.CAMPAIGN[i].scene).ends_with(tail):
+			return i
+	return -1
+
+func test_campaign_order_ground_floor_precedes_finale() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
-	var names: Array = []
-	for profile in flow.CAMPAIGN:
-		names.append(String(profile.name))
-	var buzzard := names.find("The Buzzard Run")
-	var ground := names.find("Ground Floor Gore")
-	var stadium := names.find("The Coliseum")
-	t.check(ground == buzzard + 1 and stadium == ground + 1,
-		"ground floor flow: chase detour and normal clear both lead here before Goliath")
+	var docks := _scene_index(flow, "dock.tscn")
+	var ground := _scene_index(flow, "ground_floor_gore.tscn")
+	var stadium := _scene_index(flow, "stadium.tscn")
+	t.check(ground == docks + 1 and stadium == ground + 1
+		and stadium == flow.CAMPAIGN.size() - 1,
+		"campaign flow: Ground Floor Gore is the last arena before the finale")
 	var profile: Dictionary = flow.CAMPAIGN[ground]
 	t.check(profile.size_class == &"large" and profile.target_cars == 8
 		and profile.stations == 2 and profile.mp_ready,
 		"ground floor flow: large eight-car profile matches scene capacity")
+
+## Durable campaign frame: guards every future reorder/rename.
+func test_campaign_frame_invariants() -> void:
+	var flow: Node = t.root.get_node(^"/root/SceneFlow")
+	var last: int = flow.CAMPAIGN.size() - 1
+	t.check(String(flow.CAMPAIGN[0].scene).ends_with("arena.tscn"),
+		"campaign frame: Downtown Derby opens the campaign")
+	t.check(String(flow.CAMPAIGN[last].scene).ends_with("stadium.tscn"),
+		"campaign frame: Goliath's Arena is the finale")
+	var specialty := 0
+	for profile in flow.CAMPAIGN:
+		if profile.mode == &"specialty":
+			specialty += 1
+	t.check(specialty == 1, "campaign frame: exactly one specialty level (Route 666 Roulette)")
