@@ -283,6 +283,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(384, 512)
 surface_color = Color(0.43, 0.31, 0.19, 1)
+surface_paint = false
 rails = false
 terrain_type = "dirt"
 downhill_pull = 120.0
@@ -368,6 +369,7 @@ low_floor = 2
 high_floor = 3
 size = Vector2(256, 384)
 surface_color = Color(0.4, 0.42, 0.46, 1)
+surface_paint = false
 terrain_type = "road"
 downhill_pull = 120.0
 
@@ -379,6 +381,7 @@ low_floor = 2
 high_floor = 3
 size = Vector2(256, 384)
 surface_color = Color(0.4, 0.42, 0.46, 1)
+surface_paint = false
 terrain_type = "road"
 downhill_pull = 120.0
 
@@ -604,6 +607,26 @@ position = Vector2(1500, 80)
 script = ExtResource("17_site_deco")
 kind = "forms"
 size = Vector2(220, 120)
+
+[node name="EmbankmentSkin" type="Node2D" parent="SiteDeco"]
+position = Vector2(-384, -768)
+rotation = 1.570796
+script = ExtResource("17_site_deco")
+kind = "embankment"
+size = Vector2(384, 512)
+
+[node name="CourtyardNorthSkin" type="Node2D" parent="SiteDeco"]
+position = Vector2(784, -832)
+script = ExtResource("17_site_deco")
+kind = "scaffold_grade"
+size = Vector2(256, 384)
+
+[node name="CourtyardSouthSkin" type="Node2D" parent="SiteDeco"]
+position = Vector2(1088, -448)
+rotation = 3.141593
+script = ExtResource("17_site_deco")
+kind = "scaffold_grade"
+size = Vector2(256, 384)
 
 [node name="BreakableCover" type="Node2D" parent="."]
 
