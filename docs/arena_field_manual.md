@@ -128,6 +128,9 @@ those systems room to express themselves.
 
 - **MUST:** every `Ramp` has positive downhill force. Ordinary grades use
   `120 px/s²`; uphill loses speed and downhill gains it.
+- **DEFAULT:** compact `DriveableHill` facets use `180 px/s²`. Their short
+  240px crossing needs the stronger impulse to register; standalone ramps stay
+  at 120 and Coliseum stairs retain their explicit 170.
 - **MUST:** terrain composes with grade force. `road` means asphalt; grass,
   snow, dirt, ice, and water retain the shared controller modifiers and vehicle
   terrain profiles.
@@ -169,10 +172,11 @@ paired connectors for both directions; grade commits do not boost.
   interpolate vehicle/shadow lift, but may never scale or offset physics.
 - **MUST:** a prop spanning a grade/floor seam carries both adjoining floor
   bits. Hill skin draws first, then slope props, then vehicles.
-- **DEFAULT:** relief uses the shared fixed northwest light, strength `0.14`,
-  projected pattern compression `1.35`, restrained crest/foot shading, and a
-  small southeast contact shadow. It is static and self-contained: no shimmer,
-  contour bands, normal-map assets, or scene-wide light dependency.
+- **DEFAULT:** relief uses the shared fixed northwest light, strength `0.22`,
+  projected pattern compression `1.55`, all-slope darkening `0.06`, an 18px
+  crest (`0.10`), a 20px foot (`0.12`), and a `(12,14)` southeast contact
+  shadow at `0.20` alpha. It is static and self-contained: no shimmer, contour
+  bands, normal-map assets, or scene-wide light dependency.
 - **DEFAULT:** ordinary grades interpolate the existing floor lift and visual
   scale continuously from low to high. `stairs = true` opts out so the
   Coliseum retains its row-by-row visual language.
@@ -347,7 +351,7 @@ that crosses a grade seam.
 - Center / low floor / high floor:
 - Summit size / grade length / derived corner leg / total footprint:
 - Substrate material / terrain material / terrain type:
-- Downhill pull (ordinary default 120):
+- Downhill pull (compact hill default 180; standalone ramp 120):
 - Relief overrides (prefer shared defaults):
 - Summit rewards and ambience parented to the hill:
 - Slope props, draw order, and floor bits:
