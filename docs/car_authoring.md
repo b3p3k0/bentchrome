@@ -28,7 +28,8 @@ the suite goes red and names it.
    `git checkout` the cosmetic churn on the others.
 4. **Paint file**: `vehicles/paint/<id>.gd` — copy a similar silhouette. `STYLE` dict
    (half_len / half_wid / radius / skid_points / steer_wheels, plus `"blink": true`
-   for a flashing light bar) + `static func paint(c, primary, accent, steer, phase)`.
+   for a flashing light bar and `"mg_points": [Vector2, …]` for staggered
+   multi-barrel MG fire — Hubcap's twins) + `static func paint(c, primary, accent, steer, phase)`.
    Draw with `Parts.*` helpers; never preload car_paint.gd from a style file.
 5. **Register it**: one preload line in `car_paint.gd`'s `STYLE_SCRIPTS`.
 6. **Size canon**: insert the id into `tests/test_car_paint.gd` `ORDER` at its radius
@@ -41,7 +42,7 @@ the suite goes red and names it.
 - **Radius is gameplay.** Hitbox stays 1:1 while the body renders at
   `FLEET_SCALE` 1.25 — deliberate near-miss forgiveness, don't "fix" it.
   Corner-escape AI budgets couple to radius (kandykane pinned at 22).
-  Taken radii: 12, 13.5, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 26.
+  Taken radii: 12, 13.5, 14, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 26.
 - **Stat budget (advisory)**: the fleet totals 27-35 points across the five
   stats (Cyclone's 35 is paid for by the offroad penalty box). Stay in the
   band unless the car IS the gimmick; low armor buys speed.
@@ -50,13 +51,14 @@ the suite goes red and names it.
 - **Terrain identity**: only where it sells the car (Cricket dirt, 4WD snow);
   omitted surfaces are neutral ×1.0. Unknown names fail import.
 
-## Role grid (the current twelve) — open niches for the rest of the fleet
+## Role grid (the current thirteen) — open niches for the rest of the fleet
 
 | id        | mass | speed/armor  | special kind        | archetype   | terrain    |
 |-----------|------|--------------|---------------------|-------------|------------|
 | mrghastly | 1    | fast/paper   | PROJECTILE (sniper) | aggressor   | —          |
 | cyclone   | 2    | fastest/glass| TORNADO             | ambusher    | road+, offroad− |
 | cricket   | 2    | fast/light   | DASH                | aggressor   | dirt/grass |
+| hubcap    | 3    | agile/mid    | PULSE               | aggressor   | — (dual MG, wider than long) |
 | ghost     | 3    | fastest/thin | PROJECTILE (homing) | aggressor   | —          |
 | lovebug   | 4    | peppy/light  | PROJECTILE (disarm) | opportunist | water=road; burn 1.5x |
 | hornet    | 5    | all 6s       | PROJECTILE (burn)   | aggressor   | —          |
@@ -67,10 +69,10 @@ the suite goes red and names it.
 | razorback | 7    | slow/heavy   | PROJECTILE (salvo)  | defender    | 4WD        |
 | hammertoe | 8    | mid/heavy    | TRIGGER             | ambusher    | all-road   |
 
-Open niches: BEAM/FLAME/DASH/TRIGGER/TORNADO each have exactly one owner;
+Open niches: BEAM/FLAME/DASH/TRIGGER/TORNADO/PULSE each have exactly one owner;
 **no DROP signature** (mines are only shared slots); no rear-launch special;
 no ice or snow specialist; mass 9-10 unused (boss territory); radius gaps
-under 12, at 14, 20.5, 23-25, and above 26.
+under 12, at 20.5, 23-25, and above 26.
 
 ## New special Kind recipe (when data isn't enough)
 
