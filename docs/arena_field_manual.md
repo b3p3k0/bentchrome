@@ -1,0 +1,317 @@
+# Arena field manual
+
+This is the authoring contract for Bent Chrome's hand-built campaign and LAN
+combat arenas. Buzzard Run is a specialty chase level and does not inherit this
+contract. The suspended custom-level editor is also outside it.
+
+The purpose is consistency without sameness. An arena may be a city grid, a
+freeway ring, a mountain, a freight yard, or a stadium. It must still speak the
+same language to cars, AI, weapons, the camera, and multiplayer.
+
+## How to read the rules
+
+- **MUST** — engine, safety, multiplayer, or readability invariant. Tests should
+  enforce it wherever geometry permits.
+- **DEFAULT** — the proven starting band. Deviate only for a stated design
+  reason and verify the result by playtest.
+- **EXCEPTION** — a named deviation with a reason, compensating check, and
+  removal condition. Silent exceptions are bugs.
+- **PRECEDENT** — a shipped example demonstrating a useful solution, not a
+  requirement to copy its silhouette.
+
+When rules conflict, physical correctness and player readability win, followed
+by combat counterplay, then visual flavor.
+
+## Shared vocabulary
+
+- **Arena** — reusable physical battlefield: bounds, floors, routes, hazards,
+  cover, resources, and spawn capacity.
+- **Encounter overlay** — campaign-only actors or direction layered over an
+  arena, such as Lackey or Goliath. It must stand down in `mp_managed` play.
+- **Combat lane** — space wide enough for speed, aiming, passing, and a BREAK
+  arc. It need not look like a road.
+- **Recovery route** — a readable way out of pressure: side street, outer ring,
+  open field, grade, breakable wall, or drop.
+- **Combat pocket** — a local fight space connected to the larger route graph.
+  It is not a dead-end kill box.
+- **Contested resource** — a pickup on an exposed or intersecting route.
+- **Traversal reward** — a pickup earned by a jump, grade, destructible secret,
+  or dangerous detour.
+- **Landmark** — macro-scale silhouette/color/topology used to orient at combat
+  zoom, overview zoom, and on the radar.
+- **Terrace** — a discrete driveable floor. Every XY point has one winning
+  driveable floor except inside an authored grade transition.
+- **Grade ramp** — grounded floor transition. Local high end is `-Y`; it always
+  resists ascent and assists descent.
+- **Corner grade** — right-triangle grade between cardinal slopes. The
+  right-angle vertex is high; the 45-degree hypotenuse is low.
+- **Terrace chamfer** — solid right-triangle cap where the empty corner belongs
+  to the elevated top. It blocks both adjoining floors.
+- **Jump route** — airborne transition initiated by a jump pad. It is not a ramp.
+- **Lethal edge** — pit or deep water. It must be visible, floor-correct, and
+  protected from AI pathing by a hazard curb.
+- **Cosmetic layer** — visual/flavor content invisible to navigation and combat.
+
+## The three authoring layers
+
+Build and review in this order.
+
+1. **Physical topology** — bounds, driveable floor, walls, cover footprints,
+   lethal space, terraces, grades, jump routes, and collision layers.
+2. **Combat and economy** — spawn graph, sightlines, recovery routes, AI
+   connectors, destructibility, pickups, stations, and encounter overlay.
+3. **Readability and flavor** — surface paint, road marks, landmarks, shadows,
+   lights, ambience, living streets, and non-colliding motion.
+
+Paint never excuses broken collision. Flavor never closes a route the AI or
+largest car was promised.
+
+## Capacity and arena size
+
+### Car capacity
+
+- **MUST:** every regular arena supports at least four simultaneously fielded
+  cars, matching the four human LAN seats.
+- **Small:** 4 target cars.
+- **Medium:** 5–7 target cars.
+- **Large:** 7–8 target cars.
+- A boss overlay may field only player + boss in campaign. Its underlying arena
+  still declares at least four neutral MP spawn positions.
+
+`target_cars` means the intended full field, not enemy count. A five-car
+campaign melee is one player plus four AI; a five-car LAN melee may be four
+humans plus one AI.
+
+### Aquarium rule
+
+- **MUST:** gross interior area is at least `1,600,000 px² × target_cars`.
+- **MUST:** the shorter interior dimension is at least `2048px`.
+- Four cars therefore need at least `6,400,000 px²`; `2560×2560` is the first
+  square 128-grid starting point above that floor.
+- **DEFAULT:** dimensions and major footprints land on the 128px grid; detailed
+  props may use 64px increments.
+- **MUST:** area is only the first gate. Human review must discount buildings,
+  lethal water, unreachable terraces, and dense cover. A large bounding box can
+  still be a tiny aquarium.
+
+Review both the gross ratio and whether all cars can circulate without spending
+the match in single-file traffic.
+
+## Physical topology
+
+- **MUST:** root is a `Node2D` using `combat_level.gd` or a subclass that honors
+  `mp_managed` before campaign-only work.
+- **MUST:** the player/spawn source and arena geometry are direct children while
+  `combat_level.gd` derives MP spawn data from baked cars.
+- **MUST:** physics bodies stay scale `Vector2.ONE`. Resize shapes or authored
+  radius values; never scale a collision owner.
+- **MUST:** use named collision channels from `project.godot`. No private level
+  bit may be invented.
+- **MUST:** visible hard boundaries and collision agree. The only deliberately
+  invisible rails are `hazard_curb` AI feelers along lethal edges.
+- **MUST:** player-to-enemy baked starts remain at least 700px apart.
+- **MUST:** clutter and blocking props remain at least 300px from AI starts.
+- **DEFAULT:** enemy starts are also separated enough to choose independent
+  opening lines instead of beginning in an antler lock.
+- **DEFAULT:** primary lanes allow two large ordinary vehicles to pass with
+  steering room; 320px+ is a useful high-speed starting width. Optional cuts
+  may narrow, but may not trap the largest selectable car.
+- **DEFAULT:** every combat pocket has two exits or one normal exit plus a clear,
+  intentional breakable escape.
+
+Do not build a uniform empty plane or a corridor maze. Alternate readable
+700–1200px firing opportunities with cover breaks and 300–600px local fights.
+The AI fires to 1000px and feels obstacles roughly 200px plus speed lead; give
+those systems room to express themselves.
+
+## Grades, corner grades, and chamfers
+
+- **MUST:** every `Ramp` has positive downhill force. Ordinary grades use
+  `120 px/s²`; uphill loses speed and downhill gains it.
+- **MUST:** terrain composes with grade force. `road` means asphalt; grass,
+  snow, dirt, ice, and water retain the shared controller modifiers and vehicle
+  terrain profiles.
+- **MUST:** ramp-local terrain has priority over broad background terrain. An
+  asphalt garage grade over grass still drives as road.
+- **MUST:** rectangular ramps split into low/high ramp-tagged floor halves.
+- **MUST:** corner grades use the triangular convention defined above and split
+  into a high triangle and low trapezoid. Crossing either way is grounded: no
+  jump pop and no fall bill.
+- **MUST:** a solid elevated corner uses `TerraceChamfer`, carrying obstacle plus
+  both adjoining floor bits.
+- **DEFAULT:** a hill uses four cardinal grades plus four corner grades. This is
+  the accepted eight-sided approximation of a circular slope.
+- **DEFAULT:** side rails belong on chokepoint ramps. They are disabled where
+  cardinal and corner facets must meet as one continuous hill.
+- **EXCEPTION:** Coliseum seating uses explicit `170 px/s²`, `stairs = true`,
+  row speed nicks, and camera bumps. It is stadium anatomy, not a gradual hill,
+  and must retain its current feel.
+
+Every grade route needs a clear 220px AI approach on its `from_floor`. Author
+paired connectors for both directions; grade commits do not boost.
+
+## Terraces and airborne routes
+
+- **MUST:** every occupied floor has a route up and a route down. A one-way drop
+  is supporting texture, never the only way back into the fight.
+- **MUST:** spawns author `start_floor`, and every collision-bearing prop on a
+  terrace authors `floor_index` or explicit floor bits.
+- **MUST:** straight weapons, rams, contact specials, mines, and hazards obey
+  same-floor rules. Tracking weapons retain their endpoint-cover policy.
+- **MUST:** a missing terrace boundary is replaced by a real ramp, open drop, or
+  solid wall. Never delete it and let lower-floor cars ghost into raised XY.
+- **MUST:** jump pads are floor-stamped, stand clear of solid scenery, and have a
+  usable run-up and landing zone.
+- **DEFAULT:** high routes pay with exposure or traversal effort and return a
+  vantage, shortcut, pickup, or escape option.
+
+## Terrain and hazards
+
+- **MUST:** surface paint and `TerrainZone.terrain_type` describe the same
+  material. Broad material regions beat decorative confetti patches.
+- **DEFAULT:** one dominant surface establishes identity; one or two accents
+  create decisions. More types require a clear geographic reason.
+- Ice needs a straight entry and recovery run. Water needs a visible shallow
+  buffer before lethal deep water. Dirt/grass/snow should change route choice,
+  not merely tint asphalt.
+- **MUST:** pits and deep water are visually legible before commitment, floor
+  gated, and hazard-curbed for AI. Airborne bypass is intentional gameplay.
+- **DEFAULT:** pair severe hazards with a safer, slower route or a demanding but
+  readable skill route.
+
+## Cover and destruction
+
+- `StaticBody2D` walls define permanent topology.
+- `DestructibleBlock` is temporary cover that opens the match over time.
+- `Clutter` is 1HP pop-through flavor, not a tactical wall.
+- `DerelictCar` is readable medium-soft cover using the vehicle language.
+- Road marks, lights, weather, signs, overhead paint, and living streets are
+  cosmetic unless their scene explicitly says otherwise.
+
+- **MUST:** solid cover does not overlap other solid cover accidentally.
+- **MUST:** cover never overlaps jump pads or connector approach lanes.
+- **DEFAULT:** cover clusters interrupt sightlines without fully enclosing a
+  pocket. Destructible exits are a useful pressure valve, not a secret required
+  for basic circulation.
+- Fuel barrels and other explosive scenery need readable spacing and must not
+  produce unavoidable spawn-chain damage.
+
+## Resource economy
+
+- Default ammo respawn is 20s.
+- Standard/rear/mine crates normally grant 2; homing/power/jump grant 1 unless
+  the encounter has a documented reason.
+- **MUST:** pickups are outside spawn safety zones, lethal footprints, and
+  connector run-ups.
+- **DEFAULT:** use a mix of baseline access, contested resources, traversal
+  rewards, and occasional destructible secrets.
+- **DEFAULT:** every melee arena supplies standard, homing, power, and rear
+  missiles. Mine types are encounter/topology choices rather than quotas.
+- **MUST:** repair-station count follows the arena profile: small 1, medium 1–2,
+  large 2–3. A boss overlay may intentionally use one.
+- Stations need several clean exit bearings because repaired cars resume their
+  saved velocity and then receive the two-second shield.
+
+## Readability, landmarks, and ambience
+
+- **MUST:** the arena remains readable at combat zoom, overview zoom, and on the
+  north-up radar.
+- **DEFAULT:** every major district has a macro landmark, distinct material or
+  topology, and a memorable route relationship.
+- Opaque overhead art must obey the established floor/z-order contract. If cars
+  can travel beneath it, under-fade behavior must remain readable.
+- Ambient populations stay nonblocking, untargeted, cosmetic-local in LAN, and
+  sparse enough that combat silhouettes win.
+- Pure animation must not create false collision or weapon telegraphs.
+
+## Campaign and LAN are one arena
+
+- **MUST:** every new regular arena ships in both `CAMPAIGN` and `MP_MAPS` using
+  the same scene.
+- **MUST:** `target_cars` unique baked/declared spawn positions exist with sane
+  floors. Four human seats never require a smaller special-case ruleset.
+- **MUST:** `mp_managed` removes campaign cars into spawn data and stands down
+  pause/end UI, lives, enemy rerolls, boss controllers, cutscenes, and victory
+  choreography.
+- Gameplay remains host-authoritative. Client-local ambience is allowed only
+  when it cannot affect collision, damage, targeting, score, or objectives.
+- **EXCEPTION:** Depot and Coliseum currently bake only player + boss and are not
+  in `MP_MAPS`. They are the only grandfathered exceptions; their removal
+  condition is a neutral four-plus spawn seam independent of campaign actors.
+
+## Shipped precedents
+
+| Arena | Class / target | Dominant topology | Signature pressure | Reusable lesson |
+|---|---:|---|---|---|
+| Downtown | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
+| Freeway | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
+| Suburbs | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
+| Snowy Pass | Medium / 7 | switchbacks + eight-face summit hill | ice, pits, snow grades | severe handling terrain needs recovery room and multiple approaches |
+| Depot | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
+| Docks | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
+| Coliseum | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
+
+## Copy-paste level/change brief
+
+```markdown
+# <Arena/change name>
+
+## Intent
+- Fantasy and campaign role:
+- Existing precedent being extended (if any):
+- Player skill or decision this should emphasize:
+
+## Profile
+- Mode: arena
+- Size class: small / medium / large
+- Interior size: <w × h> = <area>
+- Target cars: <n>; area per car: <area/n>
+- Campaign encounter: melee / miniboss / boss
+- MP target and spawn plan:
+- Stations:
+
+## Topology
+- One-sentence topology:
+- Primary circulation loop:
+- Secondary/recovery routes:
+- Combat pockets and exits:
+- Permanent vs destructible cover:
+- Signature pressure mechanic and its counterplay:
+
+## Surfaces and floors
+- Dominant terrain and accents:
+- Grades/corner grades/chamfers:
+- Floors and paired connectors:
+- Jump routes and landing/run-up clearance:
+- Lethal hazards, telegraph, safe alternative, hazard curbs:
+
+## Economy and readability
+- Baseline / contested / traversal / secret pickups:
+- Repair-bay placement and exit bearings:
+- Macro landmarks at both zooms and radar:
+- Ambient/deco budget and collision status:
+
+## Implementation contract
+- Reused scenes/scripts:
+- New reusable primitive, if genuinely needed:
+- Campaign logic that must stand down under mp_managed:
+- Automated gates to add or extend:
+- Human route/feel/performance playtest:
+
+## Exceptions
+- Rule:
+- Reason:
+- Compensating design/test:
+- Removal condition:
+```
+
+## Acceptance loop
+
+1. Validate profile, capacity, spawn clearance, and floor topology headlessly.
+2. Drive every primary, recovery, jump, grade, diagonal, drop, and secret route
+   with a small and large vehicle.
+3. Watch normal AI circulate, recover, scavenge, and change floors.
+4. Inspect combat and overview zoom plus radar readability.
+5. Run eight combatants and the authored ambience at 60 FPS.
+6. Host the same scene in a two-window LAN match and verify spawn/floor parity.
+7. Record any exception explicitly before calling the arena complete.
