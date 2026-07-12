@@ -16,7 +16,8 @@ same scene supports campaign and eight-car LAN play.
 | Stations | 2: floor 1 southwest, floor 3 north repair platform |
 | Dominant terrain | dirt |
 | Accents | three mud basins, two shallow-water puddles |
-| Floors | yard 1, foundation 2, scaffold 3 |
+| Floors | yard 1, foundation 2, scaffold 3 (+ two-tier south dirt pile 1→2→3) |
+| Lighting | rainy dusk: `night_arena` CanvasModulate `(0.62,0.65,0.78)`, five lit worklights, viewer glow, explosion blooms |
 | LAN | MP-ready, protocol 8 arena-state rows |
 
 Arena bounds are `x=-2304…2304`, `y=-1920…1920`. The dry outer haul road is
@@ -49,6 +50,18 @@ pairs have explicit two-way `FloorConnector`s. Deck support posts, base
 plates, and cast shadows ride an understructure canvas that stays visible
 while the deck plane under-fades for traffic below.
 
+Three ring rails are **breakaway**: 12 HP destructible guardrails (net ids
+24–26) over hazard-taped drop lips on WestRun's courtyard side, EastRun's
+courtyard side, and SoutheastPlatform's south face — smash through and drive
+off the deck. AI-only hazard curbs on the same lips keep bots from following.
+
+The southern yard is dominated by the **spoil heap**: a two-tier octagonal
+`DriveableHill` pair at `(-200,1150)` — an 848px floor-2 dirt apron
+(grade 240, pull 180) carrying a 448px floor-3 cap (grade 200) — all sixteen
+faces driveable, relief-shaded slopes against flat caps, with the relocated
+land-mine crate on top. The pile forced the generator west and reshuffled the
+south yard (Enemy2, dump truck, southwest mud, stray props).
+
 Four poured `112×112` **SlabColumns** stand on the slab's painted sixteen-anchor
 512px grid — a courtyard cover pair at `(576,-944)`/`(1088,-944)`, a west
 corridor column at `(64,-432)`, and a south strip column at `(1088,80)`. They
@@ -76,7 +89,10 @@ without cutting the dependable dry perimeter route.
 
 ## Signature generator
 
-The floor-1 generator is a `256×192`, 450 HP landmark at `(350,1000)`. It is
+The floor-1 generator is a `256×192`, 450 HP landmark at `(-1420,-60)` in the
+west service yard (flanked by fuel barrels and a pipe bundle). Below 90% HP it
+pops intermittent insulator sparks and a smoke wisp, amplified below 75% — the
+early interactivity cue, visual-only and identical on LAN puppets. It is
 ordinary cover until HP reaches 112.5, then warns for 1.2s, arcs for 2s, and
 waits exactly 60s after the burst. Every same-floor, line-of-sight car within
 480px is latched impartially. A full latch deals 16 environmental damage and
@@ -109,8 +125,15 @@ IDs are unsigned 16-bit values unique within this scene:
 |---|---|
 | 1 | power generator |
 | 10–17 | west porta-potties |
-| 20–22 | breakable containers |
+| 20–22 | breakable containers (west pair + slab) |
 | 23 | south chain-link cover |
+| 24–26 | breakaway scaffold rails (west / east / south lips) |
+| 27–28 | added containers (slab east, south yard) |
+| 29–33 | fuel barrels (generator pair, hill pair, cement truck) |
+| 34–36 | junk piles |
+| 37–38 | slab crates |
+| 39–40 | entry barriers |
+| 41–47 | parking-lot derelicts (NW corner, mundane pool) |
 
 Destroyed networked props remain hidden, noncolliding tombstones so late and
 repeated snapshots converge without replaying their death presentation.
@@ -130,7 +153,16 @@ repeated snapshots converge without replaying their death presentation.
 5. Fight around all three machines and inside the courtyard pit against the
    slab columns, destroy the porta row, and check worker containment on every
    floor.
-6. Wake the generator with shots and rams, test cover/escape counterplay, then
-   trigger its blast into nearby destructibles.
-7. Repeat a generator cycle and prop destruction in a two-window LAN match.
-8. Run eight combatants with full ambience and inspect the frame-time target.
+6. Chip the generator to 89% and 74% HP and confirm the two spark/smoke tiers;
+   then wake it fully, test cover/escape counterplay, and trigger its blast
+   into the neighboring barrels.
+7. Climb the spoil heap on every face, grab the cap mine crate, and jump off
+   both tiers; verify slope shading reads against the flat caps at dusk.
+8. Smash all three breakaway rails and take each yeet; confirm AI never
+   follows and the hazard tape reads after the rail dies.
+9. Tour the dusk pass: worklight pools, viewer glow, explosion blooms, rain
+   and mud sheen under the tint, radar/HUD untinted; sweep the parking lot and
+   porta row (one door ajar).
+10. Repeat a generator cycle, rail break, and derelict kill in a two-window
+    LAN match (tombstones on the client, sparks on the puppet).
+11. Run eight combatants with full ambience and inspect the frame-time target.

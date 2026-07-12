@@ -220,6 +220,12 @@ that crosses a grade seam.
   mouth; its shoulders build guard statics, so junctions cannot leak
   accidental lips. Seam edges draw nothing and build nothing — abutting decks
   merge into one surface.
+- **DEFAULT:** a breakaway rail is a drop edge wearing a low-HP destructible
+  guardrail (`destructible_block` `deco = &"rail"`, ~12 HP, floor-stamped,
+  z_index 2, host-synced `arena_net_id` on MP maps) plus an AI-only
+  `hazard_curb` on the same lip — the player earns the yeet, the bots never
+  lemming. The hazard-tape lip paint underneath stays readable after the rail
+  dies.
 - **MUST:** rails and AI hazard curbs agree. Protected edges show both; committed
   drops omit both only where a safe landing and recovery route exist.
 - **MUST:** floor-3 stations, pickups, props, and soft targets are explicitly

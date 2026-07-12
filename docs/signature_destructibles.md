@@ -12,6 +12,10 @@ every ordinary crate a bespoke network system.
   counterplay, not merely a larger explosion.
 - **MUST:** its silhouette, dangerous phases, effective floor/range, and escape
   option remain legible at combat zoom. Warning precedes unavoidable output.
+- **DEFAULT:** the landmark telegraphs damageability early with visual-only
+  distress FX driven off its locally mirrored HP fraction — host and client
+  puppets both read Health directly, so the tiers need zero wire state and
+  never touch the phase machine.
 - **MUST:** cover, distance, floor changes, destruction, or another explicitly
   documented player action counters the hazard.
 - **MUST:** difficulty does not silently re-price environmental phase timing or
@@ -69,9 +73,10 @@ For each new landmark, document and test:
 
 ## Prototype precedent: power generator
 
-Ground Floor Gore proves the contract with a 450 HP floor-1 cabinet. At 25% HP
-it warns 1.2s, arcs to every visible same-floor car within 480px for 2s, then
-waits 60s. Its 16-damage full latch and interference are environmental. Death
+Ground Floor Gore proves the contract with a 450 HP floor-1 cabinet. Below 90%
+HP it pops intermittent insulator sparks and a smoke wisp (amplified below
+75%) — the early "this is interactive" cue. At 25% HP it warns 1.2s, arcs to
+every visible same-floor car within 480px for 2s, then waits 60s. Its 16-damage full latch and interference are environmental. Death
 deals 50→15 and shoves 420→140 across 420px, can chain through site cover, and
 leaves a charred pad. See
 [`arena_briefs/ground_floor_gore.md`](arena_briefs/ground_floor_gore.md) for the
