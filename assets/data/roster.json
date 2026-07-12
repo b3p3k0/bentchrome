@@ -149,6 +149,34 @@
       "mass": 7
     },
     {
+      "id": "lovebug",
+      "car_name": "Lovebug",
+      "driver_name": "Moonbeam",
+      "flavor": "A sunshine-yellow Beetle wearing flowers, peace signs, and thirty years of good vibes. Moonbeam doesn't believe in violence; she believes in consequences. The bug zips off the line, wanders through corners, and famously floats across shallow water like the commercials promised. Thin panels and an air-cooled engine mean fire is her worst enemy. She'd rather disarm you than dent you.",
+      "special_weapon": "Chill Out, Man: a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 20 seconds. Evaporates into glitter on impact.",
+      "special_def": "chill_out",
+      "stats": {
+        "acceleration": 7,
+        "top_speed": 5,
+        "handling": 4,
+        "armor": 4,
+        "special_power": 7
+      },
+      "colors": {
+        "primary": "#ffd824",
+        "accent": "#b03aa8"
+      },
+      "portrait": "res://assets/img/bios/lovebug.png",
+      "ai_archetype": "opportunist",
+      "special_ammo_cap": 1,
+      "special_recharge_seconds": 30.0,
+      "burn_taken": 1.5,
+      "terrain_modifiers": {
+        "water": {"accel": 2.5, "top": 2.2222222222, "grip": 1.4285714286}
+      },
+      "mass": 4
+    },
+    {
       "id": "mrghastly",
       "car_name": "Mr. Ghastly",
       "driver_name": "???",

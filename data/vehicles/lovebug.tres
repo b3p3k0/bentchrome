@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_jkfpl"]
+[ext_resource type="Resource" path="res://data/weapons/chill_out.tres" id="2_xafs2"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_h0l6y"]
+
+[sub_resource type="Resource" id="Resource_orulh"]
+script = ExtResource("3_h0l6y")
+terrain = &"water"
+accel = 2.5
+top = 2.2222222222
+grip = 1.4285714286
+
+[resource]
+script = ExtResource("1_jkfpl")
+id = &"lovebug"
+car_name = "Lovebug"
+driver_name = "Moonbeam"
+flavor = "A sunshine-yellow Beetle wearing flowers, peace signs, and thirty years of good vibes. Moonbeam doesn't believe in violence; she believes in consequences. The bug zips off the line, wanders through corners, and famously floats across shallow water like the commercials promised. Thin panels and an air-cooled engine mean fire is her worst enemy. She'd rather disarm you than dent you."
+special_name = "Chill Out, Man"
+special_desc = "a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 20 seconds. Evaporates into glitter on impact."
+acceleration = 7
+handling = 4
+armor = 4
+special_power = 7
+mass = 4
+primary_color = Color(1, 0.84705883, 0.14117648, 1)
+accent_color = Color(0.6901961, 0.22745098, 0.65882355, 1)
+special = ExtResource("2_xafs2")
+special_recharge_seconds = 30.0
+burn_taken = 1.5
+terrain_modifiers = Array[ExtResource("3_h0l6y")]([SubResource("Resource_orulh")])
