@@ -70,7 +70,7 @@ func _draw() -> void:
 	# DEVGOD sees everything map-wide — a testing aid riding the settings
 	# toggle; normal play keeps the RANGE skill gate.
 	var gs := get_node_or_null(^"/root/GameState")
-	var all_seeing: bool = gs != null and gs.devgod
+	var all_seeing: bool = gs != null and gs.is_devgod_enabled()
 	var pf := _floor_of(player)
 	for e in get_tree().get_nodes_in_group(&"enemies"):
 		if not all_seeing and e.global_position.distance_to(player.global_position) > RANGE:

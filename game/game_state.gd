@@ -32,6 +32,14 @@ var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 
+## Developer Mode is the master breaker. The raw subordinate choices stay
+## persisted so switching the breaker back on restores the developer's bench.
+func is_devgod_enabled() -> bool:
+	return dev_mode and devgod
+
+func effective_start_level_index() -> int:
+	return start_level_index if dev_mode else 0
+
 const SETTINGS_PATH := "user://settings.json"
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
 	"dev_mode", "start_level_index", "screen_shake", "player_name"]

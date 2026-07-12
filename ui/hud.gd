@@ -47,7 +47,7 @@ func _process(_delta: float) -> void:
 	_hp_label.text = "HP %3.0f" % _player.get_hp()
 	if _god_label:
 		var gs := get_node_or_null(^"/root/GameState")
-		_god_label.visible = gs != null and gs.devgod
+		_god_label.visible = gs != null and gs.is_devgod_enabled()
 	_speed_label.text = "SPEED %3.0f MPH" % (_player.get_speed() * MPH_PER_PXS)
 	if _floor_label:
 		_floor_label.visible = _player.floor_index >= 1

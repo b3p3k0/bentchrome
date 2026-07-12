@@ -99,8 +99,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			SceneFlow.to_mp_lobby()
 			return
 		GameState.reset_campaign()
-		# Settings' START LEVEL picker: launch into the chosen campaign stop.
-		SceneFlow.to_level(GameState.start_level_index)
+		# Developer Options' START LEVEL picker is gated by its master breaker.
+		SceneFlow.to_level(GameState.effective_start_level_index())
 
 ## Soft-coupled MP check: this stays a pure SP screen unless a session is live.
 func _mp_session() -> bool:

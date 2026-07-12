@@ -189,7 +189,7 @@ func _ready() -> void:
 	var god_gs := get_node_or_null(^"/root/GameState")
 	var net_live := get_node_or_null(^"/root/Net")
 	var in_mp: bool = net_live != null and int(net_live.get("mode")) != 0
-	if faction == &"player" and god_gs and god_gs.devgod and not in_mp:
+	if faction == &"player" and god_gs and god_gs.is_devgod_enabled() and not in_mp:
 		if _health:
 			_health.god = true
 		if _rack:

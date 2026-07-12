@@ -49,6 +49,27 @@ func test_settings_round_trip() -> void:
 	for k in keep:
 		gs.set(k, keep[k])
 
+func test_developer_mode_gates_preserved_options() -> void:
+	var gs := _gs()
+	var keep_dev: bool = gs.dev_mode
+	var keep_god: bool = gs.devgod
+	var keep_level: int = gs.start_level_index
+	gs.devgod = true
+	gs.start_level_index = 4
+	gs.dev_mode = false
+	t.check(not gs.is_devgod_enabled(), "developer breaker: DEVGOD is inert while master is off")
+	t.check(gs.effective_start_level_index() == 0,
+		"developer breaker: campaign falls back to Downtown while master is off")
+	t.check(gs.devgod and gs.start_level_index == 4,
+		"developer breaker: subordinate choices remain stored")
+	gs.dev_mode = true
+	t.check(gs.is_devgod_enabled(), "developer breaker: remembered DEVGOD returns with master")
+	t.check(gs.effective_start_level_index() == 4,
+		"developer breaker: remembered start level returns with master")
+	gs.dev_mode = keep_dev
+	gs.devgod = keep_god
+	gs.start_level_index = keep_level
+
 func test_devgod_health_blocks_damage_not_pits() -> void:
 	var h = preload("res://vehicles/health.gd").new()
 	t.root.add_child(h)
