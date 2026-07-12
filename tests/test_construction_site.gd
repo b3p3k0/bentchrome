@@ -6,6 +6,7 @@ const ArenaScene := preload("res://levels/construction/ground_floor_gore.tscn")
 const MachineScene := preload("res://environment/construction_machine.tscn")
 const PortaScene := preload("res://environment/porta_potty.tscn")
 const ActorScene := preload("res://environment/ambient_actor.tscn")
+const SlabColumnScript := preload("res://levels/construction/slab_column.gd")
 
 var t
 
@@ -33,6 +34,31 @@ func test_heavy_machine_footprints_are_permanent_floor_cover() -> void:
 			"site machine: %s is permanent, not another destructible" % kind)
 		t.root.remove_child(machine)
 		machine.free()
+
+func test_slab_column_is_permanent_floor2_cover() -> void:
+	var column: StaticBody2D = SlabColumnScript.new()
+	t.root.add_child(column)
+	t.check(column.collision_layer == (4 | 16) and column.collision_mask == 0,
+		"columns: poured column is solid floor-2 obstacle cover")
+	var col := column.get_node(^"Col") as CollisionShape2D
+	t.check(col != null and (col.shape as RectangleShape2D).size == Vector2(112, 112)
+		and column.scale == Vector2.ONE,
+		"columns: unscaled 112px footprint rides the paint node")
+	t.check(column.get_node_or_null(^"Health") == null,
+		"columns: structure is permanent, not another destructible")
+	t.root.remove_child(column)
+	column.free()
+
+func test_scene_authors_four_columns_on_the_anchor_grid() -> void:
+	var arena := ArenaScene.instantiate()
+	var columns := arena.get_node(^"SlabColumns").get_children()
+	t.check(columns.size() == 4,
+		"columns: four poured columns rise off the sixteen-anchor grid")
+	for column in columns:
+		var p: Vector2 = column.position
+		t.check(p.x in [64.0, 576.0, 1088.0, 1600.0] and p.y in [-1456.0, -944.0, -432.0, 80.0],
+			"columns: %s sits exactly on a painted 512px anchor" % column.name)
+	arena.free()
 
 func test_authored_worker_and_porta_budgets() -> void:
 	var arena := ArenaScene.instantiate()

@@ -51,6 +51,7 @@ func _draw() -> void:
 	draw_rect(Rect2(-half, size), SLAB)
 	_draw_joints(half)
 	_draw_stains(half)
+	_draw_anchors()
 	_draw_caution_band(Rect2(-half.x, WEST_GAP_Y.x, 48.0, WEST_GAP_Y.y - WEST_GAP_Y.x), true)
 	_draw_caution_band(Rect2(SOUTH_GAP_X.x, half.y - 48.0,
 		SOUTH_GAP_X.y - SOUTH_GAP_X.x, 48.0), false)
@@ -89,6 +90,22 @@ func _draw_stains(half: Vector2) -> void:
 	draw_colored_polygon(PackedVector2Array([
 		wash - side, wash + side, wash + wash_dir + side * 0.5, wash + wash_dir - side * 0.5,
 	]), Color(0.70, 0.71, 0.70, 0.10))
+
+## Sixteen column anchors on the 512px grid: steel base plate, four bolt
+## heads, and a rebar dowel cluster waiting for the pour. SlabColumns rise on
+## four of these; the empty twelve promise the rest of the tower.
+func _draw_anchors() -> void:
+	for x in GRID_X:
+		for y in GRID_Y:
+			var p := Vector2(x, y)
+			draw_rect(Rect2(p - Vector2(24, 24), Vector2(48, 48)), Color(0.40, 0.42, 0.45))
+			draw_rect(Rect2(p - Vector2(24, 24), Vector2(48, 48)),
+				Color(0.30, 0.32, 0.35), false, 2.0)
+			for d: Vector2 in [Vector2(-14, -14), Vector2(14, -14),
+					Vector2(-14, 14), Vector2(14, 14)]:
+				draw_circle(p + d, 3.5, Color(0.22, 0.23, 0.26))
+			for d: Vector2 in [Vector2(-6, 0), Vector2(6, -5), Vector2(2, 7)]:
+				draw_circle(p + d, 2.5, Color(0.38, 0.24, 0.14))
 
 func _stain_point(rng: RandomNumberGenerator, half: Vector2) -> Vector2:
 	return Vector2(rng.randf_range(-half.x + 90.0, half.x - 90.0),
