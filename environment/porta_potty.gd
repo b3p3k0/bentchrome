@@ -142,11 +142,27 @@ func _spawn_blue_debris(host: Node) -> void:
 	host.add_child(puff)
 	puff.global_position = global_position
 
+## The door lives on the local +X (east) face so a west-wall column reads as
+## a proper service row: jamb band, proud leaf with hinge seam and handle, a
+## threshold step onto the yard. One seeded unit per row hangs ajar.
 func _draw() -> void:
 	draw_rect(Rect2(Vector2(-32, -40) + Vector2(7, 9), Vector2(64, 80)), Color(0, 0, 0, 0.3))
 	draw_rect(Rect2(-32, -40, 64, 80), Color(0.18, 0.52, 0.72))
-	draw_rect(Rect2(-26, -34, 52, 68), Color(0.22, 0.60, 0.80))
-	draw_rect(Rect2(-20, -29, 40, 54), Color(0.16, 0.47, 0.68), false, 3.0)
-	draw_circle(Vector2(13, 0), 3.0, Color(0.92, 0.82, 0.25))
-	for x in [-17.0, -6.0, 6.0, 17.0]:
+	draw_rect(Rect2(-28, -36, 48, 72), Color(0.22, 0.60, 0.80))
+	draw_rect(Rect2(-24, -32, 12, 12), Color(0.14, 0.42, 0.60))
+	draw_rect(Rect2(-24, -32, 12, 12), Color(0.08, 0.28, 0.42), false, 2.0)
+	draw_rect(Rect2(22, -34, 10, 68), Color(0.12, 0.38, 0.55))
+	if seed_offset % 8 == 3:
+		draw_rect(Rect2(24, -28, 10, 56), Color(0.05, 0.10, 0.14))
+		draw_set_transform(Vector2(28, -28), 0.5, Vector2.ONE)
+		draw_rect(Rect2(0, 0, 8, 56), Color(0.30, 0.68, 0.86))
+		draw_rect(Rect2(0, 0, 8, 56), Color(0.10, 0.34, 0.50), false, 2.0)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_rect(Rect2(26, -28, 8, 56), Color(0.30, 0.68, 0.86))
+		draw_rect(Rect2(26, -28, 8, 56), Color(0.10, 0.34, 0.50), false, 2.0)
+		draw_line(Vector2(27, -26), Vector2(27, 26), Color(0.10, 0.34, 0.50), 1.5)
+		draw_circle(Vector2(31, 16), 3.0, Color(0.92, 0.82, 0.25))
+	draw_rect(Rect2(34, -12, 6, 24), Color(0.45, 0.47, 0.50))
+	for x in [-18.0, -8.0, 2.0, 12.0]:
 		draw_line(Vector2(x, -33), Vector2(x, -27), Color(0.08, 0.28, 0.42), 2.0)

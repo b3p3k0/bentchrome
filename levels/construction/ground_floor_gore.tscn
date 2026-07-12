@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://levels/construction/ground_floor_gore.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -25,6 +25,8 @@
 [ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="23_ammo"]
 [ext_resource type="Script" path="res://levels/construction/slab_column.gd" id="24_column"]
 [ext_resource type="PackedScene" path="res://environment/driveable_hill.tscn" id="25_hill"]
+[ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="26_wreck"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="27_marks"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -717,6 +719,18 @@ script = ExtResource("17_site_deco")
 kind = "ruts"
 size = Vector2(220, 120)
 
+[node name="PipeBundle2" type="Node2D" parent="SiteDeco"]
+position = Vector2(-1300, -260)
+script = ExtResource("17_site_deco")
+kind = "pipes"
+size = Vector2(192, 128)
+
+[node name="CableSpool2" type="Node2D" parent="SiteDeco"]
+position = Vector2(760, 1560)
+script = ExtResource("17_site_deco")
+kind = "spool"
+size = Vector2(128, 128)
+
 [node name="FloodParkingLot" type="Node2D" parent="SiteDeco"]
 position = Vector2(-1750, -1650)
 script = ExtResource("17_site_deco")
@@ -952,6 +966,66 @@ kind = &"cone"
 footprint = 24.0
 floor_index = 1
 
+[node name="Cone3" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-200, -1100)
+kind = &"cone"
+footprint = 24.0
+floor_index = 1
+
+[node name="Cone4" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(700, 990)
+kind = &"cone"
+footprint = 24.0
+floor_index = 1
+
+[node name="Cone5" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(1180, 1010)
+kind = &"cone"
+footprint = 24.0
+floor_index = 1
+
+[node name="Pallet3" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(1620, 1690)
+kind = &"pallet"
+footprint = 48.0
+floor_index = 1
+
+[node name="Pallet4" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-2200, -800)
+kind = &"pallet"
+footprint = 48.0
+floor_index = 1
+
+[node name="Bollard1" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-2240, -1400)
+kind = &"bollard"
+footprint = 28.0
+floor_index = 1
+
+[node name="Bollard2" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-2240, -1840)
+kind = &"bollard"
+footprint = 28.0
+floor_index = 1
+
+[node name="Trash1" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(2240, -1740)
+kind = &"trash"
+footprint = 40.0
+floor_index = 1
+
+[node name="Trash2" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-2250, 1750)
+kind = &"trash"
+footprint = 40.0
+floor_index = 1
+
+[node name="Trash3" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(140, 1850)
+kind = &"trash"
+footprint = 40.0
+floor_index = 1
+
 [node name="PortaRow" type="Node2D" parent="."]
 
 [node name="Porta1" parent="PortaRow" instance=ExtResource("19_porta")]
@@ -993,6 +1067,104 @@ arena_net_id = 16
 position = Vector2(-2100, 32)
 seed_offset = 8
 arena_net_id = 17
+
+[node name="ParkingLot" type="Node2D" parent="."]
+
+[node name="Wreck1" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-2180, -1790)
+rotation = 1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 41
+
+[node name="Wreck2" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-2070, -1790)
+rotation = 1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 42
+
+[node name="Wreck3" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-1960, -1790)
+rotation = 1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 43
+
+[node name="Wreck4" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-1850, -1790)
+rotation = 1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 44
+
+[node name="Wreck5" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-2200, -1540)
+rotation = -1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 45
+
+[node name="Wreck6" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-2090, -1540)
+rotation = -1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 46
+
+[node name="Wreck7" parent="ParkingLot" instance=ExtResource("26_wreck")]
+position = Vector2(-1980, -1540)
+rotation = -1.570796
+pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+arena_net_id = 47
+
+[node name="StallA1" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2235, -1868)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallA2" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2125, -1868)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallA3" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2015, -1868)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallA4" type="Node2D" parent="ParkingLot"]
+position = Vector2(-1905, -1868)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallA5" type="Node2D" parent="ParkingLot"]
+position = Vector2(-1795, -1868)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallB1" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2255, -1618)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallB2" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2145, -1618)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallB3" type="Node2D" parent="ParkingLot"]
+position = Vector2(-2035, -1618)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
+
+[node name="StallB4" type="Node2D" parent="ParkingLot"]
+position = Vector2(-1925, -1618)
+script = ExtResource("27_marks")
+points = PackedVector2Array(0, 0, 0, 156)
+style = &"stop_line"
 
 [node name="AmbientLife" type="Node2D" parent="."]
 
