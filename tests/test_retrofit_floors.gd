@@ -1,6 +1,6 @@
 extends RefCounted
-## Retrofit floor hygiene for Downtown + Snowy Pass. Instantiate-only (no
-## tree, no _ready): every bit-4 solid carries its terrace (raw statics by
+## Retrofit floor hygiene for Downtown + Snowy Pass. Every bit-4 solid carries
+## its terrace (raw statics by
 ## layer bits, instanced props by floor_index — one forgotten static means
 ## cars drive through it), jump pads are floor-stamped, spawns start on the
 ## zone under them, grade Ramp nodes land their ends on the right floors,
@@ -39,6 +39,9 @@ func test_retrofit_structure() -> void:
 		for child in lvl.get_children():
 			if child is Area2D and child.scene_file_path.ends_with("floor_zone.tscn"):
 				zones.append({"rect": _zone_rect(child), "floor": int(child.floor_index)})
+			elif child is DriveableHill:
+				zones.append({"rect": Rect2(child.position - child.summit_size * 0.5,
+					child.summit_size), "floor": int(child.high_floor)})
 			elif child.get("from_floor") != null:
 				connectors.append(child)
 			elif _script_path(child).ends_with("/ramp.gd"):
@@ -83,11 +86,17 @@ func test_retrofit_structure() -> void:
 
 func test_snowy_hill_has_eight_driveable_faces() -> void:
 	var snowy := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	t.root.add_child(snowy)  # DriveableHill builds its authored recipe at ready.
+	var hill := snowy.get_node_or_null(^"SnowyHill") as DriveableHill
+	t.check(hill != null and hill.summit_size == Vector2(896, 896)
+			and is_equal_approx(hill.grade_length, 240.0),
+		"snowy hill: one reusable authoring root owns summit and grade depth")
 	var cardinals: Array = []
 	var corners: Array = []
 	var grade_up := 0
 	var grade_down := 0
-	for child in snowy.get_children():
+	var generated := hill.get_node_or_null(^"_Generated") if hill else null
+	for child in generated.get_children() if generated else []:
 		if child is Ramp and String(child.name).begins_with("Ramp"):
 			cardinals.append(child)
 		elif child is CornerRamp:
@@ -111,7 +120,7 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 				and corner.terrain_type == "snow"
 				and is_equal_approx(corner.downhill_pull, 120.0),
 			"snowy hill: %s exactly fills its 120px corner gap" % corner.name)
-	var skin := snowy.get_node_or_null(^"SummitSnow/Vis") as Polygon2D
+	var skin := hill.get_node_or_null(^"_Generated/Surface") as Polygon2D
 	var expected_skin := PackedVector2Array([
 		Vector2(-448, -568), Vector2(448, -568),
 		Vector2(568, -448), Vector2(568, 448),
@@ -120,14 +129,20 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	])
 	t.check(skin != null and skin.polygon == expected_skin,
 		"snowy hill: one compact snow-textured octagon owns the complete silhouette")
-	var summit_snow := snowy.get_node_or_null(^"SummitSnow") as TerrainZone
-	var edge := snowy.get_node_or_null(^"SummitSnow/HillEdge") as Line2D
-	t.check(summit_snow != null and not summit_snow.soften_visual
-			and edge != null and is_equal_approx(edge.width, 3.0),
-		"snowy hill: authored octagon stays crisp behind one restrained edge")
+	var substrate := hill.get_node_or_null(^"_Generated/Substrate") as Polygon2D
+	var edge := hill.get_node_or_null(^"_Generated/Edge") as Line2D
+	var surface_mat := skin.material as ShaderMaterial if skin else null
+	t.check(substrate != null and substrate.material != hill.substrate_material
+			and surface_mat != null and surface_mat != hill.terrain_material,
+		"snowy hill: local material copies prevent substrate stacking and shared mutation")
+	t.check(bool(surface_mat.get_shader_parameter("relief_enabled"))
+			and is_equal_approx(float(surface_mat.get_shader_parameter("relief_strength")), 0.14)
+			and edge != null and is_equal_approx(edge.width, 2.0),
+		"snowy hill: restrained opt-in relief owns one crisp edge")
 	t.check(grade_up == 8 and grade_down == 8,
 		"snowy hill: AI has paired routes over all eight faces")
-	t.check(snowy.get_node_or_null(^"AmmoPowerSummit") != null
-			and snowy.get_node_or_null(^"AmmoStandardSummit") != null,
+	t.check(hill.get_node_or_null(^"AmmoPowerSummit") != null
+			and hill.get_node_or_null(^"AmmoStandardSummit") != null,
 		"snowy hill: summit traversal rewards stay authored")
+	t.root.remove_child(snowy)
 	snowy.free()
