@@ -8,7 +8,6 @@ const DEFAULT_COLOR := Color(1.0, 0.18, 0.62, 0.95)
 const UNDER_COLOR := Color(0.12, 0.015, 0.07, 0.72)
 const UNDER_WIDTH := 7.0
 const PINK_WIDTH := 4.0
-const PULSE_DEPTH := 4.0
 const PULSES_PER_MINUTE := 18.0
 const PULSE_SPEED := TAU * PULSES_PER_MINUTE / 60.0
 
@@ -22,7 +21,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func current_radius() -> float:
-	return radius - (1.0 - _outward_pulse()) * PULSE_DEPTH
+	return radius * _outward_pulse()
 
 func current_alpha() -> float:
 	return color.a * lerpf(0.76, 1.0, _outward_pulse())

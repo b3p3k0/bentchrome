@@ -44,8 +44,8 @@ func test_pink_ring_pulses_inside_small_bounds() -> void:
 		cue._process(TAU / PickupCue.PULSE_SPEED / 12.0)
 		radii.append(cue.current_radius())
 		alphas.append(cue.current_alpha())
-	t.check_approx(radii.min(), 32.0,
-		"pickup cue: ring contracts four pixels inside the collection surface")
+	t.check_approx(radii.min(), 0.0,
+		"pickup cue: ring contracts all the way to the pickup center")
 	t.check_approx(radii.max(), 36.0,
 		"pickup cue: pulse never expands past the collection surface")
 	t.check_approx(PickupCue.PULSE_SPEED / TAU * 60.0, 18.0,
