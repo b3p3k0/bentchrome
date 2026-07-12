@@ -108,12 +108,16 @@ func metrics() -> Dictionary:
 	var skids: Array = []
 	for p in raw.skid_points:
 		skids.append((p as Vector2) * FLEET_SCALE)
+	var guns: Array = []
+	for p in raw.get("mg_points", []):  # optional: staggered multi-barrel MG (Hubcap)
+		guns.append((p as Vector2) * FLEET_SCALE)
 	var m := {
 		"half_len": float(raw.half_len) * FLEET_SCALE,
 		"half_wid": float(raw.half_wid) * FLEET_SCALE,
 		"radius": float(raw.radius),  # collision — deliberately unscaled
 		"skid_points": skids,
 		"steer_wheels": raw.steer_wheels,  # paint-local; the node's own scale covers them
+		"mg_points": guns,
 	}
 	_metrics_cache[style_id] = m
 	return m
