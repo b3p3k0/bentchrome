@@ -56,8 +56,7 @@ func _sweep_projectiles() -> void:
 func test_disarm_gates_mg_and_expires() -> void:
 	var car = _car()
 	var driver := FireDriver.new()
-	car.add_child(driver)
-	car.set_driver(driver)
+	car.set_driver(driver)  # set_driver parents it — pre-adding double-parents
 	var mg = car.get_node("MachineGunMount")
 	car.apply_effect(_spec(&"disarm", 1.0))
 	t.check(car.is_disarmed(), "disarm: status lands on a regular car")

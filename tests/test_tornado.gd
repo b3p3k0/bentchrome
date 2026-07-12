@@ -110,9 +110,7 @@ func test_steer_authority_cut_while_spinning() -> void:
 	var straight = _car(Vector2(0, 0))
 	var spinner = _car(Vector2(4000, 0))
 	for car in [straight, spinner]:
-		var driver := SteerDriver.new()
-		car.add_child(driver)
-		car.set_driver(driver)
+		car.set_driver(SteerDriver.new())  # set_driver parents it itself
 	var sc = _spin_up(spinner)
 	sc._tornado_t = 99.0  # hold the spin for the whole comparison window
 	for i in 60:

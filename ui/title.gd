@@ -68,18 +68,24 @@ func _highlight() -> void:
 		_entries[i].text = ("[ %s ]" if i == _index else "%s") % ENTRY_NAMES[i]
 
 func _activate() -> void:
+	# Autoload fetched by path: bare identifiers fail to compile when this
+	# script rides a test's -s preload chain (house rule — see vehicle.gd).
+	var flow := get_node_or_null(^"/root/SceneFlow")
 	match _index:
 		0:
 			_done = true
-			SceneFlow.to_difficulty()
+			if flow:
+				flow.to_difficulty()
 		1:
 			_done = true
-			SceneFlow.to_mp_menu()
+			if flow:
+				flow.to_mp_menu()
 		2:
 			_open_story()
 		3:
 			_done = true
-			SceneFlow.to_settings()
+			if flow:
+				flow.to_settings()
 
 ## The quit confirm's own input loop: any nav key toggles YES/NO, confirm
 ## activates, a second ESC backs out.
