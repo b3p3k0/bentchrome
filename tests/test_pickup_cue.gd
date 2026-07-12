@@ -40,12 +40,16 @@ func test_pink_ring_pulses_inside_small_bounds() -> void:
 		"pickup cue: shared ink is translucent hot pink")
 	var radii: Array[float] = []
 	var alphas: Array[float] = []
-	for i in 8:
-		cue._process(TAU / PickupCue.PULSE_SPEED / 8.0)
+	for i in 12:
+		cue._process(TAU / PickupCue.PULSE_SPEED / 12.0)
 		radii.append(cue.current_radius())
 		alphas.append(cue.current_alpha())
-	t.check(radii.min() >= 34.0 and radii.max() <= 38.0,
-		"pickup cue: breathing radius stays subtle around the surface")
+	t.check_approx(radii.min(), 32.0,
+		"pickup cue: ring contracts four pixels inside the collection surface")
+	t.check_approx(radii.max(), 36.0,
+		"pickup cue: pulse never expands past the collection surface")
+	t.check_approx(PickupCue.PULSE_SPEED / TAU * 60.0, 18.0,
+		"pickup cue: breathing cadence is eighteen pulses per minute")
 	t.check(alphas.min() >= 0.72 and alphas.max() <= 0.95,
 		"pickup cue: hot-pink stroke remains legible throughout its pulse")
 	t.check(PickupCue.UNDER_WIDTH == 7.0 and PickupCue.PINK_WIDTH == 4.0,
