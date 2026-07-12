@@ -39,6 +39,8 @@ by combat counterplay, then visual flavor.
   or dangerous detour.
 - **Landmark** — macro-scale silhouette/color/topology used to orient at combat
   zoom, overview zoom, and on the radar.
+- **Signature destructible** — an opt-in stateful landmark whose telegraphed
+  phases change local pressure and whose persistent state is host-authoritative.
 - **Terrace** — a discrete driveable floor. Every XY point has one winning
   driveable floor except inside an authored grade transition.
 - **Grade ramp** — grounded floor transition. Local high end is `-Y`; it always
@@ -204,6 +206,22 @@ that crosses a grade seam.
 - **DEFAULT:** high routes pay with exposure or traversal effort and return a
   vantage, shortcut, pickup, or escape option.
 
+### Scaffold networks
+
+- **DEFAULT:** scaffold runs start at 256px wide and connect through readable
+  448px work platforms. Widen a repair platform to at least `640×448` and give
+  it a clean entry, exit, and release runway.
+- **MUST:** a scaffold network offers multiple connected paths, paired grades
+  back to its supporting floor, and no accidental gaps. Deliberate drops use
+  `FloorConnector kind = edge` and remain visually distinct from guarded edges.
+- **MUST:** rails and AI hazard curbs agree. Protected edges show both; committed
+  drops omit both only where a safe landing and recovery route exist.
+- **MUST:** floor-3 stations, pickups, props, and soft targets are explicitly
+  floor-gated so traffic beneath the deck cannot interact through it.
+- **MUST:** overhead deck paint uses the established under-fade/z-order seam.
+  Floor-1/2 vehicles remain readable below it, and collision bodies stay
+  unscaled.
+
 ## Terrain and hazards
 
 - **MUST:** surface paint and `TerrainZone.terrain_type` describe the same
@@ -213,6 +231,14 @@ that crosses a grade seam.
 - Ice needs a straight entry and recovery run. Water needs a visible shallow
   buffer before lethal deep water. Dirt/grass/snow should change route choice,
   not merely tint asphalt.
+- Mud is a first-class wet-soil surface: global accel `0.55`, top `0.60`, grip
+  `0.42`, steer `0.90`. It belongs in geographically coherent basins with a dry
+  recovery route; isolated brown confetti is neither readable nor interesting.
+- Vehicle mud profiles are authored through `VehicleTerrainModifier`, never car
+  ID branches. Ground Floor Gore establishes Cricket `0.62/0.65/0.50/0.98`,
+  Hammertoe `0.80/0.80/0.60/0.98`, Smoky/Razorback
+  `0.72/0.74/0.55/0.96`, and Cyclone `0.36/0.40/0.25/0.78` as effective values.
+  Lovebug's water affinity and Cricket's dirt dash bonus do not imply mud perks.
 - **MUST:** pits and deep water are visually legible before commitment, floor
   gated, and hazard-curbed for AI. Airborne bypass is intentional gameplay.
 - **DEFAULT:** pair severe hazards with a safer, slower route or a demanding but
@@ -234,6 +260,21 @@ that crosses a grade seam.
   for basic circulation.
 - Fuel barrels and other explosive scenery need readable spacing and must not
   produce unavoidable spawn-chain damage.
+
+### Signature destructibles
+
+- **DEFAULT:** one signature destructible may anchor a regular arena. It must
+  be a landmark with a telegraphed, counterable pressure pattern—not a quota or
+  an oversized ordinary barrel.
+- **MUST:** gameplay state is host-authoritative and repeatedly snapshotted
+  through stable unsigned 16-bit arena IDs. Destroyed entities remain hidden,
+  noncolliding tombstones so late clients converge without replaying death.
+- **MUST:** dangerous phases state range/floor/LoS rules, expose an AI-only
+  danger cue, and provide cover, distance, or destruction counterplay.
+- **MUST:** attribution and death aftermath are explicit. Environmental hazards
+  do not become accidental player weapons.
+- Full interface, phase checklist, and generator precedent:
+  [`signature_destructibles.md`](signature_destructibles.md).
 
 ## Resource economy
 
@@ -262,6 +303,11 @@ that crosses a grade seam.
 - Ambient populations stay nonblocking, untargeted, cosmetic-local in LAN, and
   sparse enough that combat silhouettes win.
 - Pure animation must not create false collision or weapon telegraphs.
+- **MUST:** cosmetic weather is bounded and material-opt-in. Rain, ripples,
+  wind, dust, and lighting overlays do not alter handling, collision, damage,
+  visibility, or audio unless the arena brief names a separate gameplay system.
+- **DEFAULT:** duplicate weather-touched materials locally; shared dry terrain
+  must render byte-identically. GPU effects require a safe headless fallback.
 
 ## Campaign and LAN are one arena
 
@@ -288,6 +334,7 @@ that crosses a grade seam.
 | Snowy Pass | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
 | Depot | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Docks | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
+| Ground Floor Gore | Large / 8 | dirt loop + foundation + scaffold network | mud, voluntary drops, wounded generator | a dry recovery ring can frame layered risk; stateful landmarks need explicit LAN identity and counterplay |
 | Coliseum | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
 
 ## Copy-paste level/change brief

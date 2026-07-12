@@ -19,6 +19,10 @@ This document condenses the master design specs into quick-reference points we c
 - Regular hills use one `DriveableHill` root and one continuous clipped-octagon skin; corner leg is derived as half the grade length, never hand-sized.
 - Hill terrain repaints its substrate and applies the matching surface once, then uses restrained northwest relief and continuous cosmetic vehicle/shadow lift. No physics body scales.
 - Props spanning a grade seam carry both adjoining floor bits and draw after the hill skin; all eight 220px connector approaches remain clear.
+- Mud is first-class terrain: global accel/top/grip/steer = 0.55/0.60/0.42/0.90; vehicle identity remains typed profile data, never car-ID logic.
+- Cosmetic weather is bounded, material-opt-in, and gameplay-neutral. Rain does not make mud; the mud terrain zone does.
+- Scaffold networks default to 256px runs and 448px platforms, with paired grades, explicit drop connectors, floor-gated rewards, readable rails/curbs, and under-fade.
+- Signature destructibles use stable u16 arena IDs, host-authoritative repeated state, phase telegraphs/counterplay, explicit floor and attribution rules, and persistent noncolliding death tombstones (`docs/signature_destructibles.md`).
 
 ## Enemy & AI Variety
 - Archetypes: aggressor, ambusher, opportunist — a blendable weight mix `Vector3(aggressor, ambusher, opportunist)` so pure types and hybrids share one system; plus tougher mini-boss/boss variants.
@@ -27,7 +31,7 @@ This document condenses the master design specs into quick-reference points we c
 ## Systems Checklist
 - **Movement:** Inertia, drift, handling modifiers per surface, respect impassable deep water.
 - **Combat:** Machine guns (infinite, overheat lockout — built), pickup-fed standard/homing missiles (built), regenerating per-car specials (built, per-car caps via `VehicleStats`), temporary power-ups (pending).
-- **Health:** Shared major restore points (3 per level), random minor pickups, persistent inventory between levels.
+- **Health:** Shared major restore points follow arena-size bands (1 / 1–2 / 2–3), with random minor pickups and persistent inventory between levels.
 - **Environment:** Destructible props, ramps, verticality, hazards (explosives, electrical, debris).
 - **Custom levels:** JSON level format + whitelisting loader + standalone graphical editor (built — `docs/level_editor.md`); in-game custom-levels menu (pending, ships with editor/game UI integration).
 
