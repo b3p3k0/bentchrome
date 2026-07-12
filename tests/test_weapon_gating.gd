@@ -1,7 +1,8 @@
 extends RefCounted
 ## Weapon floor gating. Straight shots fly with the shooter's floor mask (they
-## physically cannot signal a cross-floor car); tracking shots fly boundary-
-## only and reach every terrace; legacy shooters keep the classic mask 7;
+## physically cannot signal a cross-floor car); tracking shots see vehicles on
+## every terrace plus cover on their launch and target floors; legacy shooters
+## keep the classic mask 7;
 ## contact specials filter targets to the shooter's floor; a mine only arms
 ## for its own terrace.
 
@@ -10,6 +11,7 @@ const ProjectileScene := preload("res://weapons/projectile.tscn")
 const MineScene := preload("res://environment/mine_land.tscn")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const FloorZoneScene := preload("res://environment/floor_zone.tscn")
+const BlockScene := preload("res://environment/destructible_block.tscn")
 const SOFT := 1 << 9
 
 class FloorNode extends Node2D:
@@ -20,7 +22,8 @@ var t
 func _init(runner) -> void:
 	t = runner
 
-func _mount_fixture(shooter_floor: int, tracking: bool, pierce := false) -> Dictionary:
+func _mount_fixture(shooter_floor: int, tracking: bool, pierce := false,
+		target_floor := -1) -> Dictionary:
 	var container := Node2D.new()
 	var mount = MountScript.new()
 	mount.fire_rate = 100.0
@@ -33,6 +36,12 @@ func _mount_fixture(shooter_floor: int, tracking: bool, pierce := false) -> Dict
 	shooter.floor_index = shooter_floor
 	container.add_child(mount)
 	container.add_child(shooter)
+	if target_floor >= 1:
+		var target := FloorNode.new()
+		target.floor_index = target_floor
+		target.position = Vector2(300, 0)
+		target.add_to_group(&"vehicles")
+		container.add_child(target)
 	t.root.add_child(container)
 	t.current_scene = container  # try_fire spawns projectiles here
 	return {"container": container, "mount": mount, "shooter": shooter}
@@ -53,11 +62,15 @@ func test_straight_shot_masks_to_own_floor() -> void:
 		"gating: floor-2 straight shot = wall + floor bit + cosmetic targets")
 	_done(f)
 
-func test_tracking_shot_arcs_over_floors() -> void:
-	var f := _mount_fixture(3, true)
-	t.check(_fired_mask(f) == (1 | 2 | SOFT),
-		"gating: tracking shot flies boundary-only plus cosmetic targets")
+func test_tracking_shot_respects_endpoint_cover() -> void:
+	var f := _mount_fixture(1, true, false, 3)
+	t.check(_fired_mask(f) == (1 | 2 | 8 | 32 | SOFT),
+		"gating: tracking shot sees launch and target cover, not the middle floor")
 	_done(f)
+	var fp := _mount_fixture(1, true, true, 3)
+	t.check(_fired_mask(fp) == (1 | 2 | SOFT),
+		"gating: explicit piercing tracking shot remains boundary-only")
+	_done(fp)
 
 func test_legacy_shooter_keeps_classic_masks() -> void:
 	var f := _mount_fixture(-1, false)
@@ -67,6 +80,28 @@ func test_legacy_shooter_keeps_classic_masks() -> void:
 	t.check(_fired_mask(fp) == (3 | SOFT),
 		"gating: legacy pierces_cover drops only obstacle, keeps cosmetic targets")
 	_done(fp)
+
+func test_projectile_damages_destructible_and_is_consumed() -> void:
+	var block = BlockScene.instantiate()
+	block.floor_index = 2
+	t.root.add_child(block)
+	var health: Health = block.get_node(^"Health")
+	var before := health.hp
+	var shot = ProjectileScene.instantiate()
+	t.root.add_child(shot)
+	var shooter := Node2D.new()
+	shot.setup(Vector2.ZERO, Vector2.RIGHT, 400.0, 12.0, 2.0, shooter)
+	shot._on_body_entered(block)
+	t.check(is_equal_approx(health.hp, before - 12.0),
+		"gating: destructible endpoint cover takes the missile damage")
+	t.check(shot._spent, "gating: destructible endpoint cover consumes the missile")
+	if is_instance_valid(shot):
+		t.root.remove_child(shot)
+		shot.free()
+	shooter.free()
+	if is_instance_valid(block):
+		t.root.remove_child(block)
+		block.free()
 
 func test_targeting_same_floor_filter() -> void:
 	var container := Node2D.new()

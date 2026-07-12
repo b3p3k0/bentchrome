@@ -53,13 +53,21 @@ static func ground_mask(floor_index: int) -> int:
 
 ## Projectile flight mask. Straight shots live entirely on the shooter's
 ## floor — no plain vehicle bit, so a cross-floor car is never even signaled.
-## Tracking shots "arc" between floors: boundary walls only, any vehicle.
-static func projectile_mask(floor_index: int, tracking: bool) -> int:
-	if floor_index < MIN_FLOOR:
-		return 1 | 2 | 4  # legacy; the mount applies pierces_cover on top
-	if tracking:
+## Tracking shots arc between floors, but cover at either endpoint still gets
+## a vote. Scenery on intermediate terraces is omitted from the mask. Explicit
+## cover-piercing shots retain their old boundary-only flight.
+static func projectile_mask(shooter_floor: int, tracking: bool,
+		target_floor := -1, pierces_cover := false) -> int:
+	if shooter_floor < MIN_FLOOR:
+		return (1 | 2) if pierces_cover else (1 | 2 | 4)
+	if pierces_cover:
 		return 1 | 2
-	return 2 | floor_bit(floor_index)
+	if tracking:
+		var mask := 1 | 2 | floor_bit(shooter_floor)
+		if target_floor >= MIN_FLOOR:
+			mask |= floor_bit(target_floor)
+		return mask
+	return 2 | floor_bit(shooter_floor)
 
 ## Line-of-sight raycast mask (beams, AI fire gates): walls + whatever blocks
 ## on the caster's floor; legacy keeps today's ground|wall|obstacle.

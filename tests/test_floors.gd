@@ -26,7 +26,11 @@ func test_mask_math_floor_mode() -> void:
 	t.check(Floors.ground_layer(2) == (1 | 16), "floors: floor-2 layer keeps the ground bit")
 	t.check(Floors.ground_mask(2) == (2 | 16), "floors: floor-2 mask = wall + own floor")
 	t.check(Floors.projectile_mask(2, false) == (2 | 16), "floors: straight shot never signals cross-floor cars")
-	t.check(Floors.projectile_mask(2, true) == (1 | 2), "floors: tracking shot arcs over floor statics")
+	t.check(Floors.projectile_mask(2, true) == (1 | 2 | 16), "floors: untargeted tracking shot respects launch cover")
+	t.check(Floors.projectile_mask(1, true, 3) == (1 | 2 | 8 | 32),
+		"floors: tracking shot respects endpoint cover and arcs over the middle")
+	t.check(Floors.projectile_mask(1, true, 3, true) == (1 | 2),
+		"floors: explicit cover piercing remains boundary-only")
 	t.check(Floors.los_mask(3) == (1 | 2 | 32), "floors: LoS blocks on own-floor statics")
 
 func test_same_floor_duck_typing() -> void:

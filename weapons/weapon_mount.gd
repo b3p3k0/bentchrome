@@ -136,6 +136,7 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	var tgt: Node2D = null
 	if tracking:
 		tgt = Targeting.nearest_other(origin, shooter, acquisition_radius)
+	var target_floor := Floors.floor_of(tgt)
 	for i in pellets:
 		var dir := direction
 		if pellets > 1:
@@ -147,14 +148,11 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 			else projectile_scene.instantiate()) as Projectile
 		p.modulate = projectile_tint
 		p.hit_sfx = &"hit_mg" if heat_per_shot > 0.0 else &"hit_weapon"
-		if pierces_cover:
-			p.collision_mask &= ~4  # drop the obstacle bit — flies through cover
-		if shooter_floor >= 1:
-			# Floor levels: straight shots live entirely on the shooter's floor
-			# (own-floor cover blocks, cross-floor cars are never even signaled);
-			# tracking shots arc over floor statics and may hit any floor. This
-			# override subsumes pierces_cover — every piercing weapon tracks.
-			p.collision_mask = Floors.projectile_mask(shooter_floor, tracking)
+		# One shared mask path keeps legacy, straight, tracking, and explicit
+		# cover-piercing semantics aligned. Tracking shots arc over intermediate
+		# terraces while cover on the launch and locked-target floors can stop them.
+		p.collision_mask = Floors.projectile_mask(shooter_floor, tracking,
+			target_floor, pierces_cover)
 		scene.add_child(p)
 		p.setup(origin, dir, projectile_speed, damage, projectile_lifetime, shooter, deg_to_rad(turn_rate_deg), tgt)
 		p.on_hit_effects = on_hit_effects
