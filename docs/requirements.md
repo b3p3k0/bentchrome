@@ -6,14 +6,16 @@ This document condenses the master design specs into quick-reference points we c
 - Speedy, destructive vehicular combat with free-angle arcade driving (inertia, drift, surface-sensitive handling; vehicles drawn as procedural per-car bodies quantized to 16 compass steps), ramps, pits, and multiple surface types that affect traction.
 - Distinct vehicle silhouettes and handling; each car has machine guns (infinite), a finite primary weapon, and an auto-recharging special.
 - Arena structure that rewards scavenging, environmental destruction, and short-term improvisation under pressure.
+- Regular campaign/MP arena contract: `docs/arena_field_manual.md` (machine floor in `levels/arena_contract.gd`).
 
-## Level Progression Targets
-1. **Arena (Small)** – tutorial, 1 enemy, compact onboarding.
-2. **Freeway (Medium)** – 3 enemies, multi-tiered interchanges.
-3. **Suburbs (Medium)** – 5 enemies, flat/destructible suburbia.
-4. **Junkyard (Small+)** – single mini-boss, debris hazards.
-5. **Downtown (Large)** – 7 enemies, landmark-rich city hub.
-6. **Central Park (Boss)** – confined boss arena continuing Downtown’s topology.
+## Regular Arena Targets
+- Minimum four fielded cars, including boss arenas' underlying MP capacity.
+- Small / medium / large = 4 / 5–7 / 7–8 target cars.
+- Gross interior budget ≥1,600,000 px² per target car; short side ≥2048px.
+- One authored scene serves campaign and LAN; Buzzard Run is the specialty exception.
+- Depot and Coliseum are named temporary MP exceptions until neutral four-plus spawn data is separated from their boss actors.
+- Every grade slows ascent and assists descent; surface terrain still composes. Ordinary pull =120 px/s²; Coliseum stairs retain 170 + row bumps.
+- Four cardinal grades plus four triangular corner grades are the standard eight-sided hill approximation; solid top-side gaps use a two-floor triangular chamfer.
 
 ## Enemy & AI Variety
 - Archetypes: aggressor, ambusher, opportunist — a blendable weight mix `Vector3(aggressor, ambusher, opportunist)` so pure types and hybrids share one system; plus tougher mini-boss/boss variants.
