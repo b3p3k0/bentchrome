@@ -13,6 +13,7 @@ var tint := Color(0.8, 0.3, 0.2)   # debris color — set to the car's paint job
 var size_scale := 1.0              # 0.6 for crates, 1.0 for cars
 var allow_camera_shake := true     # false for screen-space HUD confirmations
 var allow_night_light := true      # CanvasLayer bursts must not grow world bloom
+var ring_only := false             # HUD chip-hit cue: no core flash, debris, shake, or bloom
 
 const NIGHT_LIGHT_ENERGY := 1.6    # bloom strength in a darkened arena
 
@@ -20,35 +21,36 @@ var _t := 0.0
 var _light: PointLight2D = null
 
 func _ready() -> void:
-	var debris := CPUParticles2D.new()
-	debris.one_shot = true
-	debris.emitting = true
-	debris.amount = 26
-	debris.lifetime = 0.6
-	debris.explosiveness = 1.0
-	debris.spread = 180.0
-	debris.initial_velocity_min = 180.0 * size_scale
-	debris.initial_velocity_max = 420.0 * size_scale
-	debris.damping_min = 200.0
-	debris.damping_max = 400.0
-	debris.scale_amount_min = 2.0
-	debris.scale_amount_max = 5.0
-	debris.gravity = Vector2.ZERO
-	debris.color = tint
-	add_child(debris)
+	if not ring_only:
+		var debris := CPUParticles2D.new()
+		debris.one_shot = true
+		debris.emitting = true
+		debris.amount = 26
+		debris.lifetime = 0.6
+		debris.explosiveness = 1.0
+		debris.spread = 180.0
+		debris.initial_velocity_min = 180.0 * size_scale
+		debris.initial_velocity_max = 420.0 * size_scale
+		debris.damping_min = 200.0
+		debris.damping_max = 400.0
+		debris.scale_amount_min = 2.0
+		debris.scale_amount_max = 5.0
+		debris.gravity = Vector2.ZERO
+		debris.color = tint
+		add_child(debris)
 	# The VIEWER's camera shakes (local_player group; "player" fallback keeps
 	# unmarked scenes working). Inline — this file stays dependency-free.
 	var player := get_tree().get_first_node_in_group(&"local_player")
 	if player == null:
 		player = get_tree().get_first_node_in_group(&"player")
-	if allow_camera_shake and player is Node2D and player.has_method(&"add_shake"):
+	if not ring_only and allow_camera_shake and player is Node2D and player.has_method(&"add_shake"):
 		var d: float = global_position.distance_to(player.global_position)
 		if d < SHAKE_RANGE:
 			player.add_shake(7.0 * size_scale * (1.0 - d / SHAKE_RANGE))
 	# In a night arena (group marker, duck-typed) the blast BLOOMS: a light
 	# whose energy dies with the flash. Absent the marker this costs nothing —
 	# and this file stays dependency-free, so the texture is built inline.
-	if allow_night_light and get_tree().get_first_node_in_group(&"night_arena") != null:
+	if not ring_only and allow_night_light and get_tree().get_first_node_in_group(&"night_arena") != null:
 		var grad := Gradient.new()
 		grad.set_color(0, Color(1, 1, 1, 1))
 		grad.set_color(1, Color(1, 1, 1, 0))
@@ -80,5 +82,5 @@ func _draw() -> void:
 	var eased := 1.0 - (1.0 - f) * (1.0 - f)
 	var radius := lerpf(8.0, 90.0, eased) * size_scale
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 32, Color(RING_COLOR, 1.0 - f), 2.0 + 6.0 * (1.0 - f))
-	if f < 0.25:
+	if not ring_only and f < 0.25:
 		draw_circle(Vector2.ZERO, lerpf(26.0, 4.0, f / 0.25) * size_scale, Color(FLASH_COLOR, 1.0 - f / 0.25))

@@ -113,14 +113,35 @@ func test_personal_hit_burst_filters_and_rate_limits() -> void:
 			"hit cue: explosion reuses the small HUD scale")
 		t.check(not burst.allow_camera_shake and not burst.allow_night_light,
 			"hit cue: screen-space explosion cannot shake or bloom the world")
+		t.check(burst.ring_only, "hit cue: nonfatal confirmation uses outer ring only")
+		var debris := false
+		for child in burst.get_children():
+			if child is CPUParticles2D:
+				debris = true
+		t.check(not debris, "hit cue: nonfatal confirmation creates no debris")
 	var before := tracker.get_child_count()
 	enemy.present_hit(viewer)
 	t.check(tracker.get_child_count() == before, "hit cue: rapid repeats are rate-limited")
+	# Fatal feedback must survive that same cooldown and restore the complete
+	# miniature explosion; Health has already written hp=0 when combat_hit fires.
+	enemy.hp = 0.0
+	enemy.present_hit(viewer)
+	var fatal = tracker.get_node_or_null("FatalHitBurst")
+	t.check(fatal != null and not fatal.ring_only,
+		"hit cue: fatal tracked hit bypasses cooldown with full burst")
+	var fatal_debris := false
+	if fatal:
+		for child in fatal.get_children():
+			if child is CPUParticles2D:
+				fatal_debris = true
+	t.check(fatal_debris, "hit cue: fatal confirmation keeps debris scatter")
+	enemy.hp = 100.0
 	enemy.position = TrackerScript.PLAY_RECT.get_center()
 	tracker._process(0.0)
 	tracker._last_burst_ms.clear()
+	var before_onscreen := tracker.get_child_count()
 	enemy.present_hit(viewer)
-	t.check(tracker.get_child_count() == before, "hit cue: onscreen victim gets no edge burst")
+	t.check(tracker.get_child_count() == before_onscreen, "hit cue: onscreen victim gets no edge burst")
 	t.root.remove_child(tracker)
 	t.root.remove_child(enemy)
 	t.root.remove_child(other)

@@ -107,17 +107,19 @@ func _on_combat_hit(attacker: Node2D, victim: Node2D) -> void:
 		return
 	var id := victim.get_instance_id()
 	var now := Time.get_ticks_msec()
-	if now - int(_last_burst_ms.get(id, -HIT_BURST_COOLDOWN_MS)) < HIT_BURST_COOLDOWN_MS:
+	var fatal: bool = victim.has_method(&"get_hp") and float(victim.call(&"get_hp")) <= 0.0
+	if not fatal and now - int(_last_burst_ms.get(id, -HIT_BURST_COOLDOWN_MS)) < HIT_BURST_COOLDOWN_MS:
 		return
 	_last_burst_ms[id] = now
 	var boom := ExplosionScene.instantiate()
-	boom.name = "HitBurst"
+	boom.name = "FatalHitBurst" if fatal else "HitBurst"
 	boom.position = tracked_position(victim)
 	var paint: Variant = victim.get("body_color")
 	boom.tint = paint if paint is Color else Color.WHITE
 	boom.size_scale = HIT_BURST_SCALE
 	boom.allow_camera_shake = false
 	boom.allow_night_light = false
+	boom.ring_only = not fatal
 	add_child(boom)
 
 static func world_to_screen(canvas: Transform2D, world: Vector2) -> Vector2:
