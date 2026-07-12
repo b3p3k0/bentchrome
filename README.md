@@ -17,10 +17,10 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 ## Getting Started & Controls
 
-The game starts with a splash screen offering Start 1P to enter character selection, Story to view background lore, or Settings. The story screen shows game background with 'Press any key to return'. Settings covers zoom depth, screen shake, a campaign start-level picker for practice runs, and the DEVGOD/developer toggles for playtesting — choices persist between sessions.
+The game starts with a splash screen offering Single Player, Multiplayer, Story, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD and the campaign start-level picker. Those subordinate choices stay remembered while the breaker is off, but cannot affect a run until it is switched back on. Choices persist between sessions.
 
 ### Pick Your License
-Start 1P sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:
+Single Player sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:
 - **LEARNER'S PERMIT** — soft hits, lazy trigger fingers, bosses that let you breathe. The Rustbelt, with training wheels.
 - **ROAD RAGING COMMUTER** — they mean it out there, but you'll get a word in edgewise.
 - **REVOKED LICENSE** — the ride as intended. Full damage, full cadence, bosses off the leash.

@@ -3,6 +3,7 @@ extends RefCounted
 ## bad-file tolerance, and reset. Never touches Kevin's real settings.json.
 
 const TMP := "user://_test_settings.json"
+const SettingsScene := preload("res://ui/settings.tscn")
 
 var t
 
@@ -69,6 +70,56 @@ func test_developer_mode_gates_preserved_options() -> void:
 	gs.dev_mode = keep_dev
 	gs.devgod = keep_god
 	gs.start_level_index = keep_level
+
+func test_developer_options_menu_contract() -> void:
+	var gs := _gs()
+	var keep_dev: bool = gs.dev_mode
+	var keep_god: bool = gs.devgod
+	var keep_level: int = gs.start_level_index
+	var screen = SettingsScene.instantiate()
+	t.root.add_child(screen)
+	var main_names: Array[String] = []
+	for row in screen._rows:
+		main_names.append(String(row.name))
+	t.check(main_names == ["ZOOM DEPTH", "SCREEN SHAKE", "DEVELOPER OPTIONS",
+		"RESET TO DEFAULTS", "BACK"], "settings menu: developer controls collapse to one entry")
+	var dev_names: Array[String] = []
+	for row in screen._dev_rows:
+		dev_names.append(String(row.name))
+	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "BACK"],
+		"developer dialog: master, subordinate options, and back are present")
+	t.check(not bool(screen._rows[2].persist) and not bool(screen._dev_rows[3].persist),
+		"developer dialog: opening and closing are non-persisting navigation")
+
+	gs.dev_mode = false
+	gs.devgod = true
+	gs.start_level_index = 3
+	screen._adj_devgod(1)
+	screen._adj_level(1)
+	t.check(gs.devgod and gs.start_level_index == 3,
+		"developer dialog: locked child adjustments preserve remembered values")
+	screen._dev_index = 0
+	screen._step_dev(1)
+	t.check(screen._dev_index == 3, "developer dialog: navigation skips locked children")
+	gs.dev_mode = true
+	screen._dev_index = 0
+	screen._step_dev(1)
+	t.check(screen._dev_index == 1, "developer dialog: powered children rejoin navigation")
+	screen._open_dev_dialog()
+	t.check(screen._dev_dialog != null, "developer dialog: entry opens an in-screen modal")
+	screen._close_dev_dialog()
+	t.check(screen._dev_dialog == null, "developer dialog: back closes only the modal")
+	var title_script: String = FileAccess.get_file_as_string("res://ui/title.gd")
+	var title_scene: String = FileAccess.get_file_as_string("res://ui/title.tscn")
+	t.check(title_script.contains('const ENTRY_NAMES := ["SINGLE PLAYER"')
+		and title_scene.contains('text = "SINGLE PLAYER"'),
+		"title menu: runtime label and authored fallback carry the full name")
+
+	gs.dev_mode = keep_dev
+	gs.devgod = keep_god
+	gs.start_level_index = keep_level
+	t.root.remove_child(screen)
+	screen.free()
 
 func test_devgod_health_blocks_damage_not_pits() -> void:
 	var h = preload("res://vehicles/health.gd").new()

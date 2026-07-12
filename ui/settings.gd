@@ -1,13 +1,15 @@
 extends Control
 ## Settings screen (title menu -> SETTINGS). Keyboard-driven rows: up/down
 ## selects, left/right adjusts (Enter also nudges), ESC returns to the title.
-## Every change persists immediately via GameState.save_settings().
+## Developer-only settings live behind an in-screen master-breaker dialog.
+## Every actual setting change persists immediately via GameState.save_settings().
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const ALIVE_TEXT := Color(0.8, 0.82, 0.86)
 const WARN := Color(1.0, 0.35, 0.3)
+const LOCKED_TEXT := Color(0.32, 0.34, 0.37)
 
 const ZOOM_MIN := 0.45
 const ZOOM_MAX := 0.72
@@ -17,19 +19,31 @@ var _index := 0
 var _rows: Array = []  # {name, adjust: Callable(dir), value: Callable() -> [text, color]}
 var _name_labels: Array = []
 var _value_labels: Array = []
+var _dev_dialog: Control
+var _dev_index := 0
+var _dev_rows: Array = []
+var _dev_name_labels: Array = []
+var _dev_value_labels: Array = []
 
 @onready var _gs: Node = get_node(^"/root/GameState")
 @onready var _flow: Node = get_node(^"/root/SceneFlow")
 
 func _ready() -> void:
 	_rows = [
-		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
 		{"name": "ZOOM DEPTH", "adjust": _adj_zoom, "value": _val_zoom},
-		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
 		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
+		{"name": "DEVELOPER OPTIONS", "adjust": _adj_dev_options, "value": _val_open,
+			"persist": false},
+		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
+			"persist": false},
+		{"name": "BACK", "adjust": _adj_back, "value": _val_blank, "persist": false},
+	]
+	_dev_rows = [
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
-		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank},
-		{"name": "BACK", "adjust": _adj_back, "value": _val_blank},
+		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
+		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
+		{"name": "BACK", "adjust": _adj_close_dev, "value": _val_blank,
+			"persist": false},
 	]
 	_build_ui()
 	_refresh()
@@ -37,6 +51,8 @@ func _ready() -> void:
 # --- row behaviors -----------------------------------------------------------
 
 func _adj_devgod(_d: int) -> void:
+	if not _gs.dev_mode:
+		return
 	_gs.devgod = not _gs.devgod
 
 func _val_devgod() -> Array:
@@ -49,6 +65,8 @@ func _val_zoom() -> Array:
 	return ["%.2f  %s" % [_gs.zoom_combat, _bar(_gs.zoom_combat, ZOOM_MIN, ZOOM_MAX)], DIM_TEXT]
 
 func _adj_level(d: int) -> void:
+	if not _gs.dev_mode:
+		return
 	_gs.start_level_index = wrapi(_gs.start_level_index + (d if d != 0 else 1), 0, _flow.CAMPAIGN.size())
 
 func _val_level() -> Array:
@@ -59,6 +77,12 @@ func _adj_shake(_d: int) -> void:
 
 func _val_shake() -> Array:
 	return ["ON" if _gs.screen_shake else "OFF", DIM_TEXT]
+
+func _adj_dev_options(_d: int) -> void:
+	_open_dev_dialog()
+
+func _val_open() -> Array:
+	return ["OPEN", DIM_TEXT]
 
 func _adj_dev(_d: int) -> void:
 	_gs.dev_mode = not _gs.dev_mode
@@ -73,6 +97,9 @@ func _adj_reset(_d: int) -> void:
 
 func _adj_back(_d: int) -> void:
 	_flow.to_title()
+
+func _adj_close_dev(_d: int) -> void:
+	_close_dev_dialog()
 
 func _val_blank() -> Array:
 	return ["", DIM_TEXT]
@@ -91,6 +118,9 @@ func _bar(v: float, lo: float, hi: float) -> String:
 # --- input / paint -----------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _dev_dialog:
+		_dev_input(event)
+		return
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		_flow.to_title()
@@ -110,8 +140,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	_refresh()
 
 func _adjust(dir: int) -> void:
-	(_rows[_index].adjust as Callable).call(dir)
-	_gs.save_settings()
+	var row: Dictionary = _rows[_index]
+	(row.adjust as Callable).call(dir)
+	if bool(row.get("persist", true)):
+		_gs.save_settings()
 	_refresh()
 
 func _refresh() -> void:
@@ -178,3 +210,129 @@ func _build_ui() -> void:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
+
+# --- developer options dialog -----------------------------------------------
+
+func _dev_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"pause"):
+		get_viewport().set_input_as_handled()
+		_close_dev_dialog()
+		return
+	if event.is_action_pressed(&"move_up"):
+		_step_dev(-1)
+	elif event.is_action_pressed(&"move_down"):
+		_step_dev(1)
+	elif event.is_action_pressed(&"select_prev"):
+		_adjust_dev(-1)
+		return
+	elif event.is_action_pressed(&"select_next") or event.is_action_pressed(&"select_confirm"):
+		_adjust_dev(1)
+		return
+	else:
+		return
+	_refresh_dev()
+
+func _step_dev(dir: int) -> void:
+	var candidate: int = _dev_index
+	for _i in _dev_rows.size():
+		candidate = wrapi(candidate + dir, 0, _dev_rows.size())
+		if _dev_row_enabled(candidate):
+			_dev_index = candidate
+			return
+
+func _dev_row_enabled(index: int) -> bool:
+	return index == 0 or index == _dev_rows.size() - 1 or _gs.dev_mode
+
+func _adjust_dev(dir: int) -> void:
+	if not _dev_row_enabled(_dev_index):
+		return
+	var row: Dictionary = _dev_rows[_dev_index]
+	(row.adjust as Callable).call(dir)
+	if bool(row.get("persist", true)):
+		_gs.save_settings()
+	_refresh_dev()
+
+func _open_dev_dialog() -> void:
+	if _dev_dialog:
+		return
+	_dev_index = 0
+	_dev_dialog = Control.new()
+	_dev_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_dev_dialog)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dev_dialog.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dev_dialog.add_child(center)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_BG
+	style.border_color = AMBER
+	for side in ["left", "right", "top", "bottom"]:
+		style.set("border_width_" + side, 6)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.custom_minimum_size = Vector2(620, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 28)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "DEVELOPER OPTIONS"
+	title.add_theme_font_size_override("font_size", 32)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = AMBER
+	vbox.add_child(title)
+
+	for row in _dev_rows:
+		var hbox := HBoxContainer.new()
+		var name_lbl := Label.new()
+		name_lbl.text = row.name
+		name_lbl.add_theme_font_size_override("font_size", 22)
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(name_lbl)
+		var value_lbl := Label.new()
+		value_lbl.add_theme_font_size_override("font_size", 22)
+		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		hbox.add_child(value_lbl)
+		vbox.add_child(hbox)
+		_dev_name_labels.append(name_lbl)
+		_dev_value_labels.append(value_lbl)
+
+	var hint := Label.new()
+	hint.text = "DEVELOPER MODE powers every option below it    ESC back"
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.modulate = DIM_TEXT
+	vbox.add_child(hint)
+	_refresh_dev()
+
+func _close_dev_dialog() -> void:
+	if not _dev_dialog:
+		return
+	_dev_dialog.queue_free()
+	_dev_dialog = null
+	_dev_name_labels.clear()
+	_dev_value_labels.clear()
+	_refresh()
+
+func _refresh_dev() -> void:
+	if not _dev_dialog:
+		return
+	for i in _dev_rows.size():
+		var enabled := _dev_row_enabled(i)
+		var selected := enabled and i == _dev_index
+		_dev_name_labels[i].modulate = AMBER if selected else (ALIVE_TEXT if enabled else LOCKED_TEXT)
+		var v: Array = (_dev_rows[i].value as Callable).call()
+		_dev_value_labels[i].text = v[0]
+		_dev_value_labels[i].modulate = v[1] if enabled else LOCKED_TEXT

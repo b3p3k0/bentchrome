@@ -239,7 +239,7 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | Signature arena state | protocol 8 repeated rows | u16 stable ID + flags + HP fraction + phase timer + 8-actor target mask; host authority; dead props persist as hidden/noncolliding tombstones |
 | Driveable hill | one root / one skin / eight faces | `DriveableHill`: compact pull 180; footprint = summit size + grade length; corner leg = grade length ÷ 2; substrate-reset + terrain skin; NW relief 0.22, projection 1.55, slope darkening 0.06, crest 0.10/18px, foot 0.12/20px, shadow (12,14)/0.20; all connector pairs generated; seam props carry both floor bits |
 | Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Goliath's Arena buttress convention |
-| DEVGOD (settings) | immune, ∞ ammo, all-seeing radar | pits/deep water still kill but the life is comped; radar range gate off |
+| DEVGOD (Developer Options) | immune, ∞ ammo, all-seeing radar | Developer Mode master-gates every effect while preserving the stored toggle; pits/deep water still kill but the life is comped; radar range gate off |
 | Jump-mine pop | vz 450 | ~0.7s air |
 | Mine sensing | land 52px / jump 26px | land paint remains 14px; only the damaging mine has proximity reach |
 | Lives / respawn | 3 lives; 1.6s delay, 2s shield | shield also fires at level start; full-wipe on 0 |
@@ -252,7 +252,7 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 
 ## Difficulty (license classes)
 
-Source: `game/difficulty.gd` — ONE static table, every value a multiplier on the hard baseline (HARD row all ×1.0 by definition, locked by `tests/test_difficulty.gd`). Tier is run state: picked at the DMV screen after title START, fixed until Quit to Title (end-screen Restart keeps it). Read at use sites only — no declared const/static ever moves.
+Source: `game/difficulty.gd` — ONE static table, every value a multiplier on the hard baseline (HARD row all ×1.0 by definition, locked by `tests/test_difficulty.gd`). Tier is run state: picked at the DMV screen after title SINGLE PLAYER, fixed until Quit to Title (end-screen Restart keeps it). Read at use sites only — no declared const/static ever moves.
 
 | Knob | EASY (Learner's Permit) | MEDIUM (Road Raging Commuter) | HARD (Revoked License) | Read at |
 |---|---|---|---|---|
@@ -391,6 +391,8 @@ Sources: `vehicles/goliath/*.gd` static vars, `data/vehicles/goliath.tres` / `go
 | Fireworks | every 0.9s, 30% double | stadium.gd FIREWORK_* | win-card backdrop, 5 shell colors |
 | Victory lap | throttle 0.8, arrive 260 | victory_lap_driver LAP_* | god-moded; end_screen.win_keeps_rolling |
 | Quit confirm | ESC on title | ui/title.gd | "Awww, giving up so soon?" — NO default |
+| Single-player entry | SINGLE PLAYER | ui/title.gd | unchanged route: difficulty select → garage → campaign |
+| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Developer Mode master-gates preserved DEVGOD/start-level choices; locked rows stay visible and navigation skips them |
 
 ## Netplay (LAN multiplayer knobs)
 

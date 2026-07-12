@@ -1,5 +1,5 @@
 extends Control
-## Title screen: splash art + START/STORY menu. START -> difficulty select;
+## Title screen: splash art + SINGLE PLAYER/STORY menu. SINGLE PLAYER -> difficulty select;
 ## STORY -> full-screen story art (placeholder copy until the real text lands).
 ## ESC pops the quit confirm ("Awww, giving up so soon?") — NO is the default;
 ## quitting takes intent.
@@ -19,7 +19,7 @@ var _quit: Control
 var _quit_index := 1  # NO
 var _quit_entries: Array[Label] = []
 
-const ENTRY_NAMES := ["START", "MULTIPLAYER", "STORY", "SETTINGS"]
+const ENTRY_NAMES := ["SINGLE PLAYER", "MULTIPLAYER", "STORY", "SETTINGS"]
 
 @onready var _entries: Array[Label] = [$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Settings]
 
