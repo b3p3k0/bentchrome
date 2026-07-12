@@ -11,6 +11,7 @@ const EDGE_STEP := 96.0      # jitter a point roughly every this many px
 const EDGE_JITTER := 10.0    # max perpendicular wobble
 
 @export var terrain_type: StringName = &"road"
+@export var terrain_priority := 0  # overlaps choose highest; ramps reserve 100
 
 func _ready() -> void:
 	var vis := get_node_or_null(^"Vis") as Polygon2D

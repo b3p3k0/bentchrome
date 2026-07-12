@@ -24,6 +24,8 @@ const HILITE_A := 0.14  # extra light at the high end
 const SHADOW_A := 0.16  # extra dark at the low end
 const RAIL_W := 12.0
 const ROW_DEPTH := 44.0  # tier cadence for stairs — matches stadium seating rows
+const DEFAULT_DOWNHILL_PULL := 120.0
+const TERRAIN_PRIORITY := 100
 
 static var STAIR_SHAKE := 2.2       # per-tier camera kick for the player
 static var STAIR_SPEED_NICK := 0.9  # climbing: each tier eats a bite of speed;
@@ -42,9 +44,12 @@ static var STAIR_SPEED_NICK := 0.9  # climbing: each tier eats a bite of speed;
 @export var rails := true  # false = no built side rails; the level authors its
 	# own guards (stadium slope ends wear light DESTRUCTIBLE guardrails so a
 	# beached rig can smash out instead of pinning on indestructible geometry)
-@export var downhill_pull := 0.0  # px/s² bias along local +y (toward the low
-	# end): climbing fights it, descending rides it. Environment-side force —
-	# controller gains and the test-locked feel bands stay untouched. 0 = off.
+@export_enum("road", "grass", "snow", "dirt", "ice", "water") \
+	var terrain_type := "road"
+@export_range(1.0, 600.0, 1.0) var downhill_pull := DEFAULT_DOWNHILL_PULL
+	# px/s² bias along local +y (toward the low end): climbing fights it,
+	# descending rides it. Every grade has weight; terrain feel composes through
+	# the high-priority local TerrainZone built below.
 @export var stairs := false  # tiered seating: a light per-tier camera bump for
 	# the player while crossing rows — the grade is stairs, not tarmac
 
@@ -59,6 +64,7 @@ func _ready() -> void:
 		zone.size = Vector2(size.x, size.y * 0.5)
 		zone.position = Vector2(0.0, cfg.y)
 		add_child(zone)
+	_add_terrain_override()
 	if rails:
 		var rail_bits: int = 4 | Floors.floor_bit(low_floor) | Floors.floor_bit(high_floor)
 		for s in [-1.0, 1.0]:
@@ -73,7 +79,10 @@ func _ready() -> void:
 			rail.add_child(col)
 			add_child(rail)
 	if downhill_pull > 0.0 or stairs:
+		var mechanics := Node2D.new()
+		mechanics.name = "GradeMechanics"
 		_grade_area = Area2D.new()
+		_grade_area.name = "Area"
 		_grade_area.collision_layer = 0
 		_grade_area.collision_mask = 1  # cars always keep the ground bit
 		var gcol := CollisionShape2D.new()
@@ -81,7 +90,8 @@ func _ready() -> void:
 		gshape.size = size
 		gcol.shape = gshape
 		_grade_area.add_child(gcol)
-		add_child(_grade_area)
+		mechanics.add_child(_grade_area)
+		add_child(mechanics)
 		_grade_area.body_exited.connect(_on_grade_exit)
 	set_physics_process(_grade_area != null)
 	queue_redraw()
@@ -89,14 +99,14 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if _grade_area == null:
 		return
-	var downhill := Vector2.DOWN.rotated(global_rotation)  # local +y = low end
+	var downhill := downhill_vector(global_rotation)  # local +y = low end
 	for body in _grade_area.get_overlapping_bodies():
 		if not (body is CharacterBody2D):
 			continue
 		if body.get("height") != 0.0:
 			continue  # airborne cars aren't on the grade
 		if downhill_pull > 0.0:
-			body.velocity += downhill * downhill_pull * delta
+			body.velocity += grade_impulse(global_rotation, downhill_pull, delta)
 		if stairs:
 			_tier_tick(body)
 
@@ -116,6 +126,30 @@ func _tier_tick(body: CharacterBody2D) -> void:
 
 func _on_grade_exit(body: Node) -> void:
 	_tier_bucket.erase(body.get_instance_id())
+
+func _add_terrain_override() -> void:
+	var holder := Node2D.new()
+	holder.name = "TerrainOverride"
+	var zone := TerrainZone.new()
+	zone.name = "Terrain"
+	zone.terrain_type = StringName(terrain_type)
+	zone.terrain_priority = TERRAIN_PRIORITY
+	zone.collision_layer = 128
+	zone.collision_mask = 0
+	var col := CollisionShape2D.new()
+	col.name = "Col"
+	var shape := RectangleShape2D.new()
+	shape.size = size
+	col.shape = shape
+	zone.add_child(col)
+	holder.add_child(zone)
+	add_child(holder)
+
+static func downhill_vector(world_rotation: float) -> Vector2:
+	return Vector2.DOWN.rotated(world_rotation)
+
+static func grade_impulse(world_rotation: float, pull: float, delta: float) -> Vector2:
+	return downhill_vector(world_rotation) * pull * delta
 
 func _draw() -> void:
 	var half := size * 0.5

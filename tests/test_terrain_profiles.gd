@@ -126,6 +126,30 @@ func test_dashboard_reports_current_effective_surface() -> void:
 		and text.contains("top 1.08") and text.contains("steer 1.15"),
 		"terrain profile: dashboard exposes current effective values")
 
+func test_terrain_sensor_priority_and_legacy_entry_order() -> void:
+	var sensor := TerrainSensor.new()
+	var grass := TerrainZone.new()
+	grass.terrain_type = &"grass"
+	var snow := TerrainZone.new()
+	snow.terrain_type = &"snow"
+	var ramp_road := TerrainZone.new()
+	ramp_road.terrain_type = &"road"
+	ramp_road.terrain_priority = Ramp.TERRAIN_PRIORITY
+	sensor._on_area_entered(grass)
+	sensor._on_area_entered(snow)
+	t.check(sensor.current_terrain == &"snow",
+		"terrain sensor: latest legacy zone wins an equal-priority overlap")
+	sensor._on_area_entered(ramp_road)
+	t.check(sensor.current_terrain == &"road",
+		"terrain sensor: ramp-local asphalt overrides broad terrain")
+	sensor._on_area_exited(ramp_road)
+	t.check(sensor.current_terrain == &"snow",
+		"terrain sensor: leaving a ramp restores the latest broad surface")
+	sensor.free()
+	grass.free()
+	snow.free()
+	ramp_road.free()
+
 func test_cricket_dash_damage_is_authored_as_a_generic_terrain_factor() -> void:
 	var cricket: VehicleStats = load("res://data/vehicles/cricket.tres")
 	t.check_approx(cricket.terrain_factor(&"dirt", &"dash_damage"), 1.15,

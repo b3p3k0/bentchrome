@@ -58,6 +58,30 @@ func test_grade_bias_reads_downhill() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_grade_defaults_and_terrain_override() -> void:
+	var ramp := Ramp.new()
+	t.check_approx(ramp.downhill_pull, 120.0, "grade: every ordinary ramp has weight")
+	t.check(ramp.terrain_type == "road", "grade: asphalt/road is the default surface")
+	var impulse := Ramp.grade_impulse(0.0, ramp.downhill_pull, 1.0)
+	t.check(absf(impulse.x) < 0.001 and is_equal_approx(impulse.y, 120.0),
+		"grade: lateral travel receives only a downhill-axis impulse")
+	t.root.add_child(ramp)
+	var terrain := ramp.get_node_or_null(^"TerrainOverride/Terrain") as TerrainZone
+	t.check(terrain != null and terrain.terrain_priority == Ramp.TERRAIN_PRIORITY
+			and terrain.terrain_type == &"road",
+		"grade: local terrain deterministically owns the slope footprint")
+	t.root.remove_child(ramp)
+	ramp.free()
+	var stadium := (load("res://levels/stadium/stadium.tscn") as PackedScene).instantiate()
+	var stair_slopes := 0
+	for child in stadium.get_children():
+		if child is Ramp and child.stairs:
+			stair_slopes += 1
+			t.check_approx(child.downhill_pull, 170.0,
+				"grade: Coliseum stairs retain their authored pull")
+	t.check(stair_slopes == 4, "grade: all four Coliseum stair slopes are protected")
+	stadium.free()
+
 func test_stadium_structure() -> void:
 	var scene: PackedScene = load("res://levels/stadium/stadium.tscn")
 	var stadium: Node = scene.instantiate()
