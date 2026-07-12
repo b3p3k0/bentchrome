@@ -27,6 +27,8 @@ func test_all_pickup_families_share_surface_and_cue() -> void:
 			"pickup cue: collection surface is 36px")
 		t.check(cue != null and is_equal_approx(cue.radius, 36.0),
 			"pickup cue: ring follows the shared collection surface")
+		t.check(cue.z_index >= 0,
+			"pickup cue: ring shares the visible world layer instead of hiding under terrain")
 		t.check(cue.get_child_count() == 0,
 			"pickup cue: procedural ring carries no collision children")
 		t.root.remove_child(pickup)
@@ -42,10 +44,14 @@ func test_pink_ring_pulses_inside_small_bounds() -> void:
 		cue._process(TAU / PickupCue.PULSE_SPEED / 8.0)
 		radii.append(cue.current_radius())
 		alphas.append(cue.current_alpha())
-	t.check(radii.min() >= 34.5 and radii.max() <= 37.5,
+	t.check(radii.min() >= 34.0 and radii.max() <= 38.0,
 		"pickup cue: breathing radius stays subtle around the surface")
-	t.check(alphas.min() >= 0.35 and alphas.max() <= 0.5,
-		"pickup cue: breathing alpha remains soft and translucent")
+	t.check(alphas.min() >= 0.72 and alphas.max() <= 0.95,
+		"pickup cue: hot-pink stroke remains legible throughout its pulse")
+	t.check(PickupCue.UNDER_WIDTH == 7.0 and PickupCue.PINK_WIDTH == 4.0,
+		"pickup cue: contrast under-stroke and pink face keep authored widths")
+	t.check(PickupCue.PINK_WIDTH * 0.42 >= 1.68,
+		"pickup cue: overview zoom retains a visible pink stroke")
 	cue.free()
 
 func test_near_pass_collects_and_respawn_restores_whole_cue() -> void:
