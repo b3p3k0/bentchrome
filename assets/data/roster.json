@@ -5,7 +5,7 @@
       "car_name": "Bumper",
       "driver_name": "Chester J. Banks",
       "flavor": "Country-club rebel in a hot-pink land yacht. The Cadillac floats, then thuds when it lands. It is slow off the line yet cruises steady once moving. Steering is lazy but predictable. He weaponizes swagger and wide fenders.",
-      "special_weapon": "Blunt Blaze: a front cone of fire that widens with distance. Applies steady burn while the torch is held, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial.",
+      "special_weapon": "Blunt Blaze: a two-second front cone of fire that widens with distance, followed by a long recovery. Applies heavy burn while bathed, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial.",
       "stats": {
         "acceleration": 3,
         "top_speed": 6,
@@ -19,7 +19,7 @@
       },
       "portrait": "res://assets/img/bios/bumper.png",
       "special_ammo_cap": 2,
-      "special_recharge_seconds": 15.0,
+      "special_recharge_seconds": 90.0,
       "mass": 6
     },
     {
@@ -167,7 +167,7 @@
       "car_name": "Smoky",
       "driver_name": "Officer Richard Vepsh",
       "flavor": "A hard-nosed cop in a pursuit-tuned SUV. It jumps off the line and shrugs off fender benders. Mid pack at the top end and clumsy in tight chicanes. Built for ramming and zone control. Sirens on means mercy off.",
-      "special_weapon": "Taser: auto-locks within close range and channels continuous shock. Deals light damage per second and cripples the victim’s handling while in range. Sustains up to 20 seconds if the target cannot break away.",
+      "special_weapon": "Taser: auto-locks within close range for a two-second shock burst, then needs a long recovery. Deals moderate damage per second and cripples the victim’s handling while latched.",
       "stats": {
         "acceleration": 7,
         "top_speed": 6,
@@ -181,7 +181,7 @@
       },
       "portrait": "res://assets/img/bios/smoky.png",
 	  "special_ammo_cap": 3,
-	  "special_recharge_seconds": 8.0,
+	  "special_recharge_seconds": 90.0,
 	  "terrain_modifiers": {
 		"grass": {"accel": 1.0555555556, "top": 1.0555555556, "grip": 1.075},
 		"snow": {"accel": 1.0588235294, "top": 1.0444444444, "grip": 1.1777777778},

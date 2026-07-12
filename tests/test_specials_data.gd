@@ -34,8 +34,26 @@ func test_lackey_loadout() -> void:
 	t.check(stats.no_mines, "lackey: never touches mines")
 	t.check(stats.turret != null and stats.turret.kind == 0
 		and is_equal_approx(stats.turret.damage, 45.0), "lackey: turret slings power-class shots")
-	t.check(stats.special_ammo_cap == 2 and is_equal_approx(stats.special_recharge_seconds, 10.0),
-		"lackey: shared pool 2 charges / 10s")
+	t.check(stats.special_ammo_cap == 2 and is_equal_approx(stats.special_recharge_seconds, 120.0),
+		"lackey: shared pool 2 charges / 120s")
+
+func test_sustained_vehicle_charge_economy() -> void:
+	var bumper: VehicleStats = load("res://data/vehicles/bumper.tres")
+	var smoky: VehicleStats = load("res://data/vehicles/smoky.tres")
+	t.check(bumper.special_ammo_cap == 2 and is_equal_approx(bumper.special_recharge_seconds, 90.0),
+		"sustained economy: Bumper keeps 2 charges at 90s each")
+	t.check(smoky.special_ammo_cap == 3 and is_equal_approx(smoky.special_recharge_seconds, 90.0),
+		"sustained economy: Smoky keeps 3 charges at 90s each")
+	var file := FileAccess.open("res://assets/data/roster.json", FileAccess.READ)
+	var roster: Dictionary = JSON.parse_string(file.get_as_text())
+	file.close()
+	var authored := {}
+	for car in roster.characters:
+		if car.id in ["bumper", "smoky"]:
+			authored[car.id] = car
+	t.check(is_equal_approx(float(authored.bumper.special_recharge_seconds), 90.0)
+		and is_equal_approx(float(authored.smoky.special_recharge_seconds), 90.0),
+		"sustained economy: roster source and generated resources agree")
 
 func test_twin_barrel_chooses_by_context() -> void:
 	var container := Node2D.new()
@@ -73,7 +91,9 @@ func test_splat_effect_def() -> void:
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
 	t.check(not d.stub and d.kind == 4, "blaze: live FLAME column")
-	t.check_approx(d.cooldown, 2.0, "blaze: two-second post-fire lockout")
+	t.check_approx(d.active_duration, 2.0, "blaze: two-second active burst")
+	t.check_approx(d.cooldown, 15.0, "blaze: fifteen-second post-fire lockout")
+	t.check_approx(d.damage, 34.0, "blaze: middle-ground 34 dps")
 	var fx := _first_effect(d)
 	t.check(fx != null and fx.kind == &"burn", "blaze: burn on hit")
 	t.check_approx(fx.duration, 10.0, "blaze: 10s ignite")
@@ -93,7 +113,9 @@ func test_red_glare_def() -> void:
 func test_taser_def() -> void:
 	var d := _def("res://data/weapons/taser.tres")
 	t.check(not d.stub and d.kind == 1, "taser: live BEAM")
-	t.check_approx(d.cooldown, 2.0, "taser: two-second post-fire lockout")
+	t.check_approx(d.active_duration, 2.0, "taser: two-second active burst")
+	t.check_approx(d.cooldown, 15.0, "taser: fifteen-second post-fire lockout")
+	t.check_approx(d.damage, 18.0, "taser: middle-ground 18 dps")
 	t.check_approx(d.acquisition_radius, 400.0, "taser: doubled reach (break at 800 via hold factor)")
 
 func test_sustained_cooldown_starts_after_flame_finishes() -> void:
@@ -105,20 +127,20 @@ func test_sustained_cooldown_starts_after_flame_finishes() -> void:
 	sc.set_weapon(blaze)
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
 		"sustained cooldown: flame activation succeeds")
-	sc._physics_process(ControllerScript.FLAME_DURATION - 0.2)
+	sc._physics_process(blaze.active_duration - 0.2)
 	t.check_approx(sc.sustained_cooldown_remaining(), 0.0,
 		"sustained cooldown: firing duration pays none of the lockout")
 	sc._physics_process(0.21)
-	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+	t.check_approx(sc.sustained_cooldown_remaining(), 15.0,
 		"sustained cooldown: full clock arms when flame ends")
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
 		"sustained cooldown: immediate repeat is rejected")
-	sc._physics_process(1.9)
+	sc._physics_process(14.9)
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat stays locked before two seconds")
+		"sustained cooldown: repeat stays locked before fifteen seconds")
 	sc._physics_process(0.1)
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat opens exactly after two seconds")
+		"sustained cooldown: repeat opens exactly after fifteen seconds")
 	t.root.remove_child(shooter)
 	shooter.free()
 
@@ -140,15 +162,17 @@ func test_twin_sustained_barrels_share_early_end_lockout() -> void:
 	container.add_child(prey)
 	t.check(sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
 		"sustained cooldown: Lackey twin chooses and starts the beam")
+	t.check_approx(sc._beam_t, 2.0,
+		"sustained cooldown: data-authored beam is a true two-second burst")
 	sc._end_beam()  # LoS/range/target loss all converge on this early-end seam
-	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+	t.check_approx(sc.sustained_cooldown_remaining(), 15.0,
 		"sustained cooldown: interrupted beam starts a fresh full clock")
 	prey.position = Vector2(900, 0)  # context now chooses the flame barrel
 	t.check(not sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
 		"sustained cooldown: ending one twin locks the other")
-	sc._physics_process(2.0)
+	sc._physics_process(15.0)
 	t.check(sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
-		"sustained cooldown: shared twin gate reopens after two seconds")
+		"sustained cooldown: shared twin gate reopens after fifteen seconds")
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()

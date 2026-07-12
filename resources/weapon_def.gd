@@ -14,6 +14,7 @@ enum LaunchSide { FORWARD, REAR }
 @export var launch_side := LaunchSide.FORWARD  # projectile origin + initial direction
 @export var on_hit_effects: Array[StatusEffectSpec] = []  # applied to what a projectile hits
 @export var cooldown := 1.0             # seconds between uses (recharge)
+@export var active_duration := 0.0      # BEAM/FLAME runtime; 0 = controller fallback
 @export var damage := 25.0
 @export var projectile_speed := 650.0
 @export var projectile_lifetime := 3.0

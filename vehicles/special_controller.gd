@@ -10,7 +10,7 @@ extends Node
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
 
-const BEAM_DURATION := 4.0        # seconds a zap stays latched
+const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
 const BOLT_SEG := 45.0            # lightning: subdivide the bolt every ~this many px
@@ -23,7 +23,7 @@ const DASH_INVULN_T := 2.0        # invulnerability after connecting
 const DASH_SLOW := 0.5            # victim speed drain
 const DASH_SLOW_T := 2.0
 
-const FLAME_DURATION := 3.0       # one press = one fixed burst per ammo (2 cap / 15s recharge)
+const FLAME_DURATION := 3.0       # legacy fallback; current defs author active_duration
 								  # July 2026 balance: 5s + 30 dps read OP in playtest
 const FLAME_LENGTH := 300.0       # nose-forward reach
 const FLAME_WIDTH := 70.0         # column thickness
@@ -146,7 +146,7 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 		return false  # headless fixtures may not set one — same guard as the mount
 	_beam_def = def
 	_beam_target = tgt
-	_beam_t = BEAM_DURATION
+	_beam_t = _duration(def, BEAM_DURATION)
 	# Lightning rig: a wide faint glow line under a thin hot bolt, plus sparks
 	# crackling off the latch point. Points regenerate jagged every tick.
 	_beam_glow = Line2D.new()
@@ -370,7 +370,7 @@ func _flame(pressed: bool, def: WeaponDef) -> bool:
 	if not pressed or _flame_t > 0.0:
 		return false
 	_flame_def = def
-	_flame_t = FLAME_DURATION
+	_flame_t = _duration(def, FLAME_DURATION)
 	var vehicle := get_parent() as Node2D
 	var visual := vehicle.get_node_or_null("Visual") if vehicle else null
 	if visual:
@@ -456,6 +456,9 @@ func _end_flame(arm_cooldown := true) -> void:
 
 func sustained_cooldown_remaining() -> float:
 	return _sustained_cooldown_t
+
+func _duration(def: WeaponDef, fallback: float) -> float:
+	return def.active_duration if def and def.active_duration > 0.0 else fallback
 
 ## Toe Jam: arm a charge that replaces the next landed ram's speed-scaled
 ## damage with one heavy flat hit (def.damage). Smash something within
