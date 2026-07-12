@@ -6,6 +6,7 @@
       "driver_name": "Chester J. Banks",
       "flavor": "Country-club rebel in a hot-pink land yacht. The Cadillac floats, then thuds when it lands. It is slow off the line yet cruises steady once moving. Steering is lazy but predictable. He weaponizes swagger and wide fenders.",
       "special_weapon": "Blunt Blaze: a two-second front cone of fire that widens with distance, followed by a long recovery. Applies heavy burn while bathed, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial.",
+      "special_def": "blunt_blaze",
       "stats": {
         "acceleration": 3,
         "top_speed": 6,
@@ -18,6 +19,7 @@
         "accent": "#ffd4f0"
       },
       "portrait": "res://assets/img/bios/bumper.png",
+      "ai_archetype": "defender",
       "special_ammo_cap": 2,
       "special_recharge_seconds": 90.0,
       "mass": 6
@@ -28,6 +30,7 @@
       "driver_name": "Mae Hemm",
       "flavor": "A dirt-track prodigy with bubble-gum confidence. The bright green midget car rockets out of corners. It skitters at the edge of control on pavement. Fragile panels keep weight down but punish mistakes. She lives for straight-line charges and risky lines.",
       "special_weapon": "Leap: locks the nearest target in range, then full-throttle body-check. Ignores destructible cover and grants 2 seconds of brief invulnerability after impact. Massive hit and speed drain if it connects.",
+      "special_def": "leap",
       "stats": {
         "acceleration": 8,
         "top_speed": 8,
@@ -40,6 +43,7 @@
         "accent": "#0a8a2c"
       },
       "portrait": "res://assets/img/bios/cricket.png",
+      "ai_archetype": "aggressor",
 	  "special_ammo_cap": 1,
 	  "special_recharge_seconds": 10.0,
 	  "terrain_modifiers": {
@@ -54,6 +58,7 @@
       "driver_name": "Chad Duché",
       "flavor": "A pristine 1960s white sports car built for applause. It launches hard, carves clean arcs, and screams at the top end. Thin skin makes every mistake expensive. The driver smiles for cameras while hunting the win. Fame is fuel, and it burns fast.",
       "special_weapon": "Phantom Phire: a spectral missile that locks the nearest target anywhere on the map. Passes through cover and expires after 90 seconds if it fails to hit. Beatable only by outrunning and breaking line.",
+      "special_def": "phantom_phire",
       "stats": {
         "acceleration": 8,
         "top_speed": 9,
@@ -66,6 +71,7 @@
         "accent": "#d7e3ff"
       },
       "portrait": "res://assets/img/bios/ghost.png",
+      "ai_archetype": "aggressor",
       "mass": 3
     },
     {
@@ -74,6 +80,7 @@
       "driver_name": "Chuck and Vern",
       "flavor": "Two party-boy dropouts in a lifted monster. It wallows like a boat and hates hairpins. The frame is stout and happy to trade paint. Straight roads turn it mean; tight tracks punish it. Collisions are not accidents. They are a plan.",
       "special_weapon": "Toe Jam: triggers on collision when a charge is held. Replaces normal crash damage with a heavy, punishing hit. Best when ambushing around blind corners.",
+      "special_def": "toe_jam",
       "stats": {
         "acceleration": 5,
         "top_speed": 5,
@@ -86,6 +93,7 @@
         "accent": "#5212a4"
       },
       "portrait": "res://assets/img/bios/hammertoe.png",
+      "ai_archetype": "ambusher",
 	  "special_ammo_cap": 1,
 	  "special_recharge_seconds": 8.0,
 	  "terrain_modifiers": {
@@ -102,6 +110,7 @@
       "driver_name": "Kandy Kane",
       "flavor": "A sadistic clown queen wrapped in leather and laughter. Her battered ice cream truck lures crowds, then scatters them. She delights in chaos and close-quarters carnage. The rig is heavy and stubborn but inexorable once rolling. Expect brute control and sustained pressure over finesse.",
       "special_weapon": "Molotov Cocktail: a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Works best when pinning foes in tight alleys.",
+      "special_def": "molotov",
       "stats": {
         "acceleration": 5,
         "top_speed": 6,
@@ -114,6 +123,7 @@
         "accent": "#ff5a9d"
       },
       "portrait": "res://assets/img/bios/kandykane.png",
+      "ai_archetype": "mini_boss",
       "mass": 7
     },
     {
@@ -122,6 +132,7 @@
       "driver_name": "???",
       "flavor": "A roaring old-school Harley ridden by death in leather. The bike is viciously quick and dances through gaps. Armor is a rumor; every hit matters. The rider’s gaze never blinks. Miss him once and he is gone.",
       "special_weapon": "Scythe of the Damned: a straight-line, slightly slow, recharging projectile. Immense damage if it connects, no homing. Demands precise timing and lane control.",
+      "special_def": "scythe",
       "stats": {
         "acceleration": 8,
         "top_speed": 8,
@@ -134,6 +145,7 @@
         "accent": "#a60011"
       },
       "portrait": "res://assets/img/bios/mrghastly.png",
+      "ai_archetype": "aggressor",
       "mass": 1
     },
     {
@@ -142,6 +154,7 @@
       "driver_name": "Big Sarge",
       "flavor": "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes.",
       "special_weapon": "Red Glare: a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches.",
+      "special_def": "red_glare",
       "stats": {
         "acceleration": 3,
         "top_speed": 6,
@@ -154,6 +167,7 @@
         "accent": "#0d4020"
       },
 	  "portrait": "res://assets/img/bios/razorback.png",
+	  "ai_archetype": "defender",
 	  "terrain_modifiers": {
 		"grass": {"accel": 1.0555555556, "top": 1.0555555556, "grip": 1.075},
 		"snow": {"accel": 1.0588235294, "top": 1.0444444444, "grip": 1.1777777778},
@@ -168,6 +182,7 @@
       "driver_name": "Officer Richard Vepsh",
       "flavor": "A hard-nosed cop in a pursuit-tuned SUV. It jumps off the line and shrugs off fender benders. Mid pack at the top end and clumsy in tight chicanes. Built for ramming and zone control. Sirens on means mercy off.",
       "special_weapon": "Taser: auto-locks within close range for a two-second shock burst, then needs a long recovery. Deals moderate damage per second and cripples the victim’s handling while latched.",
+      "special_def": "taser",
       "stats": {
         "acceleration": 7,
         "top_speed": 6,
@@ -180,6 +195,7 @@
         "accent": "#0a203c"
       },
       "portrait": "res://assets/img/bios/smoky.png",
+      "ai_archetype": "defender",
 	  "special_ammo_cap": 3,
 	  "special_recharge_seconds": 90.0,
 	  "terrain_modifiers": {
@@ -196,6 +212,7 @@
       "driver_name": "Juan Dough",
       "flavor": "A fast-talking courier with nine lives and unpaid parking tickets. The compact ride is quick, nimble, and streetwise. Armor sits in the middle; evasive driving is the real defense. He thrives in traffic and dirty lines. Delivery guaranteed, signature optional.",
       "special_weapon": "Splat Effect: on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups.",
+      "special_def": "splat_effect",
       "stats": {
         "acceleration": 6,
         "top_speed": 7,
@@ -208,6 +225,7 @@
         "accent": "#ff8a41"
       },
       "portrait": "res://assets/img/bios/splatcat.png",
+      "ai_archetype": "ambusher",
       "special_ammo_cap": 2,
       "special_recharge_seconds": 6.0,
       "mass": 5

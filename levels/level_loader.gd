@@ -11,7 +11,6 @@ const GridFloorScript := preload("res://levels/grid_floor.gd")
 const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 
 const ROSTER_PATH := "res://assets/data/roster.json"
-const AI_PROFILES_PATH := "res://assets/data/ai_profiles.json"
 const SPECKLE_SHADER := preload("res://shaders/terrain_speckle.gdshader")
 # Per-type speckle params (speckle color, density, cell scale, shimmer);
 # base color comes from Catalog.TERRAIN_COLORS. Matches the arena's look.
@@ -27,8 +26,8 @@ const FLOOR_OVERSCAN := 512.0  # grid drawn past the walls, like the arena
 # heading_deg 0 = nose up, clockwise; vehicle heading 0 = +X, so shift a quarter turn.
 const HEADING_UP_OFFSET := -PI / 2
 
-## INTERIM SHIM — ai_profiles.json archetypes -> EnemyDriver.mix weights
-## (aggressor, ambusher, opportunist). The JSON's vocabulary predates the mix
+## INTERIM SHIM — roster.json ai_archetype -> EnemyDriver.mix weights
+## (aggressor, ambusher, opportunist). The vocabulary predates the mix
 ## system ("defender" doesn't exist in-game; opportunist is the nearest fit).
 ## When a real AIProfileLoader lands, replace mix_for_car() and delete this.
 const ARCHETYPE_MIX := {
@@ -220,10 +219,7 @@ static func _load_car_data() -> void:
 	var roster: Variant = JSON.parse_string(FileAccess.get_file_as_string(ROSTER_PATH))
 	for entry in roster.characters:
 		_car_ids.append(String(entry.id))
-	var profiles: Variant = JSON.parse_string(FileAccess.get_file_as_string(AI_PROFILES_PATH))
-	if typeof(profiles) == TYPE_DICTIONARY:
-		for profile in profiles.get("profiles", []):
-			_archetype_by_id[String(profile.get("id", ""))] = String(profile.get("archetype", "aggressor"))
+		_archetype_by_id[String(entry.id)] = String(entry.get("ai_archetype", "aggressor"))
 
 ## Cached per-type speckle material for zone visuals (arena parity).
 static func _speckle_material(type: String) -> ShaderMaterial:
