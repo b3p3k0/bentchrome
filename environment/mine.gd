@@ -16,7 +16,7 @@ const JUMP_DEV_MIN := 45.0
 const JUMP_DEV_MAX := 80.0
 const JUMP_VZ := 450.0
 const VISIBLE_RADIUS := 14.0
-const LAND_TRIGGER_RADIUS := 34.0
+const LAND_TRIGGER_RADIUS := 52.0
 const JUMP_TRIGGER_RADIUS := 26.0
 
 @export var jump := false

@@ -76,8 +76,8 @@ func test_land_proximity_is_wider_but_jump_stays_tight() -> void:
 	t.root.add_child(jump)
 	var land_shape := land.get_child(0) as CollisionShape2D
 	var jump_shape := jump.get_child(0) as CollisionShape2D
-	t.check_approx((land_shape.shape as CircleShape2D).radius, 34.0,
-		"mine proximity: land fuse reaches 34px")
+	t.check_approx((land_shape.shape as CircleShape2D).radius, 52.0,
+		"mine proximity: land fuse reaches 52px")
 	t.check_approx((jump_shape.shape as CircleShape2D).radius, 26.0,
 		"mine proximity: jump trap keeps its 26px contact range")
 	t.check_approx(land.VISIBLE_RADIUS, 14.0,
@@ -87,23 +87,23 @@ func test_land_proximity_is_wider_but_jump_stays_tight() -> void:
 	t.root.remove_child(jump)
 	jump.free()
 
-	# A 1px probe car at 30px cleanly isolates the mine surface: the 34px land
-	# fuse overlaps, while the old/jump 26px surface still misses.
-	var near_land := _proximity_fixture(LandScene, 30.0)
+	# A 1px probe car at 48px exercises the added outer band: the 52px land
+	# fuse overlaps, while the jump mine's 26px contact surface still misses.
+	var near_land := _proximity_fixture(LandScene, 48.0)
 	for i in ARM_FRAMES:
 		await t.physics_frame
 	t.check(not is_instance_valid(near_land.mine),
 		"mine proximity: near pass beyond the old surface detonates land mine")
 	_done(near_land)
 
-	var near_jump := _proximity_fixture(JumpScene, 30.0)
+	var near_jump := _proximity_fixture(JumpScene, 48.0)
 	for i in ARM_FRAMES:
 		await t.physics_frame
 	t.check(is_instance_valid(near_jump.mine),
 		"mine proximity: same near pass does not trigger the tighter jump mine")
 	_done(near_jump)
 
-	var outside := _proximity_fixture(LandScene, 38.0)
+	var outside := _proximity_fixture(LandScene, 56.0)
 	for i in ARM_FRAMES:
 		await t.physics_frame
 	t.check(is_instance_valid(outside.mine),
