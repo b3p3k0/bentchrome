@@ -319,6 +319,14 @@ func cancel_dash() -> void:
 		_dash_target = null
 		_dash_damage_mult = 1.0
 
+## A world interaction has taken the wheel. Running sustained effects end as a
+## real early finish (and therefore arm their authored post-fire cooldown);
+## a live dash gives up its movement override and ram premium.
+func cancel_for_interaction() -> void:
+	_end_beam()
+	_end_flame()
+	cancel_dash()
+
 func _dash_tick(delta: float) -> void:
 	var vehicle := get_parent() as CharacterBody2D
 	if vehicle == null:

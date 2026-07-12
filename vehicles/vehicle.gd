@@ -91,6 +91,11 @@ var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
+var _repairing := false
+var _repair_anchor := Vector2.ZERO
+var _repair_saved_velocity := Vector2.ZERO
+var _repair_saved_heading := 0.0
+const REPAIR_IMMUNITY := &"health_station"
 # Whoever hurt us last — AI holds a grudge, and the MP MatchDirector bills
 # kills against it within a recency window (pit-shoves count; ancient grudges
 # don't). The setter stamps the clock on every hit, whoever assigns it.
@@ -320,6 +325,23 @@ func _physics_process(delta: float) -> void:
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
 	_update_floor()
+	if _repairing:
+		# Remain a solid obstacle, but never ask move_and_slide to resolve the
+		# body away from the bay. Child cooldown/recharge/status ticks continue.
+		global_position = _repair_anchor
+		velocity = Vector2.ZERO
+		heading = _repair_saved_heading
+		if _controller:
+			_controller.boosting = false
+			_controller.handbraking = false
+			_controller.service_braking = false
+		_sync_brake_lights()
+		var held_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
+		_visual.rotation = held_heading
+		if _shadow:
+			_shadow.rotation = held_heading
+		_update_depth(delta)
+		return
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
 	if _status and _status.is_stunned():
 		intent = {}  # stunned: hands off the wheel — friction owns the car
@@ -582,7 +604,7 @@ func _set_airborne(on: bool) -> void:
 
 ## Smaller pop than a jump pad (jump mines) — airborne physics from any height kick.
 func pop_airborne(vz_speed: float) -> void:
-	if height > 0.0 or launch_immune:
+	if _repairing or height > 0.0 or launch_immune:
 		return
 	vz = vz_speed
 	_set_airborne(true)
@@ -594,7 +616,7 @@ const ESCAPE_HOP_SPEED := 420.0
 const ESCAPE_HOP_VZ := 430.0
 
 func escape_hop(direction: Vector2) -> void:
-	if height > 0.0 or direction == Vector2.ZERO:
+	if _repairing or height > 0.0 or direction == Vector2.ZERO:
 		return
 	heading = direction.angle()
 	velocity = direction * ESCAPE_HOP_SPEED
@@ -606,6 +628,8 @@ func escape_hop(direction: Vector2) -> void:
 ## dmg 0 = the caller already billed damage elsewhere (charge hits ride the
 ## normal ram loop; the tail bills its own).
 func apply_impact(from: Vector2, dmg: float, knockback: float, spin: float, stun_t: float) -> void:
+	if _repairing:
+		return
 	var dir := (global_position - from).normalized()
 	if dir == Vector2.ZERO:
 		dir = Vector2.RIGHT.rotated(heading)
@@ -623,7 +647,7 @@ func apply_impact(from: Vector2, dmg: float, knockback: float, spin: float, stun
 ## Jump pads call this; needs speed and ground. (Driveable RAMPS never launch —
 ## they grade the floor over via ramp-flagged FloorZones.)
 func launch_from_jump() -> void:
-	if height > 0.0 or launch_immune or velocity.length() < min_launch_speed:
+	if _repairing or height > 0.0 or launch_immune or velocity.length() < min_launch_speed:
 		return
 	vz = jump_launch
 	_set_airborne(true)
@@ -681,6 +705,7 @@ func sink_into_water() -> void:
 		_falling = false)
 
 func _on_died() -> void:
+	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
 	var drive_fx := get_node_or_null(^"DriveFX")
@@ -729,6 +754,43 @@ func get_mg_mount() -> WeaponMount:
 func get_speed_scale() -> float:
 	return _status.speed_scale() if _status else 1.0
 
+## Health stations own the refill clock; Vehicle owns the physics/control
+## contract. The saved velocity is the complete world vector so reverse and
+## drift leave the bay exactly as they entered it.
+func begin_repair_hold(anchor: Vector2) -> bool:
+	if net_puppet or _repairing or height > 0.0 or vz != 0.0 \
+			or _health == null or _health.hp <= 0.0:
+		return false
+	_repair_saved_velocity = velocity
+	_repair_saved_heading = heading
+	_repair_anchor = anchor
+	_repairing = true
+	global_position = anchor
+	velocity = Vector2.ZERO
+	if _controller:
+		_controller.boosting = false
+		_controller.handbraking = false
+		_controller.service_braking = false
+	if _special:
+		_special.cancel_for_interaction()
+	_health.set_immunity(REPAIR_IMMUNITY, true)
+	return true
+
+func end_repair_hold(restore_momentum := true) -> void:
+	if not _repairing:
+		return
+	_repairing = false
+	if _health:
+		_health.set_immunity(REPAIR_IMMUNITY, false)
+	if restore_momentum and _health and _health.hp > 0.0 and is_inside_tree():
+		heading = _repair_saved_heading
+		velocity = _repair_saved_velocity
+	else:
+		velocity = Vector2.ZERO
+
+func is_repairing() -> bool:
+	return _repairing
+
 ## Generic surface-profile lookup for vehicle-side systems beyond driving
 ## (currently DASH impact). Callers never need roster ids or resource internals.
 func terrain_factor(property: StringName, surface: StringName = current_terrain) -> float:
@@ -747,6 +809,7 @@ func is_shielded() -> bool:
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.
 func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
+	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
 	var drive_fx := get_node_or_null(^"DriveFX")
