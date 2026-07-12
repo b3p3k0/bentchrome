@@ -28,6 +28,7 @@ const STYLE_SCRIPTS := {
 	&"smoky": preload("res://vehicles/paint/smoky.gd"),
 	&"mrghastly": preload("res://vehicles/paint/mrghastly.gd"),
 	&"cricket": preload("res://vehicles/paint/cricket.gd"),
+	&"cyclone": preload("res://vehicles/paint/cyclone.gd"),
 	&"razorback": preload("res://vehicles/paint/razorback.gd"),
 	&"kandykane": preload("res://vehicles/paint/kandykane.gd"),
 	&"hammertoe": preload("res://vehicles/paint/hammertoe.gd"),

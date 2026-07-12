@@ -93,6 +93,11 @@ func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 		&"lovebug": {
 			&"water": [1.0, 1.0, 1.0, 1.0],
 		},
+		# Slicks: pavement is a superpower, everything else is a penalty box.
+		&"cyclone": {
+			&"road": [1.1, 1.05, 1.25, 1.1],
+			&"dirt": [0.6, 0.68, 0.36, 1.0],
+		},
 	}
 	for car_id in expected:
 		var stats: VehicleStats = load("res://data/vehicles/%s.tres" % String(car_id))

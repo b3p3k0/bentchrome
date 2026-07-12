@@ -53,6 +53,37 @@
 	  "mass": 2
     },
     {
+      "id": "cyclone",
+      "car_name": "Cyclone",
+      "driver_name": "Mandy Joule",
+      "flavor": "A brilliant blue open-wheeler that escaped the circuit with its engineer still in the seat. Mandy talks in lap deltas and considers walls a data source. On pavement nothing touches her; off it, the racing slicks spin like prayer wheels. Two millimeters of carbon fiber between her and the world, and she likes those odds. The pit crew quit. The car didn't notice.",
+      "special_weapon": "Tornado Alley: the rear wheels lift and the car whips into a three-second spin, dealing damage all around and spinning out anyone caught in the funnel. Where it stops facing, nobody knows.",
+      "special_def": "tornado_alley",
+      "stats": {
+        "acceleration": 9,
+        "top_speed": 10,
+        "handling": 6,
+        "armor": 2,
+        "special_power": 8
+      },
+      "colors": {
+        "primary": "#1a5cff",
+        "accent": "#c8dcff"
+      },
+      "portrait": "res://assets/img/bios/cyclone.png",
+      "ai_archetype": "ambusher",
+      "special_ammo_cap": 1,
+      "special_recharge_seconds": 30.0,
+      "terrain_modifiers": {
+        "road": {"accel": 1.1, "top": 1.05, "grip": 1.25, "steer": 1.1},
+        "grass": {"accel": 0.75, "top": 0.8, "grip": 0.6},
+        "snow": {"accel": 0.75, "top": 0.8, "grip": 0.6},
+        "dirt": {"accel": 0.75, "top": 0.8, "grip": 0.6},
+        "water": {"accel": 0.7, "top": 0.75, "grip": 0.8}
+      },
+      "mass": 2
+    },
+    {
       "id": "ghost",
       "car_name": "Ghost",
       "driver_name": "Chad Duché",
