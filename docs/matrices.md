@@ -392,7 +392,7 @@ Sources: `vehicles/goliath/*.gd` static vars, `data/vehicles/goliath.tres` / `go
 | Victory lap | throttle 0.8, arrive 260 | victory_lap_driver LAP_* | god-moded; end_screen.win_keeps_rolling |
 | Quit confirm | ESC on title | ui/title.gd | "Awww, giving up so soon?" — NO default |
 | Single-player entry | SINGLE PLAYER | ui/title.gd | unchanged route: difficulty select → garage → campaign |
-| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Developer Mode master-gates preserved DEVGOD/start-level choices; locked rows stay visible and navigation skips them |
+| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Arrow-only: Up/Down select, Left/Right change, Right enters submenu/actions, ESC backs out; WASD/Enter/Space/controller ignored; changes autosave; Developer Mode master-gates preserved DEVGOD/start-level choices |
 
 ## Netplay (LAN multiplayer knobs)
 

@@ -1,6 +1,6 @@
 extends Control
-## Settings screen (title menu -> SETTINGS). Keyboard-driven rows: up/down
-## selects, left/right adjusts (Enter also nudges), ESC returns to the title.
+## Settings screen (title menu -> SETTINGS). Arrow-only rows: up/down selects,
+## left/right adjusts, right enters submenu/action rows, ESC backs out.
 ## Developer-only settings live behind an in-screen master-breaker dialog.
 ## Every actual setting change persists immediately via GameState.save_settings().
 
@@ -15,8 +15,10 @@ const ZOOM_MIN := 0.45
 const ZOOM_MAX := 0.72
 const ZOOM_STEP := 0.01
 
+enum MenuKey { NONE, UP, DOWN, LEFT, RIGHT, BACK }
+
 var _index := 0
-var _rows: Array = []  # {name, adjust: Callable(dir), value: Callable() -> [text, color]}
+var _rows: Array = []  # {name, adjust, value, kind: value|submenu|action, persist}
 var _name_labels: Array = []
 var _value_labels: Array = []
 var _dev_dialog: Control
@@ -24,6 +26,7 @@ var _dev_index := 0
 var _dev_rows: Array = []
 var _dev_name_labels: Array = []
 var _dev_value_labels: Array = []
+var _settings_path := "user://settings.json"  # overridden only by hermetic tests
 
 @onready var _gs: Node = get_node(^"/root/GameState")
 @onready var _flow: Node = get_node(^"/root/SceneFlow")
@@ -33,17 +36,18 @@ func _ready() -> void:
 		{"name": "ZOOM DEPTH", "adjust": _adj_zoom, "value": _val_zoom},
 		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
 		{"name": "DEVELOPER OPTIONS", "adjust": _adj_dev_options, "value": _val_open,
-			"persist": false},
+			"kind": &"submenu", "persist": false},
 		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
-			"persist": false},
-		{"name": "BACK", "adjust": _adj_back, "value": _val_blank, "persist": false},
+			"kind": &"action", "persist": false},
+		{"name": "BACK", "adjust": _adj_back, "value": _val_blank,
+			"kind": &"action", "persist": false},
 	]
 	_dev_rows = [
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
 		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
 		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
 		{"name": "BACK", "adjust": _adj_close_dev, "value": _val_blank,
-			"persist": false},
+			"kind": &"action", "persist": false},
 	]
 	_build_ui()
 	_refresh()
@@ -118,33 +122,56 @@ func _bar(v: float, lo: float, hi: float) -> String:
 # --- input / paint -----------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	var key := _menu_key(event)
+	if key == MenuKey.NONE:
+		return
+	get_viewport().set_input_as_handled()
 	if _dev_dialog:
-		_dev_input(event)
+		_dev_input(key)
 		return
-	if event.is_action_pressed(&"pause"):
-		get_viewport().set_input_as_handled()
-		_flow.to_title()
-		return
-	if event.is_action_pressed(&"move_up"):
-		_index = wrapi(_index - 1, 0, _rows.size())
-	elif event.is_action_pressed(&"move_down"):
-		_index = wrapi(_index + 1, 0, _rows.size())
-	elif event.is_action_pressed(&"select_prev"):
-		_adjust(-1)
-		return
-	elif event.is_action_pressed(&"select_next") or event.is_action_pressed(&"select_confirm"):
-		_adjust(1)
-		return
-	else:
-		return
+	match key:
+		MenuKey.UP:
+			_index = wrapi(_index - 1, 0, _rows.size())
+		MenuKey.DOWN:
+			_index = wrapi(_index + 1, 0, _rows.size())
+		MenuKey.LEFT:
+			_adjust(-1)
+			return
+		MenuKey.RIGHT:
+			_adjust(1)
+			return
+		MenuKey.BACK:
+			_flow.to_title()
+			return
 	_refresh()
 
 func _adjust(dir: int) -> void:
 	var row: Dictionary = _rows[_index]
+	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
+		return
 	(row.adjust as Callable).call(dir)
 	if bool(row.get("persist", true)):
-		_gs.save_settings()
+		_gs.save_settings(_settings_path)
 	_refresh()
+
+## Settings deliberately bypasses shared gameplay/menu actions: those actions
+## also carry WASD, Enter, Space, stick, and face-button bindings. Raw physical
+## arrows make this screen's contract narrow and reusable for nested rows.
+func _menu_key(event: InputEvent) -> MenuKey:
+	if not event is InputEventKey or not event.pressed:
+		return MenuKey.NONE
+	match event.physical_keycode:
+		KEY_UP:
+			return MenuKey.UP
+		KEY_DOWN:
+			return MenuKey.DOWN
+		KEY_LEFT:
+			return MenuKey.LEFT
+		KEY_RIGHT:
+			return MenuKey.RIGHT
+		KEY_ESCAPE:
+			return MenuKey.BACK
+	return MenuKey.NONE
 
 func _refresh() -> void:
 	for i in _rows.size():
@@ -205,7 +232,7 @@ func _build_ui() -> void:
 		_value_labels.append(value_lbl)
 
 	var hint := Label.new()
-	hint.text = "W/S select    A/D adjust    ESC back  —  saved to user://settings.json"
+	hint.text = "UP/DOWN select    LEFT/RIGHT change    RIGHT opens -->    ESC back — autosaved"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT
@@ -213,23 +240,21 @@ func _build_ui() -> void:
 
 # --- developer options dialog -----------------------------------------------
 
-func _dev_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"pause"):
-		get_viewport().set_input_as_handled()
-		_close_dev_dialog()
-		return
-	if event.is_action_pressed(&"move_up"):
-		_step_dev(-1)
-	elif event.is_action_pressed(&"move_down"):
-		_step_dev(1)
-	elif event.is_action_pressed(&"select_prev"):
-		_adjust_dev(-1)
-		return
-	elif event.is_action_pressed(&"select_next") or event.is_action_pressed(&"select_confirm"):
-		_adjust_dev(1)
-		return
-	else:
-		return
+func _dev_input(key: MenuKey) -> void:
+	match key:
+		MenuKey.UP:
+			_step_dev(-1)
+		MenuKey.DOWN:
+			_step_dev(1)
+		MenuKey.LEFT:
+			_adjust_dev(-1)
+			return
+		MenuKey.RIGHT:
+			_adjust_dev(1)
+			return
+		MenuKey.BACK:
+			_close_dev_dialog()
+			return
 	_refresh_dev()
 
 func _step_dev(dir: int) -> void:
@@ -247,9 +272,11 @@ func _adjust_dev(dir: int) -> void:
 	if not _dev_row_enabled(_dev_index):
 		return
 	var row: Dictionary = _dev_rows[_dev_index]
+	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
+		return
 	(row.adjust as Callable).call(dir)
 	if bool(row.get("persist", true)):
-		_gs.save_settings()
+		_gs.save_settings(_settings_path)
 	_refresh_dev()
 
 func _open_dev_dialog() -> void:
@@ -310,7 +337,7 @@ func _open_dev_dialog() -> void:
 		_dev_value_labels.append(value_lbl)
 
 	var hint := Label.new()
-	hint.text = "DEVELOPER MODE powers every option below it    ESC back"
+	hint.text = "ARROWS select/change    ESC back — autosaved    DEVELOPER MODE powers the rows"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT

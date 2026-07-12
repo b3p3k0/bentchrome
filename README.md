@@ -17,7 +17,7 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 ## Getting Started & Controls
 
-The game starts with a splash screen offering Single Player, Multiplayer, Story, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD and the campaign start-level picker. Those subordinate choices stay remembered while the breaker is off, but cannot affect a run until it is switched back on. Choices persist between sessions.
+The game starts with a splash screen offering Single Player, Multiplayer, Story, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD and the campaign start-level picker. Those subordinate choices stay remembered while the breaker is off, but cannot affect a run until it is switched back on. Settings is deliberately arrow-only: Up/Down selects, Left/Right changes values, Right enters `-->` rows, and Escape backs out with every change already saved. Choices persist between sessions.
 
 ### Pick Your License
 Single Player sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:

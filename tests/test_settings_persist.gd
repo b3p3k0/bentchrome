@@ -13,6 +13,12 @@ func _init(runner) -> void:
 func _gs() -> Node:
 	return t.root.get_node(^"/root/GameState")
 
+func _key(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.pressed = true
+	return event
+
 func test_settings_round_trip() -> void:
 	var gs := _gs()
 	var keep := {}
@@ -92,6 +98,35 @@ func test_developer_options_menu_contract() -> void:
 		"developer dialog: master, subordinate options, and back are present")
 	t.check(not bool(screen._rows[2].persist) and not bool(screen._dev_rows[3].persist),
 		"developer dialog: opening and closing are non-persisting navigation")
+	t.check(screen._rows[2].kind == &"submenu" and screen._rows[3].kind == &"action",
+		"settings menu: row kinds distinguish values from right-only destinations")
+
+	screen._settings_path = TMP
+	screen._unhandled_input(_key(KEY_DOWN))
+	t.check(screen._index == 1, "settings input: down arrow advances the row")
+	screen._unhandled_input(_key(KEY_UP))
+	t.check(screen._index == 0, "settings input: up arrow reverses the row")
+	var zoom_before: float = gs.zoom_combat
+	screen._unhandled_input(_key(KEY_LEFT))
+	t.check(is_equal_approx(gs.zoom_combat, zoom_before - screen.ZOOM_STEP),
+		"settings input: left arrow decreases a value")
+	screen._unhandled_input(_key(KEY_RIGHT))
+	t.check(is_equal_approx(gs.zoom_combat, zoom_before),
+		"settings input: right arrow increases a value")
+	for ignored in [KEY_W, KEY_A, KEY_S, KEY_D, KEY_ENTER, KEY_SPACE]:
+		var index_before: int = screen._index
+		var zoom_ignored: float = gs.zoom_combat
+		screen._unhandled_input(_key(ignored))
+		t.check(screen._index == index_before and is_equal_approx(gs.zoom_combat, zoom_ignored),
+			"settings input: legacy key %s is ignored" % ignored)
+	screen._index = 2
+	screen._unhandled_input(_key(KEY_LEFT))
+	t.check(screen._dev_dialog == null, "settings input: left cannot enter a submenu")
+	screen._unhandled_input(_key(KEY_RIGHT))
+	t.check(screen._dev_dialog != null, "settings input: right enters a submenu")
+	screen._unhandled_input(_key(KEY_ESCAPE))
+	t.check(screen._dev_dialog == null, "settings input: escape closes the nested menu first")
+	DirAccess.remove_absolute(TMP)
 
 	gs.dev_mode = false
 	gs.devgod = true
