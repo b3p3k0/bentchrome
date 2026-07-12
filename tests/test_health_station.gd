@@ -51,6 +51,7 @@ func test_station_lifecycle() -> void:
 	station.tick(0.01)
 	t.check(is_equal_approx(p_health.hp, 100.0) and not player.is_repairing(),
 		"station: two seconds lands exactly on full health")
+	t.check(player.is_shielded(), "station: completion grants the shared respawn shield")
 	t.check(player.velocity == Vector2(-180, 75) and is_equal_approx(player.heading, 1.2),
 		"station: complete world velocity and facing resume")
 	t.check(station.uses == 1, "station: one use burned")
@@ -122,6 +123,8 @@ func test_eligibility_immunity_and_cleanup() -> void:
 	health.take_damage(10.0)
 	t.check(health.hp == 100.0, "station: releasing its hold preserves status immunity")
 	health.invulnerable = false
+	var status := player.get_node(^"Status") as StatusReceiver
+	status.tick(Vehicle.DEFAULT_SHIELD_SECONDS)
 	health.take_damage(10.0)
 	t.check(health.hp == 90.0, "station: repair immunity clears after release")
 
@@ -134,8 +137,59 @@ func test_eligibility_immunity_and_cleanup() -> void:
 	station.free()
 	t.check(not player.is_repairing() and player.velocity == Vector2.ZERO,
 		"station: removal safely cancels without launching the patient")
+	t.check(not player.is_shielded(), "station: cancelled treatment grants no exit shield")
 	health.take_damage(10.0)
 	t.check(health.hp == 40.0, "station: cancellation releases its immunity hold")
 
+	t.root.remove_child(container)
+	container.free()
+
+func test_four_corner_lightning_lifecycle() -> void:
+	var station := StationScene.instantiate()
+	t.root.add_child(station)
+	var fx := station.get_node(^"RepairFX") as RepairBayFX
+	fx.start()
+	var first := fx.bolt_paths()
+	t.check(fx.is_effect_active() and first.size() == 4,
+		"station fx: one persistent bolt comes from every corner")
+	for i in first.size():
+		var path: PackedVector2Array = first[i]
+		t.check(path.size() == 7 and path[0] == RepairBayFX.CORNERS[i]
+				and path[path.size() - 1] == Vector2.ZERO,
+			"station fx: bolt %d runs authored corner to exact center" % i)
+	t.check(is_equal_approx(RepairBayFX.GLOW_WIDTH, 5.0)
+			and is_equal_approx(RepairBayFX.CORE_WIDTH, 2.0),
+		"station fx: blue glow and white core retain contrast widths")
+	fx.tick(RepairBayFX.FLICKER_INTERVAL)
+	t.check(fx.bolt_paths() != first, "station fx: geometry crackles at the bounded cadence")
+	fx.finish(true)
+	t.check(not fx.is_effect_active() and fx.is_finishing(),
+		"station fx: completion collapses into a short pulse")
+	fx.tick(RepairBayFX.COMPLETION_SECONDS)
+	t.check(not fx.is_finishing() and fx.bolt_paths().is_empty(),
+		"station fx: completion clears every bolt")
+	t.root.remove_child(station)
+	station.free()
+
+func test_exit_shield_uses_respawn_duration() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var station := StationScene.instantiate()
+	container.add_child(station)
+	var player := _car(container, &"player", 25.0)
+	var health := player.get_node(^"Health") as Health
+	var status := player.get_node(^"Status") as StatusReceiver
+	t.check(station.try_begin_treatment(player), "station shield: treatment starts")
+	station.tick(station.TREATMENT_SECONDS)
+	health.take_damage(20.0)
+	t.check(health.hp == 100.0 and player.is_shielded(),
+		"station shield: damage is blocked immediately after launch")
+	status.tick(Vehicle.DEFAULT_SHIELD_SECONDS - 0.01)
+	health.take_damage(20.0)
+	t.check(health.hp == 100.0, "station shield: protection holds for the respawn window")
+	status.tick(0.02)  # cross the boundary despite float grain
+	health.take_damage(20.0)
+	t.check(health.hp == 80.0 and not player.is_shielded(),
+		"station shield: protection expires at the shared two-second boundary")
 	t.root.remove_child(container)
 	container.free()

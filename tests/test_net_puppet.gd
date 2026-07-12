@@ -6,6 +6,7 @@ extends RefCounted
 ## (faction enemies — player-group shadowing is the classic trap).
 
 const VehicleScene := preload("res://vehicles/enemy_vehicle.tscn")
+const StationScene := preload("res://environment/health_station.tscn")
 
 var t
 
@@ -107,3 +108,23 @@ func test_puppet_flags_drive_cosmetics() -> void:
 		and not paint.brake_lights_on() and not v.is_burning(),
 		"puppet: flags clear on the next slice")
 	_free(v)
+
+func test_puppet_repair_flag_binds_nearest_station() -> void:
+	var station := StationScene.instantiate()
+	station.global_position = Vector2(300, 220)
+	t.root.add_child(station)
+	var fx := station.get_node(^"RepairFX") as RepairBayFX
+	var v := _spawn()
+	v.set_net_puppet(true)
+	v.apply_net_state({"pos": station.global_position, "repairing": true, "hp": 60.0})
+	t.check(fx.is_effect_active(), "puppet: repair rise binds the nearest bay effect")
+	v.apply_net_state({"pos": station.global_position, "repairing": true, "hp": 80.0})
+	t.check(fx.is_effect_active(), "puppet: repeated repair slices do not restart or clear FX")
+	v.apply_net_state({"pos": station.global_position, "repairing": false, "hp": 100.0})
+	t.check(not fx.is_effect_active() and fx.is_finishing(),
+		"puppet: repair fall becomes the same completion pulse")
+	fx.tick(RepairBayFX.COMPLETION_SECONDS)
+	t.check(not fx.is_finishing(), "puppet: completion presentation cleans itself")
+	_free(v)
+	t.root.remove_child(station)
+	station.free()

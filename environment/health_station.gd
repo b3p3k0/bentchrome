@@ -19,15 +19,18 @@ var _patient: CharacterBody2D = null
 var _patient_health: Health = null
 var _start_hp := 0.0
 var _treatment_t := 0.0
+var _remote_patient: Node2D = null
+@onready var _fx: RepairBayFX = $RepairFX
 
 func _ready() -> void:
 	add_to_group(&"health_stations")
+	_set_pad_tint(READY_TINT)
 
 ## Level-wide lockout: called on every station when any one of them heals.
 func start_cooldown() -> void:
 	_cd = cooldown_seconds
 	if uses > 0:
-		modulate = COOLING_TINT
+		_set_pad_tint(COOLING_TINT)
 
 func _physics_process(delta: float) -> void:
 	tick(delta)
@@ -38,7 +41,7 @@ func tick(delta: float) -> void:
 	if _cd > 0.0:
 		_cd -= delta
 		if _cd <= 0.0 and uses > 0:
-			modulate = READY_TINT
+			_set_pad_tint(READY_TINT)
 	if _patient != null or _cd > 0.0 or uses <= 0:
 		return
 	for body in get_overlapping_bodies():
@@ -63,7 +66,9 @@ func try_begin_treatment(body: Node) -> bool:
 	_treatment_t = 0.0
 	uses -= 1
 	get_tree().call_group(&"health_stations", "start_cooldown")  # reserve every bay now
-	modulate = SPENT_TINT if uses <= 0 else COOLING_TINT
+	_set_pad_tint(SPENT_TINT if uses <= 0 else COOLING_TINT)
+	if _fx:
+		_fx.start()
 	return true
 
 func _tick_treatment(delta: float) -> void:
@@ -77,15 +82,39 @@ func _tick_treatment(delta: float) -> void:
 	_patient_health.heal(target - _patient_health.hp)
 	if _treatment_t >= TREATMENT_SECONDS:
 		_patient_health.heal(_patient_health.max_hp - _patient_health.hp)
-		_cancel_treatment(true)
+		_cancel_treatment(true, true)
 
-func _cancel_treatment(restore_momentum: bool) -> void:
+func _cancel_treatment(restore_momentum: bool, completed := false) -> void:
 	if is_instance_valid(_patient) and _patient.has_method(&"end_repair_hold"):
-		_patient.call(&"end_repair_hold", restore_momentum)
+		_patient.call(&"end_repair_hold", restore_momentum, completed)
 	_patient = null
 	_patient_health = null
 	_start_hp = 0.0
 	_treatment_t = 0.0
+	if _fx:
+		_fx.finish(completed)
+
+## Client puppets never overlap Area2D collision. Their streamed repair flag
+## binds the same persistent visual to the station at the authoritative anchor.
+func present_remote_treatment(patient: Node2D, on: bool) -> void:
+	if on:
+		_remote_patient = patient
+		if _fx:
+			_fx.start()
+	else:
+		if patient != _remote_patient:
+			return
+		_remote_patient = null
+		if _fx:
+			_fx.finish(true)
+
+func _set_pad_tint(tint: Color) -> void:
+	# Tint paint only: root modulation used to bury the lightning in the cooling
+	# gray. Collision and RepairFX deliberately keep their authored colors.
+	for child_name in [&"BoxLeft", &"BoxRight", &"Base", &"CrossV", &"CrossH"]:
+		var item := get_node_or_null(NodePath(child_name)) as CanvasItem
+		if item:
+			item.modulate = tint
 
 func _exit_tree() -> void:
 	_cancel_treatment(false)

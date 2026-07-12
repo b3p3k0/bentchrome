@@ -17,6 +17,7 @@ const F_BURN := 8
 const F_SHIELD := 16
 const F_MG_LOCKED := 32
 const F_BRAKE := 64
+const F_REPAIR := 128
 
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
@@ -97,6 +98,8 @@ static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteAr
 			flags |= F_MG_LOCKED
 		if row.get("brake", false):
 			flags |= F_BRAKE
+		if row.get("repairing", false):
+			flags |= F_REPAIR
 		buf.put_u8(flags)
 		buf.put_8(int(row.get("floor", -1)))
 		var pos: Vector2 = row.get("pos", Vector2.ZERO)
@@ -184,6 +187,7 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			"handbrake": (flags & F_HANDBRAKE) != 0, "burn": (flags & F_BURN) != 0,
 			"shield": (flags & F_SHIELD) != 0, "mg_locked": (flags & F_MG_LOCKED) != 0,
 			"brake": (flags & F_BRAKE) != 0,
+			"repairing": (flags & F_REPAIR) != 0,
 			"heat": heat, "boost_fuel": boost_fuel, "slot": slot, "ammo": ammo,
 			"recharge": recharge,
 		})

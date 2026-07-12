@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://environment/health_station.gd" id="1_heal"]
+[ext_resource type="Script" path="res://environment/repair_bay_fx.gd" id="2_fx"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_heal"]
 size = Vector2(80, 80)
@@ -32,3 +33,6 @@ polygon = PackedVector2Array(-22, -6, 22, -6, 22, 6, -22, 6)
 
 [node name="Col" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_heal")
+
+[node name="RepairFX" type="Node2D" parent="."]
+script = ExtResource("2_fx")

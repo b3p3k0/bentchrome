@@ -22,6 +22,7 @@ extends CharacterBody2D
 const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
+const DEFAULT_SHIELD_SECONDS := 2.0
 const HEADING_STEPS := 16  # quantize the visual to N compass steps (retro
 							# directional-sprite feel); 0 = smooth rotation
 const FLOOR_SCALE_TWEEN := 0.25  # size-cue tween on floor change (visuals only)
@@ -79,6 +80,7 @@ var vz: float = 0.0       # vertical velocity (px/s)
 var floor_index := -1     # terrace we drive on; -1 = legacy single-plane level
 var _takeoff_floor := -1  # floor at the moment we went airborne (fall bookkeeping)
 var _floor_tween: Tween = null
+var _shield_tween: Tween = null
 var _floor_lift := 0.0    # visual elevation for upper terraces (see FLOOR_LIFT)
 var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never radii
 	set(v):
@@ -117,6 +119,8 @@ var _net_b := {}          # newer sample
 var _net_prev_hp := -1.0  # local hit feedback: flash/shake on streamed drops
 var _net_alive := true    # edge-detected: falling = boom + hide, rising = show
 var _net_shield := false  # streamed blink-shield flag (visual pulse only)
+var _net_repairing := false
+var _net_repair_station: Node = null
 
 @onready var _controller: DrivingController = $DrivingController
 @onready var _driver: Driver = $Driver
@@ -194,6 +198,10 @@ func _ready() -> void:
 	var boot_gs := get_node_or_null(^"/root/GameState")
 	if boot_cam and boot_cam.enabled and boot_gs:
 		boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview if boot_gs.overview else boot_gs.zoom_combat)
+
+func _exit_tree() -> void:
+	_set_net_repairing(false, global_position)
+	end_repair_hold(false)
 
 ## Hit feedback: brief white pulse (skipped for sub-1 DoT ticks, which would
 ## strobe), plus camera shake when it's the player taking it.
@@ -438,6 +446,7 @@ func set_net_puppet(on: bool) -> void:
 		_net_alive = true
 		_net_shield = false
 	else:
+		_set_net_repairing(false, global_position)
 		_apply_ground_collision()
 
 ## One snapshot slice for this car. Motion fields buffer for interpolation;
@@ -486,6 +495,8 @@ func apply_net_state(slice: Dictionary) -> void:
 		_net_shield = bool(slice.shield)
 		if not _net_shield and _visual and _net_alive:
 			_visual.modulate.a = 1.0
+	if slice.has("repairing"):
+		_set_net_repairing(bool(slice.repairing), slice.get("pos", global_position))
 	# HUD mirrors: the viewer's dash reads its puppet like a live car.
 	if _mg_mount and slice.has("heat"):
 		_mg_mount.net_mirror_heat(float(slice.heat), bool(slice.get("mg_locked", false)))
@@ -776,9 +787,13 @@ func begin_repair_hold(anchor: Vector2) -> bool:
 	_health.set_immunity(REPAIR_IMMUNITY, true)
 	return true
 
-func end_repair_hold(restore_momentum := true) -> void:
+func end_repair_hold(restore_momentum := true, grant_exit_shield := false) -> void:
 	if not _repairing:
 		return
+	# Lay down the status shield before releasing the bay's named immunity hold:
+	# successful treatment has no one-frame damage seam for station campers.
+	if grant_exit_shield:
+		grant_spawn_shield()
 	_repairing = false
 	if _health:
 		_health.set_immunity(REPAIR_IMMUNITY, false)
@@ -790,6 +805,30 @@ func end_repair_hold(restore_momentum := true) -> void:
 
 func is_repairing() -> bool:
 	return _repairing
+
+func _set_net_repairing(on: bool, at: Vector2) -> void:
+	if on == _net_repairing:
+		return
+	_net_repairing = on
+	if not on:
+		if is_instance_valid(_net_repair_station) \
+				and _net_repair_station.has_method(&"present_remote_treatment"):
+			_net_repair_station.call(&"present_remote_treatment", self, false)
+		_net_repair_station = null
+		return
+	var nearest: Node = null
+	var nearest_d2 := 96.0 * 96.0
+	for station_v in get_tree().get_nodes_in_group(&"health_stations"):
+		var station := station_v as Node2D
+		if station == null or not station.has_method(&"present_remote_treatment"):
+			continue
+		var d2 := station.global_position.distance_squared_to(at)
+		if d2 <= nearest_d2:
+			nearest_d2 = d2
+			nearest = station
+	_net_repair_station = nearest
+	if nearest:
+		nearest.call(&"present_remote_treatment", self, true)
 
 ## Generic surface-profile lookup for vehicle-side systems beyond driving
 ## (currently DASH impact). Callers never need roster ids or resource internals.
@@ -806,9 +845,32 @@ func is_burning() -> bool:
 func is_shielded() -> bool:
 	return _status != null and _status.has_effect(&"invuln")
 
+## Shared respawn/repair protection. Re-applying StatusReceiver's same-kind
+## effect refreshes it to at least the full requested duration; one owned tween
+## keeps the blink cadence from stacking when a shield is refreshed.
+func grant_spawn_shield(seconds := DEFAULT_SHIELD_SECONDS) -> void:
+	if seconds <= 0.0 or _status == null:
+		return
+	var shield := StatusEffectSpec.new()
+	shield.kind = &"invuln"
+	shield.duration = seconds
+	apply_effect(shield)
+	# StatusReceiver normally re-syncs this on its next physics tick. A bay
+	# releases its named hold in this same call, so bridge that frame explicitly.
+	if _health:
+		_health.invulnerable = true
+	if _shield_tween:
+		_shield_tween.kill()
+	if _visual:
+		_visual.modulate.a = 1.0
+		_shield_tween = create_tween()
+		_shield_tween.set_loops(maxi(1, int(ceilf(seconds / 0.2))))
+		_shield_tween.tween_property(_visual, "modulate:a", 0.35, 0.1)
+		_shield_tween.tween_property(_visual, "modulate:a", 1.0, 0.1)
+
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
 ## invuln blink-shield so spawn-camping hunters can't chain-kill.
-func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
+func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_SECONDS) -> void:
 	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
@@ -843,16 +905,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := 2.0) -> void:
 		_visual.modulate = Color.WHITE
 	if _shadow:
 		_shadow.scale = Vector2.ONE * body_scale
-	if shield_seconds > 0.0 and _status:
-		var shield := StatusEffectSpec.new()
-		shield.kind = &"invuln"
-		shield.duration = shield_seconds
-		apply_effect(shield)
-		if _visual:
-			var tween := create_tween()
-			tween.set_loops(int(shield_seconds / 0.2))
-			tween.tween_property(_visual, "modulate:a", 0.35, 0.1)
-			tween.tween_property(_visual, "modulate:a", 1.0, 0.1)
+	grant_spawn_shield(shield_seconds)
 
 func take_ram_damage(amount: float, source: Node2D = null) -> void:
 	if source:
