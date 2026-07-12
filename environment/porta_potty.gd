@@ -5,6 +5,7 @@ extends StaticBody2D
 
 const Floors := preload("res://game/floors.gd")
 const ActorScene := preload("res://environment/ambient_actor.tscn")
+const ArenaState := preload("res://game/net/arena_state.gd")
 
 const ESCAPE_CHANCE := 0.20
 const ESCAPE_PANIC := 2.5
@@ -12,15 +13,21 @@ const ESCAPE_PANIC := 2.5
 @export var floor_index := 1
 @export var max_hp := 20.0
 @export var seed_offset := 0
+@export_range(0, 65535, 1) var arena_net_id := 0
 
 var last_attacker: Node2D = null
 var _dead := false
+var _escaped := false
+var _base_collision_layer := 0
 var _forced_roll := -1.0  # deterministic fixture seam; negative = seeded RNG
 @onready var _health: Health = $Health
 
 func _ready() -> void:
 	collision_layer = 4 | Floors.floor_bit(floor_index)
+	_base_collision_layer = collision_layer
 	collision_mask = 0
+	if arena_net_id > 0:
+		add_to_group(&"arena_net_entities")
 	_health.max_hp = max_hp
 	_health.hp = max_hp
 	_health.died.connect(_die)
@@ -36,6 +43,9 @@ func _die() -> void:
 	if _dead:
 		return
 	_dead = true
+	var rng := _rng()
+	var roll := _forced_roll if _forced_roll >= 0.0 else rng.randf()
+	_escaped = releases_worker(roll)
 	collision_layer = 0
 	set_deferred(&"collision_mask", 0)
 	visible = false
@@ -47,12 +57,45 @@ func _finish_death() -> void:
 		host = get_parent()
 	if host:
 		_spawn_blue_debris(host)
-		var rng := RandomNumberGenerator.new()
-		rng.seed = int(absf(global_position.x * 7.0 + global_position.y * 13.0)) + seed_offset * 7919 + 17
-		var roll := _forced_roll if _forced_roll >= 0.0 else rng.randf()
-		if releases_worker(roll):
+		var rng := _rng()
+		if _escaped:
 			_spawn_worker(host, rng)
-	queue_free()
+	if arena_net_id <= 0:
+		queue_free()
+
+func _rng() -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(absf(global_position.x * 7.0 + global_position.y * 13.0)) + seed_offset * 7919 + 17
+	return rng
+
+func capture_arena_state(_actor_lookup: Array) -> Dictionary:
+	var flags := 0 if _dead else ArenaState.ALIVE
+	if _escaped:
+		flags |= ArenaState.ESCAPE
+	return {"flags": flags, "hp": clampf(_health.hp / maxf(max_hp, 0.001), 0.0, 1.0),
+		"timer_ms": 0, "targets": 0}
+
+func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
+	var alive := ArenaState.is_alive(row)
+	_health.hp = clampf(float(row.get("hp", 0.0)), 0.0, 1.0) * max_hp
+	_escaped = (ArenaState.flags(row) & ArenaState.ESCAPE) != 0
+	if alive:
+		_dead = false
+		visible = true
+		collision_layer = _base_collision_layer
+	elif not _dead:
+		_dead = true
+		collision_layer = 0
+		collision_mask = 0
+		visible = false
+		if not initial_state:
+			var host := get_tree().current_scene
+			if host == null:
+				host = get_parent()
+			if host:
+				_spawn_blue_debris(host)
+				if _escaped:
+					_spawn_worker(host, _rng())
 
 func _spawn_worker(host: Node, rng: RandomNumberGenerator) -> void:
 	var actor := ActorScene.instantiate() as AmbientActor

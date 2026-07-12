@@ -37,6 +37,8 @@ var _my_car: Vehicle = null
 var _stream_accum := 0
 var _snap_tick := 0
 var _visual_shots: Dictionary = {}  # u32 host shot id -> pooled client twin
+var _arena_entities: Dictionary = {} # u16 stable id -> opt-in level prop
+var _arena_seen: Dictionary = {}
 
 # Autoloads by path, never bare identifier — this script rides the test
 # runner's preload chain, where -s compilation can't bind autoload names.
@@ -52,6 +54,7 @@ func _ready() -> void:
 		_flow.to_mp_menu.call_deferred()
 		return
 	_load_arena()
+	_index_arena_entities()
 	add_child(PauseOverlayScene.instantiate())
 	_build_kill_feed()
 	_net.kill_feed.connect(_on_feed_line)
@@ -90,7 +93,7 @@ func _physics_process(delta: float) -> void:
 			_stream_accum = 0
 			_snap_tick += 1
 			_net.broadcast_snapshot(Snapshot.pack_snapshot(
-				_snap_tick, _collect_rows(), _drain_events()))
+				_snap_tick, _collect_rows(), _drain_events(), _collect_arena_rows()))
 	elif _my_driver and _my_car and is_instance_valid(_my_car):
 		# The client's whole contribution: this tick's sampled intent.
 		var intent: Dictionary = _my_driver.get_intent(_my_car, delta)
@@ -108,6 +111,18 @@ func _load_arena() -> void:
 	_arena = scene.instantiate()
 	_arena.mp_managed = true  # before add_child: the arena's _ready reads it
 	add_child(_arena)
+
+func _index_arena_entities() -> void:
+	_arena_entities.clear()
+	if _arena == null:
+		return
+	for node in get_tree().get_nodes_in_group(&"arena_net_entities"):
+		if not _arena.is_ancestor_of(node):
+			continue
+		var entity_id := int(node.get("arena_net_id"))
+		if entity_id <= 0 or entity_id > 65535 or _arena_entities.has(entity_id):
+			continue
+		_arena_entities[entity_id] = node
 
 # --------------------------------------------------------------------- host
 
@@ -328,6 +343,19 @@ func _collect_rows() -> Array:
 		})
 	return rows
 
+func _collect_arena_rows() -> Array:
+	var rows: Array = []
+	var ids: Array = _arena_entities.keys()
+	ids.sort()
+	for entity_id in ids:
+		var entity: Node = _arena_entities[entity_id]
+		if not is_instance_valid(entity) or not entity.has_method(&"capture_arena_state"):
+			continue
+		var row: Dictionary = entity.call(&"capture_arena_state", _actor_cars)
+		row["id"] = entity_id
+		rows.append(row)
+	return rows
+
 ## NetEvents drainage with node references resolved to compact actor indices.
 func _drain_events() -> Array:
 	var out: Array = []
@@ -385,6 +413,7 @@ func _on_snapshot(data: Dictionary) -> void:
 		var row: Dictionary = rows[i]
 		row["t"] = now
 		car.apply_net_state(row)
+	_apply_arena_rows(data.get("arena_rows", []))
 	for ev in data.events:
 		match int(ev.get("kind", 0)):
 			Snapshot.EV_HIT:
@@ -393,6 +422,18 @@ func _on_snapshot(data: Dictionary) -> void:
 				_present_impact_event(ev)
 			Snapshot.EV_PROJECTILE:
 				_spawn_visual_projectile(ev)
+
+func _apply_arena_rows(rows: Array) -> void:
+	for row_v in rows:
+		var row: Dictionary = row_v
+		var entity_id := int(row.get("id", 0))
+		var entity: Node = _arena_entities.get(entity_id)
+		if entity == null or not is_instance_valid(entity) \
+				or not entity.has_method(&"apply_arena_state"):
+			continue
+		row["_actors"] = _actor_cars
+		entity.call(&"apply_arena_state", row, not _arena_seen.has(entity_id))
+		_arena_seen[entity_id] = true
 
 func _present_hit_event(ev: Dictionary) -> void:
 	var attacker_idx := int(ev.get("attacker_actor", Snapshot.NO_TARGET))

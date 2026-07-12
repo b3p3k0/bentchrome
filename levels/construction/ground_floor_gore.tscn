@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" path="res://environment/porta_potty.tscn" id="19_porta"]
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="20_block"]
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="21_clutter"]
+[ext_resource type="PackedScene" path="res://environment/power_generator.tscn" id="22_generator"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -527,6 +528,10 @@ size = Vector2(220, 120)
 
 [node name="BreakableCover" type="Node2D" parent="."]
 
+[node name="PowerGenerator" parent="." instance=ExtResource("22_generator")]
+position = Vector2(350, 1000)
+arena_net_id = 1
+
 [node name="ContainerWestA" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(-980, 300)
 size = Vector2(256, 96)
@@ -534,6 +539,7 @@ max_hp = 100.0
 deco = &"container"
 floor_index = 1
 livery = 1
+arena_net_id = 20
 
 [node name="ContainerWestB" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(-620, 300)
@@ -542,6 +548,7 @@ max_hp = 100.0
 deco = &"container"
 floor_index = 1
 livery = 3
+arena_net_id = 21
 
 [node name="ContainerSlabA" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(896, -240)
@@ -551,6 +558,7 @@ max_hp = 100.0
 deco = &"container"
 floor_index = 2
 livery = 2
+arena_net_id = 22
 
 [node name="FenceSouth" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(-1200, 1500)
@@ -558,6 +566,7 @@ size = Vector2(384, 24)
 max_hp = 35.0
 deco = &"chainlink"
 floor_index = 1
+arena_net_id = 23
 
 [node name="LooseClutter" type="Node2D" parent="."]
 
@@ -590,34 +599,42 @@ floor_index = 1
 [node name="Porta1" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -640)
 seed_offset = 1
+arena_net_id = 10
 
 [node name="Porta2" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -544)
 seed_offset = 2
+arena_net_id = 11
 
 [node name="Porta3" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -448)
 seed_offset = 3
+arena_net_id = 12
 
 [node name="Porta4" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -352)
 seed_offset = 4
+arena_net_id = 13
 
 [node name="Porta5" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -256)
 seed_offset = 5
+arena_net_id = 14
 
 [node name="Porta6" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -160)
 seed_offset = 6
+arena_net_id = 15
 
 [node name="Porta7" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, -64)
 seed_offset = 7
+arena_net_id = 16
 
 [node name="Porta8" parent="PortaRow" instance=ExtResource("19_porta")]
 position = Vector2(-2100, 32)
 seed_offset = 8
+arena_net_id = 17
 
 [node name="AmbientLife" type="Node2D" parent="."]
 

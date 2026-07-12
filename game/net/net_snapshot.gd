@@ -10,7 +10,7 @@ extends RefCounted
 const Proto := preload("res://game/net/net_protocol.gd")
 
 # Row flags — puppet-facing state bits. The first byte is FULL; new bits go
-# in flags2 (added for disarm, protocol 7).
+# in flags2 (added for disarm in protocol 7; arena rows arrive in protocol 8).
 const F_ALIVE := 1
 const F_BOOST := 2
 const F_HANDBRAKE := 4
@@ -77,9 +77,10 @@ static func unpack_input(bytes: PackedByteArray) -> Dictionary:
 
 # ------------------------------------------------------------ state snapshot
 
-## rows: one Dictionary per actor, fixed order. events: NetEvents drainage
-## with targets already resolved to actor indices (NO_TARGET = none).
-static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteArray:
+## rows: one Dictionary per actor, fixed order. arena_rows: repeated opt-in
+## prop state (7 bytes each), so destruction/phase changes converge after loss.
+static func pack_snapshot(tick: int, rows: Array, events: Array,
+		arena_rows: Array = []) -> PackedByteArray:
 	var buf := StreamPeerBuffer.new()
 	buf.put_u8(Proto.PROTOCOL_VERSION)
 	buf.put_u32(tick)
@@ -124,6 +125,14 @@ static func pack_snapshot(tick: int, rows: Array, events: Array) -> PackedByteAr
 		for i in AMMO_SLOTS:
 			buf.put_u8(clampi(int(ammo[i]) if i < ammo.size() else 0, 0, 255))
 		buf.put_u8(clampi(roundi(float(row.get("recharge", 1.0)) * 255.0), 0, 255))
+	buf.put_u8(mini(arena_rows.size(), 255))
+	for i in mini(arena_rows.size(), 255):
+		var arena: Dictionary = arena_rows[i]
+		buf.put_u16(clampi(int(arena.get("id", 0)), 0, 65535))
+		buf.put_u8(clampi(int(arena.get("flags", 0)), 0, 255))
+		buf.put_u8(clampi(roundi(float(arena.get("hp", 0.0)) * 255.0), 0, 255))
+		buf.put_u16(clampi(int(arena.get("timer_ms", 0)), 0, 65535))
+		buf.put_u8(clampi(int(arena.get("targets", 0)), 0, 255))
 	buf.put_u8(mini(events.size(), 255))
 	for i in mini(events.size(), 255):
 		var ev: Dictionary = events[i]
@@ -201,6 +210,18 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 		})
 	if buf.get_available_bytes() < 1:
 		return {}
+	var arena_count := buf.get_u8()
+	var arena_rows: Array = []
+	for a in arena_count:
+		if buf.get_available_bytes() < 7:
+			return {}
+		arena_rows.append({
+			"id": buf.get_u16(), "flags": buf.get_u8(),
+			"hp": float(buf.get_u8()) / 255.0,
+			"timer_ms": buf.get_u16(), "targets": buf.get_u8(),
+		})
+	if buf.get_available_bytes() < 1:
+		return {}
 	var ev_count := buf.get_u8()
 	var events: Array = []
 	for e in ev_count:
@@ -242,4 +263,4 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			"dir": Vector2.RIGHT.rotated(angle), "speed": speed,
 			"lifetime": lifetime, "turn_rate": turn_rate, "target_actor": target,
 		})
-	return {"tick": tick, "rows": rows, "events": events}
+	return {"tick": tick, "rows": rows, "arena_rows": arena_rows, "events": events}

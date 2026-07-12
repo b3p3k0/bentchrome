@@ -55,6 +55,20 @@ func test_container_deco_and_floor_bit() -> void:
 	t.root.remove_child(block)
 	block.free()
 
+func test_opt_in_network_block_persists_as_tombstone() -> void:
+	var block = BlockScene.instantiate()
+	block.arena_net_id = 77
+	t.root.add_child(block)
+	block.get_node("Health").take_damage(999.0)
+	t.check(not block.is_queued_for_deletion() and not block.visible
+		and block.collision_layer == 0,
+		"arena block: networked death persists hidden and noncolliding")
+	var row: Dictionary = block.capture_arena_state([])
+	t.check(int(row.flags) == 0 and float(row.hp) == 0.0,
+		"arena block: tombstone repeats terminal state")
+	t.root.remove_child(block)
+	block.free()
+
 func test_chainlink_crumples_and_livery_overrides() -> void:
 	var fence = BlockScene.instantiate()
 	fence.deco = &"chainlink"

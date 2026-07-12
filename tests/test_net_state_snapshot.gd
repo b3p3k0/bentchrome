@@ -6,6 +6,7 @@ extends RefCounted
 
 const Snap := preload("res://game/net/net_snapshot.gd")
 const Proto := preload("res://game/net/net_protocol.gd")
+const State := preload("res://game/net/arena_state.gd")
 
 var t
 
@@ -23,7 +24,7 @@ func _row_a() -> Dictionary:
 	}
 
 func test_rows_round_trip() -> void:
-	t.check(Proto.PROTOCOL_VERSION == 7, "snap: the disarm flags2 byte ships behind protocol 7")
+	t.check(Proto.PROTOCOL_VERSION == 8, "snap: repeated arena state ships behind protocol 8")
 	var dead := {"alive": false, "hp": 0.0}
 	var bytes: PackedByteArray = Snap.pack_snapshot(99, [_row_a(), dead], [])
 	var back: Dictionary = Snap.unpack_snapshot(bytes)
@@ -66,6 +67,21 @@ func test_events_round_trip() -> void:
 	t.check(absf(float(e.lifetime) - 2.4) < 0.002, "snap: lifetime survives")
 	t.check(absf(float(e.turn_rate) - 3.5) < 0.002, "snap: homing rate survives")
 	t.check(int(e.target_actor) == 2, "snap: target actor survives")
+
+func test_arena_rows_round_trip_and_reject_truncation() -> void:
+	var arena := {"id": 513, "flags": State.ALIVE | State.WARNING,
+		"hp": 0.25, "timer_ms": 1200, "targets": 0b10010101}
+	var bytes := Snap.pack_snapshot(11, [], [], [arena])
+	var back := Snap.unpack_snapshot(bytes)
+	t.check(back.arena_rows.size() == 1, "snap: arena row count survives")
+	var row: Dictionary = back.arena_rows[0]
+	t.check(int(row.id) == 513 and int(row.flags) == int(arena.flags),
+		"snap: arena id and flags survive")
+	t.check(absf(float(row.hp) - 0.25) < 0.005 and int(row.timer_ms) == 1200,
+		"snap: arena hp grain and phase timer survive")
+	t.check(int(row.targets) == 0b10010101, "snap: eight-actor target mask survives")
+	bytes.resize(bytes.size() - 2)
+	t.check(Snap.unpack_snapshot(bytes).is_empty(), "snap: truncated arena/event tail rejected")
 
 func test_hit_event_round_trip() -> void:
 	var ev := {"kind": &"hit", "attacker_actor": 1, "victim_actor": 4}

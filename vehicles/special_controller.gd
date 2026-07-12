@@ -11,12 +11,11 @@ const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
 const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
 const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-honest blast ring
+const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
 
 const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
-const BOLT_SEG := 45.0            # lightning: subdivide the bolt every ~this many px
-const BOLT_JAG := 14.0            # ...and wobble interior points up to this far
 
 const DASH_SPEED := 1400.0        # body-check velocity (well past any top speed)
 const DASH_DURATION := 0.4        # ~560px of travel
@@ -56,9 +55,7 @@ var _flame_def: WeaponDef = null  # with — selection/twin swaps can't corrupt 
 var _armed_damage := 0.0
 var _beam_target: Node2D = null
 var _beam_t := 0.0
-var _beam_line: Line2D = null
-var _beam_glow: Line2D = null
-var _beam_sparks: CPUParticles2D = null
+var _beam_fx: Node2D = null
 var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
@@ -179,45 +176,9 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	_beam_def = def
 	_beam_target = tgt
 	_beam_t = _duration(def, BEAM_DURATION)
-	# Lightning rig: a wide faint glow line under a thin hot bolt, plus sparks
-	# crackling off the latch point. Points regenerate jagged every tick.
-	_beam_glow = Line2D.new()
-	_beam_glow.width = 7.0
-	_beam_glow.default_color = Color(0.35, 0.75, 1.0, 0.25)
-	fx_scene.add_child(_beam_glow)
-	_beam_line = Line2D.new()
-	_beam_line.width = 2.5
-	_beam_line.default_color = Color(0.75, 0.95, 1.0, 0.95)
-	fx_scene.add_child(_beam_line)
-	_beam_sparks = CPUParticles2D.new()
-	_beam_sparks.amount = 10
-	_beam_sparks.lifetime = 0.25
-	_beam_sparks.local_coords = false
-	_beam_sparks.spread = 180.0
-	_beam_sparks.initial_velocity_min = 60.0
-	_beam_sparks.initial_velocity_max = 160.0
-	_beam_sparks.scale_amount_min = 1.5
-	_beam_sparks.scale_amount_max = 2.5
-	_beam_sparks.gravity = Vector2.ZERO
-	_beam_sparks.color = Color(0.7, 0.92, 1.0, 0.9)
-	fx_scene.add_child(_beam_sparks)
+	_beam_fx = ElectricArcScene.instantiate() as Node2D
+	fx_scene.add_child(_beam_fx)
 	return true
-
-## Jagged bolt between two points: subdivide every ~BOLT_SEG px and offset the
-## interior points perpendicular by a random amount enveloped toward mid-span —
-## regenerated every tick, so the bolt lives.
-func _bolt_points(from: Vector2, to: Vector2) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	var span := to - from
-	var segs := maxi(int(span.length() / BOLT_SEG), 2)
-	var perp := span.normalized().orthogonal()
-	pts.append(from)
-	for i in range(1, segs):
-		var f := float(i) / segs
-		var envelope := sin(f * PI)  # zero at the ends, peak mid-span
-		pts.append(from + span * f + perp * randf_range(-BOLT_JAG, BOLT_JAG) * envelope)
-	pts.append(to)
-	return pts
 
 func _physics_process(delta: float) -> void:
 	# Tick before active effects: when one ends below and arms the cooldown, its
@@ -266,13 +227,8 @@ func _beam_tick(delta: float) -> void:
 		slow.duration = 0.4  # refreshed every tick while latched
 		slow.magnitude = BEAM_SLOW
 		_beam_target.apply_effect(slow)
-	var bolt := _bolt_points(origin, _beam_target.global_position)
-	_beam_line.points = bolt
-	if _beam_glow:
-		_beam_glow.points = bolt
-	if _beam_sparks:
-		_beam_sparks.global_position = _beam_target.global_position
-		_beam_sparks.emitting = true
+	if _beam_fx:
+		_beam_fx.set_arc(origin, _beam_target.global_position)
 	_beam_t -= delta
 	if _beam_t <= 0.0:
 		_end_beam()
@@ -285,15 +241,9 @@ func _end_beam(arm_cooldown := true) -> void:
 	_beam_t = 0.0
 	if arm_cooldown and was_active:
 		_sustained_cooldown_t = maxf(cooldown, 0.0)
-	if _beam_line:
-		_beam_line.queue_free()
-		_beam_line = null
-	if _beam_glow:
-		_beam_glow.queue_free()
-		_beam_glow = null
-	if _beam_sparks:
-		_beam_sparks.queue_free()
-		_beam_sparks = null
+	if _beam_fx:
+		_beam_fx.queue_free()
+		_beam_fx = null
 
 func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 	var body := shooter as CollisionObject2D

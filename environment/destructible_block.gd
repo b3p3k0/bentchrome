@@ -51,6 +51,7 @@ const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside c
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates
+const ArenaState := preload("res://game/net/arena_state.gd")
 
 @export var size := Vector2(96, 96)
 @export var max_hp := 80.0
@@ -60,8 +61,12 @@ const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 									# straddling a grade boundary (stadium slope
 									# ends), where both floors must collide
 @export var livery := -1            # containers: CONTAINER_PALETTES index; -1 = seeded
+@export_range(0, 65535, 1) var arena_net_id := 0 # 0 = legacy/local destruction
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
+var _dead := false
+var _net_initialized := false
+var _base_collision_layer := 4
 
 @onready var _health: Health = $Health
 @onready var _vis: Polygon2D = $Vis
@@ -71,6 +76,9 @@ func _ready() -> void:
 		collision_layer |= Floors.floor_bit(floor_index)  # keeps bit 4 for the radar
 	if extra_floor >= 1:
 		collision_layer |= Floors.floor_bit(extra_floor)
+	_base_collision_layer = collision_layer
+	if arena_net_id > 0:
+		add_to_group(&"arena_net_entities")
 	var half := size * 0.5
 	_vis.polygon = PackedVector2Array([
 		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),
@@ -96,6 +104,22 @@ func _on_damaged(_amount: float, hp: float) -> void:
 		queue_redraw()
 
 func _explode_and_free() -> void:
+	if _dead:
+		return
+	_dead = true
+	_spawn_death_visual()
+	if deco == &"barrel":
+		# Deferred: death often lands mid-physics-flush (projectile Area2D
+		# signal), and shape queries need the space unlocked.
+		call_deferred("_barrel_blast")
+	if arena_net_id > 0:
+		collision_layer = 0
+		collision_mask = 0
+		visible = false
+	else:
+		queue_free()
+
+func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
 	if scene:  # headless fixtures may not set one
 		var boom := preload("res://environment/explosion.tscn").instantiate()
@@ -103,11 +127,31 @@ func _explode_and_free() -> void:
 		boom.tint = _boom_tint()
 		boom.size_scale = 1.0 if deco == &"barrel" else 0.6
 		scene.add_child(boom)
-	if deco == &"barrel":
-		# Deferred: death often lands mid-physics-flush (projectile Area2D
-		# signal), and shape queries need the space unlocked.
-		call_deferred("_barrel_blast")
-	queue_free()
+
+func capture_arena_state(_actor_lookup: Array) -> Dictionary:
+	return {
+		"flags": 0 if _dead else ArenaState.ALIVE,
+		"hp": clampf(_health.hp / maxf(max_hp, 0.001), 0.0, 1.0),
+		"timer_ms": 0, "targets": 0,
+	}
+
+func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
+	var alive := ArenaState.is_alive(row)
+	_health.hp = clampf(float(row.get("hp", 0.0)), 0.0, 1.0) * max_hp
+	_wreck = 1.0 - _health.hp / maxf(max_hp, 0.001)
+	if alive:
+		_dead = false
+		visible = true
+		collision_layer = _base_collision_layer
+		queue_redraw()
+	elif not _dead:
+		_dead = true
+		if not initial_state:
+			_spawn_death_visual()
+		visible = false
+		collision_layer = 0
+		collision_mask = 0
+	_net_initialized = true
 
 func _boom_tint() -> Color:
 	match deco:
