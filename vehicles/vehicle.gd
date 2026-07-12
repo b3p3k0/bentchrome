@@ -95,6 +95,7 @@ var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
+var _mg_alt := 0          # staggered multi-barrel MG: which barrel fires next
 var _repairing := false
 var _repair_anchor := Vector2.ZERO
 var _repair_saved_velocity := Vector2.ZERO
@@ -390,7 +391,8 @@ func _physics_process(delta: float) -> void:
 	_update_depth(delta)
 	var aim := Vector2.RIGHT.rotated(heading)
 	if _mg_mount and _muzzle and intent.get("fire_mg", false):
-		_mg_mount.try_fire(_muzzle.global_position, aim, self)
+		if _mg_mount.try_fire(_mg_origin(), aim, self):
+			_mg_alt += 1  # staggered multi-barrel styles alternate on real shots
 	if _rack:
 		if intent.get("weapon_prev", false):
 			_rack.select_prev()
@@ -895,6 +897,17 @@ func is_burning() -> bool:
 
 func is_disarmed() -> bool:
 	return _status != null and _status.has_effect(&"disarm")
+
+## MG launch point. Styles with authored mg_points (Hubcap's twin barrels)
+## alternate between them — same mount, same rate and heat, the rounds just
+## leave staggered. Everything else keeps the classic nose muzzle.
+func _mg_origin() -> Vector2:
+	var m: Dictionary = body_metrics()
+	var guns: Array = m.get("mg_points", [])
+	if guns.is_empty():
+		return _muzzle.global_position
+	var p: Vector2 = guns[_mg_alt % guns.size()]
+	return global_position + p.rotated(heading)
 
 func is_shielded() -> bool:
 	return _status != null and _status.has_effect(&"invuln")
