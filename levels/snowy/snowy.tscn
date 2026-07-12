@@ -711,7 +711,7 @@ floor_index = 2
 [node name="Skiers" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"skier"])
-count = 3
+count = 2
 movement = 1
 route_points = PackedVector2Array(-1200, 1250, 800, 1250, 800, 300, -700, 300, -700, -1050, -1200, -1050, -1200, 1250)
 floor_index = 2
@@ -723,7 +723,7 @@ seed_offset = 31
 position = Vector2(896, -896)
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"deer"])
-count = 6
+count = 5
 movement = 1
 route_points = PackedVector2Array(-260, -220, 260, -220, 260, 220, -260, 220, -260, -220)
 floor_index = 3

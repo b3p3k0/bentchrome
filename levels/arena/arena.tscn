@@ -846,7 +846,7 @@ seed_offset = 2
 [node name="BusinessWest" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"business_suit", &"business_dress"])
-count = 3
+count = 2
 movement = 1
 route_points = PackedVector2Array(-950, -680, -950, 1360, -740, 1360, -740, -680, -950, -680)
 floor_index = 2
@@ -856,7 +856,7 @@ seed_offset = 3
 [node name="BusinessPark" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"business_dress", &"business_suit"])
-count = 3
+count = 2
 bounds = Vector2(980, 900)
 floor_index = 2
 speed = 48.0
@@ -875,7 +875,7 @@ seed_offset = 5
 [node name="PolicePatrol" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"police"])
-count = 3
+count = 2
 movement = 1
 route_points = PackedVector2Array(-1050, -650, 1050, -650, 1050, 900, -1050, 900, -1050, -650)
 floor_index = 2
@@ -921,26 +921,6 @@ floor_index = 2
 reacts_to_cars = false
 leaves_splat = false
 seed_offset = 10
-
-[node name="VendorS" type="Node2D" parent="AmbientLife"]
-position = Vector2(-1200, 1450)
-script = ExtResource("29_ambient")
-kinds = Array[StringName]([&"vendor"])
-movement = 2
-bounds = Vector2(0, 0)
-floor_index = 2
-seed_offset = 11
-
-[node name="CartS" type="Node2D" parent="AmbientLife"]
-position = Vector2(-1175, 1450)
-script = ExtResource("29_ambient")
-kinds = Array[StringName]([&"hotdog_cart"])
-movement = 2
-bounds = Vector2(0, 0)
-floor_index = 2
-reacts_to_cars = false
-leaves_splat = false
-seed_offset = 12
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 576)

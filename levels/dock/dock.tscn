@@ -1303,7 +1303,7 @@ shape = SubResource("R_wall_v")
 [node name="LowlandWorkers" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"dock_worker"])
-count = 4
+count = 3
 movement = 1
 route_points = PackedVector2Array(-2450, -1350, -1550, -1350, -1550, 1200, -2450, 1200, -2450, -1350)
 floor_index = 1
@@ -1314,7 +1314,7 @@ seed_offset = 41
 [node name="QuayWorkers" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"dock_worker"])
-count = 6
+count = 5
 movement = 1
 route_points = PackedVector2Array(-1200, 920, 1000, 920, 1000, 1040, -1200, 1040, -1200, 920)
 floor_index = 2
@@ -1325,7 +1325,7 @@ seed_offset = 42
 [node name="YardWorkers" type="Node2D" parent="AmbientLife"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"dock_worker"])
-count = 4
+count = 3
 movement = 1
 route_points = PackedVector2Array(-1250, -650, -1250, 700, 1050, 700, 1050, -650, -1250, -650)
 floor_index = 2
@@ -1337,7 +1337,7 @@ seed_offset = 43
 position = Vector2(1644, 1375)
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"dock_worker"])
-count = 5
+count = 4
 movement = 1
 route_points = PackedVector2Array(-650, -120, 650, -120, 650, 120, -650, 120, -650, -120)
 floor_index = 3

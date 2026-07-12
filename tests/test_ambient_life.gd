@@ -188,6 +188,10 @@ func test_downtown_population_budget_and_kinds() -> void:
 	var life: Node = level.get_node("AmbientLife")
 	var figures := 0
 	var carts := 0
+	var business := 0
+	var vagrants := 0
+	var police := 0
+	var vendors := 0
 	var found := {}
 	for pop in life.get_children():
 		for kind in pop.kinds:
@@ -196,8 +200,18 @@ func test_downtown_population_budget_and_kinds() -> void:
 			carts += pop.count
 		else:
 			figures += pop.count
-	t.check(figures == 22, "downtown ambience: exact 22 living figures authored")
-	t.check(carts == 3, "downtown ambience: three separate carts authored")
+		if pop.kinds.has(&"business_suit") or pop.kinds.has(&"business_dress"):
+			business += pop.count
+		elif pop.kinds.has(&"vagrant"):
+			vagrants += pop.count
+		elif pop.kinds.has(&"police"):
+			police += pop.count
+		elif pop.kinds.has(&"vendor"):
+			vendors += pop.count
+	t.check(figures == 18, "downtown ambience: reduced 18 living figures authored")
+	t.check(carts == 2, "downtown ambience: two separate carts authored")
+	t.check(business == 12 and vagrants == 2 and police == 2 and vendors == 2,
+		"downtown ambience: reduced mix stays 12/2/2/2")
 	for kind in AmbientActor.DOWNTOWN_KINDS:
 		t.check(found.has(kind), "downtown ambience: kind present %s" % kind)
 	level.free()
@@ -273,13 +287,13 @@ func test_regional_population_budgets_and_floor_authorship() -> void:
 		and suburbs.get(&"mower", 0) == 3 and suburbs.get(&"police", 0) == 2,
 		"regional ambience: Suburbs exact 18 actors authored")
 	var snowy := _authored_kind_counts("res://levels/snowy/snowy.tscn")
-	t.check(snowy.get(&"skier", 0) == 3 and snowy.get(&"deer", 0) == 6,
-		"regional ambience: Snowy exact three skiers and six deer")
+	t.check(snowy.get(&"skier", 0) == 2 and snowy.get(&"deer", 0) == 5,
+		"regional ambience: Snowy reduced to two skiers and five deer")
 	t.check(snowy[&"_floors"].Skiers == 2 and snowy[&"_floors"].DeerHerd == 3,
 		"regional ambience: skiers stay low and deer herd owns plateau")
 	var docks := _authored_kind_counts("res://levels/dock/dock.tscn")
-	t.check(docks.get(&"dock_worker", 0) == 19 and docks.get(&"police", 0) == 3,
-		"regional ambience: Docks exact 22 actors authored")
+	t.check(docks.get(&"dock_worker", 0) == 15 and docks.get(&"police", 0) == 3,
+		"regional ambience: Docks reduced to 15 workers and three police")
 	t.check(docks[&"_floors"].LowlandWorkers == 1 and docks[&"_floors"].QuayWorkers == 2
 		and docks[&"_floors"].DeckWorkers == 3,
 		"regional ambience: Docks workers explicitly span all terraces")
