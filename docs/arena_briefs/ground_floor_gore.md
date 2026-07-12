@@ -33,12 +33,27 @@ Retaining faces are solid everywhere except the two authored entries:
 - West dirt embankment at `(-384,-768)`, floor 1↔2, `384×512`, pull 120.
 - South concrete ramp at `(640,512)`, floor 1↔2, `384×512`, pull 120.
 
-The scaffold is a connected floor-3 circuit built from 256px runs and 448px
-work platforms. Its repair platform is widened to `640×448`. Two ordinary
-grades connect floors 2↔3; the north repair-platform edge deliberately drops to
-floor 2, while the west cantilever deliberately drops to floor 1. Protected
-edges carry visible rails and AI curbs; open edges are readable commitments.
-All four grade pairs have explicit two-way `FloorConnector`s.
+The scaffold is an orthogonal floor-3 ring on column lines `x=384/1536` and
+row lines `y=-1152/-128`: five 448px-deep work platforms (northwest, repair
+`640×448`, southeast, southwest, west cantilever) joined by five derived 256px
+runs whose lengths equal the platform-edge gaps exactly. The ring encloses a
+floor-2 **courtyard fight pit** (`x=512…1408`, `y=-1024…-256`); two switchback
+scaffold grades rise from inside it — north ramp `(784,-832)`, south ramp
+`(1088,-448)`, both `256×384`, pull 120, floors 2↔3, skinned deco over
+`surface_paint=false`. Every deck edge is classified **rail / gate / seam /
+drop**: gates are authored openings exactly covered by a neighboring deck or a
+ramp mouth (their shoulders build guard statics, so junctions cannot leak
+accidental lips); the repair platform's north lip drops to floor 2 and the
+cantilever's west lip drops to floor 1, both hazard-taped. All four grade
+pairs have explicit two-way `FloorConnector`s. Deck support posts, base
+plates, and cast shadows ride an understructure canvas that stays visible
+while the deck plane under-fades for traffic below.
+
+Four poured `112×112` **SlabColumns** stand on the slab's painted sixteen-anchor
+512px grid — a courtyard cover pair at `(576,-944)`/`(1088,-944)`, a west
+corridor column at `(64,-432)`, and a south strip column at `(1088,80)`. They
+are permanent floor-2 obstacle cover (no Health), one node owning paint and
+unscaled collision.
 
 The eight baked starts are four on floor 1, three on floor 2, and one on floor
 3. Their exact positions live in `ground_floor_gore.tscn`; tests enforce unique
@@ -53,10 +68,11 @@ The 11-crate budget is fixed:
 - No crate may enter a spawn safety zone, generator blast envelope, connector
   approach, or repair release lane.
 
-Permanent machine cover consists of a `256×128` bulldozer and `320×128` dump
-and cement trucks. Containers, chain link, porta-potties, and the generator are
-temporary cover. The three mud basins interrupt local fights without cutting
-the dependable dry perimeter route.
+Permanent cover consists of a `256×128` bulldozer, `320×128` dump and cement
+trucks, and the four poured slab columns. Containers (one now serves as
+courtyard cover beside the east run), chain link, porta-potties, and the
+generator are temporary cover. The three mud basins interrupt local fights
+without cutting the dependable dry perimeter route.
 
 ## Signature generator
 
@@ -105,12 +121,15 @@ repeated snapshots converge without replaying their death presentation.
    never dead-ends.
 2. Cross every mud basin and puddle with neutral, off-road, 4WD, and Cyclone
    profiles; inspect rain and ripples at combat and overview zoom.
-3. Use both foundation grades and both scaffold grades in both directions with
-   a small and heavy car.
-4. Complete every scaffold branch, use the repair bay from floor 3, then take
-   both deliberate drops; verify a floor-1 car below cannot collect or repair.
-5. Fight around all three machines, destroy the porta row, and check worker
-   containment on every floor.
+3. Use both foundation grades and both courtyard scaffold grades in both
+   directions with a small and heavy car.
+4. Lap the floor-3 ring both ways, take the cantilever spur, use the repair
+   bay from floor 3, then take both hazard-taped drops; verify a floor-1 car
+   below cannot collect or repair, and that fading decks leave their posts and
+   ground shadows visible.
+5. Fight around all three machines and inside the courtyard pit against the
+   slab columns, destroy the porta row, and check worker containment on every
+   floor.
 6. Wake the generator with shots and rams, test cover/escape counterplay, then
    trigger its blast into nearby destructibles.
 7. Repeat a generator cycle and prop destruction in a two-window LAN match.

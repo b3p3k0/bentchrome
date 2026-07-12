@@ -214,6 +214,12 @@ that crosses a grade seam.
 - **MUST:** a scaffold network offers multiple connected paths, paired grades
   back to its supporting floor, and no accidental gaps. Deliberate drops use
   `FloorConnector kind = edge` and remain visually distinct from guarded edges.
+- **DEFAULT:** classify every deck edge as exactly one of rail, gate, seam, or
+  drop (`ScaffoldDeck` exports). A gate is an authored opening (`gate_width`,
+  optional center offset) exactly covered by a neighboring deck or a ramp
+  mouth; its shoulders build guard statics, so junctions cannot leak
+  accidental lips. Seam edges draw nothing and build nothing — abutting decks
+  merge into one surface.
 - **MUST:** rails and AI hazard curbs agree. Protected edges show both; committed
   drops omit both only where a safe landing and recovery route exist.
 - **MUST:** floor-3 stations, pickups, props, and soft targets are explicitly
