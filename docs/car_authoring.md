@@ -13,6 +13,7 @@ the suite goes red and names it.
    - `special_weapon` — prose, `"Name: description"` (the colon split feeds the HUD).
    - `special_def` — basename of the WeaponDef: `data/weapons/<special_def>.tres`.
    - `ai_archetype` — `aggressor | ambusher | opportunist` (`defender`/`mini_boss` are legacy aliases).
+   - Optional: `burn_taken` — burn-DoT multiplier (Lovebug's air-cooled 1.5).
    - `stats` — acceleration / top_speed / handling / armor / special_power, integers 1-10.
    - `colors` — `primary` + `accent` hex.
    - `portrait` — `res://assets/img/bios/<id>.png`.
@@ -40,38 +41,43 @@ the suite goes red and names it.
 - **Radius is gameplay.** Hitbox stays 1:1 while the body renders at
   `FLEET_SCALE` 1.25 — deliberate near-miss forgiveness, don't "fix" it.
   Corner-escape AI budgets couple to radius (kandykane pinned at 22).
-  Taken radii: 12, 15, 17, 19, 20, 21, 21.5, 22, 26.
-- **Stat budget (advisory)**: the current nine total 27-34 points across the five
-  stats. Stay in the band unless the car IS the gimmick; low armor buys speed.
+  Taken radii: 12, 13.5, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 26.
+- **Stat budget (advisory)**: the fleet totals 27-35 points across the five
+  stats (Cyclone's 35 is paid for by the offroad penalty box). Stay in the
+  band unless the car IS the gimmick; low armor buys speed.
 - **Ammo economics**: cap 1-3; recharge 6-12s for light specials, 90s+ for
   heavy sustained ones (taser/blaze class).
 - **Terrain identity**: only where it sells the car (Cricket dirt, 4WD snow);
   omitted surfaces are neutral ×1.0. Unknown names fail import.
 
-## Role grid (the current nine) — open niches for the new fleet
+## Role grid (the current twelve) — open niches for the rest of the fleet
 
-| id        | mass | speed/armor  | special kind        | archetype  | terrain    |
-|-----------|------|--------------|---------------------|------------|------------|
-| mrghastly | 1    | fast/paper   | PROJECTILE (sniper) | aggressor  | —          |
-| cricket   | 2    | fast/light   | DASH                | aggressor  | dirt/grass |
-| ghost     | 3    | fastest/thin | PROJECTILE (homing) | aggressor  | —          |
-| splatcat  | 5    | nimble/mid   | PROJECTILE (slow-fx)| ambusher   | —          |
-| bumper    | 6    | slow/heavy   | FLAME               | defender   | —          |
-| smoky     | 6    | punchy/heavy | BEAM                | defender   | 4WD        |
-| kandykane | 7    | slow/heavy   | PROJECTILE (burn)   | mini_boss  | —          |
-| razorback | 7    | slow/heavy   | PROJECTILE (salvo)  | defender   | 4WD        |
-| hammertoe | 8    | mid/heavy    | TRIGGER             | ambusher   | all-road   |
+| id        | mass | speed/armor  | special kind        | archetype   | terrain    |
+|-----------|------|--------------|---------------------|-------------|------------|
+| mrghastly | 1    | fast/paper   | PROJECTILE (sniper) | aggressor   | —          |
+| cyclone   | 2    | fastest/glass| TORNADO             | ambusher    | road+, offroad− |
+| cricket   | 2    | fast/light   | DASH                | aggressor   | dirt/grass |
+| ghost     | 3    | fastest/thin | PROJECTILE (homing) | aggressor   | —          |
+| lovebug   | 4    | peppy/light  | PROJECTILE (disarm) | opportunist | water=road; burn 1.5x |
+| hornet    | 5    | all 6s       | PROJECTILE (burn)   | aggressor   | —          |
+| splatcat  | 5    | nimble/mid   | PROJECTILE (slow-fx)| ambusher    | —          |
+| bumper    | 6    | slow/heavy   | FLAME               | defender    | —          |
+| smoky     | 6    | punchy/heavy | BEAM                | defender    | 4WD        |
+| kandykane | 7    | slow/heavy   | PROJECTILE (burn)   | mini_boss   | —          |
+| razorback | 7    | slow/heavy   | PROJECTILE (salvo)  | defender    | 4WD        |
+| hammertoe | 8    | mid/heavy    | TRIGGER             | ambusher    | all-road   |
 
-Open niches: **no opportunist** archetype car; BEAM/FLAME/DASH/TRIGGER each have
-exactly one owner; **no DROP signature** (mines are only shared slots); no
-rear-launch special; no ice/snow/road specialist; mass 4 and 9-10 unused;
-radius gaps under 12, 13-14, 16, 18, 23-25, and above 26.
+Open niches: BEAM/FLAME/DASH/TRIGGER/TORNADO each have exactly one owner;
+**no DROP signature** (mines are only shared slots); no rear-launch special;
+no ice or snow specialist; mass 9-10 unused (boss territory); radius gaps
+under 12, at 14, 20.5, 23-25, and above 26.
 
 ## New special Kind recipe (when data isn't enough)
 
 1. Add the value to `WeaponDef.Kind` (`resources/weapon_def.gd`).
-2. Handler in `vehicles/special_controller.gd` — dispatch lives in `_activate`;
-   study BEAM (sustained + lockout), DASH (controller bypass), DROP (rear deploy).
+2. Handler in `vehicles/special_controller.gd` — dispatch lives in `activate()`;
+   study BEAM (sustained + lockout), DASH (controller bypass), DROP (rear
+   deploy), TORNADO (self-AoE + visual override — the newest worked example).
 3. Same-floor filtering and mask-restore etiquette apply (see CLAUDE.md multi-floor).
 4. A test in `tests/` (register in `run_tests.gd` SUITES) + a row in
    `docs/specials_backlog.md`'s behavior table + matrices.md.
