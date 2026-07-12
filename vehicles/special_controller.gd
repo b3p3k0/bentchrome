@@ -30,6 +30,14 @@ const FLAME_WIDTH := 70.0         # column thickness
 
 const DROP_COOLDOWN := 0.5        # held button lays a trail, not a carpet
 
+# Tornado Alley (Cyclone): rear wheels up, violent spin, mobile AoE.
+static var TORNADO_SPIN_DEG := 900.0   # visual whirl rate (quantizer bypassed)
+static var TORNADO_STEER := 0.3        # steer authority left while spinning
+static var TORNADO_RADIUS_MULT := 1.5  # AoE radius = this x the visual footprint
+static var TORNADO_SHOVE := 220.0      # outward shove on a caught car (once each)
+static var TORNADO_DEV_MIN := 5.0      # course-deviation band (deg) — the land-mine
+static var TORNADO_DEV_MAX := 45.0     # spin-out idiom, momentum preserved
+
 const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
 
 var _def: WeaponDef = null
@@ -53,6 +61,11 @@ var _flame_t := 0.0
 var _flame_vis: Polygon2D = null
 var _drop_cd := 0.0
 var _sustained_cooldown_t := 0.0  # BEAM/FLAME: starts only after the effect ends
+var _tornado_t := 0.0
+var _tornado_def: WeaponDef = null
+var _tornado_spin := 0.0          # accumulated visual whirl angle
+var _tornado_hit := {}            # instance id -> true: one spin-out per victim
+var _tornado_fx: CPUParticles2D = null
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -109,6 +122,8 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			return _flame(pressed, def)
 		WeaponDef.Kind.DROP:
 			return _drop(pressed, shooter, def)
+		WeaponDef.Kind.TORNADO:
+			return _tornado(pressed, def)
 	return false
 
 ## Mines: deploy off the REAR bumper. Internal cooldown so a held button lays
@@ -200,6 +215,8 @@ func _physics_process(delta: float) -> void:
 		_dash_tick(delta)
 	if _flame_t > 0.0:
 		_flame_tick(delta)
+	if _tornado_t > 0.0:
+		_tornado_tick(delta)
 	if _drop_cd > 0.0:
 		_drop_cd -= delta
 	if _armed and _armed_t > 0.0:
@@ -273,6 +290,7 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 func _exit_tree() -> void:
 	_end_beam(false)   # don't leave an orphaned beam line if the car dies mid-zap
 	_end_flame(false)  # same etiquette for the torch
+	_end_tornado(false)
 	_dash_t = 0.0
 	_dash_target = null
 	_dash_damage_mult = 1.0
@@ -325,6 +343,7 @@ func cancel_dash() -> void:
 func cancel_for_interaction() -> void:
 	_end_beam()
 	_end_flame()
+	_end_tornado(false)  # interaction owns the pose — no random exit heading
 	cancel_dash()
 
 func _dash_tick(delta: float) -> void:
@@ -461,6 +480,108 @@ func _end_flame(arm_cooldown := true) -> void:
 	if _flame_vis:
 		_flame_vis.queue_free()
 		_flame_vis = null
+
+## Tornado Alley: the rear wheels lift and the car whips into a violent spin
+## for active_duration — a mobile AoE that cooks anything Health-bearing in a
+## ring ~TORNADO_RADIUS_MULT x the visual footprint (damage authored as dps).
+## A caught car gets the land-mine spin-out (course deviation, momentum kept)
+## plus an outward shove, once per activation. The Vehicle reads is_spinning()
+## to whirl the visual past the 16-step quantizer and cut steer authority;
+## when it stops, the nose points wherever the spin left it.
+func _tornado(pressed: bool, def: WeaponDef) -> bool:
+	if not pressed or _tornado_t > 0.0:
+		return false
+	_tornado_def = def
+	_tornado_t = _duration(def, 3.0)
+	_tornado_hit = {}
+	var vehicle := get_parent() as Node2D
+	_tornado_spin = float(vehicle.get("heading")) if vehicle else 0.0
+	if vehicle:
+		_tornado_fx = CPUParticles2D.new()
+		_tornado_fx.amount = 30
+		_tornado_fx.lifetime = 0.5
+		_tornado_fx.local_coords = false
+		_tornado_fx.spread = 180.0
+		_tornado_fx.gravity = Vector2.ZERO
+		_tornado_fx.initial_velocity_min = 30.0
+		_tornado_fx.initial_velocity_max = 80.0
+		_tornado_fx.tangential_accel_min = 140.0  # the vortex read
+		_tornado_fx.tangential_accel_max = 220.0
+		_tornado_fx.scale_amount_min = 2.0
+		_tornado_fx.scale_amount_max = 4.0
+		_tornado_fx.color = Color(0.62, 0.56, 0.46, 0.7)
+		vehicle.add_child(_tornado_fx)
+	return true
+
+func _tornado_tick(delta: float) -> void:
+	var vehicle := get_parent() as CollisionObject2D
+	if vehicle == null or _tornado_def == null:
+		_end_tornado(false)
+		return
+	_tornado_spin += deg_to_rad(TORNADO_SPIN_DEG) * delta
+	var shape := CircleShape2D.new()
+	shape.radius = _tornado_radius()
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = shape
+	params.transform = Transform2D(0.0, vehicle.global_position)
+	params.collision_mask = 5 | (1 << 9)  # ground | obstacle | soft target
+	params.collide_with_areas = true
+	params.exclude = [vehicle.get_rid()]
+	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
+		var body: Node = hit["collider"]
+		if not Floors.same_floor(vehicle, body):
+			continue  # the funnel stays on its own terrace
+		for child in body.get_children():
+			if child is Health:
+				if "last_attacker" in body:
+					body.last_attacker = vehicle
+				child.take_damage(_tornado_def.damage * delta * Combat.scale(vehicle, body))
+				break
+		if body is CharacterBody2D and body.has_method("apply_effect") \
+				and not _tornado_hit.has(body.get_instance_id()) \
+				and not bool(body.get("launch_immune")):
+			_tornado_hit[body.get_instance_id()] = true
+			var dev := deg_to_rad(randf_range(TORNADO_DEV_MIN, TORNADO_DEV_MAX))
+			if randf() < 0.5:
+				dev = -dev
+			body.velocity = body.velocity.rotated(dev)
+			if "heading" in body:
+				body.heading += dev
+			var away: Vector2 = ((body as Node2D).global_position - vehicle.global_position).normalized()
+			body.velocity += away * TORNADO_SHOVE
+	_tornado_t -= delta
+	if _tornado_t <= 0.0:
+		_end_tornado()
+
+## AoE reach: the fleet-scaled visual footprint, not the collision radius —
+## the funnel should look like it touches what it touches.
+func _tornado_radius() -> float:
+	var vehicle := get_parent()
+	if vehicle and vehicle.has_method("body_metrics"):
+		var m: Dictionary = vehicle.body_metrics()
+		return maxf(float(m.get("half_len", 26.0)), float(m.get("half_wid", 13.0))) * TORNADO_RADIUS_MULT
+	return 26.0 * TORNADO_RADIUS_MULT
+
+func _end_tornado(random_heading := true) -> void:
+	var was_active := _tornado_def != null
+	_tornado_t = 0.0
+	_tornado_def = null
+	_tornado_hit = {}
+	if _tornado_fx:
+		_tornado_fx.queue_free()
+		_tornado_fx = null
+	if was_active and random_heading:
+		var vehicle := get_parent()
+		if vehicle:
+			vehicle.set("heading", randf_range(0.0, TAU))  # as if it suddenly stopped
+
+func is_spinning() -> bool:
+	return _tornado_t > 0.0
+
+## The accumulated whirl angle — the Vehicle paints this instead of the
+## quantized heading while the tornado runs.
+func tornado_visual_angle() -> float:
+	return _tornado_spin
 
 func sustained_cooldown_remaining() -> float:
 	return _sustained_cooldown_t

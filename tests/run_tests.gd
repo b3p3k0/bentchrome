@@ -25,6 +25,7 @@ const SUITES := [
 	preload("res://tests/test_car_paint.gd"),
 	preload("res://tests/test_roster_contract.gd"),
 	preload("res://tests/test_disarm.gd"),
+	preload("res://tests/test_tornado.gd"),
 	preload("res://tests/test_spawn_distance.gd"),
 	preload("res://tests/test_car_select_bio.gd"),
 	preload("res://tests/test_input_bindings.gd"),

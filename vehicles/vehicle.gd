@@ -356,6 +356,9 @@ func _physics_process(delta: float) -> void:
 	elif _status and _status.has_effect(&"disarm"):
 		intent.erase("fire_mg")  # disarmed: pedals work, triggers don't
 		intent.erase("fire_selected")
+	if _special and _special.is_spinning() and intent.has("steer"):
+		# Tornado Alley: rear wheels are off the ground — mostly a passenger.
+		intent["steer"] = float(intent["steer"]) * SpecialController.TORNADO_STEER
 	if _controller and not (_special and _special.is_dashing()) \
 			and not (_driver and _driver.has_method(&"is_forcing") and _driver.is_forcing()):
 		# Normal driving; skipped mid-Leap (and mid-charge for drivers that
@@ -374,6 +377,8 @@ func _physics_process(delta: float) -> void:
 	_apply_bounce(pre_slide_vel)
 	_update_ram(delta, pre_slide_vel.length())
 	var visual_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
+	if _special and _special.is_spinning():
+		visual_heading = _special.tornado_visual_angle()  # whirl past the quantizer
 	_visual.rotation = visual_heading
 	if _shadow:
 		_shadow.rotation = visual_heading

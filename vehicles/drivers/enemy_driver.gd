@@ -35,6 +35,7 @@ const PURE := {
 enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE, NAVIGATE }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
+static var TORNADO_FIRE_RANGE := 250.0  # melee-radius special: only pull it point-blank
 const Floors := preload("res://game/floors.gd")  # terraced-floor math
 
 # NAVIGATE (floor levels only): a cross-floor target needs a connector — an
@@ -402,7 +403,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
 			"steer": clampf(diff * 2.0 + weave + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
 			"fire_mg": not scavenging and absf(aim) < 0.35 and dist < FIRE_RANGE and los,
-			"fire_selected": not scavenging and absf(aim) < 0.2 and dist < FIRE_RANGE * 0.7 and (los or arc),
+			"fire_selected": not scavenging and absf(aim) < 0.2 and dist < special_fire_range(rack) and (los or arc),
 			"boost": dist > 900.0 and absf(diff) < 0.5,  # burn nitro to close long gaps
 		}
 
@@ -510,6 +511,15 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 		"fire_selected": false,
 		"boost": _nav_phase == 1 and c.get("kind") == &"jump",
 	}
+
+## Kind-aware special envelope: a self-centered AoE (TORNADO) is wasted at
+## missile range — hold it until the target is basically in the funnel.
+func special_fire_range(rack) -> float:
+	if rack != null:
+		var def: Variant = rack.selected_def()
+		if def != null and def.kind == WeaponDef.Kind.TORNADO:
+			return TORNADO_FIRE_RANGE
+	return FIRE_RANGE * 0.7
 
 ## The selected secondary tracks (homing) — the only thing allowed to fire
 ## across floors.
