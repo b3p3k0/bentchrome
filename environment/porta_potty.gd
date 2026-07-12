@@ -1,0 +1,109 @@
+class_name PortaPotty
+extends StaticBody2D
+## Light site prop with a small chance of releasing a startled worker. The
+## worker stays a normal soft target; the cubicle never becomes tactical loot.
+
+const Floors := preload("res://game/floors.gd")
+const ActorScene := preload("res://environment/ambient_actor.tscn")
+
+const ESCAPE_CHANCE := 0.20
+const ESCAPE_PANIC := 2.5
+
+@export var floor_index := 1
+@export var max_hp := 20.0
+@export var seed_offset := 0
+
+var last_attacker: Node2D = null
+var _dead := false
+var _forced_roll := -1.0  # deterministic fixture seam; negative = seeded RNG
+@onready var _health: Health = $Health
+
+func _ready() -> void:
+	collision_layer = 4 | Floors.floor_bit(floor_index)
+	collision_mask = 0
+	_health.max_hp = max_hp
+	_health.hp = max_hp
+	_health.died.connect(_die)
+	queue_redraw()
+
+func set_test_roll(value: float) -> void:
+	_forced_roll = value
+
+static func releases_worker(roll: float) -> bool:
+	return roll >= 0.0 and roll < ESCAPE_CHANCE
+
+func _die() -> void:
+	if _dead:
+		return
+	_dead = true
+	collision_layer = 0
+	set_deferred(&"collision_mask", 0)
+	visible = false
+	call_deferred(&"_finish_death")
+
+func _finish_death() -> void:
+	var host := get_tree().current_scene
+	if host == null:
+		host = get_parent()
+	if host:
+		_spawn_blue_debris(host)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(absf(global_position.x * 7.0 + global_position.y * 13.0)) + seed_offset * 7919 + 17
+		var roll := _forced_roll if _forced_roll >= 0.0 else rng.randf()
+		if releases_worker(roll):
+			_spawn_worker(host, rng)
+	queue_free()
+
+func _spawn_worker(host: Node, rng: RandomNumberGenerator) -> void:
+	var actor := ActorScene.instantiate() as AmbientActor
+	actor.kind = &"construction_worker"
+	actor.palette_index = rng.randi_range(0, 2)
+	actor.floor_index = floor_index
+	actor.movement = AmbientActor.Movement.WANDER
+	actor.move_speed = 72.0
+	actor.actor_seed = int(rng.randi())
+	actor.wander_rect = Rect2(-Vector2(180, 180), Vector2(360, 360))
+	host.add_child(actor)
+	var threat := last_attacker if is_instance_valid(last_attacker) else _nearest_vehicle()
+	var away := (global_position - threat.global_position).normalized() if threat else Vector2.RIGHT
+	actor.global_position = global_position + away * 48.0
+	actor.panic_from(threat.global_position if threat else global_position - away, ESCAPE_PANIC)
+
+func _nearest_vehicle() -> Node2D:
+	var nearest: Node2D = null
+	var distance := INF
+	for candidate in get_tree().get_nodes_in_group(&"vehicles"):
+		if candidate is Node2D and Floors.same_floor(self, candidate):
+			var d := global_position.distance_squared_to(candidate.global_position)
+			if d < distance:
+				distance = d
+				nearest = candidate
+	return nearest
+
+func _spawn_blue_debris(host: Node) -> void:
+	var puff := CPUParticles2D.new()
+	puff.one_shot = true
+	puff.emitting = true
+	puff.amount = 18
+	puff.lifetime = 0.65
+	puff.explosiveness = 1.0
+	puff.spread = 180.0
+	puff.initial_velocity_min = 100.0
+	puff.initial_velocity_max = 260.0
+	puff.damping_min = 160.0
+	puff.damping_max = 300.0
+	puff.scale_amount_min = 2.0
+	puff.scale_amount_max = 5.0
+	puff.color = Color(0.25, 0.58, 0.78, 0.9)
+	puff.finished.connect(puff.queue_free)
+	host.add_child(puff)
+	puff.global_position = global_position
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2(-32, -40) + Vector2(7, 9), Vector2(64, 80)), Color(0, 0, 0, 0.3))
+	draw_rect(Rect2(-32, -40, 64, 80), Color(0.18, 0.52, 0.72))
+	draw_rect(Rect2(-26, -34, 52, 68), Color(0.22, 0.60, 0.80))
+	draw_rect(Rect2(-20, -29, 40, 54), Color(0.16, 0.47, 0.68), false, 3.0)
+	draw_circle(Vector2(13, 0), 3.0, Color(0.92, 0.82, 0.25))
+	for x in [-17.0, -6.0, 6.0, 17.0]:
+		draw_line(Vector2(x, -33), Vector2(x, -27), Color(0.08, 0.28, 0.42), 2.0)

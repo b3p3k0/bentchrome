@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -15,6 +15,12 @@
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="13_station"]
 [ext_resource type="PackedScene" path="res://environment/rain_squall.tscn" id="14_rain"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="15_speckle"]
+[ext_resource type="PackedScene" path="res://environment/construction_machine.tscn" id="16_machine"]
+[ext_resource type="Script" path="res://levels/construction/construction_deco.gd" id="17_site_deco"]
+[ext_resource type="Script" path="res://environment/ambient_population.gd" id="18_ambient"]
+[ext_resource type="PackedScene" path="res://environment/porta_potty.tscn" id="19_porta"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="20_block"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="21_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -458,6 +464,218 @@ z_index = 2
 [node name="RainSquall" parent="." instance=ExtResource("14_rain")]
 bounds = Vector2(4608, 3840)
 intensity = 1.0
+
+[node name="HeavyMachines" type="Node2D" parent="."]
+
+[node name="Bulldozer" parent="HeavyMachines" instance=ExtResource("16_machine")]
+position = Vector2(-900, -1200)
+kind = "bulldozer"
+size = Vector2(256, 128)
+floor_index = 1
+
+[node name="DumpTruck" parent="HeavyMachines" instance=ExtResource("16_machine")]
+position = Vector2(-300, 1050)
+rotation = -0.22
+kind = "dump_truck"
+size = Vector2(320, 128)
+floor_index = 1
+
+[node name="CementTruck" parent="HeavyMachines" instance=ExtResource("16_machine")]
+position = Vector2(1000, 650)
+rotation = 0.35
+kind = "cement_truck"
+size = Vector2(320, 128)
+floor_index = 1
+
+[node name="SiteDeco" type="Node2D" parent="."]
+
+[node name="TowerCrane" type="Node2D" parent="SiteDeco"]
+position = Vector2(640, -1710)
+script = ExtResource("17_site_deco")
+kind = "crane"
+size = Vector2(1260, 160)
+
+[node name="RebarCage1" type="Node2D" parent="SiteDeco"]
+position = Vector2(256, -256)
+script = ExtResource("17_site_deco")
+kind = "rebar"
+size = Vector2(160, 96)
+
+[node name="RebarCage2" type="Node2D" parent="SiteDeco"]
+position = Vector2(1180, -1400)
+script = ExtResource("17_site_deco")
+kind = "rebar"
+size = Vector2(144, 96)
+
+[node name="PipeBundle" type="Node2D" parent="SiteDeco"]
+position = Vector2(-1520, 240)
+script = ExtResource("17_site_deco")
+kind = "pipes"
+size = Vector2(192, 128)
+
+[node name="CableSpool" type="Node2D" parent="SiteDeco"]
+position = Vector2(1840, 1400)
+script = ExtResource("17_site_deco")
+kind = "spool"
+size = Vector2(128, 128)
+
+[node name="ConcreteForms" type="Node2D" parent="SiteDeco"]
+position = Vector2(1500, 80)
+script = ExtResource("17_site_deco")
+kind = "forms"
+size = Vector2(220, 120)
+
+[node name="BreakableCover" type="Node2D" parent="."]
+
+[node name="ContainerWestA" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-980, 300)
+size = Vector2(256, 96)
+max_hp = 100.0
+deco = &"container"
+floor_index = 1
+livery = 1
+
+[node name="ContainerWestB" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-620, 300)
+size = Vector2(256, 96)
+max_hp = 100.0
+deco = &"container"
+floor_index = 1
+livery = 3
+
+[node name="ContainerSlabA" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(896, -240)
+rotation = 1.570796
+size = Vector2(256, 96)
+max_hp = 100.0
+deco = &"container"
+floor_index = 2
+livery = 2
+
+[node name="FenceSouth" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-1200, 1500)
+size = Vector2(384, 24)
+max_hp = 35.0
+deco = &"chainlink"
+floor_index = 1
+
+[node name="LooseClutter" type="Node2D" parent="."]
+
+[node name="Pallet1" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(-420, 720)
+kind = &"pallet"
+footprint = 48.0
+floor_index = 1
+
+[node name="Pallet2" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(360, -1400)
+kind = &"pallet"
+footprint = 48.0
+floor_index = 2
+
+[node name="Cone1" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(360, 700)
+kind = &"cone"
+footprint = 24.0
+floor_index = 1
+
+[node name="Cone2" parent="LooseClutter" instance=ExtResource("21_clutter")]
+position = Vector2(910, 360)
+kind = &"cone"
+footprint = 24.0
+floor_index = 1
+
+[node name="PortaRow" type="Node2D" parent="."]
+
+[node name="Porta1" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -640)
+seed_offset = 1
+
+[node name="Porta2" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -544)
+seed_offset = 2
+
+[node name="Porta3" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -448)
+seed_offset = 3
+
+[node name="Porta4" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -352)
+seed_offset = 4
+
+[node name="Porta5" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -256)
+seed_offset = 5
+
+[node name="Porta6" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -160)
+seed_offset = 6
+
+[node name="Porta7" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, -64)
+seed_offset = 7
+
+[node name="Porta8" parent="PortaRow" instance=ExtResource("19_porta")]
+position = Vector2(-2100, 32)
+seed_offset = 8
+
+[node name="AmbientLife" type="Node2D" parent="."]
+
+[node name="YardWorkers" type="Node2D" parent="AmbientLife"]
+position = Vector2(-700, 760)
+script = ExtResource("18_ambient")
+kinds = Array[StringName]([&"construction_worker", &"supply_worker"])
+count = 5
+movement = 0
+bounds = Vector2(1200, 620)
+floor_index = 1
+speed = 50.0
+lane_spread = 14.0
+seed_offset = 61
+
+[node name="HaulWorkers" type="Node2D" parent="AmbientLife"]
+script = ExtResource("18_ambient")
+kinds = Array[StringName]([&"construction_worker", &"supply_worker"])
+count = 3
+movement = 1
+route_points = PackedVector2Array(-1840, -1050, -1200, -1450, -420, -1120, -760, -520, -1660, -520, -1840, -1050)
+floor_index = 1
+speed = 54.0
+lane_spread = 18.0
+seed_offset = 62
+
+[node name="WheelbarrowCrew" type="Node2D" parent="AmbientLife"]
+script = ExtResource("18_ambient")
+kinds = Array[StringName]([&"wheelbarrow_worker"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(-1650, 260, -1450, 700, -1550, 1240, -1980, 1180, -1900, 400, -1650, 260)
+floor_index = 1
+speed = 42.0
+lane_spread = 10.0
+seed_offset = 63
+
+[node name="SlabCrew" type="Node2D" parent="AmbientLife"]
+script = ExtResource("18_ambient")
+kinds = Array[StringName]([&"construction_worker", &"supply_worker"])
+count = 4
+movement = 1
+route_points = PackedVector2Array(80, -1280, 720, -1400, 1680, -1250, 1760, -520, 1100, 40, 260, -80, 80, -1280)
+floor_index = 2
+speed = 47.0
+lane_spread = 15.0
+seed_offset = 64
+
+[node name="ScaffoldCrew" type="Node2D" parent="AmbientLife"]
+script = ExtResource("18_ambient")
+kinds = Array[StringName]([&"supply_worker"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(384, -1152, 1536, -1152, 960, -640, 384, -1152)
+floor_index = 3
+speed = 42.0
+lane_spread = 8.0
+seed_offset = 65
 
 [node name="Vehicle" parent="." instance=ExtResource("3_vehicle")]
 position = Vector2(-1792, 1408)

@@ -25,7 +25,8 @@ const POLICE_BULLET_LIFE := 0.7
 const DOWNTOWN_KINDS := [&"business_suit", &"business_dress", &"vagrant",
 	&"police", &"vendor", &"hotdog_cart"]
 const REGIONAL_KINDS := [&"jogger", &"cyclist", &"dog", &"skateboarder", &"mower",
-	&"skier", &"deer", &"dock_worker"]
+	&"skier", &"deer", &"dock_worker", &"construction_worker",
+	&"wheelbarrow_worker", &"supply_worker"]
 const SUIT_COLORS := [Color(0.38, 0.4, 0.44), Color(0.12, 0.24, 0.48), Color(0.08, 0.09, 0.11)]
 const DRESS_COLORS := [Color(0.12, 0.32, 0.68), Color(0.12, 0.52, 0.25), Color(0.72, 0.12, 0.16)]
 const SKIN_COLORS := [Color(0.78, 0.59, 0.43), Color(0.56, 0.36, 0.25), Color(0.88, 0.69, 0.52)]
@@ -154,6 +155,14 @@ func _update_panic(delta: float) -> void:
 		_panic_t = PANIC_HOLD
 	elif _panic_t <= 0.0 and movement == Movement.ROUTE and route:
 		route_progress = route.get_closest_offset(get_parent().to_local(global_position))
+
+## Public reaction seam for authored surprises such as a worker escaping a
+## smashed porta-potty. Movement internals remain private to the actor.
+func panic_from(world_point: Vector2, duration := PANIC_HOLD) -> void:
+	_panic_dir = (global_position - world_point).normalized()
+	if _panic_dir == Vector2.ZERO:
+		_panic_dir = Vector2.RIGHT.rotated(_rng.randf_range(0.0, TAU))
+	_panic_t = maxf(duration, 0.0)
 
 func _on_body_entered(body: Node2D) -> void:
 	if _dead or not body.is_in_group(&"vehicles") or not Floors.same_floor(self, body):
@@ -317,6 +326,12 @@ func _draw() -> void:
 			_draw_deer(stride)
 		&"dock_worker":
 			_draw_dock_worker(stride)
+		&"construction_worker":
+			_draw_construction_worker(stride, 0)
+		&"wheelbarrow_worker":
+			_draw_construction_worker(stride, 1)
+		&"supply_worker":
+			_draw_construction_worker(stride, 2)
 		_:
 			_draw_business(stride, false)
 
@@ -371,6 +386,32 @@ func _draw_vendor(stride: float) -> void:
 	draw_rect(Rect2(-4, -4, 8, 8), Color(0.75, 0.12, 0.12))
 	draw_circle(Vector2(7, 0), 4.5, _skin())
 	draw_rect(Rect2(6, -5, 5, 10), Color(0.92, 0.92, 0.86))
+
+func _draw_construction_worker(stride: float, gear: int) -> void:
+	_shadow(8.0 if gear == 1 else 7.0)
+	var workwear: Color = [Color(0.15, 0.31, 0.55), Color(0.38, 0.40, 0.42),
+		Color(0.56, 0.46, 0.30)][palette_index % 3]
+	var vest := Color(0.72, 0.9, 0.18) if palette_index % 2 == 0 else Color(1.0, 0.45, 0.08)
+	var hat: Color = [Color(0.98, 0.78, 0.12), Color(0.95, 0.38, 0.08),
+		Color(0.92, 0.93, 0.9)][palette_index % 3]
+	_legs(stride, workwear.darkened(0.25))
+	draw_rect(Rect2(-7, -5, 13, 10), workwear)
+	draw_line(Vector2(-4, -4), Vector2(4, 4), vest, 2.5)
+	draw_line(Vector2(-4, 4), Vector2(4, -4), vest, 2.5)
+	draw_circle(Vector2(7, 0), 4.5, _skin())
+	draw_rect(Rect2(6, -5.5, 5, 11), hat)
+	draw_line(Vector2(5, -5.5), Vector2(11, -5.5), hat.darkened(0.25), 1.5)
+	if gear == 1:
+		# Wheelbarrow trails behind; one wheel and two handles sell it at speed.
+		draw_colored_polygon(PackedVector2Array([Vector2(-22, -8), Vector2(-11, -6),
+			Vector2(-11, 6), Vector2(-22, 8)]), Color(0.46, 0.49, 0.48))
+		draw_circle(Vector2(-23, 0), 3.5, Color(0.08, 0.08, 0.09))
+		draw_line(Vector2(-11, -5), Vector2(-3, -4), Color(0.22, 0.23, 0.24), 2.0)
+		draw_line(Vector2(-11, 5), Vector2(-3, 4), Color(0.22, 0.23, 0.24), 2.0)
+	elif gear == 2:
+		var load_color := Color(0.48, 0.31, 0.16) if palette_index % 2 == 0 else Color(0.58, 0.60, 0.62)
+		for y in [-6.0, 0.0, 6.0]:
+			draw_line(Vector2(-13, y), Vector2(7, y), load_color, 2.5)
 
 func _draw_hotdog_cart() -> void:
 	draw_rect(Rect2(-14, -10, 28, 20), Color(0, 0, 0, 0.25))
