@@ -11,10 +11,12 @@ const EDGE := Color(0.55, 0.55, 0.62)
 
 @export var low_floor := 2
 @export var high_floor := 3
-@export_range(64.0, 1024.0, 16.0) var leg_size := 240.0
+@export_range(64.0, 1024.0, 8.0) var leg_size := 240.0
 @export_enum("road", "grass", "snow", "dirt", "ice", "water") \
 	var terrain_type := "road"
 @export var surface_color := Color(0.16, 0.16, 0.19)
+@export var surface_paint := true  # false when one level-owned skin paints a
+	# seamless multi-facet hill; floor, terrain, and grade mechanics stay live
 @export_range(1.0, 600.0, 1.0) var downhill_pull := Ramp.DEFAULT_DOWNHILL_PULL
 
 var _grade_area: Area2D = null
@@ -96,6 +98,8 @@ static func downhill_vector(world_rotation: float) -> Vector2:
 	return Vector2(1.0, 1.0).normalized().rotated(world_rotation)
 
 func _draw() -> void:
+	if not surface_paint:
+		return
 	draw_colored_polygon(footprint(), surface_color)
 	for i in range(1, BANDS):
 		var f := float(i) / float(BANDS)

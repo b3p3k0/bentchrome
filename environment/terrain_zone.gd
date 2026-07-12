@@ -12,10 +12,11 @@ const EDGE_JITTER := 10.0    # max perpendicular wobble
 
 @export var terrain_type: StringName = &"road"
 @export var terrain_priority := 0  # overlaps choose highest; ramps reserve 100
+@export var soften_visual := true  # false for authored geometric silhouettes
 
 func _ready() -> void:
 	var vis := get_node_or_null(^"Vis") as Polygon2D
-	if vis and vis.polygon.size() >= 3:
+	if soften_visual and vis and vis.polygon.size() >= 3:
 		vis.polygon = _soften(vis.polygon)
 
 ## Deterministic per-zone: rounds each corner (chamfer + inward mid point) and

@@ -103,14 +103,28 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	t.check(cardinals.size() == 4 and corners.size() == 4,
 		"snowy hill: four cardinal and four diagonal faces")
 	for ramp in cardinals:
-		t.check(ramp.size == Vector2(896, 240) and not ramp.rails
+		t.check(ramp.size == Vector2(896, 240) and not ramp.rails and not ramp.surface_paint
 				and ramp.terrain_type == "snow" and is_equal_approx(ramp.downhill_pull, 120.0),
-			"snowy hill: %s is a broad seamless snow grade" % ramp.name)
+			"snowy hill: %s yields paint to the seamless snow skin" % ramp.name)
 	for corner in corners:
-		t.check(is_equal_approx(corner.leg_size, 240.0)
+		t.check(is_equal_approx(corner.leg_size, 120.0) and not corner.surface_paint
 				and corner.terrain_type == "snow"
 				and is_equal_approx(corner.downhill_pull, 120.0),
-			"snowy hill: %s fills its diagonal with the same grade language" % corner.name)
+			"snowy hill: %s exactly fills its 120px corner gap" % corner.name)
+	var skin := snowy.get_node_or_null(^"SummitSnow/Vis") as Polygon2D
+	var expected_skin := PackedVector2Array([
+		Vector2(-448, -568), Vector2(448, -568),
+		Vector2(568, -448), Vector2(568, 448),
+		Vector2(448, 568), Vector2(-448, 568),
+		Vector2(-568, 448), Vector2(-568, -448),
+	])
+	t.check(skin != null and skin.polygon == expected_skin,
+		"snowy hill: one compact snow-textured octagon owns the complete silhouette")
+	var summit_snow := snowy.get_node_or_null(^"SummitSnow") as TerrainZone
+	var edge := snowy.get_node_or_null(^"SummitSnow/HillEdge") as Line2D
+	t.check(summit_snow != null and not summit_snow.soften_visual
+			and edge != null and is_equal_approx(edge.width, 3.0),
+		"snowy hill: authored octagon stays crisp behind one restrained edge")
 	t.check(grade_up == 8 and grade_down == 8,
 		"snowy hill: AI has paired routes over all eight faces")
 	t.check(snowy.get_node_or_null(^"AmmoPowerSummit") != null

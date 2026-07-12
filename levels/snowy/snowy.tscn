@@ -403,11 +403,18 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
 terrain_type = &"snow"
+soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="SummitSnow"]
 material = SubResource("SM_snow")
 color = Color(0.82, 0.85, 0.92, 0.55)
-polygon = PackedVector2Array(-448, -448, 448, -448, 448, 448, -448, 448)
+polygon = PackedVector2Array(-448, -568, 448, -568, 568, -448, 568, 448, 448, 568, -448, 568, -568, 448, -568, -448)
+
+[node name="HillEdge" type="Line2D" parent="SummitSnow"]
+points = PackedVector2Array(-448, -568, 448, -568, 568, -448, 568, 448, 448, 568, -448, 568, -568, 448, -568, -448, -448, -568)
+width = 3.0
+default_color = Color(0.38, 0.43, 0.53, 0.55)
+joint_mode = 2
 
 [node name="Col" type="CollisionShape2D" parent="SummitSnow"]
 shape = SubResource("R_summit")
@@ -419,7 +426,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(896, 240)
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 rails = false
 terrain_type = "snow"
 
@@ -429,7 +436,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(896, 240)
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 rails = false
 terrain_type = "snow"
 
@@ -440,7 +447,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(896, 240)
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 rails = false
 terrain_type = "snow"
 
@@ -451,7 +458,7 @@ script = ExtResource("25_ramp")
 low_floor = 2
 high_floor = 3
 size = Vector2(896, 240)
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 rails = false
 terrain_type = "snow"
 
@@ -460,35 +467,35 @@ position = Vector2(448, -1344)
 rotation = 3.14159
 low_floor = 2
 high_floor = 3
-leg_size = 240.0
+leg_size = 120.0
 terrain_type = "snow"
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 
 [node name="CornerNE" parent="." instance=ExtResource("30_corner")]
 position = Vector2(1344, -1344)
 rotation = -1.5708
 low_floor = 2
 high_floor = 3
-leg_size = 240.0
+leg_size = 120.0
 terrain_type = "snow"
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 
 [node name="CornerSE" parent="." instance=ExtResource("30_corner")]
 position = Vector2(1344, -448)
 low_floor = 2
 high_floor = 3
-leg_size = 240.0
+leg_size = 120.0
 terrain_type = "snow"
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 
 [node name="CornerSW" parent="." instance=ExtResource("30_corner")]
 position = Vector2(448, -448)
 rotation = 1.5708
 low_floor = 2
 high_floor = 3
-leg_size = 240.0
+leg_size = 120.0
 terrain_type = "snow"
-surface_color = Color(0.78, 0.81, 0.88, 1)
+surface_paint = false
 
 [node name="ConNorthGradeUp" type="Node2D" parent="."]
 position = Vector2(896, -1344)
@@ -555,7 +562,7 @@ approach_dir = Vector2(1, 0)
 kind = &"grade"
 
 [node name="ConNWGradeUp" type="Node2D" parent="."]
-position = Vector2(368, -1424)
+position = Vector2(408, -1384)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
@@ -563,7 +570,7 @@ approach_dir = Vector2(0.707107, 0.707107)
 kind = &"grade"
 
 [node name="ConNWGradeDown" type="Node2D" parent="."]
-position = Vector2(368, -1424)
+position = Vector2(408, -1384)
 script = ExtResource("27_conn")
 from_floor = 3
 to_floor = 2
@@ -571,7 +578,7 @@ approach_dir = Vector2(-0.707107, -0.707107)
 kind = &"grade"
 
 [node name="ConNEGradeUp" type="Node2D" parent="."]
-position = Vector2(1424, -1424)
+position = Vector2(1384, -1384)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
@@ -579,7 +586,7 @@ approach_dir = Vector2(-0.707107, 0.707107)
 kind = &"grade"
 
 [node name="ConNEGradeDown" type="Node2D" parent="."]
-position = Vector2(1424, -1424)
+position = Vector2(1384, -1384)
 script = ExtResource("27_conn")
 from_floor = 3
 to_floor = 2
@@ -587,7 +594,7 @@ approach_dir = Vector2(0.707107, -0.707107)
 kind = &"grade"
 
 [node name="ConSEGradeUp" type="Node2D" parent="."]
-position = Vector2(1424, -368)
+position = Vector2(1384, -408)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
@@ -595,7 +602,7 @@ approach_dir = Vector2(-0.707107, -0.707107)
 kind = &"grade"
 
 [node name="ConSEGradeDown" type="Node2D" parent="."]
-position = Vector2(1424, -368)
+position = Vector2(1384, -408)
 script = ExtResource("27_conn")
 from_floor = 3
 to_floor = 2
@@ -603,7 +610,7 @@ approach_dir = Vector2(0.707107, 0.707107)
 kind = &"grade"
 
 [node name="ConSWGradeUp" type="Node2D" parent="."]
-position = Vector2(368, -368)
+position = Vector2(408, -408)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 3
@@ -611,7 +618,7 @@ approach_dir = Vector2(0.707107, -0.707107)
 kind = &"grade"
 
 [node name="ConSWGradeDown" type="Node2D" parent="."]
-position = Vector2(368, -368)
+position = Vector2(408, -408)
 script = ExtResource("27_conn")
 from_floor = 3
 to_floor = 2
