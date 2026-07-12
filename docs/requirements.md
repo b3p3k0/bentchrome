@@ -16,6 +16,9 @@ This document condenses the master design specs into quick-reference points we c
 - Depot and Coliseum are named temporary MP exceptions until neutral four-plus spawn data is separated from their boss actors.
 - Every grade slows ascent and assists descent; surface terrain still composes. Ordinary pull =120 px/s²; Coliseum stairs retain 170 + row bumps.
 - Four cardinal grades plus four triangular corner grades are the standard eight-sided hill approximation; solid top-side gaps use a two-floor triangular chamfer.
+- Regular hills use one `DriveableHill` root and one continuous clipped-octagon skin; corner leg is derived as half the grade length, never hand-sized.
+- Hill terrain repaints its substrate and applies the matching surface once, then uses restrained northwest relief and continuous cosmetic vehicle/shadow lift. No physics body scales.
+- Props spanning a grade seam carry both adjoining floor bits and draw after the hill skin; all eight 220px connector approaches remain clear.
 
 ## Enemy & AI Variety
 - Archetypes: aggressor, ambusher, opportunist — a blendable weight mix `Vector3(aggressor, ambusher, opportunist)` so pure types and hybrids share one system; plus tougher mini-boss/boss variants.

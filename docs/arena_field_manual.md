@@ -150,6 +150,41 @@ those systems room to express themselves.
 Every grade route needs a clear 220px AI approach on its `from_floor`. Author
 paired connectors for both directions; grade commits do not boost.
 
+### Driveable hills: one root, one skin
+
+- **MUST:** author a regular eight-faced mound through `DriveableHill`, not as
+  eight independently positioned or painted prefabs. The node owns the summit
+  FloorZone/TerrainZone, four cardinal `Ramp`s, four `CornerRamp`s, and all
+  paired connectors.
+- **MUST:** `grade_length` is the only slope-depth input. Corner leg equals
+  exactly half that length; the full footprint is `summit_size + grade_length`.
+  Do not hand-scale a corner to fill a visually estimated gap.
+- **MUST:** one clipped-octagon surface paints the complete mound. Individual
+  grades set `surface_paint = false`; per-face opaque paint produces seams,
+  bands, overlaps, and arrowhead corners.
+- **MUST:** assign the same substrate and terrain materials used around the
+  hill. The component repaints the substrate, then applies the terrain once;
+  this prevents translucent grass/snow from stacking brighter over itself.
+- **MUST:** slope relief stays cosmetic. It may tint and re-project terrain and
+  interpolate vehicle/shadow lift, but may never scale or offset physics.
+- **MUST:** a prop spanning a grade/floor seam carries both adjoining floor
+  bits. Hill skin draws first, then slope props, then vehicles.
+- **DEFAULT:** relief uses the shared fixed northwest light, strength `0.14`,
+  projected pattern compression `1.35`, restrained crest/foot shading, and a
+  small southeast contact shadow. It is static and self-contained: no shimmer,
+  contour bands, normal-map assets, or scene-wide light dependency.
+- **DEFAULT:** ordinary grades interpolate the existing floor lift and visual
+  scale continuously from low to high. `stairs = true` opts out so the
+  Coliseum retains its row-by-row visual language.
+- **DEFAULT:** place authored summit rewards and ambience beneath the hill root
+  so moving the hill cannot strand its content. Keep roads/markings outside the
+  footprint and re-run all eight connector approaches after any transform.
+
+Failure precedents now locked out: individually opaque grade strips, manually
+sized corner facets, translucent terrain painted twice, a binary midpoint
+height pop, props hidden behind the skin, and single-floor collision on a prop
+that crosses a grade seam.
+
 ## Terraces and airborne routes
 
 - **MUST:** every occupied floor has a route up and a route down. A one-way drop
@@ -246,7 +281,7 @@ paired connectors for both directions; grade commits do not boost.
 | Downtown | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
 | Freeway | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
 | Suburbs | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
-| Snowy Pass | Medium / 7 | switchbacks + eight-face summit hill | ice, pits, snow grades | severe handling terrain needs recovery room and multiple approaches |
+| Snowy Pass | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
 | Depot | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Docks | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
 | Coliseum | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
@@ -303,6 +338,23 @@ paired connectors for both directions; grade commits do not boost.
 - Reason:
 - Compensating design/test:
 - Removal condition:
+```
+
+## Copy-paste hill brief
+
+```markdown
+# <Hill name>
+- Center / low floor / high floor:
+- Summit size / grade length / derived corner leg / total footprint:
+- Substrate material / terrain material / terrain type:
+- Downhill pull (ordinary default 120):
+- Relief overrides (prefer shared defaults):
+- Summit rewards and ambience parented to the hill:
+- Slope props, draw order, and floor bits:
+- Road/marking clearance:
+- Eight paired connector approaches clear by 220px:
+- Small-car and large-car eight-direction test route:
+- Combat/overview visual check and eight-car performance result:
 ```
 
 ## Acceptance loop
