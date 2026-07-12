@@ -116,6 +116,26 @@ func test_expires_after_lifetime() -> void:
 	sc._end_pulse()
 	_done(caster)
 
+func test_dual_mg_alternates_barrels() -> void:
+	var car = _car(Vector2.ZERO)
+	car.set_stats(load("res://data/vehicles/hubcap.tres"))
+	await _settle([car])
+	var a: Vector2 = car._mg_origin()
+	car._mg_alt += 1  # the vehicle bumps this on every REAL shot
+	var b: Vector2 = car._mg_origin()
+	car._mg_alt += 1
+	var a2: Vector2 = car._mg_origin()
+	t.check(a != b, "dual mg: consecutive shots leave different barrels")
+	t.check(is_equal_approx(a.y, -b.y) and is_equal_approx(a.x, b.x),
+		"dual mg: barrels mirror across the axle")
+	t.check(a == a2, "dual mg: the two-barrel cycle repeats")
+	var stock = _car(Vector2(500, 0))
+	await _settle([stock])
+	t.check(stock._mg_origin() == stock.get_node("Visual/Muzzle").global_position,
+		"dual mg: single-muzzle cars keep the classic nose origin")
+	_done(car)
+	_done(stock)
+
 func test_ai_holds_pulse_until_point_blank() -> void:
 	var driver = EnemyDriverScript.new()
 	var rack := StubRack.new()

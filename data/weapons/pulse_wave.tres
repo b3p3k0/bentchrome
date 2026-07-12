@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Pulse Wave"
+kind = 7
+cooldown = 2.0
+damage = 35.0
+projectile_speed = 600.0
+projectile_lifetime = 0.45
+note = "Neon shockwave: 270px ring (speed x lifetime), damage + shove fall off center-to-rim, caster pops a little hop. The ring IS the hitbox."

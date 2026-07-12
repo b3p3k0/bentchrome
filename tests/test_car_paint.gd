@@ -8,7 +8,7 @@ const PaintScript := preload("res://vehicles/car_paint.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 
 # Canon size order, smallest first. Lackey sits above via depot body_scale 1.5.
-const ORDER := [&"mrghastly", &"cyclone", &"cricket", &"lovebug", &"ghost",
+const ORDER := [&"mrghastly", &"cyclone", &"hubcap", &"cricket", &"lovebug", &"ghost",
 	&"hornet", &"splatcat", &"bumper", &"smoky", &"razorback", &"kandykane", &"hammertoe"]
 
 var t

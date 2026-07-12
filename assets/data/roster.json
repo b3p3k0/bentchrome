@@ -161,6 +161,30 @@
       "mass": 5
     },
     {
+      "id": "hubcap",
+      "car_name": "Hubcap",
+      "driver_name": "Rex Goodyear",
+      "flavor": "There is no car. Rex Goodyear strapped himself between two wheels taller than he is, bolted a machine gun to each hub mount, and called it a vehicle. The wheelbase is a single axle line, so he pivots on a coin and laughs while he does it. Armor is whatever Rex remembered to wear that morning. Nobody knows how he steers. Rex says the wheels know.",
+      "special_weapon": "Pulse Wave: a neon-green ring of energy radiating out from Rex's body, damaging and shoving away everything it touches — hardest up close, a nudge at the rim. The kick pops him briefly off the ground.",
+      "special_def": "pulse_wave",
+      "stats": {
+        "acceleration": 8,
+        "top_speed": 4,
+        "handling": 9,
+        "armor": 5,
+        "special_power": 8
+      },
+      "colors": {
+        "primary": "#7a3bd6",
+        "accent": "#39ff6a"
+      },
+      "portrait": "res://assets/img/bios/hubcap.png",
+      "ai_archetype": "aggressor",
+      "special_ammo_cap": 1,
+      "special_recharge_seconds": 25.0,
+      "mass": 3
+    },
+    {
       "id": "kandykane",
       "car_name": "Kandy Kane",
       "driver_name": "Kandy Kane",
