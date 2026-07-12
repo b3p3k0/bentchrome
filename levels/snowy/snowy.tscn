@@ -335,18 +335,6 @@ polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 [node name="Col" type="CollisionShape2D" parent="Rock1"]
 shape = SubResource("RectangleShape2D_rock")
 
-[node name="Rock2" type="StaticBody2D" parent="."]
-collision_layer = 20
-script = ExtResource("12_deco")
-position = Vector2(640, -160)
-
-[node name="Vis" type="Polygon2D" parent="Rock2"]
-color = Color(0.3, 0.3, 0.36, 1)
-polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-
-[node name="Col" type="CollisionShape2D" parent="Rock2"]
-shape = SubResource("RectangleShape2D_rock")
-
 [node name="Rock3" type="StaticBody2D" parent="."]
 collision_layer = 20
 script = ExtResource("12_deco")
@@ -391,8 +379,8 @@ floor_index = 2
 size = Vector2(3456, 3456)
 
 [node name="SnowyHill" parent="." instance=ExtResource("25_hill")]
-position = Vector2(896, -896)
-summit_size = Vector2(896, 896)
+position = Vector2(896, -672)
+summit_size = Vector2(848, 848)
 grade_length = 240.0
 low_floor = 2
 high_floor = 3
@@ -409,6 +397,18 @@ crest_highlight = 0.06
 foot_darkening = 0.08
 edge_width = 2.0
 edge_color = Color(0.38, 0.43, 0.53, 0.4)
+
+[node name="SlopeBuilding" type="StaticBody2D" parent="."]
+collision_layer = 52
+script = ExtResource("12_deco")
+position = Vector2(640, -160)
+
+[node name="Vis" type="Polygon2D" parent="SlopeBuilding"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+
+[node name="Col" type="CollisionShape2D" parent="SlopeBuilding"]
+shape = SubResource("RectangleShape2D_rock")
 
 [node name="AmmoPowerSummit" parent="SnowyHill" instance=ExtResource("8_ammo")]
 kind = "power"
@@ -568,8 +568,7 @@ speed = 80.0
 lane_spread = 20.0
 seed_offset = 31
 
-[node name="DeerHerd" type="Node2D" parent="AmbientLife"]
-position = Vector2(896, -896)
+[node name="DeerHerd" type="Node2D" parent="SnowyHill"]
 script = ExtResource("29_ambient")
 kinds = Array[StringName]([&"deer"])
 count = 5

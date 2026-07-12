@@ -271,11 +271,15 @@ func _authored_kind_counts(scene_path: String) -> Dictionary:
 	var level: Node = load(scene_path).instantiate()
 	var out := {}
 	var floors := {}
-	var life: Node = level.get_node("AmbientLife")
-	for pop in life.get_children():
-		for kind in pop.kinds:
-			out[kind] = int(out.get(kind, 0)) + pop.count
-		floors[pop.name] = pop.floor_index
+	var stack: Array[Node] = [level]
+	while not stack.is_empty():
+		var node := stack.pop_back() as Node
+		for child in node.get_children():
+			stack.append(child)
+		if node is AmbientPopulation:
+			for kind in node.kinds:
+				out[kind] = int(out.get(kind, 0)) + node.count
+			floors[node.name] = node.floor_index
 	out[&"_floors"] = floors
 	level.free()
 	return out
