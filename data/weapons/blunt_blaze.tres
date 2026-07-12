@@ -13,6 +13,7 @@ magnitude = 4.0
 script = ExtResource("1_def")
 display_name = "Blunt Blaze"
 kind = 4
+cooldown = 2.0
 damage = 27.0
 on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_blaze_burn")])
 note = "FLAME: nose-anchored fire column (~300px, 3s per ammo, hold to torch). Damage is dps while bathed; hits ignite for 10s."

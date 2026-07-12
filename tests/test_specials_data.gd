@@ -13,6 +13,11 @@ class DashShooter extends CharacterBody2D:
 	func terrain_factor(property: StringName, _surface: StringName = &"") -> float:
 		return dash_terrain_factor if property == &"dash_damage" else 1.0
 
+class SustainedShooter extends CharacterBody2D:
+	var heading := 0.0
+	func body_metrics() -> Dictionary:
+		return {"half_len": 26.0}
+
 func _init(runner) -> void:
 	t = runner
 
@@ -35,7 +40,7 @@ func test_lackey_loadout() -> void:
 func test_twin_barrel_chooses_by_context() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
-	var shooter := CharacterBody2D.new()
+	var shooter := SustainedShooter.new()
 	container.add_child(shooter)
 	var ctrl = ControllerScript.new()
 	shooter.add_child(ctrl)
@@ -68,6 +73,7 @@ func test_splat_effect_def() -> void:
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
 	t.check(not d.stub and d.kind == 4, "blaze: live FLAME column")
+	t.check_approx(d.cooldown, 2.0, "blaze: two-second post-fire lockout")
 	var fx := _first_effect(d)
 	t.check(fx != null and fx.kind == &"burn", "blaze: burn on hit")
 	t.check_approx(fx.duration, 10.0, "blaze: 10s ignite")
@@ -87,7 +93,65 @@ func test_red_glare_def() -> void:
 func test_taser_def() -> void:
 	var d := _def("res://data/weapons/taser.tres")
 	t.check(not d.stub and d.kind == 1, "taser: live BEAM")
+	t.check_approx(d.cooldown, 2.0, "taser: two-second post-fire lockout")
 	t.check_approx(d.acquisition_radius, 400.0, "taser: doubled reach (break at 800 via hold factor)")
+
+func test_sustained_cooldown_starts_after_flame_finishes() -> void:
+	var shooter := SustainedShooter.new()
+	t.root.add_child(shooter)
+	var sc = ControllerScript.new()
+	shooter.add_child(sc)
+	var blaze: WeaponDef = load("res://data/weapons/blunt_blaze.tres")
+	sc.set_weapon(blaze)
+	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
+		"sustained cooldown: flame activation succeeds")
+	sc._physics_process(ControllerScript.FLAME_DURATION - 0.2)
+	t.check_approx(sc.sustained_cooldown_remaining(), 0.0,
+		"sustained cooldown: firing duration pays none of the lockout")
+	sc._physics_process(0.21)
+	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+		"sustained cooldown: full clock arms when flame ends")
+	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
+		"sustained cooldown: immediate repeat is rejected")
+	sc._physics_process(1.9)
+	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
+		"sustained cooldown: repeat stays locked before two seconds")
+	sc._physics_process(0.1)
+	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
+		"sustained cooldown: repeat opens exactly after two seconds")
+	t.root.remove_child(shooter)
+	shooter.free()
+
+func test_twin_sustained_barrels_share_early_end_lockout() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var shooter := CharacterBody2D.new()
+	container.add_child(shooter)
+	var sc = ControllerScript.new()
+	shooter.add_child(sc)
+	var blaze: WeaponDef = load("res://data/weapons/blunt_blaze.tres")
+	var taser: WeaponDef = load("res://data/weapons/taser.tres")
+	sc.set_weapon(blaze)
+	sc.set_twin(taser)
+	var prey := CharacterBody2D.new()
+	prey.position = Vector2(300, 0)
+	prey.add_to_group(&"vehicles")
+	container.add_child(prey)
+	t.check(sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
+		"sustained cooldown: Lackey twin chooses and starts the beam")
+	sc._end_beam()  # LoS/range/target loss all converge on this early-end seam
+	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+		"sustained cooldown: interrupted beam starts a fresh full clock")
+	prey.position = Vector2(900, 0)  # context now chooses the flame barrel
+	t.check(not sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
+		"sustained cooldown: ending one twin locks the other")
+	sc._physics_process(2.0)
+	t.check(sc.activate(true, shooter.global_position, Vector2.RIGHT, shooter),
+		"sustained cooldown: shared twin gate reopens after two seconds")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
 
 func test_leap_def() -> void:
 	var d := _def("res://data/weapons/leap.tres")

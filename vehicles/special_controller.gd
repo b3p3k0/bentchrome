@@ -52,6 +52,7 @@ var _armed_fx: CPUParticles2D = null
 var _flame_t := 0.0
 var _flame_vis: Polygon2D = null
 var _drop_cd := 0.0
+var _sustained_cooldown_t := 0.0  # BEAM/FLAME: starts only after the effect ends
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -91,6 +92,9 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 	var def := _active_def(origin, shooter) if pressed else _def
 	if def == null:
 		return false
+	if def.kind in [WeaponDef.Kind.BEAM, WeaponDef.Kind.FLAME] \
+			and (_beam_t > 0.0 or _flame_t > 0.0 or _sustained_cooldown_t > 0.0):
+		return false  # twin barrels share one active/post-fire gate
 	match def.kind:
 		WeaponDef.Kind.PROJECTILE:
 			if pressed and _mount:
@@ -184,6 +188,12 @@ func _bolt_points(from: Vector2, to: Vector2) -> PackedVector2Array:
 	return pts
 
 func _physics_process(delta: float) -> void:
+	# Tick before active effects: when one ends below and arms the cooldown, its
+	# first full frame is the NEXT frame — firing time never pays the lockout.
+	if _sustained_cooldown_t > 0.0 and _beam_t <= 0.0 and _flame_t <= 0.0:
+		_sustained_cooldown_t = maxf(_sustained_cooldown_t - delta, 0.0)
+		if _sustained_cooldown_t < 0.0001:
+			_sustained_cooldown_t = 0.0  # float grain must not steal an extra frame
 	if _beam_t > 0.0:
 		_beam_tick(delta)
 	if _dash_t > 0.0:
@@ -231,10 +241,14 @@ func _beam_tick(delta: float) -> void:
 	if _beam_t <= 0.0:
 		_end_beam()
 
-func _end_beam() -> void:
+func _end_beam(arm_cooldown := true) -> void:
+	var cooldown := _beam_def.cooldown if _beam_def else 0.0
+	var was_active := _beam_def != null
 	_beam_target = null
 	_beam_def = null
 	_beam_t = 0.0
+	if arm_cooldown and was_active:
+		_sustained_cooldown_t = maxf(cooldown, 0.0)
 	if _beam_line:
 		_beam_line.queue_free()
 		_beam_line = null
@@ -257,8 +271,8 @@ func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 	return body.get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
 func _exit_tree() -> void:
-	_end_beam()   # don't leave an orphaned beam line if the car dies mid-zap
-	_end_flame()  # same etiquette for the torch
+	_end_beam(false)   # don't leave an orphaned beam line if the car dies mid-zap
+	_end_flame(false)  # same etiquette for the torch
 	_dash_t = 0.0
 	_dash_target = null
 	_dash_damage_mult = 1.0
@@ -429,12 +443,19 @@ func _flame_shape() -> PackedVector2Array:
 	pts.append(Vector2(nose, 6.0))
 	return pts
 
-func _end_flame() -> void:
+func _end_flame(arm_cooldown := true) -> void:
+	var cooldown := _flame_def.cooldown if _flame_def else 0.0
+	var was_active := _flame_def != null
 	_flame_t = 0.0
 	_flame_def = null
+	if arm_cooldown and was_active:
+		_sustained_cooldown_t = maxf(cooldown, 0.0)
 	if _flame_vis:
 		_flame_vis.queue_free()
 		_flame_vis = null
+
+func sustained_cooldown_remaining() -> float:
+	return _sustained_cooldown_t
 
 ## Toe Jam: arm a charge that replaces the next landed ram's speed-scaled
 ## damage with one heavy flat hit (def.damage). Smash something within

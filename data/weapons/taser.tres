@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 display_name = "Taser"
 kind = 1
+cooldown = 2.0
 damage = 12.0
 acquisition_radius = 400.0
 note = "Burst zap: latches the nearest car within ~3 car lengths and shocks it for 4s (12 dps + handling cripple). Latch holds through turns; breaks only if cover or another car crosses the beam. 3 charges, 8s recharge each."
