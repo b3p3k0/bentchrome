@@ -10,6 +10,7 @@ extends Node
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
 const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
+const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-honest blast ring
 
 const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
 const BEAM_SLOW := 0.5            # handling cripple while zapped
@@ -40,6 +41,12 @@ static var TORNADO_SHOVE := 220.0      # outward shove on a caught car (once eac
 static var TORNADO_DEV_MIN := 5.0      # course-deviation band (deg) — the land-mine
 static var TORNADO_DEV_MAX := 45.0     # spin-out idiom, momentum preserved
 
+# Pulse Wave (Hubcap): expanding radial blast, center-out falloff + shove.
+# Range = def.projectile_speed x def.projectile_lifetime (wave speed x time).
+static var PULSE_EDGE_FRAC := 0.25     # damage/shove remaining at the rim
+static var PULSE_SHOVE := 380.0        # radial shove at point-blank (px/s, additive)
+static var PULSE_HOP_VZ := 200.0       # the caster's little launch kick
+
 const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
 
 var _def: WeaponDef = null
@@ -69,6 +76,11 @@ var _tornado_spin := 0.0          # accumulated visual whirl angle
 var _tornado_hit := {}            # instance id -> true: one spin-out per victim
 var _tornado_fx: CPUParticles2D = null
 var _tornado_swirl: Node2D = null # the wind ring drawn at the AoE boundary
+var _pulse_t := 0.0               # elapsed expansion time
+var _pulse_def: WeaponDef = null
+var _pulse_origin := Vector2.ZERO # the wave detaches — anchored at cast position
+var _pulse_hit := {}              # instance id -> true: the front crosses each body once
+var _pulse_ring: Node2D = null
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -127,6 +139,8 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			return _drop(pressed, shooter, def)
 		WeaponDef.Kind.TORNADO:
 			return _tornado(pressed, def)
+		WeaponDef.Kind.PULSE:
+			return _pulse(pressed, def, shooter)
 	return false
 
 ## Mines: deploy off the REAR bumper. Internal cooldown so a held button lays
@@ -220,6 +234,8 @@ func _physics_process(delta: float) -> void:
 		_flame_tick(delta)
 	if _tornado_t > 0.0:
 		_tornado_tick(delta)
+	if _pulse_def != null:
+		_pulse_tick(delta)
 	if _drop_cd > 0.0:
 		_drop_cd -= delta
 	if _armed and _armed_t > 0.0:
@@ -294,6 +310,7 @@ func _exit_tree() -> void:
 	_end_beam(false)   # don't leave an orphaned beam line if the car dies mid-zap
 	_end_flame(false)  # same etiquette for the torch
 	_end_tornado(false)
+	_end_pulse()
 	_dash_t = 0.0
 	_dash_target = null
 	_dash_damage_mult = 1.0
@@ -347,6 +364,7 @@ func cancel_for_interaction() -> void:
 	_end_beam()
 	_end_flame()
 	_end_tornado(false)  # interaction owns the pose — no random exit heading
+	_end_pulse()
 	cancel_dash()
 
 func _dash_tick(delta: float) -> void:
@@ -592,6 +610,84 @@ func is_spinning() -> bool:
 ## quantized heading while the tornado runs.
 func tornado_visual_angle() -> float:
 	return _tornado_spin
+
+## Pulse Wave: a neon shockwave radiating from the CAST POSITION (the wave
+## detaches — the caster hops away mid-blast) out to projectile_speed x
+## projectile_lifetime px over that lifetime. Damage and shove fall off
+## center-to-rim (PULSE_EDGE_FRAC floor); the front crosses each body exactly
+## once; launch_immune rigs take the damage but hold course. The ring visual
+## draws exactly at the damage front.
+func _pulse(pressed: bool, def: WeaponDef, shooter: Node) -> bool:
+	if not pressed or _pulse_def != null:
+		return false
+	var vehicle := shooter as Node2D
+	if vehicle == null:
+		return false
+	_pulse_def = def
+	_pulse_t = 0.0
+	_pulse_hit = {}
+	_pulse_origin = vehicle.global_position
+	if shooter.has_method(&"pop_airborne"):
+		shooter.pop_airborne(PULSE_HOP_VZ)  # showmanship, not flight
+	var host := vehicle.get_parent()
+	if host:
+		_pulse_ring = PulseRing.new()
+		_pulse_ring.global_position = _pulse_origin
+		_pulse_ring.range_px = _pulse_range(def)
+		_pulse_ring.z_index = 2
+		host.add_child(_pulse_ring)
+	return true
+
+func _pulse_range(def: WeaponDef) -> float:
+	return maxf(def.projectile_speed * def.projectile_lifetime, 1.0)
+
+func _pulse_tick(delta: float) -> void:
+	var vehicle := get_parent() as CollisionObject2D
+	if vehicle == null or _pulse_def == null:
+		_end_pulse()
+		return
+	_pulse_t += delta
+	var range_px := _pulse_range(_pulse_def)
+	var lifetime: float = maxf(_pulse_def.projectile_lifetime, 0.05)
+	var front := range_px * clampf(_pulse_t / lifetime, 0.0, 1.0)
+	if _pulse_ring:
+		_pulse_ring.radius = front
+	var shape := CircleShape2D.new()
+	shape.radius = front
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = shape
+	params.transform = Transform2D(0.0, _pulse_origin)
+	params.collision_mask = 5 | (1 << 9)  # ground | obstacle | soft target
+	params.collide_with_areas = true
+	params.exclude = [vehicle.get_rid()]
+	for hit in vehicle.get_world_2d().direct_space_state.intersect_shape(params):
+		var body: Node = hit["collider"]
+		if _pulse_hit.has(body.get_instance_id()) or not Floors.same_floor(vehicle, body):
+			continue
+		_pulse_hit[body.get_instance_id()] = true
+		var dist: float = minf(((body as Node2D).global_position - _pulse_origin).length(), range_px)
+		var falloff := lerpf(1.0, PULSE_EDGE_FRAC, dist / range_px)
+		for child in body.get_children():
+			if child is Health:
+				if "last_attacker" in body:
+					body.last_attacker = vehicle
+				child.take_damage(_pulse_def.damage * falloff * Combat.scale(vehicle, body))
+				break
+		if body is CharacterBody2D and not bool(body.get("launch_immune")):
+			var away: Vector2 = ((body as Node2D).global_position - _pulse_origin).normalized()
+			if away == Vector2.ZERO:
+				away = Vector2.RIGHT
+			body.velocity += away * PULSE_SHOVE * falloff
+	if _pulse_t >= lifetime:
+		_end_pulse()
+
+func _end_pulse() -> void:
+	_pulse_t = 0.0
+	_pulse_def = null
+	_pulse_hit = {}
+	if is_instance_valid(_pulse_ring):
+		_pulse_ring.queue_free()
+	_pulse_ring = null
 
 func sustained_cooldown_remaining() -> float:
 	return _sustained_cooldown_t

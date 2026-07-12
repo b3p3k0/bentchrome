@@ -512,12 +512,12 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 		"boost": _nav_phase == 1 and c.get("kind") == &"jump",
 	}
 
-## Kind-aware special envelope: a self-centered AoE (TORNADO) is wasted at
-## missile range — hold it until the target is basically in the funnel.
+## Kind-aware special envelope: a self-centered AoE (TORNADO, PULSE) is wasted
+## at missile range — hold it until the target is basically inside the blast.
 func special_fire_range(rack) -> float:
 	if rack != null:
 		var def: Variant = rack.selected_def()
-		if def != null and def.kind == WeaponDef.Kind.TORNADO:
+		if def != null and def.kind in [WeaponDef.Kind.TORNADO, WeaponDef.Kind.PULSE]:
 			return TORNADO_FIRE_RANGE
 	return FIRE_RANGE * 0.7
 
