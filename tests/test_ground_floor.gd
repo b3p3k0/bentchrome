@@ -87,6 +87,32 @@ func test_scaffold_primitive_builds_floor_terrain_and_unscaled_rails() -> void:
 	t.root.remove_child(deck)
 	deck.free()
 
+func test_scaffold_gate_builds_shoulders_and_drop_builds_nothing() -> void:
+	var deck := DeckScene.instantiate() as ScaffoldDeck
+	deck.size = Vector2(608, 256)
+	deck.gate_edges = ScaffoldDeck.EDGE_BOTTOM
+	deck.gate_offset = -128.0
+	deck.drop_edges = ScaffoldDeck.EDGE_TOP
+	t.root.add_child(deck)
+	var gates := deck.find_children("Gate*", "StaticBody2D", false, false)
+	t.check(gates.size() == 2,
+		"scaffold: an offset gate edge builds exactly two shoulder statics")
+	for gate in gates:
+		t.check(gate.scale == Vector2.ONE and gate.collision_layer == (4 | 32),
+			"scaffold: gate shoulder is unscaled and floor-correct")
+	var spans := []
+	for gate in gates:
+		var shape := gate.get_child(0).shape as RectangleShape2D
+		spans.append(Rect2(gate.position - shape.size * 0.5, shape.size))
+	spans.sort_custom(func(a, b): return a.position.x < b.position.x)
+	t.check(is_equal_approx(spans[0].end.x, -256.0) and is_equal_approx(spans[1].position.x, 0.0),
+		"scaffold: shoulder statics leave exactly the authored 256px opening")
+	var statics := deck.find_children("*", "StaticBody2D", false, false)
+	t.check(statics.size() == 2,
+		"scaffold: a drop edge builds no static at all")
+	t.root.remove_child(deck)
+	deck.free()
+
 func test_scene_readies_as_mp_geometry_without_campaign_actors() -> void:
 	var arena := ArenaScene.instantiate()
 	arena.mp_managed = true
@@ -95,7 +121,7 @@ func test_scene_readies_as_mp_geometry_without_campaign_actors() -> void:
 	t.check(arena.mp_spawns.size() == 8,
 		"ground floor: shared combat shell derives all eight MP starts")
 	t.check(arena.get_node(^"Scaffold").get_child_count() == 10,
-		"ground floor: scaffold network retains four platforms and six runs")
+		"ground floor: scaffold ring retains five platforms and five runs")
 	t.root.remove_child(arena)
 	arena.free()
 
