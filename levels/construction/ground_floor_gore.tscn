@@ -1,6 +1,6 @@
 [gd_scene load_steps=34 format=3]
 
-[ext_resource type="Script" path="res://levels/combat_level.gd" id="1_level"]
+[ext_resource type="Script" path="res://levels/construction/ground_floor_gore.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="3_vehicle"]
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="4_enemy"]
@@ -110,6 +110,9 @@ size = Vector2(24, 1792)
 
 [node name="GroundFloorGore" type="Node2D"]
 script = ExtResource("1_level")
+
+[node name="DuskTint" type="CanvasModulate" parent="."]
+color = Color(0.62, 0.65, 0.78, 1)
 
 [node name="DirtSurface" type="Polygon2D" parent="."]
 material = SubResource("SM_dirt")
@@ -697,6 +700,31 @@ rotation = -0.5
 script = ExtResource("17_site_deco")
 kind = "ruts"
 size = Vector2(220, 120)
+
+[node name="FloodParkingLot" type="Node2D" parent="SiteDeco"]
+position = Vector2(-1750, -1650)
+script = ExtResource("17_site_deco")
+kind = "floodlight"
+
+[node name="FloodPortaRow" type="Node2D" parent="SiteDeco"]
+position = Vector2(-2010, -300)
+script = ExtResource("17_site_deco")
+kind = "floodlight"
+
+[node name="FloodNorthYard" type="Node2D" parent="SiteDeco"]
+position = Vector2(-1100, -1600)
+script = ExtResource("17_site_deco")
+kind = "floodlight"
+
+[node name="FloodSouthEntry" type="Node2D" parent="SiteDeco"]
+position = Vector2(960, 1060)
+script = ExtResource("17_site_deco")
+kind = "floodlight"
+
+[node name="FloodHillBase" type="Node2D" parent="SiteDeco"]
+position = Vector2(450, 1300)
+script = ExtResource("17_site_deco")
+kind = "floodlight"
 
 [node name="BreakableCover" type="Node2D" parent="."]
 

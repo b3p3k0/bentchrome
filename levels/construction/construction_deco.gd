@@ -3,9 +3,10 @@ extends Node2D
 ## visual details can never invent collision or confuse the route graph.
 
 const UnderFade := preload("res://environment/under_fade.gd")
+const LightKit := preload("res://environment/light_kit.gd")
 
 @export_enum("rebar", "pipes", "spool", "forms", "crane", "embankment", "scaffold_grade",
-	"washout", "ruts") var kind := "rebar"
+	"washout", "ruts", "floodlight") var kind := "rebar"
 @export var size := Vector2(192, 128)
 var _t := 0.0
 var _under_area: Area2D = null
@@ -19,6 +20,10 @@ func _ready() -> void:
 		ground.name = "Ground"
 		ground.z_index = -1
 		add_child(ground)
+	elif kind == "floodlight":
+		var lamp := LightKit.make_light(420.0, 0.75, Color(1.0, 0.92, 0.72))
+		lamp.position = Vector2(0, 80)
+		add_child(lamp)
 	queue_redraw()
 
 ## Ballast pad, anchor bolts, and the long jib shadow stay on the ground while
@@ -45,7 +50,26 @@ func _draw() -> void:
 		"scaffold_grade": _draw_scaffold_grade()
 		"washout": _draw_washout()
 		"ruts": _draw_ruts()
+		"floodlight": _draw_floodlight()
 		_: _draw_rebar()
+
+## Portable tripod worklight aimed south: paint sells the fixture in daylight,
+## the PointLight2D child sells it once the dusk tint darkens the yard.
+func _draw_floodlight() -> void:
+	draw_rect(Rect2(Vector2(-22, -14), Vector2(60, 48)), Color(0, 0, 0, 0.22))
+	for leg: Vector2 in [Vector2(-26, 20), Vector2(26, 20), Vector2(0, -30)]:
+		draw_line(Vector2.ZERO, leg, Color(0.30, 0.31, 0.34), 5.0)
+		draw_circle(leg, 5.0, Color(0.22, 0.23, 0.26))
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-16, 10), Vector2(16, 10), Vector2(64, 150), Vector2(-64, 150),
+	]), Color(1.0, 0.9, 0.65, 0.08))
+	draw_circle(Vector2(0, 90), 52.0, Color(1.0, 0.9, 0.65, 0.07))
+	draw_circle(Vector2.ZERO, 7.0, Color(0.38, 0.40, 0.44))
+	draw_line(Vector2(-18, 4), Vector2(18, 4), Color(0.34, 0.36, 0.40), 6.0)
+	for lx: float in [-11.0, 11.0]:
+		draw_rect(Rect2(Vector2(lx - 8.0, 4.0), Vector2(16, 14)), Color(0.85, 0.87, 0.88))
+		draw_rect(Rect2(Vector2(lx - 8.0, 4.0), Vector2(16, 14)), Color(0.25, 0.26, 0.30), false, 2.0)
+		draw_circle(Vector2(lx, 14.0), 5.0, Color(1.0, 0.95, 0.80, 0.9))
 
 ## The ramp.gd band idiom for surface_paint=false grades: lit high end (-y),
 ## shaded low end — the slope read every driveable grade in the game shares.
