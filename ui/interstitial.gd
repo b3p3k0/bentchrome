@@ -9,9 +9,18 @@ const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const INPUT_LOCK := 1.2  # players arrive here still hammering fire
 const CARD_DIR := "res://assets/img/cards"
+const DIM_TEXT := Color(0.55, 0.58, 0.62)
+# Temporary skip prompt for the under-construction chase level (The Buzzard
+# Run). Delete the buzzard_run branch in _build_ui() once the level ships.
+const DETOUR_CAPTION := "THIS ROAD IS UNDER CONSTRUCTION"
+const DETOUR_SUB := "You don't need to play it to finish the game"
+const DETOUR_OPTIONS := ["STAY ON ROUTE", "DETOUR"]
 
 var _armed := false
 var _hint: Label
+var _chooser := false
+var _choice_index := 0
+var _choice_entries: Array[Label] = []
 
 func _ready() -> void:
 	layer = 60
@@ -20,12 +29,17 @@ func _ready() -> void:
 
 func _arm() -> void:
 	_armed = true
+	if _chooser:
+		return
 	if _hint:
 		_hint.text = "press any key to roll out"
 		_hint.modulate = AMBER
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _armed:
+		return
+	if _chooser:
+		_chooser_input(event)
 		return
 	var pressed: bool = (event is InputEventKey and event.pressed) \
 		or (event is InputEventJoypadButton and event.pressed) \
@@ -37,6 +51,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	if flow and gs:
 		flow.to_level(gs.level_index)
+
+## Two-option skip prompt: nav keys toggle STAY/DETOUR, confirm activates.
+func _chooser_input(event: InputEvent) -> void:
+	var toggle: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"move_down") \
+		or event.is_action_pressed(&"select_prev") or event.is_action_pressed(&"select_next")
+	var confirm: bool = event.is_action_pressed(&"select_confirm") \
+		or (event is InputEventMouseButton and event.pressed
+			and event.button_index == MOUSE_BUTTON_LEFT)
+	if toggle:
+		get_viewport().set_input_as_handled()
+		_choice_index = 1 - _choice_index
+		_choice_highlight()
+	elif confirm:
+		get_viewport().set_input_as_handled()
+		var flow := get_node_or_null(^"/root/SceneFlow")
+		var gs := get_node_or_null(^"/root/GameState")
+		if not (flow and gs):
+			return
+		if _choice_index == 0:  # STAY ON ROUTE — play the level as normal
+			flow.to_level(gs.level_index)
+		else:  # DETOUR — skip ahead; re-show interstitial for the next level
+			gs.level_index = gs.level_index + 1
+			flow.to_interstitial()
+
+func _choice_highlight() -> void:
+	for i in _choice_entries.size():
+		_choice_entries[i].modulate = AMBER if i == _choice_index else DIM_TEXT
+		_choice_entries[i].text = ("[ %s ]" if i == _choice_index else "%s") % DETOUR_OPTIONS[i]
 
 func _build_ui() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
@@ -58,6 +100,10 @@ func _build_ui() -> void:
 		if portrait:
 			_build_card(portrait, "THE COLISEUM'S UNDEFEATED KING AWAITS — GOLIATH", AMBER)
 			return
+
+	if next_scene.ends_with("buzzard_run.tscn"):
+		_build_detour(TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1]))
+		return
 
 	var card := TextureLoader.load_texture("%s/level_%d.png" % [CARD_DIR, next_index + 1])
 	if card:
@@ -106,6 +152,63 @@ func _build_card(card: Texture2D, caption: String, caption_color: Color) -> void
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.modulate = Color(0.55, 0.58, 0.62)
 	vbox.add_child(_hint)
+
+## Under-construction skip prompt over the level card: caption + sub-line +
+## a two-option STAY/DETOUR row instead of the plain "press any key" hint.
+func _build_detour(card: Texture2D) -> void:
+	var bg := ColorRect.new()
+	bg.color = Color.BLACK
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+
+	if card:
+		var art := TextureRect.new()
+		art.texture = card
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(art)
+
+	var strip := ColorRect.new()
+	strip.color = Color(PANEL_BG.r, PANEL_BG.g, PANEL_BG.b, 0.85)
+	strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	strip.offset_top = -132.0
+	add_child(strip)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 8)
+	strip.add_child(vbox)
+
+	var caption_lbl := Label.new()
+	caption_lbl.text = DETOUR_CAPTION
+	caption_lbl.add_theme_font_size_override("font_size", 24)
+	caption_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption_lbl.modulate = AMBER
+	vbox.add_child(caption_lbl)
+
+	var sub_lbl := Label.new()
+	sub_lbl.text = DETOUR_SUB
+	sub_lbl.add_theme_font_size_override("font_size", 14)
+	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub_lbl.modulate = Color(0.75, 0.78, 0.82)
+	vbox.add_child(sub_lbl)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 48)
+	vbox.add_child(row)
+	_choice_entries.clear()
+	for option in DETOUR_OPTIONS:
+		var lbl := Label.new()
+		lbl.add_theme_font_size_override("font_size", 22)
+		row.add_child(lbl)
+		_choice_entries.append(lbl)
+	_choice_index = 0
+	_choice_highlight()
+	_chooser = true
 
 ## The original blocky panel — kept as the fallback when no card art exists.
 func _build_panel(next_index: int, next_name: String) -> void:
