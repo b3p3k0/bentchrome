@@ -9,6 +9,7 @@ extends Node
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
+const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
 
 const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
 const BEAM_SLOW := 0.5            # handling cripple while zapped
@@ -33,7 +34,8 @@ const DROP_COOLDOWN := 0.5        # held button lays a trail, not a carpet
 # Tornado Alley (Cyclone): rear wheels up, violent spin, mobile AoE.
 static var TORNADO_SPIN_DEG := 900.0   # visual whirl rate (quantizer bypassed)
 static var TORNADO_STEER := 0.3        # steer authority left while spinning
-static var TORNADO_RADIUS_MULT := 1.5  # AoE radius = this x the visual footprint
+static var TORNADO_RADIUS_MULT := 2.2  # AoE radius = this x the visual footprint
+                                       # (the swirl ring draws exactly here)
 static var TORNADO_SHOVE := 220.0      # outward shove on a caught car (once each)
 static var TORNADO_DEV_MIN := 5.0      # course-deviation band (deg) — the land-mine
 static var TORNADO_DEV_MAX := 45.0     # spin-out idiom, momentum preserved
@@ -66,6 +68,7 @@ var _tornado_def: WeaponDef = null
 var _tornado_spin := 0.0          # accumulated visual whirl angle
 var _tornado_hit := {}            # instance id -> true: one spin-out per victim
 var _tornado_fx: CPUParticles2D = null
+var _tornado_swirl: Node2D = null # the wind ring drawn at the AoE boundary
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
@@ -509,8 +512,12 @@ func _tornado(pressed: bool, def: WeaponDef) -> bool:
 		_tornado_fx.tangential_accel_max = 220.0
 		_tornado_fx.scale_amount_min = 2.0
 		_tornado_fx.scale_amount_max = 4.0
-		_tornado_fx.color = Color(0.62, 0.56, 0.46, 0.7)
+		_tornado_fx.color = Color(0.62, 0.56, 0.46, 0.55)  # the swirl carries the read
 		vehicle.add_child(_tornado_fx)
+		_tornado_swirl = TornadoSwirl.new()
+		_tornado_swirl.radius = _tornado_radius()
+		_tornado_swirl.z_index = 2  # over the car, under explosions
+		vehicle.add_child(_tornado_swirl)
 	return true
 
 func _tornado_tick(delta: float) -> void:
@@ -570,6 +577,9 @@ func _end_tornado(random_heading := true) -> void:
 	if _tornado_fx:
 		_tornado_fx.queue_free()
 		_tornado_fx = null
+	if _tornado_swirl:
+		_tornado_swirl.queue_free()
+		_tornado_swirl = null
 	if was_active and random_heading:
 		var vehicle := get_parent()
 		if vehicle:
