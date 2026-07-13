@@ -20,14 +20,21 @@ static func paint(c: CanvasItem, primary: Color, accent: Color, steer: float, _p
 	# Plow assembly first, so the hull mount overlaps the lift arms.
 	c.draw_rect(Rect2(21, -6.5, 5, 2.5), Parts.CHROME)  # lift arms
 	c.draw_rect(Rect2(21, 4, 5, 2.5), Parts.CHROME)
+	# Scooped blade: wing tips curl gently FORWARD of the center (real plows
+	# cup the snow), so the leading edge is concave toward the road ahead.
 	var blade := PackedVector2Array([
-		Vector2(24, -17), Vector2(29, -15), Vector2(31, -8),
-		Vector2(31, 8), Vector2(29, 15), Vector2(24, 17),
-		Vector2(26.5, 8), Vector2(26.5, -8),
+		Vector2(31.5, -17), Vector2(29.8, -10), Vector2(29, -3),
+		Vector2(29, 3), Vector2(29.8, 10), Vector2(31.5, 17),
+		Vector2(27.5, 15), Vector2(25.5, 9), Vector2(24.8, 3),
+		Vector2(24.8, -3), Vector2(25.5, -9), Vector2(27.5, -15),
 	])
 	c.draw_colored_polygon(blade, accent)
-	c.draw_line(Vector2(30.2, -8.5), Vector2(30.2, 8.5), Parts.TIRE, 1.8)  # cutting edge
-	c.draw_line(Vector2(27.6, -11), Vector2(27.6, 11), accent.darkened(0.3), 1.2)  # blade rib
+	c.draw_polyline(PackedVector2Array([  # cutting edge hugs the scoop
+		Vector2(30.5, -13), Vector2(29.6, -6), Vector2(29.4, 0),
+		Vector2(29.6, 6), Vector2(30.5, 13)]), Parts.TIRE, 1.8)
+	c.draw_polyline(PackedVector2Array([  # blade rib
+		Vector2(28.8, -11), Vector2(28, -5), Vector2(27.8, 0),
+		Vector2(28, 5), Vector2(28.8, 11)]), accent.darkened(0.3), 1.2)
 	c.draw_polyline(blade + PackedVector2Array([blade[0]]), Parts.OUTLINE, 1.5)
 	var hull := Parts.hull(23, 14, 4, 3)
 	c.draw_colored_polygon(hull, primary)
