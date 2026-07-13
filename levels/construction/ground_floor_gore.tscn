@@ -843,7 +843,7 @@ arena_net_id = 33
 [node name="JunkNorthYard" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(-350, -1650)
 size = Vector2(120, 110)
-max_hp = 60.0
+max_hp = 15.0
 deco = &"junk"
 floor_index = 1
 arena_net_id = 34
@@ -851,7 +851,7 @@ arena_net_id = 34
 [node name="JunkSECorner" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(2150, 1800)
 size = Vector2(120, 110)
-max_hp = 60.0
+max_hp = 15.0
 deco = &"junk"
 floor_index = 1
 arena_net_id = 35
@@ -859,7 +859,7 @@ arena_net_id = 35
 [node name="JunkHillWest" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(-820, 1360)
 size = Vector2(110, 100)
-max_hp = 60.0
+max_hp = 15.0
 deco = &"junk"
 floor_index = 1
 arena_net_id = 36

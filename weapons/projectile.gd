@@ -56,6 +56,10 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 	_homing = p_turn_rate > 0.0 and p_target != null
 	_age = 0.0
 	_spent = false
+	if p_shooter is CanvasItem:
+		# Ride the shooter's draw order: a floor-3/airborne car sits at z 2,
+		# above the z-1 terrace decks — its shots must not vanish under them.
+		z_index = (p_shooter as CanvasItem).z_index
 	if harms_ambient:
 		collision_mask |= SOFT_TARGET_LAYER
 	if NetEvents.armed and p_damage > 0.0:
@@ -177,6 +181,7 @@ func pool_reset() -> void:
 	hit_sfx = &"hit_weapon"
 	harms_ambient = true
 	net_shot_id = 0
+	z_index = 0  # a pooled floor-3 shot must not float above the next level's decks
 	collision_mask = BASE_MASK
 
 func _find_health(body: Node) -> Health:

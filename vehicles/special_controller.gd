@@ -157,6 +157,8 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 	mine.dropper = shooter
 	if "floor_index" in mine:
 		mine.floor_index = Floors.floor_of(shooter)  # armed for the dropper's terrace
+		if mine is CanvasItem and int(mine.floor_index) >= 3:
+			mine.z_index = 2  # sit ON the terrace deck paint, not under it
 	scene.add_child(mine)
 	return true
 
@@ -177,6 +179,8 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	_beam_target = tgt
 	_beam_t = _duration(def, BEAM_DURATION)
 	_beam_fx = ElectricArcScene.instantiate() as Node2D
+	if shooter is CanvasItem:
+		_beam_fx.z_index = (shooter as CanvasItem).z_index  # arcs above fl-3 decks
 	fx_scene.add_child(_beam_fx)
 	return true
 

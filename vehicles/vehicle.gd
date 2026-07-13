@@ -68,6 +68,9 @@ signal combat_hit(attacker: Node2D)
 @export var ram_damage_scale := 0.06
 @export var ram_min_speed := 220.0
 @export var ram_cooldown := 0.3
+@export var punch_hp_ref := 200.0     # punch-through keep-scale reference:
+@export var punch_keep_min := 0.55    # ram-killing a prop restores entry speed
+@export var punch_keep_max := 0.95    # scaled by its heft — debris flies, cover costs
 
 @export_group("Bounce")
 @export var bounce_factor := 0.35     # fraction of the into-surface speed reflected
@@ -381,7 +384,7 @@ func _physics_process(delta: float) -> void:
 	var pre_slide_vel := velocity
 	move_and_slide()
 	_apply_bounce(pre_slide_vel)
-	_update_ram(delta, pre_slide_vel.length())
+	_update_ram(delta, pre_slide_vel)
 	var visual_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
 	if _special and _special.is_spinning():
 		visual_heading = _special.tornado_visual_angle()  # whirl past the quantizer
@@ -989,7 +992,8 @@ func present_combat_hit(attacker: Node2D) -> void:
 ## Speed-based collision damage after move_and_slide: other vehicles, plus any
 ## Health-bearing body (destructible blocks, dummies). The rammer takes nothing
 ## from static targets; Toe Jam's armed charge is saved for vehicles.
-func _update_ram(delta: float, impact_speed: float) -> void:
+func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
+	var impact_speed := pre_slide_vel.length()
 	if _ram_cd > 0.0:
 		_ram_cd -= delta
 		return
@@ -1013,6 +1017,12 @@ func _update_ram(delta: float, impact_speed: float) -> void:
 			var health := _find_health_child(other)
 			if health and impact_speed > ram_min_speed:
 				health.take_damage((impact_speed - ram_min_speed) * ram_damage_scale)
+				if health.hp <= 0.0:
+					# The prop broke: punch through with most of the entry
+					# momentum instead of eating the bounce — trash flies,
+					# heavier cover still takes a real bite out of the run.
+					velocity = pre_slide_vel * clampf(1.0 - health.max_hp / punch_hp_ref,
+						punch_keep_min, punch_keep_max)
 				_ram_cd = ram_cooldown
 				break
 

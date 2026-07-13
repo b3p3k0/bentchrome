@@ -9,7 +9,7 @@ const Floors := preload("res://game/floors.gd")
 const ArenaState := preload("res://game/net/arena_state.gd")
 const LightKit := preload("res://environment/light_kit.gd")
 
-const MAX_HP := 30.0
+const MAX_HP := 8.0  # portable fixture: one sideswipe or a short MG pepper
 const LAMP_WARM := Color(1.0, 0.92, 0.72)
 
 @export var floor_index := 1

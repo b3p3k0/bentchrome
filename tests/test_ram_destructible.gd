@@ -39,7 +39,31 @@ func test_fast_ram_damages_block() -> void:
 		await t.physics_frame
 	t.check(health.hp < start, "fast impact chips the block (hp %.1f -> %.1f)" % [start, health.hp])
 	t.check(health.hp > 0.0, "single ram doesn't obliterate a fresh block")
+	t.check(f.car.velocity.x < 250.0,
+		"a surviving block still stops the car (vx %.0f)" % f.car.velocity.x)
 	_done(f)
+
+## Punch-through: ram-killing a light prop restores the entry momentum instead
+## of eating the bounce — trash flies, the car keeps rolling.
+func test_ram_kill_punches_through() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var car = VehicleScene.instantiate()
+	container.add_child(car)
+	car.velocity = Vector2(600, 0)
+	var block = BlockScene.instantiate()
+	block.max_hp = 10.0  # dies to one 600 px/s ram (22.8 damage)
+	block.position = Vector2(150, 0)
+	container.add_child(block)
+	for i in IMPACT_FRAMES:
+		await t.physics_frame
+	t.check(not is_instance_valid(block) or block.is_queued_for_deletion()
+		or float(block.get_node("Health").hp) <= 0.0,
+		"punch-through: the light block dies to the ram")
+	t.check(car.velocity.x > 250.0,
+		"punch-through: the car keeps most of its momentum (vx %.0f)" % car.velocity.x)
+	t.root.remove_child(container)
+	container.free()
 
 func test_combat_scale_truth_table() -> void:
 	var container := Node2D.new()
