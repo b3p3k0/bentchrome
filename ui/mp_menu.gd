@@ -40,6 +40,7 @@ func _ready() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs:
 		_name_edit.text = String(gs.player_name)
+	_prefill_mp_prefs()
 	Net.session_changed.connect(_on_session_changed)
 	Net.join_failed.connect(_on_join_failed)
 	_show(&"home")
@@ -140,6 +141,7 @@ func _build_join() -> Control:
 
 func _do_host() -> void:
 	_persist_name()
+	_persist_mp_prefs()
 	var port := _to_port(_port_edit.text)
 	var err: String = Net.host(port, _host_pass_edit.text, _garage_edit.text,
 		_strict_check.button_pressed)
@@ -152,6 +154,7 @@ func _do_host() -> void:
 
 func _do_join() -> void:
 	_persist_name()
+	_persist_mp_prefs()
 	var ip := _ip_edit.text.strip_edges()
 	var port := _to_port(_join_port_edit.text)
 	var picked := _server_list.get_selected_items()
@@ -174,6 +177,31 @@ func _persist_name() -> void:
 	if gs and String(gs.player_name) != _name_edit.text:
 		gs.player_name = _name_edit.text
 		gs.save_settings()
+
+## Screen memory on every host/join attempt (even failed dials — a typo'd IP
+## re-shown beats a blank field). Passwords never touch the disk.
+func _persist_mp_prefs() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null:
+		return
+	gs.mp_join_ip = _ip_edit.text.strip_edges()
+	gs.mp_join_port = _to_port(_join_port_edit.text)
+	gs.mp_host_port = _to_port(_port_edit.text)
+	gs.mp_host_garage = _garage_edit.text.strip_edges()
+	gs.mp_host_strict = _strict_check.button_pressed
+	gs.save_settings()
+
+func _prefill_mp_prefs() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null:
+		return
+	_ip_edit.text = String(gs.mp_join_ip)
+	if int(gs.mp_join_port) > 1023:
+		_join_port_edit.text = str(int(gs.mp_join_port))
+	if int(gs.mp_host_port) > 1023:
+		_port_edit.text = str(int(gs.mp_host_port))
+	_garage_edit.text = String(gs.mp_host_garage)
+	_strict_check.button_pressed = bool(gs.mp_host_strict)
 
 # ------------------------------------------------------------------ net cbs
 

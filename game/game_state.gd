@@ -36,6 +36,14 @@ var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 
+# MP screen memory: last host entry + garage prefs, so a LAN night doesn't
+# start with retyping. Passwords deliberately NEVER persist (plain-text file).
+var mp_join_ip := ""
+var mp_join_port := 0      # 0 = the protocol default
+var mp_host_port := 0      # 0 = the protocol default
+var mp_host_garage := ""
+var mp_host_strict := false
+
 ## Developer Mode is the master breaker. The raw subordinate choices stay
 ## persisted so switching the breaker back on restores the developer's bench.
 ## DEVGOD stands down during Driver's Ed LESSONS (same policy as MP): the
@@ -50,7 +58,9 @@ func effective_start_level_index() -> int:
 
 const SETTINGS_PATH := "user://settings.json"
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
-	"dev_mode", "start_level_index", "screen_shake", "player_name"]
+	"dev_mode", "start_level_index", "screen_shake", "player_name",
+	"mp_join_ip", "mp_join_port", "mp_host_port", "mp_host_garage",
+	"mp_host_strict"]
 
 func _ready() -> void:
 	# Headless runs (test/smoke gates) stay hermetic: Kevin's real settings —
@@ -97,4 +107,9 @@ func reset_settings() -> void:
 	start_level_index = 0
 	screen_shake = true
 	player_name = ""
+	mp_join_ip = ""
+	mp_join_port = 0
+	mp_host_port = 0
+	mp_host_garage = ""
+	mp_host_strict = false
 	save_settings()

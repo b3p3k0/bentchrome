@@ -30,17 +30,29 @@ func test_settings_round_trip() -> void:
 	gs.dev_mode = true
 	gs.start_level_index = 3
 	gs.screen_shake = false
+	gs.mp_join_ip = "192.168.1.44"
+	gs.mp_join_port = 43555
+	gs.mp_host_garage = "Kevin's Chop Shop"
+	gs.mp_host_strict = true
 	gs.save_settings(TMP)
 	gs.zoom_combat = 0.62
 	gs.devgod = false
 	gs.dev_mode = false
 	gs.start_level_index = 0
 	gs.screen_shake = true
+	gs.mp_join_ip = ""
+	gs.mp_join_port = 0
+	gs.mp_host_garage = ""
+	gs.mp_host_strict = false
 	gs.load_settings(TMP)
 	t.check(is_equal_approx(gs.zoom_combat, 0.51), "settings: zoom round-trips")
 	t.check(gs.devgod and gs.dev_mode, "settings: toggles round-trip")
 	t.check(gs.start_level_index == 3, "settings: level select round-trips")
 	t.check(not gs.screen_shake, "settings: shake toggle round-trips")
+	t.check(gs.mp_join_ip == "192.168.1.44" and gs.mp_join_port == 43555,
+		"settings: last host entry round-trips")
+	t.check(gs.mp_host_garage == "Kevin's Chop Shop" and gs.mp_host_strict,
+		"settings: garage prefs round-trip (passwords never persist by design)")
 
 	# Corrupt file: silently keeps current values (instance-parse, no engine ERROR).
 	var f := FileAccess.open(TMP, FileAccess.WRITE)
