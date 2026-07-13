@@ -443,6 +443,10 @@ listen server: 4 seats + 8 observers (12 ENet peers). Wire changes bump `PROTOCO
 | FEED_LINES / FEED_TTL | 4 / 4.0s | mp_match.gd | kill-feed overlay |
 | NET_INTERP_MS | 50 (synced) | vehicle.gd static | shell syncs from interp_delay_ms at match start |
 | MP_MAPS cars | 5/7/7/7/8/8 | scene_flow.gd | melee backfill totals per arena, including Ground Floor Gore |
+| fx plane (reliable) | — | net_events.gd fx queue + Net.rpc_fx | beams/pulse rings/mines; drops must never vanish |
+| mine twin | cosmetic flag | environment/mine.gd | client mirror: draws + arm-blinks, never scans/bills |
+| callsign roulette | assets/data/callsigns.txt → user://callsigns.txt | ui/callsigns.gd | one name/line, '#' comments; user copy wins |
+| MP screen memory | mp_join_ip/port, mp_host_port/garage/strict | game_state.gd SETTINGS_KEYS | passwords never persist |
 | Arena-state row | 7 bytes, repeated | net_snapshot.gd | u16 ID, u8 flags, u8 HP, u16 timer ms, u8 actor mask; protocol 8 |
 
 Policies (locked): ONE of each car on the battlefield (claimed set = seats + queue; AI pool
