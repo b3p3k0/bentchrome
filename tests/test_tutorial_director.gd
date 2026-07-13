@@ -192,7 +192,7 @@ func test_floors_jump_terrain_lessons() -> void:
 	car.global_position = Vector2(0, 800)
 	director._physics_process(0.016)
 	t.check(director.lesson_index == 5, "jump: airborne OFF the lane doesn't count")
-	car.global_position = Vector2(1408, 200)
+	car.global_position = Vector2(640, 200)  # inside JUMP_LANE
 	director._physics_process(0.016)
 	t.check(director.lesson_index == 6, "jump: pad-lane air -> terrain lesson")
 	car.height = 0.0

@@ -26,7 +26,7 @@ static var HOLD_MOVE := 0.25      # seconds each of W/S/A/D must accumulate
 static var HOLD_CONTROL := 0.3    # seconds each of brake/handbrake/boost
 static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
 static var JUMP_HEIGHT := 40.0    # airborne px that count as a real launch
-static var JUMP_LANE := Rect2(1178, -700, 460, 1800)  # pad + flight path; a
+static var JUMP_LANE := Rect2(410, -400, 460, 1400)  # pad + flight path; a
 								  # ledge hop off the deck must never count
 static var SMASH_COUNT := 5       # yard kills demanded (clamped to what's left)
 
@@ -48,14 +48,14 @@ const LESSONS := [
 	{
 		"id": &"weapons",
 		"title": "LESSON 3 — THIS IS HOW YOU SHOOT",
-		"body": "LMB runs the machine gun — infinite ammo, but sustained fire overheats her and locks the trigger until she cools. RMB fires the weapon bay; the MOUSE WHEEL (or /) cycles the rack, and your special recharges on its own. Warm up the MG, cycle the bay, and send one special downrange — the dummies out west are paid to take it.",
+		"body": "LMB runs the machine gun — infinite ammo, but sustained fire overheats her and locks the trigger until she cools. RMB fires the weapon bay; the MOUSE WHEEL (or /) cycles the rack, and your special recharges on its own. Warm up the MG, cycle the bay, and send one special downrange — the wrecks out west are past caring.",
 		"hint": "LESSON 3/8 — fire MG (LMB), cycle bay (wheel), fire secondary (RMB)",
 	},
 	{
 		"id": &"pickups",
 		"title": "LESSON 4 — SCAVENGE OR STARVE",
-		"body": "We dinged your fender on the way in. Sorry not sorry. The south row's crates refill missiles and mines — the letters say which. Drive over the cross for a quick patch, or hold still on the repair bay and let it work. Grab any ammo crate, then get your hull back to full.",
-		"hint": "LESSON 4/8 — collect an ammo crate, then heal to full (south row)",
+		"body": "We dinged your fender on the way in. Sorry not sorry. The south row's crates refill missiles and mines — the letters say which. For the bodywork, hold still on the repair bay and let it do its thing. Grab any ammo crate, then get your hull back to full.",
+		"hint": "LESSON 4/8 — collect an ammo crate, then heal up at the repair bay (south row)",
 	},
 	{
 		"id": &"floors",
@@ -72,8 +72,8 @@ const LESSONS := [
 	{
 		"id": &"terrain",
 		"title": "LESSON 7 — READ THE ROAD",
-		"body": "The ground fights back. Grass drags, dirt slides, mud swallows, snow smothers, ice keeps your nose swinging long after the wheels quit gripping, and shallow water is somebody's idea of a joke. The northwest lanes sample all of it — drive every one and feel your car change.",
-		"hint": "LESSON 7/8 — drive all six NW terrain lanes",
+		"body": "The ground fights back. Grass drags, dirt slides, mud swallows, snow smothers, ice keeps your nose swinging long after the wheels quit gripping, and shallow water is somebody's idea of a joke. The northwest grid samples all of it — cross every patch and feel your car change.",
+		"hint": "LESSON 7/8 — cross all six NW terrain patches",
 	},
 	{
 		"id": &"smash",

@@ -76,9 +76,10 @@ func test_ramp_deck_geometry() -> void:
 	t.check(walls != null and walls.collision_layer == 28,
 		"deck walls carry obstacle + both floor bits")
 	if walls != null:
-		# Three closed sides (west edge stays open — that's the ledge-hop
-		# lesson); the south wall splits around the ramp mouth.
-		for wall_name in ["NorthCol", "EastCol", "SouthWCol", "SouthECol"]:
+		# The deck sits in the NE corner — the boundary owns its north and
+		# east sides, the west edge stays open (the ledge-hop lesson), and
+		# the south wall splits around the ramp mouth.
+		for wall_name in ["SouthWCol", "SouthECol"]:
 			t.check(walls.get_node_or_null(wall_name) != null,
 				"deck has %s" % wall_name)
 	scene.free()
@@ -101,7 +102,8 @@ func test_jump_pad_clear_of_deck() -> void:
 	scene.free()
 
 ## The pickup row is the lesson-4 syllabus: every ammo kind (rear and mines
-## start at 0 — the crates ARE the lesson), plus heal, boost, and the bay.
+## start at 0 — the crates ARE the lesson) plus the repair bay, and NOTHING
+## that isn't a real arena item — drive-over heal/boost are chase-exclusive.
 func test_pickup_row_complete() -> void:
 	var scene: Node = (load(SCENE) as PackedScene).instantiate()
 	var ammo_kinds := {}
@@ -116,9 +118,29 @@ func test_pickup_row_complete() -> void:
 			drive_over_kinds[child.get("kind")] = true
 	for kind in ["standard", "homing", "power", "rear", "mine", "jump"]:
 		t.check(ammo_kinds.has(kind), "pickup row has %s ammo" % kind)
-	t.check(drive_over_kinds.has(&"heal"), "pickup row has a heal")
-	t.check(drive_over_kinds.has(&"boost"), "pickup row has a boost")
+	t.check(drive_over_kinds.is_empty(),
+		"no drive-over heal/boost — chase-exclusive items stay in chase")
 	t.check(station, "yard has a repair bay")
+	scene.free()
+
+## The ghost-mode regression, third strike: every solid in this FloorZone-
+## tagged yard MUST author floor_index or floor-1 cars and shots pass through
+## it (repo-wide sweep lives in test_floor_props.gd; this is the local lock).
+func test_yard_solids_author_floors() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var solids := 0
+	for child in scene.get_children():
+		if child is StaticBody2D and (child.collision_layer & 4):
+			solids += 1
+			var fi: Variant = child.get("floor_index")
+			if fi == null:
+				# Raw static: proves itself by carrying floor bits in-layer.
+				t.check((child.collision_layer & (8 | 16 | 32)) != 0,
+					"%s (raw) carries floor bits in its layer" % child.name)
+			else:
+				t.check(int(fi) >= 1,
+					"%s authors floor_index (ghost-mode guard)" % child.name)
+	t.check(solids >= 18, "yard fields %d floored solids (>=18)" % solids)
 	scene.free()
 
 func test_smash_yard_group() -> void:
