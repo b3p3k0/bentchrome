@@ -28,8 +28,10 @@ the suite goes red and names it.
    `git checkout` the cosmetic churn on the others.
 4. **Paint file**: `vehicles/paint/<id>.gd` — copy a similar silhouette. `STYLE` dict
    (half_len / half_wid / radius / skid_points / steer_wheels, plus `"blink": true`
-   for a flashing light bar and `"mg_points": [Vector2, …]` for staggered
-   multi-barrel MG fire — Hubcap's twins) + `static func paint(c, primary, accent, steer, phase)`.
+   for a flashing light bar, `"mg_points": [Vector2, …]` for staggered
+   multi-barrel MG fire — Hubcap's twins, and `"tail_len"` when half_len
+   includes nose gear — Coldfront's plow — so taillights sit on the real
+   bumper) + `static func paint(c, primary, accent, steer, phase)`.
    Draw with `Parts.*` helpers; never preload car_paint.gd from a style file.
 5. **Register it**: one preload line in `car_paint.gd`'s `STYLE_SCRIPTS`.
 6. **Size canon**: insert the id into `tests/test_car_paint.gd` `ORDER` at its radius

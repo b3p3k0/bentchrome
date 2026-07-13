@@ -6,6 +6,7 @@ const Parts := preload("res://vehicles/paint/parts.gd")
 
 const STYLE := {
 	"half_len": 31.0, "half_wid": 15.0, "radius": 23.0,
+	"tail_len": 23.0,  # half_len includes the plow; lamps belong on the bumper
 	"skid_points": [Vector2(-17, -12), Vector2(-17, 12)],
 	"steer_wheels": [Vector2(15, -12), Vector2(15, 12)],
 }

@@ -187,7 +187,9 @@ func _draw_box() -> void:
 ## single centered lamp; every wider body gets a pair at its authored corners.
 func _taillights() -> void:
 	var raw: Dictionary = STYLES[style_id]
-	var tail_x := -float(raw.half_len)
+	# Styles whose half_len includes nose gear (Coldfront's plow) author
+	# tail_len = the real body-tail reach so the lamps sit on the bumper.
+	var tail_x := -float(raw.get("tail_len", raw.half_len))
 	var color := BRAKE_ON if _service_braking else BRAKE_OFF
 	if (raw.skid_points as Array).size() == 1:  # the bikes
 		draw_rect(Rect2(tail_x - 1.0, -2.0, 3.0, 4.0), color)
