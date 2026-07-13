@@ -50,10 +50,19 @@ pairs have explicit two-way `FloorConnector`s. Deck support posts, base
 plates, and cast shadows ride an understructure canvas that stays visible
 while the deck plane under-fades for traffic below.
 
-Three ring rails are **breakaway**: 12 HP destructible guardrails (net ids
-24–26) over hazard-taped drop lips on WestRun's courtyard side, EastRun's
-courtyard side, and SoutheastPlatform's south face — smash through and drive
-off the deck. AI-only hazard curbs on the same lips keep bots from following.
+**EVERY ring rail is breakaway**: sixteen 12 HP destructible guardrails (net
+ids 24–26 and 60–72) over hazard-taped drop lips — the whole third floor is a
+dare; smash any yellow rail and drive off the deck. Gate shoulders stay solid
+(structural), and AI-only hazard curbs on every lip keep bots from following.
+The floor-2 rim needs no such treatment: the retaining walls carry the floor-1
+bit only (the Docks ledge idiom), so floor-2 cars can already drive off the
+foundation edge anywhere while floor-1 cars stay out.
+
+The 2↔3 south ramp lives on the slab's **east strip** at `(1792,-640)`
+(256×256, climbs westward onto EastRun through a gate in its right edge) —
+relocated out of the courtyard to kill the old 20px ramp pinch; the pit now
+flows freely east-west, and the strip sets up a stunt line: up the ramp,
+through the east breakaway rail, dive into the courtyard.
 
 The southern yard is dominated by the **spoil heap**: a two-tier octagonal
 `DriveableHill` pair at `(-200,1150)` — an 848px floor-2 dirt apron
@@ -142,7 +151,9 @@ IDs are unsigned 16-bit values unique within this scene:
 | 39–40 | entry barriers |
 | 41–47 | parking-lot derelicts (NW corner, mundane pool) |
 | 48–54 | promoted site props: forms, two spools, two pipe bundles, two rebar cages |
-| 55–59 | shootable worklights (dark toppled-mast tombstones) |
+| 55–59 | shootable 8-HP worklights (dark toppled-mast tombstones) |
+| 60–72 | ring breakaway rails (full conversion) |
+| 73–74 | SE building-corner wooden crates |
 
 Destroyed networked props remain hidden, noncolliding tombstones so late and
 repeated snapshots converge without replaying their death presentation.
@@ -167,8 +178,10 @@ repeated snapshots converge without replaying their death presentation.
    into the neighboring barrels.
 7. Climb the spoil heap on every face, grab the cap mine crate, and jump off
    both tiers; verify slope shading reads against the flat caps at dusk.
-8. Smash all three breakaway rails and take each yeet; confirm AI never
-   follows and the hazard tape reads after the rail dies.
+8. Smash rails all around the ring and take the yeets (including the east-ramp
+   stunt line into the courtyard); confirm AI never follows and the hazard
+   tape reads after each rail dies. Ram a junk pile at speed and punch through
+   it; drive off the floor-2 rim anywhere.
 9. Tour the dusk pass: worklight pools, viewer glow, explosion blooms, rain
    and mud sheen under the tint, radar/HUD untinted; sweep the parking lot and
    porta row (one door ajar).
