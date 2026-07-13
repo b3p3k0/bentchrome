@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://levels/tutorial/drivers_ed.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -11,6 +11,14 @@
 [ext_resource type="Script" path="res://environment/ramp.gd" id="9_ramp"]
 [ext_resource type="Script" path="res://levels/dock_deco.gd" id="10_ddeco"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="11_marks"]
+[ext_resource type="Script" path="res://levels/tutorial/tutorial_deco.gd" id="12_tdeco"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="13_ammo"]
+[ext_resource type="PackedScene" path="res://environment/heal_pickup.tscn" id="14_heal"]
+[ext_resource type="PackedScene" path="res://environment/boost_pickup.tscn" id="15_boost"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="16_station"]
+[ext_resource type="PackedScene" path="res://environment/target_dummy.tscn" id="17_dummy"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="18_dblock"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="19_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("3_speck")
@@ -114,6 +122,12 @@ size = Vector2(304, 32)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pad"]
 size = Vector2(224, 224)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gate"]
+size = Vector2(424, 48)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_exitzone"]
+size = Vector2(300, 120)
+
 [node name="DriversEd" type="Node2D"]
 script = ExtResource("1_lvl")
 
@@ -128,6 +142,25 @@ polygon = PackedVector2Array(-192, -2304, 192, -2304, 192, -2048, -192, -2048)
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("2_grid")
 extent = Vector2(2560, 2560)
+
+[node name="TunnelDeco" type="Node2D" parent="."]
+position = Vector2(0, -2048)
+script = ExtResource("12_tdeco")
+kind = &"tunnel"
+size = Vector2(384, 256)
+
+[node name="ExitText" type="Node2D" parent="."]
+position = Vector2(0, -1560)
+script = ExtResource("12_tdeco")
+kind = &"exit_text"
+size = Vector2(384, 120)
+
+[node name="ExitSign" type="Node2D" parent="."]
+position = Vector2(0, -2120)
+z_index = 1
+script = ExtResource("12_tdeco")
+kind = &"sign"
+size = Vector2(300, 90)
 
 [node name="FZBase" parent="." instance=ExtResource("4_fz")]
 position = Vector2(0, -128)
@@ -393,6 +426,176 @@ polygon = PackedVector2Array(-232, -20, 232, -20, 232, 20, -232, 20)
 [node name="CapCol" type="CollisionShape2D" parent="Boundary"]
 position = Vector2(0, -2324)
 shape = SubResource("RectangleShape2D_cap")
+
+[node name="ExitGate" type="StaticBody2D" parent="."]
+position = Vector2(0, -2068)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Vis" type="Node2D" parent="ExitGate"]
+script = ExtResource("12_tdeco")
+kind = &"gate"
+size = Vector2(384, 48)
+
+[node name="Col" type="CollisionShape2D" parent="ExitGate"]
+shape = SubResource("RectangleShape2D_gate")
+
+[node name="ExitZone" type="Area2D" parent="."]
+position = Vector2(0, -2200)
+collision_layer = 0
+collision_mask = 1
+
+[node name="Col" type="CollisionShape2D" parent="ExitZone"]
+shape = SubResource("RectangleShape2D_exitzone")
+
+[node name="AmmoStandard" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(-840, 1600)
+kind = "standard"
+amount = 2
+
+[node name="AmmoHoming" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(-600, 1600)
+kind = "homing"
+amount = 2
+
+[node name="AmmoPower" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(-360, 1600)
+kind = "power"
+amount = 1
+
+[node name="AmmoRear" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(-120, 1600)
+kind = "rear"
+amount = 2
+
+[node name="AmmoMine" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(120, 1600)
+kind = "mine"
+amount = 1
+
+[node name="AmmoJump" parent="." instance=ExtResource("13_ammo")]
+position = Vector2(360, 1600)
+kind = "jump"
+amount = 1
+
+[node name="HealPickup" parent="." instance=ExtResource("14_heal")]
+position = Vector2(600, 1600)
+
+[node name="BoostPickup" parent="." instance=ExtResource("15_boost")]
+position = Vector2(840, 1600)
+
+[node name="HealthStation" parent="." instance=ExtResource("16_station")]
+position = Vector2(0, 1856)
+uses = 4
+
+[node name="Dummy1" parent="." instance=ExtResource("17_dummy")]
+position = Vector2(-1600, -64)
+
+[node name="Dummy2" parent="." instance=ExtResource("17_dummy")]
+position = Vector2(-1600, 256)
+
+[node name="Dummy3" parent="." instance=ExtResource("17_dummy")]
+position = Vector2(-1600, 576)
+
+[node name="RangeCrate1" parent="." instance=ExtResource("18_dblock")]
+position = Vector2(-1400, 96)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="RangeCrate2" parent="." instance=ExtResource("18_dblock")]
+position = Vector2(-1400, 416)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1200, 1200)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1312, 1216)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate3" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1252, 1320)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate4" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1600, 1400)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate5" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1712, 1424)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashCrate6" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1656, 1528)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="SmashBarrel1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1450, 1000)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="SmashBarrel2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1544, 1032)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="SmashBarrel3" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1634, 1068)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="SmashFenceS1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1250, 1780)
+size = Vector2(352, 12)
+max_hp = 15.0
+deco = &"fence"
+
+[node name="SmashFenceS2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1606, 1780)
+size = Vector2(352, 12)
+max_hp = 15.0
+deco = &"fence"
+
+[node name="SmashFenceE1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
+position = Vector2(1786, 1600)
+size = Vector2(12, 352)
+max_hp = 15.0
+deco = &"fence"
+
+[node name="SmashHydrant" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
+position = Vector2(1350, 1650)
+kind = &"hydrant"
+
+[node name="SmashCone1" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
+position = Vector2(1150, 1450)
+kind = &"cone"
+
+[node name="SmashCone2" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
+position = Vector2(1500, 1700)
+kind = &"cone"
+
+[node name="SmashTrash" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
+position = Vector2(1750, 1250)
+kind = &"trash"
 
 [node name="Vehicle" parent="." instance=ExtResource("5_veh")]
 position = Vector2(0, 800)

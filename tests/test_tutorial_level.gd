@@ -100,6 +100,60 @@ func test_jump_pad_clear_of_deck() -> void:
 			t.check(not pad_rect.intersects(ramp_rect), "jump pad clear of the ramp")
 	scene.free()
 
+## The pickup row is the lesson-4 syllabus: every ammo kind (rear and mines
+## start at 0 — the crates ARE the lesson), plus heal, boost, and the bay.
+func test_pickup_row_complete() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var ammo_kinds := {}
+	var drive_over_kinds := {}
+	var station := false
+	for child in scene.get_children():
+		if child.get("respawn_seconds") != null:
+			ammo_kinds[child.get("kind")] = true
+		elif child.get("cooldown_seconds") != null:
+			station = true
+		elif child is Area2D and child.get("kind") != null and child.get("amount") != null:
+			drive_over_kinds[child.get("kind")] = true
+	for kind in ["standard", "homing", "power", "rear", "mine", "jump"]:
+		t.check(ammo_kinds.has(kind), "pickup row has %s ammo" % kind)
+	t.check(drive_over_kinds.has(&"heal"), "pickup row has a heal")
+	t.check(drive_over_kinds.has(&"boost"), "pickup row has a boost")
+	t.check(station, "yard has a repair bay")
+	scene.free()
+
+func test_smash_yard_group() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var members := 0
+	var barrels := 0
+	for child in scene.get_children():
+		if child.is_in_group(&"tutorial_smash"):
+			members += 1
+			if child.get("deco") == &"barrel":
+				barrels += 1
+	t.check(members >= 12, "smash yard fields %d targets (>=12)" % members)
+	t.check(barrels >= 3, "smash yard has a barrel chain")
+	scene.free()
+
+func test_exit_anatomy() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var gate: Node = scene.get_node_or_null("ExitGate")
+	var zone: Node = scene.get_node_or_null("ExitZone")
+	t.check(gate != null and gate.collision_layer == 2, "exit gate is a wall-layer body")
+	t.check(gate != null and gate.visible, "exit gate authored CLOSED")
+	if gate != null:
+		var col: CollisionShape2D = gate.get_node("Col")
+		t.check(not col.disabled, "exit gate collision authored live")
+		t.check(gate.get_node_or_null("Vis") != null, "exit gate carries its stripe paint")
+	t.check(zone != null and zone.collision_mask == 1, "exit zone listens for cars")
+	if gate != null and zone != null:
+		t.check(zone.position.y < gate.position.y,
+			"exit zone sits in the throat BEHIND the gate")
+	for deco_name in ["TunnelDeco", "ExitText", "ExitSign"]:
+		t.check(scene.get_node_or_null(deco_name) != null, "yard has %s" % deco_name)
+	var sign: Node2D = scene.get_node_or_null("ExitSign")
+	t.check(sign != null and sign.z_index == 1, "EXIT sign rides the overhead layer")
+	scene.free()
+
 func test_scene_flow_destination() -> void:
 	var flow_script: Script = load("res://game/scene_flow.gd")
 	var tutorial_path: String = flow_script.get_script_constant_map().get("TUTORIAL", "")
