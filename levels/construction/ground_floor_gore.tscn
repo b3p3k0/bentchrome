@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://levels/construction/ground_floor_gore.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -27,6 +27,7 @@
 [ext_resource type="PackedScene" path="res://environment/driveable_hill.tscn" id="25_hill"]
 [ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="26_wreck"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="27_marks"]
+[ext_resource type="Script" path="res://environment/work_light.gd" id="28_worklight"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -671,36 +672,6 @@ script = ExtResource("17_site_deco")
 kind = "crane"
 size = Vector2(1260, 160)
 
-[node name="RebarCage1" type="Node2D" parent="SiteDeco"]
-position = Vector2(760, -320)
-script = ExtResource("17_site_deco")
-kind = "rebar"
-size = Vector2(160, 96)
-
-[node name="RebarCage2" type="Node2D" parent="SiteDeco"]
-position = Vector2(1140, -1420)
-script = ExtResource("17_site_deco")
-kind = "rebar"
-size = Vector2(144, 96)
-
-[node name="PipeBundle" type="Node2D" parent="SiteDeco"]
-position = Vector2(-1520, 240)
-script = ExtResource("17_site_deco")
-kind = "pipes"
-size = Vector2(192, 128)
-
-[node name="CableSpool" type="Node2D" parent="SiteDeco"]
-position = Vector2(1840, 1400)
-script = ExtResource("17_site_deco")
-kind = "spool"
-size = Vector2(128, 128)
-
-[node name="ConcreteForms" type="Node2D" parent="SiteDeco"]
-position = Vector2(1500, 80)
-script = ExtResource("17_site_deco")
-kind = "forms"
-size = Vector2(220, 120)
-
 [node name="EmbankmentSkin" type="Node2D" parent="SiteDeco"]
 position = Vector2(-384, -768)
 rotation = 1.570796
@@ -739,43 +710,6 @@ rotation = -0.5
 script = ExtResource("17_site_deco")
 kind = "ruts"
 size = Vector2(220, 120)
-
-[node name="PipeBundle2" type="Node2D" parent="SiteDeco"]
-position = Vector2(-1300, -260)
-script = ExtResource("17_site_deco")
-kind = "pipes"
-size = Vector2(192, 128)
-
-[node name="CableSpool2" type="Node2D" parent="SiteDeco"]
-position = Vector2(760, 1560)
-script = ExtResource("17_site_deco")
-kind = "spool"
-size = Vector2(128, 128)
-
-[node name="FloodParkingLot" type="Node2D" parent="SiteDeco"]
-position = Vector2(-1750, -1650)
-script = ExtResource("17_site_deco")
-kind = "floodlight"
-
-[node name="FloodPortaRow" type="Node2D" parent="SiteDeco"]
-position = Vector2(-2010, -300)
-script = ExtResource("17_site_deco")
-kind = "floodlight"
-
-[node name="FloodNorthYard" type="Node2D" parent="SiteDeco"]
-position = Vector2(-1100, -1600)
-script = ExtResource("17_site_deco")
-kind = "floodlight"
-
-[node name="FloodSouthEntry" type="Node2D" parent="SiteDeco"]
-position = Vector2(960, 1060)
-script = ExtResource("17_site_deco")
-kind = "floodlight"
-
-[node name="FloodHillBase" type="Node2D" parent="SiteDeco"]
-position = Vector2(450, 1300)
-script = ExtResource("17_site_deco")
-kind = "floodlight"
 
 [node name="BreakableCover" type="Node2D" parent="."]
 
@@ -960,6 +894,94 @@ max_hp = 50.0
 deco = &"barrier"
 floor_index = 1
 arena_net_id = 40
+
+[node name="FormsSlab" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1500, 180)
+size = Vector2(220, 120)
+max_hp = 40.0
+deco = &"forms"
+floor_index = 2
+arena_net_id = 48
+
+[node name="SpoolSE" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1840, 1400)
+size = Vector2(128, 128)
+max_hp = 45.0
+deco = &"spool"
+floor_index = 1
+arena_net_id = 49
+
+[node name="SpoolHill" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(640, 1470)
+size = Vector2(128, 128)
+max_hp = 45.0
+deco = &"spool"
+floor_index = 1
+arena_net_id = 50
+
+[node name="PipesWest" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-1520, 240)
+size = Vector2(192, 128)
+max_hp = 55.0
+deco = &"pipes"
+floor_index = 1
+arena_net_id = 51
+
+[node name="PipesGen" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-1300, -260)
+size = Vector2(192, 128)
+max_hp = 55.0
+deco = &"pipes"
+floor_index = 1
+arena_net_id = 52
+
+[node name="RebarCage1" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(760, -320)
+size = Vector2(160, 96)
+max_hp = 25.0
+deco = &"rebar"
+floor_index = 2
+arena_net_id = 53
+
+[node name="RebarCage2" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1440, -1470)
+size = Vector2(144, 96)
+max_hp = 25.0
+deco = &"rebar"
+floor_index = 2
+arena_net_id = 54
+
+[node name="WorkLights" type="Node2D" parent="."]
+
+[node name="LightParkingLot" type="StaticBody2D" parent="WorkLights"]
+position = Vector2(-1750, -1650)
+rotation = -1.570796
+script = ExtResource("28_worklight")
+arena_net_id = 55
+
+[node name="LightPortaRow" type="StaticBody2D" parent="WorkLights"]
+position = Vector2(-2010, -300)
+rotation = 1.570796
+script = ExtResource("28_worklight")
+arena_net_id = 56
+
+[node name="LightNorthYard" type="StaticBody2D" parent="WorkLights"]
+position = Vector2(-1100, -1600)
+rotation = -0.785398
+script = ExtResource("28_worklight")
+arena_net_id = 57
+
+[node name="LightSouthEntry" type="StaticBody2D" parent="WorkLights"]
+position = Vector2(960, 1060)
+rotation = 0.6
+script = ExtResource("28_worklight")
+arena_net_id = 58
+
+[node name="LightHillBase" type="StaticBody2D" parent="WorkLights"]
+position = Vector2(450, 1300)
+rotation = -2.2
+script = ExtResource("28_worklight")
+arena_net_id = 59
 
 [node name="LooseClutter" type="Node2D" parent="."]
 

@@ -3,10 +3,8 @@ extends Node2D
 ## visual details can never invent collision or confuse the route graph.
 
 const UnderFade := preload("res://environment/under_fade.gd")
-const LightKit := preload("res://environment/light_kit.gd")
 
-@export_enum("rebar", "pipes", "spool", "forms", "crane", "embankment", "scaffold_grade",
-	"washout", "ruts", "floodlight") var kind := "rebar"
+@export_enum("crane", "embankment", "scaffold_grade", "washout", "ruts") var kind := "washout"
 @export var size := Vector2(192, 128)
 var _t := 0.0
 var _under_area: Area2D = null
@@ -20,10 +18,6 @@ func _ready() -> void:
 		ground.name = "Ground"
 		ground.z_index = -1
 		add_child(ground)
-	elif kind == "floodlight":
-		var lamp := LightKit.make_light(420.0, 0.75, Color(1.0, 0.92, 0.72))
-		lamp.position = Vector2(0, 80)
-		add_child(lamp)
 	queue_redraw()
 
 ## Ballast pad, anchor bolts, and the long jib shadow stay on the ground while
@@ -42,34 +36,12 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	match kind:
-		"pipes": _draw_pipes()
-		"spool": _draw_spool()
-		"forms": _draw_forms()
 		"crane": _draw_crane()
 		"embankment": _draw_embankment()
 		"scaffold_grade": _draw_scaffold_grade()
 		"washout": _draw_washout()
 		"ruts": _draw_ruts()
-		"floodlight": _draw_floodlight()
-		_: _draw_rebar()
-
-## Portable tripod worklight aimed south: paint sells the fixture in daylight,
-## the PointLight2D child sells it once the dusk tint darkens the yard.
-func _draw_floodlight() -> void:
-	draw_rect(Rect2(Vector2(-22, -14), Vector2(60, 48)), Color(0, 0, 0, 0.22))
-	for leg: Vector2 in [Vector2(-26, 20), Vector2(26, 20), Vector2(0, -30)]:
-		draw_line(Vector2.ZERO, leg, Color(0.30, 0.31, 0.34), 5.0)
-		draw_circle(leg, 5.0, Color(0.22, 0.23, 0.26))
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(-16, 10), Vector2(16, 10), Vector2(64, 150), Vector2(-64, 150),
-	]), Color(1.0, 0.9, 0.65, 0.08))
-	draw_circle(Vector2(0, 90), 52.0, Color(1.0, 0.9, 0.65, 0.07))
-	draw_circle(Vector2.ZERO, 7.0, Color(0.38, 0.40, 0.44))
-	draw_line(Vector2(-18, 4), Vector2(18, 4), Color(0.34, 0.36, 0.40), 6.0)
-	for lx: float in [-11.0, 11.0]:
-		draw_rect(Rect2(Vector2(lx - 8.0, 4.0), Vector2(16, 14)), Color(0.85, 0.87, 0.88))
-		draw_rect(Rect2(Vector2(lx - 8.0, 4.0), Vector2(16, 14)), Color(0.25, 0.26, 0.30), false, 2.0)
-		draw_circle(Vector2(lx, 14.0), 5.0, Color(1.0, 0.95, 0.80, 0.9))
+		_: pass
 
 ## The ramp.gd band idiom for surface_paint=false grades: lit high end (-y),
 ## shaded low end — the slope read every driveable grade in the game shares.
@@ -129,56 +101,6 @@ func _draw_scaffold_grade() -> void:
 		draw_polyline(PackedVector2Array([
 			Vector2(-11.0, cy + 7.0), Vector2(0.0, cy - 7.0), Vector2(11.0, cy + 7.0),
 		]), Color(0.95, 0.9, 0.6, 0.5), 3.0)
-
-func _draw_rebar() -> void:
-	var half := size * 0.5
-	draw_rect(Rect2(-half + Vector2(4, 6), size), Color(0, 0, 0, 0.18))
-	for x in range(int(-half.x), int(half.x) + 1, 18):
-		draw_line(Vector2(x, -half.y), Vector2(x, half.y), Color(0.42, 0.25, 0.16), 2.0)
-	for y in range(int(-half.y), int(half.y) + 1, 18):
-		draw_line(Vector2(-half.x, y), Vector2(half.x, y), Color(0.35, 0.21, 0.14), 1.5)
-	for x in range(int(-half.x), int(half.x) + 1, 36):
-		draw_circle(Vector2(x, -half.y), 2.5, Color(0.50, 0.32, 0.20))
-		draw_circle(Vector2(x, half.y), 2.5, Color(0.50, 0.32, 0.20))
-
-func _draw_pipes() -> void:
-	draw_rect(Rect2(Vector2(-65.0, -35.0), Vector2(146, 90)), Color(0, 0, 0, 0.22))
-	for y: float in [-28.0, 0.0, 28.0]:
-		for x: float in [-56.0, 0.0, 56.0]:
-			draw_circle(Vector2(x, y), 17.0, Color(0.42, 0.45, 0.46))
-			draw_arc(Vector2(x, y), 13.0, PI * 0.9, PI * 1.6, 10, Color(0.60, 0.63, 0.64), 3.0)
-			draw_circle(Vector2(x, y), 10.0, Color(0.14, 0.16, 0.17))
-	for s: float in [-1.0, 1.0]:
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(s * 78.0, 46.0), Vector2(s * 94.0, 46.0), Vector2(s * 86.0, 30.0),
-		]), Color(0.36, 0.27, 0.16))
-
-func _draw_spool() -> void:
-	var r := minf(size.x, size.y)
-	draw_circle(Vector2(8, 10), r * 0.44, Color(0, 0, 0, 0.24))
-	draw_circle(Vector2.ZERO, r * 0.42, Color(0.48, 0.34, 0.19))
-	for a in range(0, 360, 45):
-		draw_line(Vector2.ZERO, Vector2.RIGHT.rotated(deg_to_rad(a)) * r * 0.38,
-			Color(0.28, 0.20, 0.12), 4.0)
-	for i in 3:
-		draw_arc(Vector2.ZERO, r * (0.24 + 0.05 * float(i)), 0.4 + float(i),
-			5.0 + float(i), 20, Color(0.20, 0.15, 0.10), 3.0)
-	draw_circle(Vector2.ZERO, r * 0.20, Color(0.14, 0.14, 0.15))
-	for a in range(0, 360, 60):
-		draw_circle(Vector2.RIGHT.rotated(deg_to_rad(a + 22)) * r * 0.36, 3.0,
-			Color(0.30, 0.22, 0.13))
-
-func _draw_forms() -> void:
-	var half := size * 0.5
-	draw_rect(Rect2(-half + Vector2(6, 9), size), Color(0, 0, 0, 0.22))
-	draw_rect(Rect2(-half, size), Color(0.45, 0.34, 0.20))
-	var y := -half.y + 14.0
-	while y < half.y:
-		draw_line(Vector2(-half.x + 3.0, y), Vector2(half.x - 3.0, y), Color(0.36, 0.27, 0.15), 2.0)
-		y += 14.0
-	for fx: float in [-half.x + size.x / 3.0, half.x - size.x / 3.0]:
-		draw_line(Vector2(fx, -half.y), Vector2(fx, half.y), Color(0.28, 0.21, 0.12), 4.0)
-	draw_rect(Rect2(-half, size), Color(0.30, 0.22, 0.13), false, 6.0)
 
 ## Proper tower crane: ballasted counter-jib, cross-braced mast at the west
 ## third, truss jib with tie lines, and a trolley walking the span with twin

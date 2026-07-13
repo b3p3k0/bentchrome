@@ -224,6 +224,78 @@ func _draw() -> void:
 			_draw_container()
 		&"chainlink":
 			_draw_chainlink()
+		&"forms":
+			_draw_forms()
+		&"spool":
+			_draw_spool()
+		&"pipes":
+			_draw_pipes()
+		&"rebar":
+			_draw_rebar()
+
+## Plywood concrete-form stack: boards, strap bands, heavy edge frame.
+func _draw_forms() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half + Vector2(6, 9), size), SHADOW)
+	draw_rect(Rect2(-half, size), _shade(Color(0.45, 0.34, 0.20)))
+	var y := -half.y + 14.0
+	while y < half.y:
+		draw_line(Vector2(-half.x + 3.0, y), Vector2(half.x - 3.0, y),
+			_shade(Color(0.36, 0.27, 0.15)), 2.0)
+		y += 14.0
+	for fx: float in [-half.x + size.x / 3.0, half.x - size.x / 3.0]:
+		draw_line(Vector2(fx, -half.y), Vector2(fx, half.y), _shade(Color(0.28, 0.21, 0.12)), 4.0)
+	draw_rect(Rect2(-half, size), _shade(Color(0.30, 0.22, 0.13)), false, 6.0)
+
+## Wooden cable reel on its side: flange, spokes, coiled cable, hub bolts.
+func _draw_spool() -> void:
+	var r := minf(size.x, size.y)
+	draw_circle(Vector2(8, 10), r * 0.44, SHADOW)
+	draw_circle(Vector2.ZERO, r * 0.42, _shade(Color(0.48, 0.34, 0.19)))
+	for a in range(0, 360, 45):
+		draw_line(Vector2.ZERO, Vector2.RIGHT.rotated(deg_to_rad(a)) * r * 0.38,
+			_shade(Color(0.28, 0.20, 0.12)), 4.0)
+	for i in 3:
+		draw_arc(Vector2.ZERO, r * (0.24 + 0.05 * float(i)), 0.4 + float(i),
+			5.0 + float(i), 20, _shade(Color(0.20, 0.15, 0.10)), 3.0)
+	draw_circle(Vector2.ZERO, r * 0.20, _shade(Color(0.14, 0.14, 0.15)))
+	for a in range(0, 360, 60):
+		draw_circle(Vector2.RIGHT.rotated(deg_to_rad(a + 22)) * r * 0.36, 3.0,
+			_shade(Color(0.30, 0.22, 0.13)))
+
+## Stacked pipe bundle: 3x3 open ends with rim highlights, chock wedges.
+func _draw_pipes() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half + Vector2(8, 10), size), SHADOW)
+	var r := minf(size.x, size.y) * 0.13
+	for row: float in [-0.22, 0.0, 0.22]:
+		for col: float in [-0.29, 0.0, 0.29]:
+			var at := Vector2(size.x * col, size.y * row)
+			draw_circle(at, r, _shade(Color(0.42, 0.45, 0.46)))
+			draw_arc(at, r * 0.76, PI * 0.9, PI * 1.6, 10, _shade(Color(0.60, 0.63, 0.64)), 3.0)
+			draw_circle(at, r * 0.59, _shade(Color(0.14, 0.16, 0.17)))
+	for s: float in [-1.0, 1.0]:
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(s * half.x * 0.81, half.y * 0.72),
+			Vector2(s * half.x * 0.98, half.y * 0.72),
+			Vector2(s * half.x * 0.9, half.y * 0.47),
+		]), _shade(Color(0.36, 0.27, 0.16)))
+
+## Tied rebar cage: bar mat with proud corner posts and end dowels.
+func _draw_rebar() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half + Vector2(4, 6), size), Color(0, 0, 0, 0.18))
+	for x in range(int(-half.x), int(half.x) + 1, 18):
+		draw_line(Vector2(x, -half.y), Vector2(x, half.y), _shade(Color(0.42, 0.25, 0.16)), 2.0)
+	for y in range(int(-half.y), int(half.y) + 1, 18):
+		draw_line(Vector2(-half.x, y), Vector2(half.x, y), _shade(Color(0.35, 0.21, 0.14)), 1.5)
+	for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+		var p := corner * (half - Vector2(8, 8))
+		draw_circle(p + Vector2(2, 3), 4.5, Color(0, 0, 0, 0.25))
+		draw_circle(p, 4.0, _shade(Color(0.50, 0.32, 0.20)))
+	for x in range(int(-half.x), int(half.x) + 1, 36):
+		draw_circle(Vector2(x, -half.y), 2.5, _shade(Color(0.50, 0.32, 0.20)))
+		draw_circle(Vector2(x, half.y), 2.5, _shade(Color(0.50, 0.32, 0.20)))
 
 func _draw_house() -> void:
 	var half := size * 0.5
