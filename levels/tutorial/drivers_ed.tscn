@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://levels/tutorial/drivers_ed.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -6,6 +6,11 @@
 [ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="4_fz"]
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="5_veh"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="6_hud"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="7_zone"]
+[ext_resource type="Script" path="res://environment/jump_pad.gd" id="8_jump"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="9_ramp"]
+[ext_resource type="Script" path="res://levels/dock_deco.gd" id="10_ddeco"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="11_marks"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("3_speck")
@@ -15,6 +20,69 @@ shader_parameter/density = 0.4
 shader_parameter/intensity = 0.35
 shader_parameter/scale = 6.0
 shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_road"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.17, 0.17, 0.2, 1)
+shader_parameter/speckle_color = Color(0.1, 0.1, 0.13, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_grass"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.25, 0.5, 0.22, 0.5)
+shader_parameter/speckle_color = Color(0.14, 0.36, 0.11, 1)
+shader_parameter/density = 0.35
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 10.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_dirt"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.5, 0.36, 0.2, 0.5)
+shader_parameter/speckle_color = Color(0.32, 0.22, 0.12, 1)
+shader_parameter/density = 0.3
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 8.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_mud"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.24, 0.16, 0.1, 0.94)
+shader_parameter/speckle_color = Color(0.08, 0.05, 0.03, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 11.0
+shader_parameter/shimmer = 0.25
+
+[sub_resource type="ShaderMaterial" id="SM_snow"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.82, 0.85, 0.92, 0.55)
+shader_parameter/speckle_color = Color(0.95, 0.97, 1, 1)
+shader_parameter/density = 0.3
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 9.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_ice"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.6, 0.8, 0.95, 0.5)
+shader_parameter/speckle_color = Color(0.85, 0.95, 1, 1)
+shader_parameter/density = 0.18
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 12.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_water"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.15, 0.3, 0.55, 0.6)
+shader_parameter/speckle_color = Color(0.45, 0.65, 0.9, 1)
+shader_parameter/density = 0.22
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 14.0
+shader_parameter/shimmer = 1.6
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(4176, 40)
@@ -30,6 +98,21 @@ size = Vector2(40, 256)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_cap"]
 size = Vector2(464, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lane"]
+size = Vector2(224, 1024)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_deck_n"]
+size = Vector2(800, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_deck_e"]
+size = Vector2(32, 800)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_deck_seg"]
+size = Vector2(304, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pad"]
+size = Vector2(224, 224)
 
 [node name="DriversEd" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -50,6 +133,190 @@ extent = Vector2(2560, 2560)
 position = Vector2(0, -128)
 floor_index = 1
 size = Vector2(4096, 4352)
+
+[node name="RoadLane" type="Polygon2D" parent="."]
+position = Vector2(-1792, -1280)
+material = SubResource("SM_road")
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="GrassLane" type="Area2D" parent="."]
+position = Vector2(-1568, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"grass"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="GrassLane"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="GrassLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="DirtLane" type="Area2D" parent="."]
+position = Vector2(-1344, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"dirt"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="DirtLane"]
+material = SubResource("SM_dirt")
+color = Color(0.5, 0.36, 0.2, 0.5)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="DirtLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="MudLane" type="Area2D" parent="."]
+position = Vector2(-1120, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"mud"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="MudLane"]
+material = SubResource("SM_mud")
+color = Color(0.24, 0.16, 0.1, 0.94)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="MudLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="SnowLane" type="Area2D" parent="."]
+position = Vector2(-896, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"snow"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="SnowLane"]
+material = SubResource("SM_snow")
+color = Color(0.82, 0.85, 0.92, 0.55)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="SnowLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="IceLane" type="Area2D" parent="."]
+position = Vector2(-672, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"ice"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="IceLane"]
+material = SubResource("SM_ice")
+color = Color(0.6, 0.8, 0.95, 0.5)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="IceLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="WaterLane" type="Area2D" parent="."]
+position = Vector2(-448, -1280)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("7_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="WaterLane"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-112, -512, 112, -512, 112, 512, -112, 512)
+
+[node name="Col" type="CollisionShape2D" parent="WaterLane"]
+shape = SubResource("RectangleShape2D_lane")
+
+[node name="DeckPlate" type="Polygon2D" parent="."]
+position = Vector2(1408, -1408)
+color = Color(0.3, 0.31, 0.35, 1)
+polygon = PackedVector2Array(-384, -384, 384, -384, 384, 384, -384, 384)
+
+[node name="DeckLedgeShadow" type="Node2D" parent="."]
+position = Vector2(1024, -1408)
+rotation = 1.5708
+script = ExtResource("10_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(768, 90)
+
+[node name="FZDeck" parent="." instance=ExtResource("4_fz")]
+position = Vector2(1408, -1408)
+floor_index = 2
+size = Vector2(768, 768)
+
+[node name="DeckWalls" type="StaticBody2D" parent="."]
+collision_layer = 28
+collision_mask = 0
+
+[node name="NorthVis" type="Polygon2D" parent="DeckWalls"]
+position = Vector2(1408, -1792)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-400, -16, 400, -16, 400, 16, -400, 16)
+
+[node name="NorthCol" type="CollisionShape2D" parent="DeckWalls"]
+position = Vector2(1408, -1792)
+shape = SubResource("RectangleShape2D_deck_n")
+
+[node name="EastVis" type="Polygon2D" parent="DeckWalls"]
+position = Vector2(1792, -1408)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-16, -400, 16, -400, 16, 400, -16, 400)
+
+[node name="EastCol" type="CollisionShape2D" parent="DeckWalls"]
+position = Vector2(1792, -1408)
+shape = SubResource("RectangleShape2D_deck_e")
+
+[node name="SouthWVis" type="Polygon2D" parent="DeckWalls"]
+position = Vector2(1160, -1024)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-152, -16, 152, -16, 152, 16, -152, 16)
+
+[node name="SouthWCol" type="CollisionShape2D" parent="DeckWalls"]
+position = Vector2(1160, -1024)
+shape = SubResource("RectangleShape2D_deck_seg")
+
+[node name="SouthEVis" type="Polygon2D" parent="DeckWalls"]
+position = Vector2(1656, -1024)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-152, -16, 152, -16, 152, 16, -152, 16)
+
+[node name="SouthECol" type="CollisionShape2D" parent="DeckWalls"]
+position = Vector2(1656, -1024)
+shape = SubResource("RectangleShape2D_deck_seg")
+
+[node name="DeckRamp" type="Node2D" parent="."]
+position = Vector2(1408, -800)
+script = ExtResource("9_ramp")
+low_floor = 1
+high_floor = 2
+size = Vector2(192, 448)
+
+[node name="JumpRunUpMarks" type="Node2D" parent="."]
+script = ExtResource("11_marks")
+points = PackedVector2Array(1408, 960, 1408, 420)
+style = &"dashed_white"
+
+[node name="JumpPad" type="Area2D" parent="."]
+position = Vector2(1408, 256)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("8_jump")
+floor_index = 1
+
+[node name="Vis" type="Polygon2D" parent="JumpPad"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
+
+[node name="Col" type="CollisionShape2D" parent="JumpPad"]
+shape = SubResource("RectangleShape2D_pad")
 
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2
