@@ -19,8 +19,14 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 The game starts with a splash screen offering Single Player, Multiplayer, Story, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD and the campaign start-level picker. Those subordinate choices stay remembered while the breaker is off, but cannot affect a run until it is switched back on. Settings is deliberately arrow-only: Up/Down selects, Left/Right changes values, Right enters `-->` rows, and Escape backs out with every change already saved. Choices persist between sessions.
 
+### Pick Your Lane
+Single Player opens the garage door with three lanes:
+- **DRIVER'S ED** — the practice yard. The sign-up window asks what you're here for: **First Time Driver** runs the full eight-lesson course (driving, braking and boost, both trigger fingers, scavenging and repairs, floors and ramps, jump pads, every nasty surface the wasteland serves, and a smash-yard finale — each lesson checks you actually DID the thing before moving on), while **Just Here for a Test Drive** hands you the same yard with no lessons and the exit already open — a no-stakes place to feel out a new ride. Nobody shoots back in either. When you're done, drive out the big EXIT tunnel on the north wall (it stays gated until class lets out), or bail any time from the pause menu.
+- **ROAD TRIP** — the campaign. Sends you past the DMV below on the way to the garage.
+- **SINGLE BATTLE** — it's on the sign, but the paint's still grey. Coming soon.
+
 ### Pick Your License
-Single Player sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:
+Road Trip sends you past the DMV before the garage. Three license classes, one campaign each — pick before you drive, live with it until you quit back to the title:
 - **LEARNER'S PERMIT** — soft hits, lazy trigger fingers, bosses that let you breathe. The Rustbelt, with training wheels.
 - **ROAD RAGING COMMUTER** — they mean it out there, but you'll get a word in edgewise.
 - **REVOKED LICENSE** — the ride as intended. Full damage, full cadence, bosses off the leash.

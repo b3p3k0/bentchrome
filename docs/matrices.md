@@ -303,6 +303,24 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 
 ---
 
+## Driver's Ed (tutorial yard knobs)
+
+Sources: `levels/tutorial/tutorial_director.gd` / `tutorial_card.gd` static vars; yard geography in `levels/tutorial/drivers_ed.tscn` (4096×4096, zero enemies). Outside `CAMPAIGN` — contract-exempt, no interstitial, end screen never auto-advances. Entry: title → SINGLE PLAYER → mode select DRIVER'S ED → sign-up dialog (FIRST TIME DRIVER = lessons, JUST HERE FOR A TEST DRIVE = free roam with the gate already open) → car select, difficulty skipped (`GameState.game_mode` = `tutorial` / `test_drive`; ROAD TRIP = `campaign`). Exit: north tunnel → confirm (KEEP PRACTICING default) → title; pause-menu Quit works any time.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| `INPUT_LOCK` | 1.2 s | tutorial_card.gd | any-key lock on every lesson card (interstitial idiom) |
+| `HOLD_MOVE` | 0.25 s | tutorial_director.gd | per-direction W/S/A/D accumulation, lesson 1 |
+| `HOLD_CONTROL` | 0.3 s | tutorial_director.gd | brake / handbrake / boost each, lesson 2 (service brake is NOT-handbrake — chords don't count, phases do) |
+| `DING_HP` | 40 | tutorial_director.gd | lesson-4 fender ding on card dismissal; skipped when hull ≤ ding+15 |
+| `JUMP_HEIGHT` | 40 px | tutorial_director.gd | airborne threshold for lesson 6 |
+| `JUMP_LANE` | Rect2(1178, −700, 460, 1800) | tutorial_director.gd | pad + flight corridor; air outside it never counts (deck ledge hops can't cheat) |
+| `SMASH_COUNT` | 5 | tutorial_director.gd | yard kills counted from the lesson-start snapshot, clamped to what's standing; ≥1 barrel unless none remain |
+
+Yard fixtures: 6-lane NW terrain sampler (grass/dirt/mud/snow/ice/water — exactly the lesson-7 set) + a road paint strip; NE floor-2 deck (768×768, south ramp, open west ledge); E jump pad (1408, 256); S pickup row (all six ammo kinds, heal, boost, 4-use repair bay); W target range (3 dummies); SE `tutorial_smash` yard (6 crates / 3 barrels / 3 picket fences / 4 clutter = 16 pieces). Lesson copy lives in the `LESSONS` const (content, not tunables); the closing card is Kevin's copy verbatim. UI layers: hint 55, lesson card 61, exit confirm 62.
+
+---
+
 ## Route 666 Roulette (chase mode knobs)
 
 Sources: `levels/chase/*.gd` static vars, `ui/hud_chase.gd`, `ui/speed_lines.gd`. Course distance d = −world_y; north is up.
