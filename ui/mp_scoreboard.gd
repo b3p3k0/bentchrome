@@ -93,17 +93,28 @@ func _build() -> void:
 		wl.modulate = DIM_TEXT
 		vbox.add_child(wl)
 
+	# One return, one exit (playtest: the old GARAGE/LOBBY pair did the same
+	# thing for the host). GARAGE = back to the lobby — the host's press rolls
+	# EVERYONE, a client's press slips just them back early. LEAVE SESSION
+	# hangs up and heads for the front door.
 	var footer := HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	footer.add_theme_constant_override("separation", 24)
-	if _net.is_active() and _net.is_host():
+	if _net.is_active():
 		footer.add_child(_button("BACK TO THE GARAGE", func() -> void:
-			_net.return_to_lobby()))
-	footer.add_child(_button("LOBBY" if _net.is_active() else "FRONT DOOR", _to_lobby))
+			if _net.is_host():
+				_net.return_to_lobby()
+			else:
+				_flow.to_mp_lobby()))
+		footer.add_child(_button("LEAVE SESSION", func() -> void:
+			_net.leave()
+			_flow.to_mp_menu()))
+	else:
+		footer.add_child(_button("FRONT DOOR", _to_lobby))
 	vbox.add_child(footer)
 
 	var hint := Label.new()
-	hint.text = "the host rolls everyone back; ESC slips out early"
+	hint.text = "the host's garage press rolls everyone; ESC slips out early"
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT

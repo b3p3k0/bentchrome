@@ -25,8 +25,8 @@ func _row_a() -> Dictionary:
 	}
 
 func test_rows_round_trip() -> void:
-	t.check(Proto.PROTOCOL_VERSION == 9,
-		"snap: projectile tint/z and special cosmetics ship behind protocol 9")
+	t.check(Proto.PROTOCOL_VERSION == 10,
+		"snap: tint/z + special cosmetics (9) and the freeze bit (10) ship behind protocol 10")
 	var dead := {"alive": false, "hp": 0.0}
 	var bytes: PackedByteArray = Snap.pack_snapshot(99, [_row_a(), dead], [])
 	var back: Dictionary = Snap.unpack_snapshot(bytes)
