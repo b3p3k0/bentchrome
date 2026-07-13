@@ -19,6 +19,7 @@ const AMBER := Color(1.0, 0.85, 0.2)
 
 static var HOLD_MOVE := 0.25      # seconds each of W/S/A/D must accumulate
 static var HOLD_CONTROL := 0.3    # seconds each of brake/handbrake/boost
+static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
 
 const LESSONS := [
 	{
@@ -79,8 +80,10 @@ var lesson_index := -1
 var completed := false
 
 var _card = null         # tutorial_card CanvasLayer
-var _latch := {}         # per-lesson accumulators; cleared on advance
+var _latch := {}         # per-lesson accumulators/flags; cleared on advance
 var _hint_label: Label = null
+var _ammo_seen := {}     # rack ammo per slot, last observed — drop = a shot
+						 # left the bay, rise = a crate landed
 
 func _ready() -> void:
 	_card = CardScript.new()
@@ -99,6 +102,27 @@ func _ready() -> void:
 	_hint_label.modulate = AMBER
 	hint_layer.add_child(_hint_label)
 	add_child(hint_layer)
+	# The rack has no "fired" signal — selection_changed covers the cycle
+	# latch, and an ammo delta against the last-seen count tells shot from
+	# crate. Player is injected before add_child, so the hookup lands here.
+	if player:
+		var rack: Node = player.get_node_or_null("WeaponRack")
+		if rack:
+			for i in 7:
+				_ammo_seen[i] = rack.ammo(i)
+			rack.selection_changed.connect(_on_rack_selection)
+			rack.ammo_changed.connect(_on_rack_ammo)
+
+func _on_rack_selection(_index: int) -> void:
+	_latch[&"cycled"] = 1.0
+
+func _on_rack_ammo(index: int, ammo: int) -> void:
+	var seen: int = int(_ammo_seen.get(index, ammo))
+	if ammo < seen:
+		_latch[&"fired_secondary"] = 1.0
+	elif ammo > seen:
+		_latch[&"crate"] = 1.0
+	_ammo_seen[index] = ammo
 
 ## Entry point, called by drivers_ed after injection. lessons=false is the
 ## test-drive boot: same yard, syllabus already stamped complete.
@@ -132,6 +156,13 @@ func _on_card_dismissed() -> void:
 	if lesson_index < 0 or lesson_index >= LESSONS.size():
 		return
 	_hint_label.text = LESSONS[lesson_index]["hint"]
+	# "We dinged your fender on the way in" — the heal half of lesson 4 needs
+	# a damaged hull and nobody here shoots. A car already hurting (barrels,
+	# fall bills) keeps its dents instead of stacking the ding.
+	if LESSONS[lesson_index]["id"] == &"pickups" and player != null:
+		var health: Node = player.get_node_or_null("Health")
+		if health and player.get_hp() > DING_HP + 15.0:
+			health.take_damage(DING_HP)
 
 ## Graduation: card 8 adds the closing dialog + exit confirm; the gate opens
 ## here so free play and test drives share one path.
@@ -169,7 +200,20 @@ func _lesson_done(id: StringName, delta: float) -> bool:
 			_hold(&"boost", ctl.boosting, delta)
 			return _held(&"brake", HOLD_CONTROL) and _held(&"handbrake", HOLD_CONTROL) \
 				and _held(&"boost", HOLD_CONTROL)
-	return false  # lessons 3-8 land in the next cards
+		&"weapons":
+			if player == null:
+				return false
+			var mount: Node = player.get_node_or_null("MachineGunMount")
+			if mount and float(mount.heat) > 0.0:
+				_latch[&"mg"] = 1.0  # heat is the proof a burst actually left
+			return _latch.has(&"mg") and _latch.has(&"cycled") \
+				and _latch.has(&"fired_secondary")
+		&"pickups":
+			if player == null:
+				return false
+			return _latch.has(&"crate") \
+				and player.get_hp() >= player.get_max_hp() - 0.01
+	return false  # lessons 5-8 land in the next card
 
 func _hold(key: StringName, on: bool, delta: float) -> void:
 	if on:

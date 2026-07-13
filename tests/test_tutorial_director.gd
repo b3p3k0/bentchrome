@@ -121,6 +121,50 @@ func test_lessons_advance_in_order() -> void:
 		_dismiss(director._card)
 	_teardown(w["world"])
 
+## Lessons 3-4 drive the director's seams directly: heat is a poll, cycle and
+## bay-fire ride real rack signals, the fender ding lands on the lesson-4
+## card dismissal, and completion needs a crate AND a full hull.
+func test_weapons_and_pickup_lessons() -> void:
+	var w := _world()
+	var director: Node = w["director"]
+	var car: Node = w["car"]
+	director.begin(true)
+	_dismiss(director._card)
+	# Jump the syllabus to lesson 3 — lessons 1-2 hold their own test above.
+	director.lesson_index = 2
+	director._latch.clear()
+	director._on_card_dismissed()
+	t.check(String(director._hint_label.text).begins_with("LESSON 3"),
+		"weapons: hint follows the jump")
+
+	var mount: Node = car.get_node("MachineGunMount")
+	mount.heat = 8.0  # a burst just left
+	var rack: Node = car.get_node("WeaponRack")
+	rack.selection_changed.emit(1)
+	var seen0: int = rack.ammo(0)
+	rack.ammo_changed.emit(0, seen0 - 1)  # bay shot: ammo fell
+	await t.physics_frame
+	await t.physics_frame
+	t.check(director.lesson_index == 3,
+		"weapons: MG heat + cycle + bay shot -> lesson 4 (index %d)" % director.lesson_index)
+	t.check(director._card.visible, "pickups: lesson 4 card up")
+
+	var hp_before: float = car.get_hp()
+	_dismiss(director._card)
+	t.check(car.get_hp() < hp_before, "pickups: fender ding lands on dismissal")
+	rack.ammo_changed.emit(1, rack.ammo(1) + 1)  # crate landed: ammo rose
+	await t.physics_frame
+	t.check(director.lesson_index == 3, "pickups: crate alone is not enough")
+	var health: Node = car.get_node("Health")
+	health.heal(9999.0)
+	await t.physics_frame
+	await t.physics_frame
+	t.check(director.lesson_index == 4,
+		"pickups: crate + full hull -> lesson 5 (index %d)" % director.lesson_index)
+	if director._card.visible:
+		_dismiss(director._card)
+	_teardown(w["world"])
+
 func test_test_drive_boots_precompleted() -> void:
 	var w := _world()
 	var director: Node = w["director"]
