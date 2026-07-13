@@ -239,7 +239,8 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | Signature arena state | protocol 8 repeated rows | u16 stable ID + flags + HP fraction + phase timer + 8-actor target mask; host authority; dead props persist as hidden/noncolliding tombstones |
 | Driveable hill | one root / one skin / eight faces | `DriveableHill`: compact pull 180; footprint = summit size + grade length; corner leg = grade length ÷ 2; substrate-reset + terrain skin; NW relief 0.22, projection 1.55, slope darkening 0.06, crest 0.10/18px, foot 0.12/20px, shadow (12,14)/0.20; all connector pairs generated; seam props carry both floor bits |
 | Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Goliath's Arena buttress convention |
-| DEVGOD (Developer Options) | immune, ∞ ammo, all-seeing radar | Developer Mode master-gates every effect while preserving the stored toggle; pits/deep water still kill but the life is comped; radar range gate off |
+| Arena radar | all other live combatants, map-wide | vehicle `body_color` + contrast outline; dots same-floor, chevrons above/below; includes LAN humans; no range/difficulty/DEVGOD gate; Route 666 GPS excluded |
+| DEVGOD (Developer Options) | immune, ∞ ammo | Developer Mode master-gates every effect while preserving the stored toggle; pits/deep water still kill but the life is comped |
 | Jump-mine pop | vz 450 | ~0.7s air |
 | Mine sensing | land 52px / jump 26px | land paint remains 14px; only the damaging mine has proximity reach |
 | Lives / respawn | 3 lives; 1.6s delay, 2s shield | shield also fires at level start; full-wipe on 0 |
