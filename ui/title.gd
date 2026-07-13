@@ -1,5 +1,5 @@
 extends Control
-## Title screen: splash art + SINGLE PLAYER/STORY menu. SINGLE PLAYER -> difficulty select;
+## Title screen: splash art + SINGLE PLAYER/STORY menu. SINGLE PLAYER -> mode select;
 ## STORY -> full-screen story art (placeholder copy until the real text lands).
 ## ESC pops the quit confirm ("Awww, giving up so soon?") — NO is the default;
 ## quitting takes intent.
@@ -75,7 +75,7 @@ func _activate() -> void:
 		0:
 			_done = true
 			if flow:
-				flow.to_difficulty()
+				flow.to_mode_select()
 		1:
 			_done = true
 			if flow:

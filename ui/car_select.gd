@@ -63,14 +63,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _done:
 		return
 	# ESC steps back one layer: dossier -> carousel -> difficulty select (or
-	# the garage lobby when this is a LAN session's ride picker). Once
-	# gameplay starts, ESC belongs to the pause menu instead.
+	# mode select when Driver's Ed skipped the DMV, or the garage lobby when
+	# this is a LAN session's ride picker). Once gameplay starts, ESC belongs
+	# to the pause menu instead.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		if _bio and _bio.visible:
 			_bio.visible = false
 		elif _mp_session():
 			SceneFlow.to_mp_lobby()
+		elif GameState.game_mode != &"campaign":
+			SceneFlow.to_mode_select()
 		else:
 			SceneFlow.to_difficulty()
 		return
@@ -99,6 +102,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			SceneFlow.to_mp_lobby()
 			return
 		GameState.reset_campaign()
+		if GameState.game_mode != &"campaign":
+			# Driver's Ed (lessons or test drive) — one-off yard, no campaign.
+			SceneFlow.to_tutorial()
+			return
 		# Developer Options' START LEVEL picker is gated by its master breaker.
 		SceneFlow.to_level(GameState.effective_start_level_index())
 

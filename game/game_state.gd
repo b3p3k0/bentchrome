@@ -10,6 +10,10 @@ var selected_vehicle_id: StringName = &""
 var level_index: int = 0
 var lives: int = 3  # campaign lives; reset at car select, spent by levels
 var score: int = 0
+# SP lane picked on the mode-select screen: &"campaign" (Road Trip),
+# &"tutorial" (Driver's Ed lessons), or &"test_drive" (same yard, free roam).
+# Run state, never persisted; mode select re-stamps it on every confirm.
+var game_mode: StringName = &"campaign"
 
 func reset_campaign() -> void:
 	level_index = 0

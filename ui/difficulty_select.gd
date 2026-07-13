@@ -1,6 +1,6 @@
 extends Control
 ## The DMV window: pick a license class before picking a ride. Sits between
-## title SINGLE PLAYER and car select; the tier is run state (difficulty.gd static),
+## mode select (ROAD TRIP) and car select; the tier is run state (difficulty.gd static),
 ## fixed for the whole campaign — the end screen's Restart never comes back
 ## here, only Quit to Title does. Cursor lands on the current tier, so first
 ## boot opens on REVOKED LICENSE (hard IS the game as intended) and a
@@ -35,11 +35,11 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:
 		return
-	# ESC steps back one layer: the DMV -> title.
+	# ESC steps back one layer: the DMV -> mode select.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		_done = true
-		SceneFlow.to_title()
+		SceneFlow.to_mode_select()
 		return
 	var up: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"select_prev")
 	var down: bool = event.is_action_pressed(&"move_down") or event.is_action_pressed(&"select_next")
