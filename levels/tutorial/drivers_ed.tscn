@@ -167,7 +167,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"grass"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="GrassPatch"]
 material = SubResource("SM_grass")
@@ -183,7 +182,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"dirt"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="DirtPatch"]
 material = SubResource("SM_dirt")
@@ -199,7 +197,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"mud"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="MudPatch"]
 material = SubResource("SM_mud")
@@ -215,7 +212,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"snow"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="SnowPatch"]
 material = SubResource("SM_snow")
@@ -231,7 +227,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"ice"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="IcePatch"]
 material = SubResource("SM_ice")
@@ -247,7 +242,6 @@ collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
 terrain_type = &"water"
-soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="WaterPatch"]
 material = SubResource("SM_water")
