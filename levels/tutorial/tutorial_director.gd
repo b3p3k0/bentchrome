@@ -31,7 +31,8 @@ static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
 static var JUMP_HEIGHT := 40.0    # airborne px that count as a real launch
 static var JUMP_LANE := Rect2(410, -400, 460, 1400)  # pad + flight path; a
 								  # ledge hop off the deck must never count
-static var SMASH_COUNT := 5       # yard kills demanded (clamped to what's left)
+static var SMASH_COUNT := 3       # yard kills demanded (clamped to what's left)
+								  # — a taste, not a chore; the rest is extra credit
 
 const TERRAIN_SET: Array[StringName] = [&"grass", &"dirt", &"mud", &"snow", &"ice", &"water"]
 
@@ -81,8 +82,8 @@ const LESSONS := [
 	{
 		"id": &"smash",
 		"title": "LESSON 8 — EVERYTHING BREAKS",
-		"body": "Scenery is a suggestion. Crates pop, fences splinter, hydrants gush — and fuel barrels go up hard enough to chain. Clear out the southeast smash yard; guns or bumper, dealer's choice. Mind the barrels. Or don't.",
-		"hint": "LESSON 8/8 — wreck the SE smash yard",
+		"body": "Scenery is a suggestion. Crates pop, fences splinter, hydrants gush — and fuel barrels go up hard enough to chain. Put three things in the southeast smash yard in the dirt (a barrel among them) and you pass; guns or bumper, dealer's choice. Extra credit is between you and the yard.",
+		"hint": "LESSON 8/8 — smash 3 things in the SE yard (incl. a barrel)",
 	},
 ]
 
