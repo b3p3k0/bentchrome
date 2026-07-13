@@ -20,6 +20,12 @@ const AMBER := Color(1.0, 0.85, 0.2)
 static var HOLD_MOVE := 0.25      # seconds each of W/S/A/D must accumulate
 static var HOLD_CONTROL := 0.3    # seconds each of brake/handbrake/boost
 static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
+static var JUMP_HEIGHT := 40.0    # airborne px that count as a real launch
+static var JUMP_LANE := Rect2(1178, -700, 460, 1800)  # pad + flight path; a
+								  # ledge hop off the deck must never count
+static var SMASH_COUNT := 5       # yard kills demanded (clamped to what's left)
+
+const TERRAIN_SET: Array[StringName] = [&"grass", &"dirt", &"mud", &"snow", &"ice", &"water"]
 
 const LESSONS := [
 	{
@@ -163,6 +169,10 @@ func _on_card_dismissed() -> void:
 		var health: Node = player.get_node_or_null("Health")
 		if health and player.get_hp() > DING_HP + 15.0:
 			health.take_damage(DING_HP)
+	# The smash quota counts from the moment the lesson goes live — anything
+	# the player flattened during earlier free play stays off the bill.
+	if LESSONS[lesson_index]["id"] == &"smash":
+		_snapshot_smash()
 
 ## Graduation: card 8 adds the closing dialog + exit confirm; the gate opens
 ## here so free play and test drives share one path.
@@ -213,7 +223,58 @@ func _lesson_done(id: StringName, delta: float) -> bool:
 				return false
 			return _latch.has(&"crate") \
 				and player.get_hp() >= player.get_max_hp() - 0.01
-	return false  # lessons 5-8 land in the next card
+		&"floors":
+			if player == null:
+				return false
+			if player.floor_index == 2:
+				_latch[&"deck_up"] = 1.0
+			elif _latch.has(&"deck_up") and player.floor_index == 1:
+				_latch[&"deck_down"] = 1.0  # only a descent AFTER the climb
+			return _latch.has(&"deck_up") and _latch.has(&"deck_down")
+		&"jump":
+			if player == null:
+				return false
+			if float(player.height) > JUMP_HEIGHT \
+					and JUMP_LANE.has_point(player.global_position):
+				_latch[&"jumped"] = 1.0
+			return _latch.has(&"jumped")
+		&"terrain":
+			if player == null:
+				return false
+			var surface: StringName = player.current_terrain
+			if surface in TERRAIN_SET:
+				_latch[surface] = 1.0
+			for s in TERRAIN_SET:
+				if not _latch.has(s):
+					return false
+			return true
+		&"smash":
+			if not _latch.has(&"smash_base"):
+				_snapshot_smash()  # entered without a dismissal (safety net)
+			var live: Array[int] = _smash_counts()
+			var destroyed: int = int(_latch[&"smash_base"]) - live[0]
+			var barrels_gone: int = int(_latch[&"smash_barrels"]) - live[1]
+			# A pre-flattened yard owes nothing; otherwise the quota clamps to
+			# what's standing and at least one barrel has to go up.
+			return destroyed >= mini(SMASH_COUNT, int(_latch[&"smash_base"])) \
+				and (barrels_gone > 0 or int(_latch[&"smash_barrels"]) == 0)
+	return false
+
+func _snapshot_smash() -> void:
+	var counts: Array[int] = _smash_counts()
+	_latch[&"smash_base"] = counts[0]
+	_latch[&"smash_barrels"] = counts[1]
+
+func _smash_counts() -> Array[int]:
+	var members := 0
+	var barrels := 0
+	for node in get_tree().get_nodes_in_group(&"tutorial_smash"):
+		if not is_instance_valid(node):
+			continue
+		members += 1
+		if node.get("deco") == &"barrel":
+			barrels += 1
+	return [members, barrels]
 
 func _hold(key: StringName, on: bool, delta: float) -> void:
 	if on:

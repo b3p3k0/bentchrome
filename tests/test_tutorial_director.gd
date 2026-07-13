@@ -165,6 +165,80 @@ func test_weapons_and_pickup_lessons() -> void:
 		_dismiss(director._card)
 	_teardown(w["world"])
 
+## Lessons 5-7 drive the director's _physics_process DIRECTLY with forced
+## vehicle state — no frame pumping, so the vehicle's own sensors never
+## overwrite the forced fields between set and poll.
+func test_floors_jump_terrain_lessons() -> void:
+	var w := _world()
+	var director: Node = w["director"]
+	var car: Node = w["car"]
+	director.begin(true)
+	_dismiss(director._card)
+	director.lesson_index = 4  # floors
+	director._latch.clear()
+	director._on_card_dismissed()
+
+	car.floor_index = 1
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 4, "floors: starting low is not the lesson")
+	car.floor_index = 2
+	director._physics_process(0.016)
+	car.floor_index = 1
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 5, "floors: up then down -> jump lesson")
+	_dismiss(director._card)
+
+	car.height = 60.0
+	car.global_position = Vector2(0, 800)
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 5, "jump: airborne OFF the lane doesn't count")
+	car.global_position = Vector2(1408, 200)
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 6, "jump: pad-lane air -> terrain lesson")
+	car.height = 0.0
+	_dismiss(director._card)
+
+	for surface in [&"grass", &"dirt", &"mud", &"snow", &"ice"]:
+		car.current_terrain = surface
+		director._physics_process(0.016)
+	t.check(director.lesson_index == 6, "terrain: five of six is not enough")
+	car.current_terrain = &"water"
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 7, "terrain: full sample -> smash lesson")
+	if director._card.visible:
+		_dismiss(director._card)
+	_teardown(w["world"])
+
+func test_smash_lesson_counts_the_yard() -> void:
+	var w := _world()
+	var director: Node = w["director"]
+	director.begin(true)
+	_dismiss(director._card)
+	var stubs: Array = []
+	for i in 6:
+		var stub := Node2D.new()
+		stub.add_to_group(&"tutorial_smash")
+		w["world"].add_child(stub)
+		stubs.append(stub)
+	var barrel: Node = (load("res://environment/destructible_block.tscn") as PackedScene).instantiate()
+	barrel.deco = &"barrel"
+	barrel.position = Vector2(3000, 3000)
+	barrel.add_to_group(&"tutorial_smash")
+	w["world"].add_child(barrel)
+	director.lesson_index = 7
+	director._latch.clear()
+	director._on_card_dismissed()  # snapshots the yard: 7 targets, 1 barrel
+
+	for i in 5:
+		stubs[i].free()
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 7, "smash: quota without the barrel is not enough")
+	barrel.free()
+	director._physics_process(0.016)
+	t.check(director.completed, "smash: barrel down -> syllabus complete")
+	t.check(not (w["gate"] as Node2D).visible, "smash: graduation opens the gate")
+	_teardown(w["world"])
+
 func test_test_drive_boots_precompleted() -> void:
 	var w := _world()
 	var director: Node = w["director"]
