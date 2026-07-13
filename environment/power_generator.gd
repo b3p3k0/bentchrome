@@ -10,8 +10,8 @@ const ExplosionScene := preload("res://environment/explosion.tscn")
 const ImpactScene := preload("res://weapons/impact_fx.tscn")
 
 const SIZE := Vector2(256, 192)
-const MAX_HP := 450.0
-const ARM_HP := 112.5
+const MAX_HP := 220.0
+const ARM_HP := 55.0
 const WARNING_SECONDS := 1.2
 const ACTIVE_SECONDS := 2.0
 const COOLDOWN_SECONDS := 60.0

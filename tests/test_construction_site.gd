@@ -74,7 +74,7 @@ func test_authored_worker_and_porta_budgets() -> void:
 	t.check(porta.size() == 8, "site life: west service row has eight cubicles")
 	for cubicle in porta:
 		var shape := (cubicle.get_node(^"Col") as CollisionShape2D).shape as RectangleShape2D
-		t.check(shape.size == Vector2(64, 80),
+		t.check(shape.size == Vector2(48, 60),
 			"site life: porta scene remains compact")
 		t.check_approx(float(cubicle.max_hp), 20.0, "site life: porta is light 20HP cover")
 	arena.free()

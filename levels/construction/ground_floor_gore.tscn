@@ -1029,42 +1029,42 @@ floor_index = 1
 [node name="PortaRow" type="Node2D" parent="."]
 
 [node name="Porta1" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -640)
+position = Vector2(-2100, -556)
 seed_offset = 1
 arena_net_id = 10
 
 [node name="Porta2" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -544)
+position = Vector2(-2100, -484)
 seed_offset = 2
 arena_net_id = 11
 
 [node name="Porta3" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -448)
+position = Vector2(-2100, -412)
 seed_offset = 3
 arena_net_id = 12
 
 [node name="Porta4" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -352)
+position = Vector2(-2100, -340)
 seed_offset = 4
 arena_net_id = 13
 
 [node name="Porta5" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -256)
+position = Vector2(-2100, -268)
 seed_offset = 5
 arena_net_id = 14
 
 [node name="Porta6" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -160)
+position = Vector2(-2100, -196)
 seed_offset = 6
 arena_net_id = 15
 
 [node name="Porta7" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, -64)
+position = Vector2(-2100, -124)
 seed_offset = 7
 arena_net_id = 16
 
 [node name="Porta8" parent="PortaRow" instance=ExtResource("19_porta")]
-position = Vector2(-2100, 32)
+position = Vector2(-2100, -52)
 seed_offset = 8
 arena_net_id = 17
 
@@ -1074,42 +1074,49 @@ arena_net_id = 17
 position = Vector2(-2180, -1790)
 rotation = 1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 41
 
 [node name="Wreck2" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-2070, -1790)
 rotation = 1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 42
 
 [node name="Wreck3" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-1960, -1790)
 rotation = 1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 43
 
 [node name="Wreck4" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-1850, -1790)
 rotation = 1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 44
 
 [node name="Wreck5" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-2200, -1540)
 rotation = -1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 45
 
 [node name="Wreck6" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-2090, -1540)
 rotation = -1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 46
 
 [node name="Wreck7" parent="ParkingLot" instance=ExtResource("26_wreck")]
 position = Vector2(-1980, -1540)
 rotation = -1.570796
 pool_override = Array[StringName]([&"bumper", &"splatcat", &"hornet", &"lovebug", &"razorback", &"buzz_sedan", &"buzz_technical"])
+floor_index = 1
 arena_net_id = 47
 
 [node name="StallA1" type="Node2D" parent="ParkingLot"]
