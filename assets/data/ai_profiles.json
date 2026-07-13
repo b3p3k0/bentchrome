@@ -395,7 +395,7 @@
       }
     },
     {
-      "id": "splatcat",
+      "id": "splatkat",
       "archetype": "ambusher",
       "state_weights": {
         "hunt": 0.4,

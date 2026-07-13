@@ -1,15 +1,16 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_lx0hr"]
-[ext_resource type="Resource" path="res://data/weapons/splat_effect.tres" id="2_a4rq5"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_a33nc"]
+[ext_resource type="Resource" path="res://data/weapons/rusty_poon.tres" id="2_fknf0"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_l53h6"]
 
 [resource]
-script = ExtResource("1_lx0hr")
-id = &"splatcat"
-car_name = "Splat Cat"
+script = ExtResource("1_a33nc")
+id = &"splatkat"
+car_name = "Splat Kat"
 driver_name = "Juan Dough"
 flavor = "A fast-talking courier with nine lives and unpaid parking tickets. The compact ride is quick, nimble, and streetwise. Armor sits in the middle; evasive driving is the real defense. He thrives in traffic and dirty lines. Delivery guaranteed, signature optional."
-special_name = "Splat Effect"
+special_name = "Rusty 'Poon"
 special_desc = "on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups."
 acceleration = 6
 top_speed = 7
@@ -17,6 +18,6 @@ handling = 7
 special_power = 8
 primary_color = Color(0.7882353, 0.32941177, 0.101960786, 1)
 accent_color = Color(1, 0.5411765, 0.25490198, 1)
-special = ExtResource("2_a4rq5")
+special = ExtResource("2_fknf0")
 special_ammo_cap = 2
 special_recharge_seconds = 6.0

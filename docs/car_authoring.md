@@ -64,7 +64,7 @@ the suite goes red and names it.
 | ghost     | 3    | fastest/thin | PROJECTILE (homing) | aggressor   | —          |
 | lovebug   | 4    | peppy/light  | PROJECTILE (disarm) | opportunist | water=road; burn 1.5x |
 | hornet    | 5    | all 6s       | PROJECTILE (burn)   | aggressor   | —          |
-| splatcat  | 5    | nimble/mid   | PROJECTILE (slow-fx)| ambusher    | —          |
+| splatkat  | 5    | nimble/mid   | PROJECTILE (slow-fx)| ambusher    | —          |
 | bumper    | 6    | slow/heavy   | FLAME               | defender    | —          |
 | smoky     | 6    | punchy/heavy | BEAM                | defender    | 4WD        |
 | kandykane | 7    | slow/heavy   | PROJECTILE (burn)   | mini_boss   | —          |

@@ -31,7 +31,7 @@ Stats are design-scale 1-10; HP derives from Armor via StatCurves (see mapping b
 | Mr. Ghastly | ??? | 8 | 8 | 7 | 2 | 9 | 1 | 82 | Scythe of the Damned | 1 | 12s | aggressor |
 | Razorback | Big Sarge | 3 | 6 | 4 | 8 | 7 | 7 | 156 | Red Glare | 1 | 12s | defender |
 | Smoky | Officer Richard Vepsh | 7 | 6 | 4 | 7 | 7 | 6 | 143 | Taser | 3 | 90s | defender |
-| Splat Cat | Juan Dough | 6 | 7 | 7 | 5 | 8 | 5 | 119 | Splat Effect | 2 | 6s | ambusher |
+| Splat Kat | Juan Dough | 6 | 7 | 7 | 5 | 8 | 5 | 119 | Rusty 'Poon | 2 | 6s | ambusher |
 | **Lackey** (miniboss) | Lackey | 7 | 6 | 6 | 10 | 10 | 9 | **360**¹ | Blaze & Bolt twin + Breach Turret | 2 (shared) | 120s | — |
 
 ¹ 180 base × `hp_scale 2.0` (Lackey's Arena scene). Lackey also carries: `body_scale 1.5`, `rear_weakspot 1.5` (projectiles from behind ×1.5), `ai_cooldown_scale 1.5` (fires at 2× a normal AI's rate), a `relentless` driver (runs the boss valve instead of mook RELENT; full-length BREAK arcs now), `no_mines` (crate-proof), and the LIVE Breach Turret.
@@ -112,7 +112,7 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
 | Red Glare (Razorback) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
 | Taser (Smoky) | BEAM | 18 dps | instant | 15s post-fire | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; cooldown starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
-| Splat Effect (Splat Cat) | PROJECTILE | 10 | 820 | 2.0s | none | On hit: slow ×0.5 / 3s (range 1804) |
+| Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | none | On hit: slow ×0.5 / 3s (range 1804) |
 | **Breach Turret (Lackey)** | TURRET | 45 | 1400 | 2.8s | auto-aim, 120°/s traverse | LIVE turret on the hull: tracks the player inside ~1100px independent of heading, LoS-gated, fires through break-offs. Aim lag is the dodge. |
 | **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire; pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
 

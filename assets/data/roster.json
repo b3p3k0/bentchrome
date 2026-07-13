@@ -353,12 +353,12 @@
 	  "mass": 6
     },
     {
-      "id": "splatcat",
-      "car_name": "Splat Cat",
+      "id": "splatkat",
+      "car_name": "Splat Kat",
       "driver_name": "Juan Dough",
       "flavor": "A fast-talking courier with nine lives and unpaid parking tickets. The compact ride is quick, nimble, and streetwise. Armor sits in the middle; evasive driving is the real defense. He thrives in traffic and dirty lines. Delivery guaranteed, signature optional.",
-      "special_weapon": "Splat Effect: on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups.",
-      "special_def": "splat_effect",
+      "special_weapon": "Rusty 'Poon: on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups.",
+      "special_def": "rusty_poon",
       "stats": {
         "acceleration": 6,
         "top_speed": 7,
@@ -370,7 +370,7 @@
         "primary": "#c9541a",
         "accent": "#ff8a41"
       },
-      "portrait": "res://assets/img/bios/splatcat.png",
+      "portrait": "res://assets/img/bios/splatkat.png",
       "ai_archetype": "ambusher",
       "special_ammo_cap": 2,
       "special_recharge_seconds": 6.0,

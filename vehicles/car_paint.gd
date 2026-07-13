@@ -23,7 +23,7 @@ const BAR_PERIOD := 0.35  # light-bar flip for "blink" styles (seconds)
 ## match the roster/stats id or the car falls back to the box.
 const STYLE_SCRIPTS := {
 	&"ghost": preload("res://vehicles/paint/ghost.gd"),
-	&"splatcat": preload("res://vehicles/paint/splatcat.gd"),
+	&"splatkat": preload("res://vehicles/paint/splatkat.gd"),
 	&"bumper": preload("res://vehicles/paint/bumper.gd"),
 	&"smoky": preload("res://vehicles/paint/smoky.gd"),
 	&"mrghastly": preload("res://vehicles/paint/mrghastly.gd"),

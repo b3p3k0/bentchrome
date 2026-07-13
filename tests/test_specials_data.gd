@@ -80,13 +80,13 @@ func test_twin_barrel_chooses_by_context() -> void:
 	t.root.remove_child(container)
 	container.free()
 
-func test_splat_effect_def() -> void:
-	var d := _def("res://data/weapons/splat_effect.tres")
-	t.check(not d.stub and d.kind == 0, "splat: live projectile")
+func test_rusty_poon_def() -> void:
+	var d := _def("res://data/weapons/rusty_poon.tres")
+	t.check(not d.stub and d.kind == 0, "rusty 'poon: live projectile")
 	var fx := _first_effect(d)
-	t.check(fx != null and fx.kind == &"slow", "splat: slow on hit")
-	t.check_approx(fx.magnitude, 0.5, "splat: half speed")
-	t.check_approx(fx.duration, 3.0, "splat: 3s")
+	t.check(fx != null and fx.kind == &"slow", "rusty 'poon: slow on hit")
+	t.check_approx(fx.magnitude, 0.5, "rusty 'poon: half speed")
+	t.check_approx(fx.duration, 3.0, "rusty 'poon: 3s")
 
 func test_chill_out_disarm_duration() -> void:
 	var d := _def("res://data/weapons/chill_out.tres")

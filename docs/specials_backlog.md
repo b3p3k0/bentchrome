@@ -6,7 +6,7 @@ wired via `VehicleStats.special`; per-car ammo cap / recharge live in
 defaults 1 / 12s). Kinds dispatch in `vehicles/special_controller.gd`:
 PROJECTILE fires through SecondaryMount; BEAM / DASH / TRIGGER have dedicated
 handlers there. On-hit status effects are `StatusEffectSpec` sub-resources in
-the weapon `.tres` (see `data/weapons/splat_effect.tres` for the pattern).
+the weapon `.tres` (see `data/weapons/rusty_poon.tres` for the pattern).
 
 | Car | Special | Kind | Behavior |
 |-----|---------|------|----------|
@@ -14,7 +14,7 @@ the weapon `.tres` (see `data/weapons/splat_effect.tres` for the pattern).
 | Razorback | Red Glare | PROJECTILE | Three quick waves of four red rockets in a 10° shotgun choke (950 px/s), each wave off the moving truck. |
 | Ghost | Phantom Phire | PROJECTILE | Map-wide aggressive homing; pierces cover (`pierces_cover`). |
 | Kandy Kane | Molotov Cocktail | PROJECTILE | Spinning green bottle with a burning rag, lobbed hard. Impact burst + 15s burn (3 dps). |
-| Splat Cat | Splat Effect | PROJECTILE | Cobbled-iron harpoon; the skewered victim runs at half speed for 3s. Cap 2 / 6s. |
+| Splat Kat | Rusty 'Poon | PROJECTILE | Cobbled-iron harpoon; the skewered victim runs at half speed for 3s. Cap 2 / 6s. |
 | Bumper | Blunt Blaze | FLAME | Nose-anchored flame column (~300px, one fixed 3s burst per press, 27 dps); bathed targets ignite 10s (4 dps). Cap 2 / 15s — a committed play, not a hose. |
 | Smoky | Taser | BEAM | Living lightning bolt latches nearest car ≤400px (breaks past 800 or on LoS block), 4s zap (12 dps + slow). Cap 3 / 8s. |
 | **Lackey** | Blaze & Bolt + Breach Turret | FLAME+BEAM twin, turret | Twin special: Bumper's torch (clinch) + Smoky's taser (chase) drain ONE shared pool (2 / 10s; SpecialController picks per activation). The Breach Cannon is a LIVE auto-aiming turret: 45 dmg power-class shot / 2.8s / ~1100px range / 120°/s traverse — fires even during break-offs. No mines, ever. |

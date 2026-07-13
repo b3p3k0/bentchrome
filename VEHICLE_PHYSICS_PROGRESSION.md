@@ -14,7 +14,7 @@ Based on vehicle types and stats:
 
 ### Medium Vehicles (6-8 seconds)
 - **Smoky** (Police SUV, Accel:7, Armor:7) → 7-8 sec
-- **Splat Cat** (Compact Car, Accel:6, Armor:5) → 6-7 sec
+- **Splat Kat** (Compact Car, Accel:6, Armor:5) → 6-7 sec
 
 ### Light/Performance Vehicles (3-6 seconds)
 - **Cricket** (Dirt Track Midget, Accel:8, Armor:4) → 4-5 sec

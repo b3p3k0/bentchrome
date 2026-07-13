@@ -20,7 +20,7 @@ const EXPORT_PATH := "user://tuning_export.json"
 const DEF_DIR := "res://data/weapons"
 const DEF_FILES := ["blunt_blaze", "goliath_turret", "lackey_cannon", "leap", "mine_jump",
 	"mine_land", "missile_homing", "missile_power", "missile_standard", "molotov",
-	"phantom_phire", "red_glare", "scythe", "splat_effect", "taser", "toe_jam"]
+	"phantom_phire", "red_glare", "rusty_poon", "scythe", "taser", "toe_jam"]
 
 # prop -> [min, max, step]
 const DEF_PROPS := {

@@ -40,7 +40,7 @@ func test_head_on_elk_break_apart() -> void:
 	t.current_scene = container  # armed AI spawn projectiles here
 	var a := _elk(container, Vector2(0, 0), 0.0, "ghost")
 	var b := _elk(container, Vector2(70, 0), PI, "smoky")
-	var c := _elk(container, Vector2(1600, 0), PI, "splatcat")  # the other fight
+	var c := _elk(container, Vector2(1600, 0), PI, "splatkat")  # the other fight
 
 	var max_sep := 0.0
 	for i in LOCK_FRAMES:
