@@ -81,6 +81,7 @@ const SUITES := [
 	preload("res://tests/test_tutorial_level.gd"),
 	preload("res://tests/test_mode_select.gd"),
 	preload("res://tests/test_tutorial_director.gd"),
+	preload("res://tests/test_floor_props.gd"),
 ]
 
 var _checks := 0
