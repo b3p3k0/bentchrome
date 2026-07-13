@@ -87,3 +87,20 @@ func test_game_mode_defaults_to_campaign() -> void:
 	var fresh: Node = gs_script.new()
 	t.check(fresh.game_mode == &"campaign", "mode: game_mode defaults to campaign")
 	fresh.free()
+
+## DEVGOD contradicts a syllabus that grades real actions (god consume()
+## never depletes -> the bay-fire latch can never land; god Health takes no
+## fender ding). It stands down for the lesson lane ONLY — the test-drive
+## lane is the developer's bench and keeps it.
+func test_devgod_inert_during_lessons() -> void:
+	var gs_script: Script = load("res://game/game_state.gd")
+	var fresh: Node = gs_script.new()
+	fresh.dev_mode = true
+	fresh.devgod = true
+	fresh.game_mode = &"tutorial"
+	t.check(not fresh.is_devgod_enabled(), "mode: DEVGOD inert during lessons")
+	fresh.game_mode = &"test_drive"
+	t.check(fresh.is_devgod_enabled(), "mode: DEVGOD live on the test-drive bench")
+	fresh.game_mode = &"campaign"
+	t.check(fresh.is_devgod_enabled(), "mode: DEVGOD untouched in campaign")
+	fresh.free()

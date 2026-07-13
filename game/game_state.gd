@@ -38,8 +38,12 @@ var player_name := ""      # LAN identity; empty = derived from the car's driver
 
 ## Developer Mode is the master breaker. The raw subordinate choices stay
 ## persisted so switching the breaker back on restores the developer's bench.
+## DEVGOD stands down during Driver's Ed LESSONS (same policy as MP): the
+## syllabus grades real actions, and god mode makes them uncompletable —
+## no ammo depletion means the bay-fire latch can never land, no damage
+## means there's nothing to repair. Test drives keep it: that's the bench.
 func is_devgod_enabled() -> bool:
-	return dev_mode and devgod
+	return dev_mode and devgod and game_mode != &"tutorial"
 
 func effective_start_level_index() -> int:
 	return start_level_index if dev_mode else 0
