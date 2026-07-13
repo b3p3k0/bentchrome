@@ -1,0 +1,77 @@
+name: installer
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "RUNME.sh"
+      - "RUNME.ps1"
+      - "RUNME.cmd"
+      - ".github/workflows/installer.yml"
+  pull_request:
+    paths:
+      - "RUNME.sh"
+      - "RUNME.ps1"
+      - "RUNME.cmd"
+      - ".github/workflows/installer.yml"
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: bent chrome
+      - name: Syntax check
+        working-directory: bent chrome
+        run: bash -n RUNME.sh
+      - name: Player install and import
+        working-directory: bent chrome
+        run: ./RUNME.sh --play --yes --no-launch
+      - name: Re-run without reinstalling
+        working-directory: bent chrome
+        run: ./RUNME.sh --play --yes --no-launch
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: bent chrome
+      - name: Syntax check
+        working-directory: bent chrome
+        run: bash -n RUNME.sh
+      - name: Player install and import
+        working-directory: bent chrome
+        run: ./RUNME.sh --play --yes --no-launch
+      - name: Re-run without reinstalling
+        working-directory: bent chrome
+        run: ./RUNME.sh --play --yes --no-launch
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: bent chrome
+      - name: PowerShell syntax check
+        working-directory: bent chrome
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path RUNME.ps1).Path, [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | Format-List | Out-String | Write-Host
+            exit 1
+          }
+      - name: CMD launcher, player install, and import
+        working-directory: bent chrome
+        shell: cmd
+        run: RUNME.cmd -Play -Yes -NoLaunch
+      - name: Re-run without reinstalling
+        working-directory: bent chrome
+        shell: powershell
+        run: .\RUNME.ps1 -Play -Yes -NoLaunch

@@ -5,8 +5,9 @@
 # system runtime libraries, the official Godot 4.7 engine on your PATH, and a
 # first asset import. Endstate: `cd` into this folder and type `godot`.
 #
-# Target: Ubuntu 24.04 / 26.x (apt). Other distros get manual guidance and the
-# engine download still works. Re-runnable: it skips anything already in place.
+# Target: Ubuntu 24.04 / 26.x (apt) and macOS. Other Linux distributions get
+# manual guidance and the engine download still works. Re-runnable: it skips
+# anything already in place.
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
@@ -15,10 +16,16 @@ set -euo pipefail
 GODOT_VERSION="4.7-stable"
 GODOT_VERSION_TAG="4.7.stable"            # what `godot --version` reports
 GODOT_DEST="$HOME/.local/bin/godot"
+GODOT_APP_DEST="$HOME/Applications/Godot.app"
 RELEASE_BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
 PATH_MARKER="# added by Bent Chrome RUNME.sh"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OS_NAME="$(uname -s)"
+
+AUTO_YES=0
+PLAY_MODE=0
+NO_LAUNCH=0
 
 # ---------------------------------------------------------------------------
 # Pretty output
@@ -38,6 +45,11 @@ err()  { printf "%s❌%s %s\n" "$C_RED" "$C_RESET" "$*" >&2; }
 ask_yesno() {
   # ask_yesno "Question?" [default:Y|N]  -> returns 0 for yes, 1 for no
   local prompt="$1" default="${2:-Y}" reply hint
+  if [ "$AUTO_YES" -eq 1 ]; then
+    printf '%s [auto: %s]\n' "$prompt" "$default"
+    [ "$default" = "Y" ]
+    return
+  fi
   if [ "$default" = "Y" ]; then hint="[Y/n]"; else hint="[y/N]"; fi
   read -r -p "$prompt $hint " reply || reply=""
   reply="${reply:-$default}"
@@ -112,6 +124,10 @@ RUNTIME_PKGS=(
 
 ensure_system_pkgs() {
   info "Checking system libraries Godot needs to run…"
+  if [ "$OS_NAME" = "Darwin" ]; then
+    ok "macOS needs no additional runtime packages"
+    return 0
+  fi
   if [ "$HAS_APT" -eq 0 ]; then
     warn "Non-apt system: install these yourself (names vary by distro):"
     printf '    %s\n' "${RUNTIME_PKGS[*]}"
@@ -123,6 +139,13 @@ ensure_system_pkgs() {
 detect_arch_asset() {
   # Echo the release asset filename for this machine's architecture.
   local m; m="$(uname -m)"
+  if [ "$OS_NAME" = "Darwin" ]; then
+    case "$m" in
+      x86_64|arm64) echo "Godot_v${GODOT_VERSION}_macos.universal.zip" ;;
+      *) err "Unsupported macOS architecture '$m'."; return 1 ;;
+    esac
+    return 0
+  fi
   case "$m" in
     x86_64|amd64)   echo "Godot_v${GODOT_VERSION}_linux.x86_64.zip" ;;
     aarch64|arm64)  echo "Godot_v${GODOT_VERSION}_linux.arm64.zip" ;;
@@ -164,16 +187,43 @@ install_godot() {
 
   info "Verifying SHA512…"
   local expected
-  expected="$(grep " \+${asset}\$" "$tmp/SHA512-SUMS.txt" | awk '{print $1}' | head -n1)"
+  expected="$(awk -v wanted="$asset" '$2 == wanted { print $1; exit }' "$tmp/SHA512-SUMS.txt")"
   if [ -z "$expected" ]; then
     err "Could not find a checksum for ${asset} — aborting."
     return 1
   fi
-  ( cd "$tmp" && printf '%s  %s\n' "$expected" "$asset" | sha512sum -c - ) \
-    || { err "Checksum mismatch — refusing to install."; return 1; }
+  if [ "$OS_NAME" = "Darwin" ]; then
+    local actual
+    actual="$(shasum -a 512 "$tmp/$asset" | awk '{print $1}')"
+    [ "$actual" = "$expected" ] \
+      || { err "Checksum mismatch — refusing to install."; return 1; }
+  else
+    ( cd "$tmp" && printf '%s  %s\n' "$expected" "$asset" | sha512sum -c - ) \
+      || { err "Checksum mismatch — refusing to install."; return 1; }
+  fi
   ok "checksum verified"
 
   info "Extracting…"
+  if [ "$OS_NAME" = "Darwin" ]; then
+    ditto -x -k "$tmp/$asset" "$tmp/extracted"
+    local extracted_app="$tmp/extracted/Godot.app"
+    if [ ! -x "$extracted_app/Contents/MacOS/Godot" ]; then
+      err "Could not find Godot.app inside the zip."
+      return 1
+    fi
+    mkdir -p "$(dirname "$GODOT_APP_DEST")" "$(dirname "$GODOT_DEST")"
+    rm -rf "$GODOT_APP_DEST"
+    mv "$extracted_app" "$GODOT_APP_DEST"
+    ln -sfn "$GODOT_APP_DEST/Contents/MacOS/Godot" "$GODOT_DEST"
+    if ! codesign --verify --deep --strict "$GODOT_APP_DEST" >/dev/null 2>&1; then
+      warn "macOS could not verify Godot's code signature."
+      warn "Do not disable Gatekeeper; re-download or use System Settings → Privacy & Security."
+    fi
+    ok "installed → $GODOT_APP_DEST"
+    ok "command link → $GODOT_DEST"
+    return 0
+  fi
+
   unzip -qo "$tmp/$asset" -d "$tmp"
   local extracted="$tmp/${asset%.zip}"
   if [ ! -f "$extracted" ]; then
@@ -199,6 +249,12 @@ ensure_path() {
       ;;
   esac
   local rc="$HOME/.bashrc"
+  if [ "$OS_NAME" = "Darwin" ]; then
+    case "${SHELL##*/}" in
+      zsh) rc="$HOME/.zprofile" ;;
+      *)   rc="$HOME/.bash_profile" ;;
+    esac
+  fi
   if [ -f "$rc" ] && grep -qF "$PATH_MARKER" "$rc"; then
     :  # already added on a prior run
   else
@@ -206,9 +262,9 @@ ensure_path() {
       printf '\n%s\n' "$PATH_MARKER"
       printf 'export PATH="$HOME/.local/bin:$PATH"\n'
     } >> "$rc"
-    ok "added ~/.local/bin to PATH in ~/.bashrc"
+    ok "added ~/.local/bin to PATH in ${rc/#$HOME/\~}"
   fi
-  warn "PATH change applies to NEW shells. For this one, run:  source ~/.bashrc"
+  warn "PATH change applies to NEW shells. For this one, run:  source ${rc/#$HOME/\~}"
 }
 
 import_project() {
@@ -275,10 +331,15 @@ launch_hint() {
   echo
   if ! command -v godot >/dev/null 2>&1; then
     warn "'godot' isn't on this shell's PATH yet. Either open a new terminal,"
-    warn "run 'source ~/.bashrc', or launch directly with: $GODOT_DEST"
+    warn "or launch directly with: $GODOT_DEST"
+  fi
+  if [ "$NO_LAUNCH" -eq 1 ]; then
+    return 0
   fi
   if ask_yesno "Launch Bent Chrome now?" N; then
-    "$GODOT_DEST" --path "$REPO_DIR"
+    local launch_bin="$GODOT_DEST"
+    command -v godot >/dev/null 2>&1 && launch_bin="godot"
+    "$launch_bin" --path "$REPO_DIR"
   fi
 }
 
@@ -292,10 +353,49 @@ run_play_path() {
   import_project
 }
 
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --play) PLAY_MODE=1 ;;
+      --yes) AUTO_YES=1 ;;
+      --no-launch) NO_LAUNCH=1 ;;
+      -h|--help)
+        echo "Usage: ./RUNME.sh [--play] [--yes] [--no-launch]"
+        exit 0
+        ;;
+      *) err "Unknown option: $1"; exit 2 ;;
+    esac
+    shift
+  done
+}
+
 main() {
+  parse_args "$@"
   printf "%s%s== Bent Chrome — Installer ==%s\n" "$C_BOLD" "$C_BLUE" "$C_RESET"
   echo "Top-down vehicular combat, built in Godot 4.7."
   echo
+
+  if [ "$PLAY_MODE" -eq 1 ]; then
+    run_play_path
+    verify_summary
+    launch_hint
+    return 0
+  fi
+
+  if [ "$OS_NAME" = "Darwin" ]; then
+    echo "  1) Just Play! — install everything needed to run the game"
+    echo "  2) Quit"
+    echo
+    local mac_choice
+    read -r -p "Choose [1/2]: " mac_choice || mac_choice="2"
+    case "$mac_choice" in
+      1) run_play_path; verify_summary; launch_hint ;;
+      2|q|Q) echo "Bye." ;;
+      *) err "Unrecognized choice: '$mac_choice'"; exit 1 ;;
+    esac
+    return 0
+  fi
+
   echo "  1) Just Play!               — install everything needed to run the game"
   echo "  2) Install additional dev tools (ripgrep, python3) — not needed in most cases"
   echo "  3) Quit"

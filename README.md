@@ -9,10 +9,13 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 ## Installation
 
 1. **Grab the code**: `git clone https://github.com/b3p3k0/bentchrome.git && cd bentchrome`.
-2. **Gear check**: Godot 4.7 on your path, a GPU that survived the last EMP, and whatever OS still boots (Linux, macOS, Windows - TempleOS port coming soon.).
-3. **Import assets (first run or after a fresh clone)**: `godot --import --path .` to generate import metadata so textures load correctly.
-4. **Optional housekeeping**: `git submodule update --init` in case we stash vendor junk later.
-5. **Launch**: `godot --path .` or open the project from the Godot launcher if you like clicking buttons.
+2. **Run the installer for your OS**:
+   - Linux: `./RUNME.sh`
+   - macOS: `./RUNME.sh`
+   - Windows: double-click `RUNME.cmd`, or run `RUNME.cmd` from Command Prompt or PowerShell
+3. **Open a new terminal if prompted**, then launch with `godot --path .`. The installer pins Godot 4.7, verifies the official download, and imports the project assets for you.
+4. **Manual setup, if preferred**: put Godot 4.7 on your path and run `godot --headless --path . --import` once before launching.
+5. **Optional housekeeping**: `git submodule update --init` in case we stash vendor junk later.
 6. **Builds**: When binaries arrive they’ll live under `builds/`. Until then, run straight from the editor and pretend crashes are deliberate explosions.
 
 ## Getting Started & Controls
