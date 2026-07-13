@@ -208,8 +208,8 @@ func _refresh() -> void:
 			audio.play(&"mp_join" if peer_count > _last_peer_count else &"mp_leave")
 	_last_peer_count = peer_count
 	var cfg: Dictionary = Net.match_config
-	_head.text = ("HOSTING on port %d" % Net.game_port) if Net.is_host() \
-		else "GARAGE FLOOR — peer %d" % Net.my_id()
+	_head.text = "GARAGE FLOOR — %s%s" % [String(Net.garage_name),
+		"  (hosting on port %d)" % Net.game_port if Net.is_host() else ""]
 
 	var me := Net.my_id()
 	var seated: bool = Net.roster.seated(me)
@@ -232,12 +232,22 @@ func _refresh() -> void:
 	_deal.text = " ".join(Config.describe(cfg, String(maps[map_idx].name),
 		String(Difficulty.NAMES.get(int(cfg.get("difficulty", 2)), "?"))))
 
-	var seats_filled: int = Net.roster.seated_ids().size()
+	# The count strip: everyone sees the same floor, host-coordinated (all of
+	# it already mirrors through the lobby sync — no extra wire).
+	var driving: int = Net.roster.seated_ids().size()
+	var in_line: int = Net.roster.queue.size()
+	var total: int = Net.peers.size()
+	var watching: int = maxi(total - driving - in_line, 0)
 	var mode := StringName(String(cfg.get("mode", &"melee")))
 	var need := 2 if mode == &"grudge" else 1
 	_start_btn.visible = Net.is_host()
-	_start_btn.disabled = seats_filled < need
-	var tail := "" if Net.is_host() else "  (the host calls the start)"
+	_start_btn.disabled = driving < need
+	var tail := ""
+	if not Net.is_host():
+		tail = "  ·  the host calls the start"
+	elif driving < need:
+		tail = "  ·  %s needs %d+ driver%s" % [
+			String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else ""]
 	var result_line := ""
 	var last: Dictionary = Net.last_result
 	if not last.is_empty():
@@ -246,9 +256,9 @@ func _refresh() -> void:
 			names.append(String(last.scores.get(int(peer), {}).get("name", "?")))
 		var who := ", ".join(names) if not names.is_empty() else "THE WASTELAND"
 		result_line = "last match: %s — %s\n" % [who, String(last.get("reason", ""))]
-	_status.text = result_line + "%d/%d seated — %s rolls with %d+ driver%s%s" % [
-		seats_filled, Proto.MAX_PLAYERS,
-		String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else "", tail]
+	_status.text = result_line \
+		+ "CONNECTED — %d DRIVING · %d IN LINE · %d WATCHING · %d IN THE GARAGE%s" \
+		% [driving, in_line, watching, total, tail]
 	UiSfx.wire(self)  # rows rebuild each refresh; wire() is idempotent per button
 
 func _refresh_seats() -> void:

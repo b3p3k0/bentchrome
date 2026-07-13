@@ -38,6 +38,7 @@ var peers := {}  # peer_id -> {name, modded, ip} — ip is host-side only ("" on
 var game_port: int = 0
 var roster: RefCounted = null  # NetRoster — host-authoritative, clients mirror
 var match_config := {}         # MatchConfig-normalized; host edits, all mirror
+var garage_name := ""          # the session's marquee, mirrored to every peer
 var _notice := ""              # one-shot message for the next menu screen
 
 var _enet: ENetMultiplayerPeer = null
@@ -107,6 +108,9 @@ func host(port: int, password: String, server_name: String, strict_mods: bool) -
 	peers = {1: {"name": display_name(), "modded": false, "ip": "local"}}
 	roster = Roster.new(Proto.MAX_PLAYERS)
 	match_config = Config.defaults()
+	garage_name = _server_name.strip_edges()
+	if garage_name.is_empty():
+		garage_name = display_name() + "'s garage"
 	# The host always drives by default: SEAT 1 is theirs until they stand up.
 	roster.claim_seat(1, 0)
 	roster.set_pick(1, _default_pick(1))
@@ -148,6 +152,7 @@ func leave() -> void:
 	game_port = 0
 	roster = null
 	match_config = {}
+	garage_name = ""
 	_banlist = null
 	_nonces.clear()
 	_verdicts.clear()
@@ -499,10 +504,13 @@ func rpc_weapon_cycle(seq: int, dir: int) -> void:
 ## Host: rebroadcast the lobby truth (and refresh the beacon card).
 func _lobby_dirty() -> void:
 	if mode == Mode.HOSTING:
-		_sync_lobby.rpc({"roster": roster.to_dict(), "config": match_config})
+		_sync_lobby.rpc(_lobby_state())
 	lobby_changed.emit()
 	if _discovery:
 		_discovery.update_beacon(_beacon_info())
+
+func _lobby_state() -> Dictionary:
+	return {"roster": roster.to_dict(), "config": match_config, "garage": garage_name}
 
 @rpc("authority", "call_remote", "reliable")
 func _sync_lobby(state: Dictionary) -> void:
@@ -510,6 +518,7 @@ func _sync_lobby(state: Dictionary) -> void:
 		roster = Roster.new(Proto.MAX_PLAYERS)
 	roster.from_dict(state.get("roster", {}))
 	match_config = state.get("config", {})
+	garage_name = String(state.get("garage", garage_name))
 	lobby_changed.emit()
 
 # ---------------------------------------------------------------- handshake
@@ -619,7 +628,7 @@ func _on_peer_connected(id: int) -> void:
 	_broadcast_peers()
 	# Newcomers get the lobby truth directly; everyone else already has it.
 	if roster:
-		_sync_lobby.rpc_id(id, {"roster": roster.to_dict(), "config": match_config})
+		_sync_lobby.rpc_id(id, _lobby_state())
 
 func _on_peer_disconnected(id: int) -> void:
 	if mode != Mode.HOSTING:
