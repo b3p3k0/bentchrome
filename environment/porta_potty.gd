@@ -108,8 +108,10 @@ func _spawn_worker(host: Node, rng: RandomNumberGenerator) -> void:
 	actor.wander_rect = Rect2(-Vector2(180, 180), Vector2(360, 360))
 	host.add_child(actor)
 	var threat := last_attacker if is_instance_valid(last_attacker) else _nearest_vehicle()
+	# Always exit through the DOOR (local +X): an away-from-threat offset can
+	# land inside a neighbor cubicle on a tight service row, wedging the actor.
+	actor.global_position = global_position + global_transform.x.normalized() * 56.0
 	var away := (global_position - threat.global_position).normalized() if threat else Vector2.RIGHT
-	actor.global_position = global_position + away * 48.0
 	actor.panic_from(threat.global_position if threat else global_position - away, ESCAPE_PANIC)
 
 func _nearest_vehicle() -> Node2D:
@@ -154,7 +156,7 @@ func _draw() -> void:
 	draw_rect(Rect2(16, -26, 8, 52), Color(0.12, 0.38, 0.55))
 	if seed_offset % 8 == 3:
 		draw_rect(Rect2(18, -21, 8, 42), Color(0.05, 0.10, 0.14))
-		draw_set_transform(Vector2(21, -21), 0.5, Vector2.ONE)
+		draw_set_transform(Vector2(21, -21), -0.5, Vector2.ONE)  # leaf swings OUT into the yard
 		draw_rect(Rect2(0, 0, 6, 42), Color(0.30, 0.68, 0.86))
 		draw_rect(Rect2(0, 0, 6, 42), Color(0.10, 0.34, 0.50), false, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

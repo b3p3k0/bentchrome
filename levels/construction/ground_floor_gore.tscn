@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://levels/construction/ground_floor_gore.gd" id="1_level"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -28,6 +28,7 @@
 [ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="26_wreck"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="27_marks"]
 [ext_resource type="Script" path="res://environment/work_light.gd" id="28_worklight"]
+[ext_resource type="Script" path="res://environment/jersey_wall.gd" id="29_jersey"]
 
 [sub_resource type="ShaderMaterial" id="SM_dirt"]
 shader = ExtResource("15_speckle")
@@ -116,6 +117,10 @@ script = ExtResource("1_level")
 
 [node name="DuskTint" type="CanvasModulate" parent="."]
 color = Color(0.62, 0.65, 0.78, 1)
+
+[node name="JerseyWall" type="Node2D" parent="."]
+script = ExtResource("29_jersey")
+extent = Vector2(2304, 1920)
 
 [node name="DirtSurface" type="Polygon2D" parent="."]
 material = SubResource("SM_dirt")
@@ -601,7 +606,7 @@ z_index = 2
 
 [node name="RainSquall" parent="." instance=ExtResource("14_rain")]
 bounds = Vector2(4608, 3840)
-intensity = 1.0
+intensity = 1.3
 
 [node name="AmmoPickups" type="Node2D" parent="."]
 
