@@ -453,6 +453,9 @@ listen server: 4 seats + 8 observers (12 ENet peers). Wire changes bump `PROTOCO
 | mine twin | cosmetic flag | environment/mine.gd | client mirror: draws + arm-blinks, never scans/bills |
 | callsign roulette | assets/data/callsigns.txt → user://callsigns.txt | ui/callsigns.gd | one name/line, '#' comments; user copy wins |
 | MP screen memory | mp_join_ip/port, mp_host_port/garage/strict | game_state.gd SETTINGS_KEYS | passwords never persist |
+| ALERT_HOLD_S | 12.0 | ui/mp_menu.gd (static) | join-failure hold; scanner can't stomp it |
+| THE DEAL | MatchConfig.describe() | match_config.gd | plain-language ruleset, 3 sentences, unit-tested |
+| garage_name | lobby sync key | net_session.gd | marquee mirrored to every peer (header + counts strip) |
 | Arena-state row | 7 bytes, repeated | net_snapshot.gd | u16 ID, u8 flags, u8 HP, u16 timer ms, u8 actor mask; protocol 8 |
 
 Policies (locked): ONE of each car on the battlefield (claimed set = seats + queue; AI pool
