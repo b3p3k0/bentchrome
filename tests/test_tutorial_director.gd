@@ -86,13 +86,16 @@ func test_lessons_advance_in_order() -> void:
 		"flow: hint line names the live objective")
 
 	# Lesson 1 — hold all four move keys (axes cancel; the latch reads keys,
-	# not motion) past HOLD_MOVE.
+	# not motion) past HOLD_MOVE. Completion arms the savor beat; burn it
+	# with one oversized direct tick instead of pumping a second of frames.
 	for action in MOVE_ACTIONS:
 		Input.action_press(action)
 	for i in 30:
 		await t.physics_frame
 	for action in MOVE_ACTIONS:
 		Input.action_release(action)
+	t.check(director.lesson_index == 0, "flow: the savor beat holds the card back")
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 1, "flow: WASD held -> lesson 2")
 	t.check(director._card.visible, "flow: lesson 2 card up")
 	_dismiss(director._card)
@@ -115,6 +118,7 @@ func test_lessons_advance_in_order() -> void:
 	for i in 25:
 		await t.physics_frame
 	Input.action_release(&"handbrake")
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 2,
 		"flow: brake/handbrake/boost held -> lesson 3 (index %d)" % director.lesson_index)
 	if director._card.visible:
@@ -145,6 +149,7 @@ func test_weapons_and_pickup_lessons() -> void:
 	rack.ammo_changed.emit(0, seen0 - 1)  # bay shot: ammo fell
 	await t.physics_frame
 	await t.physics_frame
+	director._physics_process(director.ADVANCE_DELAY + 0.1)  # burn the savor beat
 	t.check(director.lesson_index == 3,
 		"weapons: MG heat + cycle + bay shot -> lesson 4 (index %d)" % director.lesson_index)
 	t.check(director._card.visible, "pickups: lesson 4 card up")
@@ -159,6 +164,7 @@ func test_weapons_and_pickup_lessons() -> void:
 	health.heal(9999.0)
 	await t.physics_frame
 	await t.physics_frame
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 4,
 		"pickups: crate + full hull -> lesson 5 (index %d)" % director.lesson_index)
 	if director._card.visible:
@@ -184,7 +190,10 @@ func test_floors_jump_terrain_lessons() -> void:
 	car.floor_index = 2
 	director._physics_process(0.016)
 	car.floor_index = 1
-	director._physics_process(0.016)
+	director._physics_process(0.016)  # arms the savor beat
+	t.check(String(director._hint_label.text).begins_with("✓"),
+		"floors: the hint flips to a check while the beat holds")
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 5, "floors: up then down -> jump lesson")
 	_dismiss(director._card)
 
@@ -194,6 +203,7 @@ func test_floors_jump_terrain_lessons() -> void:
 	t.check(director.lesson_index == 5, "jump: airborne OFF the lane doesn't count")
 	car.global_position = Vector2(640, 200)  # inside JUMP_LANE
 	director._physics_process(0.016)
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 6, "jump: pad-lane air -> terrain lesson")
 	car.height = 0.0
 	_dismiss(director._card)
@@ -204,6 +214,7 @@ func test_floors_jump_terrain_lessons() -> void:
 	t.check(director.lesson_index == 6, "terrain: five of six is not enough")
 	car.current_terrain = &"water"
 	director._physics_process(0.016)
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.lesson_index == 7, "terrain: full sample -> smash lesson")
 	if director._card.visible:
 		_dismiss(director._card)
@@ -235,6 +246,7 @@ func test_smash_lesson_counts_the_yard() -> void:
 	t.check(director.lesson_index == 7, "smash: quota without the barrel is not enough")
 	barrel.free()
 	director._physics_process(0.016)
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.completed, "smash: barrel down -> syllabus complete")
 	t.check(director._card.visible, "smash: the closing card takes the stage")
 	t.check((w["gate"] as Node2D).visible, "smash: gate stays barred until the card is read")

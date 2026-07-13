@@ -24,6 +24,9 @@ const FREE_PLAY_HINT := "head NORTH to the EXIT when you're ready"
 
 static var HOLD_MOVE := 0.25      # seconds each of W/S/A/D must accumulate
 static var HOLD_CONTROL := 0.3    # seconds each of brake/handbrake/boost
+static var ADVANCE_DELAY := 1.0   # savor beat: seconds between nailing a
+								  # lesson and the next card, so the player
+								  # actually SEES the brake/leap/boom land
 static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
 static var JUMP_HEIGHT := 40.0    # airborne px that count as a real launch
 static var JUMP_LANE := Rect2(410, -400, 460, 1400)  # pad + flight path; a
@@ -89,6 +92,7 @@ var exit_zone: Node = null
 
 var lesson_index := -1
 var completed := false
+var _advance_wait := 0.0  # >0 = lesson nailed, holding the moment
 
 var _card = null         # tutorial_card CanvasLayer
 var _confirm = null      # exit_confirm CanvasLayer while the dialog is up
@@ -154,12 +158,23 @@ func _physics_process(delta: float) -> void:
 		return
 	if _card and _card.visible:
 		return  # reading — the tree is paused anyway; belt and suspenders
+	if _advance_wait > 0.0:
+		_advance_wait -= delta
+		if _advance_wait <= 0.0:
+			_advance()
+		return
 	if _lesson_done(LESSONS[lesson_index]["id"], delta):
-		_advance()
+		# Don't snap to the next card — let the skid finish, the car land,
+		# the barrels burn. The hint flips to a check so the pass registers.
+		_advance_wait = ADVANCE_DELAY
+		_hint_label.text = "✓ " + String(LESSONS[lesson_index]["hint"])
+		_hint_label.modulate = Color(0.85, 1.0, 0.85)
 
 func _advance() -> void:
 	lesson_index += 1
 	_latch.clear()
+	_advance_wait = 0.0
+	_hint_label.modulate = AMBER  # undo the savor-beat flourish
 	if lesson_index >= LESSONS.size():
 		_finish()
 		return
