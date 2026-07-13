@@ -66,8 +66,12 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 		# Every live shot passes through here (mounts, specials, turrets) — the
 		# one tap the MP host needs. Visual-only client shots carry damage 0,
 		# so a mirror can never echo. pool_key = the Spawner's scene path.
+		# modulate and z_index are both already stamped by this point (the
+		# mount tints before setup; the shooter-z copy sits above) — the twin
+		# paints and stacks exactly like this shot.
 		net_shot_id = NetEvents.projectile_spawned(String(get_meta(&"pool_key", scene_file_path)),
-			p_pos, p_dir, p_speed, p_lifetime, p_turn_rate, p_target)
+			p_pos, p_dir, p_speed, p_lifetime, p_turn_rate, p_target,
+			modulate, z_index)
 
 func _physics_process(delta: float) -> void:
 	if _spent:

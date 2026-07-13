@@ -11,7 +11,8 @@ static var queue: Array = []
 static var _next_shot_id := 1
 
 static func projectile_spawned(scene_path: String, pos: Vector2, dir: Vector2,
-		speed: float, lifetime: float, turn_rate: float, target: Node2D) -> int:
+		speed: float, lifetime: float, turn_rate: float, target: Node2D,
+		tint := Color.WHITE, z := 0) -> int:
 	if not armed:
 		return 0
 	var shot_id := _next_shot_id
@@ -28,6 +29,8 @@ static func projectile_spawned(scene_path: String, pos: Vector2, dir: Vector2,
 		"lifetime": lifetime,
 		"turn_rate": turn_rate,
 		"target": target,  # resolved to an actor index at drain time
+		"tint": tint,      # the mount stamped modulate before setup — protocol 9
+		"z": z,            # shooter draw order (floor-3 shots over deck paint)
 	})
 	return shot_id
 

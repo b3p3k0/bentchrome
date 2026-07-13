@@ -109,6 +109,28 @@ func test_puppet_flags_drive_cosmetics() -> void:
 		"puppet: flags clear on the next slice")
 	_free(v)
 
+func test_puppet_special_cosmetics() -> void:
+	var v := _spawn()
+	v.set_net_puppet(true)
+	var special: Node = v.get_node("SpecialController")
+	v.apply_net_state({"flame": true, "tornado": true, "armed_trigger": true})
+	t.check(special._flame_vis != null, "puppet: flame flag grows the nose cone")
+	t.check(special.is_spinning() and special._tornado_swirl != null,
+		"puppet: tornado flag mounts the swirl and reports spinning")
+	t.check(special._armed_fx != null, "puppet: armed flag lights the Toe Jam smoke")
+	var spin_before: float = special.tornado_visual_angle()
+	v._physics_process(1.0 / 60.0)  # mirror_tick runs inside the puppet tick
+	t.check(special.tornado_visual_angle() > spin_before,
+		"puppet: the whirl animates locally past the quantizer")
+	var visual: Node2D = v.get_node("Visual")
+	t.check(is_equal_approx(visual.rotation, special.tornado_visual_angle()),
+		"puppet: the visual paints the whirl, same seam as the sim")
+	v.apply_net_state({"flame": false, "tornado": false, "armed_trigger": false})
+	t.check(special._flame_vis == null and not special.is_spinning()
+			and special._tornado_swirl == null and special._armed_fx == null,
+		"puppet: special cosmetics clear on the next slice — no heading scramble")
+	_free(v)
+
 func test_puppet_repair_flag_binds_nearest_station() -> void:
 	var station := StationScene.instantiate()
 	station.global_position = Vector2(300, 220)

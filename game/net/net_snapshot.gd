@@ -10,7 +10,8 @@ extends RefCounted
 const Proto := preload("res://game/net/net_protocol.gd")
 
 # Row flags — puppet-facing state bits. The first byte is FULL; new bits go
-# in flags2 (added for disarm in protocol 7; arena rows arrive in protocol 8).
+# in flags2 (disarm in protocol 7; arena rows in protocol 8; the sustained
+# special cosmetics — flame cone, tornado whirl, Toe Jam smoke — in 9).
 const F_ALIVE := 1
 const F_BOOST := 2
 const F_HANDBRAKE := 4
@@ -20,6 +21,9 @@ const F_MG_LOCKED := 32
 const F_BRAKE := 64
 const F_REPAIR := 128
 const F2_DISARM := 1
+const F2_FLAME := 2
+const F2_TORNADO := 4
+const F2_ARMED := 8
 
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
@@ -107,6 +111,12 @@ static func pack_snapshot(tick: int, rows: Array, events: Array,
 		var flags2 := 0
 		if row.get("disarm", false):
 			flags2 |= F2_DISARM
+		if row.get("flame", false):
+			flags2 |= F2_FLAME
+		if row.get("tornado", false):
+			flags2 |= F2_TORNADO
+		if row.get("armed_trigger", false):
+			flags2 |= F2_ARMED
 		buf.put_u8(flags2)
 		buf.put_8(int(row.get("floor", -1)))
 		var pos: Vector2 = row.get("pos", Vector2.ZERO)
@@ -162,6 +172,12 @@ static func pack_snapshot(tick: int, rows: Array, events: Array,
 			buf.put_u16(clampi(roundi(float(ev.get("lifetime", 0.0)) * 1000.0), 0, 65535))
 			buf.put_u16(clampi(roundi(float(ev.get("turn_rate", 0.0)) * 1000.0), 0, 65535))
 			buf.put_u8(clampi(int(ev.get("target_actor", NO_TARGET)), 0, 255))
+			# Protocol 9: the twin paints and stacks like the host's shot.
+			var tint: Color = ev.get("tint", Color.WHITE)
+			buf.put_u8(clampi(roundi(tint.r * 255.0), 0, 255))
+			buf.put_u8(clampi(roundi(tint.g * 255.0), 0, 255))
+			buf.put_u8(clampi(roundi(tint.b * 255.0), 0, 255))
+			buf.put_u8(clampi(int(ev.get("z", 0)), 0, 255))
 	return buf.data_array
 
 ## {} on junk (bad proto, truncated). Rows come back as apply_net_state-ready
@@ -205,6 +221,9 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			"brake": (flags & F_BRAKE) != 0,
 			"repairing": (flags & F_REPAIR) != 0,
 			"disarm": (flags2 & F2_DISARM) != 0,
+			"flame": (flags2 & F2_FLAME) != 0,
+			"tornado": (flags2 & F2_TORNADO) != 0,
+			"armed_trigger": (flags2 & F2_ARMED) != 0,
 			"heat": heat, "boost_fuel": boost_fuel, "slot": slot, "ammo": ammo,
 			"recharge": recharge,
 		})
@@ -249,7 +268,7 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			return {}
 		var shot_id := buf.get_u32()
 		var path := buf.get_utf8_string()
-		if buf.get_available_bytes() < 13:
+		if buf.get_available_bytes() < 17:
 			return {}
 		var ex := buf.get_16()
 		var ey := buf.get_16()
@@ -258,9 +277,13 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 		var lifetime := float(buf.get_u16()) / 1000.0
 		var turn_rate := float(buf.get_u16()) / 1000.0
 		var target := buf.get_u8()
+		var tint := Color(float(buf.get_u8()) / 255.0, float(buf.get_u8()) / 255.0,
+			float(buf.get_u8()) / 255.0)
+		var shot_z := buf.get_u8()
 		events.append({
 			"kind": EV_PROJECTILE, "shot_id": shot_id, "path": path, "pos": Vector2(ex, ey),
 			"dir": Vector2.RIGHT.rotated(angle), "speed": speed,
 			"lifetime": lifetime, "turn_rate": turn_rate, "target_actor": target,
+			"tint": tint, "z": shot_z,
 		})
 	return {"tick": tick, "rows": rows, "arena_rows": arena_rows, "events": events}

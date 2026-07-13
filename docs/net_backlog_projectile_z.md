@@ -1,7 +1,7 @@
 # Net backlog: projectile shooter-z on the wire
 
-**Status: deferred (Kevin, 2026-07-12). Single-player and the MP HOST are already
-fixed; this note is the remaining CLIENT-side work and why it needs a wire change.**
+**Status: SHIPPED (protocol 9, 2026-07-13) — folded into the tint/special-cosmetics
+bump exactly as prescribed below. Kept for the wire-change rationale.**
 
 ## Problem
 

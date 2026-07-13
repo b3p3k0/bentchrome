@@ -334,6 +334,9 @@ func _collect_rows() -> Array:
 			"repairing": car.is_repairing(),
 			"burn": car.is_burning(), "shield": car.is_shielded(),
 			"disarm": car.is_disarmed(),
+			"flame": car.is_flame_active(),
+			"tornado": car.is_tornado_active(),
+			"armed_trigger": car.is_trigger_armed(),
 			"mg_locked": mount.is_locked() if mount else false,
 			"heat": mount.heat_fraction() if mount else 0.0,
 			"boost_fuel": ctrl.boost_fuel if ctrl else 0.0,
@@ -481,6 +484,10 @@ func _spawn_visual_projectile(ev: Dictionary) -> void:
 	_arena.add_child(shot)
 	shot.setup(ev.pos, ev.dir, float(ev.speed), 0.0, float(ev.lifetime),
 		null, float(ev.turn_rate), target)
+	# Protocol 9: paint and stack like the host's shot (setup can't — the
+	# twin's shooter is null by design; pool_reset clears both on release).
+	shot.modulate = ev.get("tint", Color.WHITE)
+	shot.z_index = int(ev.get("z", 0))
 	var shot_id := int(ev.get("shot_id", 0))
 	if shot_id > 0:
 		shot.net_shot_id = shot_id

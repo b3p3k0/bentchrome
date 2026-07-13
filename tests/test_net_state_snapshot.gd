@@ -19,12 +19,14 @@ func _row_a() -> Dictionary:
 		"heading": 2.35, "height": 42.0, "floor": 2, "hp": 87.5,
 		"alive": true, "boost": true, "handbrake": false, "brake": true, "burn": true,
 		"shield": false, "mg_locked": true, "repairing": true, "disarm": true,
+		"flame": true, "tornado": false, "armed_trigger": true,
 		"heat": 0.66, "boost_fuel": 73.0, "slot": 3,
 		"ammo": [2, 5, 0, 1, 4, 3, 0], "recharge": 0.4,
 	}
 
 func test_rows_round_trip() -> void:
-	t.check(Proto.PROTOCOL_VERSION == 8, "snap: repeated arena state ships behind protocol 8")
+	t.check(Proto.PROTOCOL_VERSION == 9,
+		"snap: projectile tint/z and special cosmetics ship behind protocol 9")
 	var dead := {"alive": false, "hp": 0.0}
 	var bytes: PackedByteArray = Snap.pack_snapshot(99, [_row_a(), dead], [])
 	var back: Dictionary = Snap.unpack_snapshot(bytes)
@@ -40,8 +42,12 @@ func test_rows_round_trip() -> void:
 	t.check(a.alive and a.boost and a.burn and a.mg_locked and a.repairing
 			and a.brake and not a.handbrake and not a.shield, "snap: flag bits survive")
 	t.check(a.disarm, "snap: the flags2 disarm bit survives")
+	t.check(a.flame and a.armed_trigger and not a.tornado,
+		"snap: flags2 special-cosmetic bits survive independently")
 	var d0: Dictionary = back.rows[1]
 	t.check(not d0.disarm, "snap: absent disarm stays false")
+	t.check(not d0.flame and not d0.tornado and not d0.armed_trigger,
+		"snap: absent special bits stay false")
 	t.check(absf(float(a.heat) - 0.66) < 0.005 and is_equal_approx(float(a.boost_fuel), 73.0),
 		"snap: HUD mirrors survive")
 	t.check(int(a.slot) == 3 and a.ammo == [2, 5, 0, 1, 4, 3, 0],
@@ -55,6 +61,7 @@ func test_events_round_trip() -> void:
 		"shot_id": 4123, "path": "res://weapons/missile.tscn", "pos": Vector2(100, -50),
 		"dir": Vector2.RIGHT.rotated(1.1), "speed": 900.0,
 		"lifetime": 2.4, "turn_rate": 3.5, "target_actor": 2,
+		"tint": Color(0.2, 0.55, 1.0), "z": 2,
 	}
 	var back: Dictionary = Snap.unpack_snapshot(Snap.pack_snapshot(7, [], [ev]))
 	t.check(back.events.size() == 1, "snap: event count survives")
@@ -67,6 +74,16 @@ func test_events_round_trip() -> void:
 	t.check(absf(float(e.lifetime) - 2.4) < 0.002, "snap: lifetime survives")
 	t.check(absf(float(e.turn_rate) - 3.5) < 0.002, "snap: homing rate survives")
 	t.check(int(e.target_actor) == 2, "snap: target actor survives")
+	var tint: Color = e.tint
+	t.check(absf(tint.r - 0.2) < 0.005 and absf(tint.g - 0.55) < 0.005
+			and absf(tint.b - 1.0) < 0.005, "snap: the twin's paint job survives (u8 grain)")
+	t.check(int(e.z) == 2, "snap: the shooter's draw order survives — floor-3 shots stack")
+	var bare := ev.duplicate()
+	bare.erase("tint")
+	bare.erase("z")
+	var plain: Dictionary = Snap.unpack_snapshot(Snap.pack_snapshot(7, [], [bare])).events[0]
+	t.check(plain.tint == Color.WHITE and int(plain.z) == 0,
+		"snap: untinted ground shots default clean")
 
 func test_arena_rows_round_trip_and_reject_truncation() -> void:
 	var arena := {"id": 513, "flags": State.ALIVE | State.WARNING,

@@ -536,6 +536,14 @@ func apply_net_state(slice: Dictionary) -> void:
 	if _status and slice.has("disarm"):
 		# Marker + HUD dim read is_disarmed() — the host owns the actual gate.
 		_status.set_cosmetic(&"disarm", bool(slice.disarm))
+	if _special:
+		# Sustained special cosmetics (protocol 9): the flag IS the lifecycle.
+		if slice.has("flame"):
+			_special.mirror_flame(bool(slice.flame))
+		if slice.has("tornado"):
+			_special.mirror_tornado(bool(slice.tornado))
+		if slice.has("armed_trigger"):
+			_special.mirror_armed(bool(slice.armed_trigger))
 	if slice.has("alive"):
 		var alive: bool = slice.alive
 		if _net_alive and not alive:
@@ -566,7 +574,7 @@ func _sync_brake_lights() -> void:
 
 ## The puppet's whole physics tick: interpolate the two newest samples at
 ## (now - NET_INTERP_MS), then the sim's visual tail — identical read.
-func _puppet_physics(_delta: float) -> void:
+func _puppet_physics(delta: float) -> void:
 	if not _net_b.is_empty():
 		if _net_a.is_empty() or int(_net_b.t) <= int(_net_a.t):
 			global_position = _net_b.pos
@@ -583,7 +591,11 @@ func _puppet_physics(_delta: float) -> void:
 			velocity = (_net_a.vel as Vector2).lerp(_net_b.vel, f)
 			heading = lerp_angle(float(_net_a.heading), float(_net_b.heading), f)
 			height = lerpf(float(_net_a.height), float(_net_b.height), f)
+	if _special:
+		_special.mirror_tick(delta)  # flame flicker / whirl on mirrored FX
 	var visual_heading := heading if HEADING_STEPS <= 0 else snappedf(heading, TAU / HEADING_STEPS)
+	if _special and _special.is_spinning():
+		visual_heading = _special.tornado_visual_angle()  # same seam as the sim
 	_visual.rotation = visual_heading
 	if _shadow:
 		_shadow.rotation = visual_heading
@@ -914,6 +926,16 @@ func _mg_origin() -> Vector2:
 
 func is_shielded() -> bool:
 	return _status != null and _status.has_effect(&"invuln")
+
+# Sustained-special state, for the MP host's snapshot rows (protocol 9).
+func is_flame_active() -> bool:
+	return _special != null and _special.flame_active()
+
+func is_tornado_active() -> bool:
+	return _special != null and _special.tornado_active()
+
+func is_trigger_armed() -> bool:
+	return _special != null and _special.trigger_armed()
 
 ## Shared respawn/repair protection. Re-applying StatusReceiver's same-kind
 ## effect refreshes it to at least the full requested duration; one owned tween

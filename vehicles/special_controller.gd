@@ -373,12 +373,16 @@ func _flame(pressed: bool, def: WeaponDef) -> bool:
 		return false
 	_flame_def = def
 	_flame_t = _duration(def, FLAME_DURATION)
+	_build_flame_vis()
+	return true
+
+## Shared by the live cast and the network mirror.
+func _build_flame_vis() -> void:
 	var vehicle := get_parent() as Node2D
 	var visual := vehicle.get_node_or_null("Visual") if vehicle else null
-	if visual:
+	if visual and _flame_vis == null:
 		_flame_vis = Polygon2D.new()
 		visual.add_child(_flame_vis)  # rides the rotating visual — tracks the nose
-	return true
 
 func _flame_tick(delta: float) -> void:
 	var vehicle := get_parent() as CollisionObject2D
@@ -471,26 +475,32 @@ func _tornado(pressed: bool, def: WeaponDef) -> bool:
 	_tornado_hit = {}
 	var vehicle := get_parent() as Node2D
 	_tornado_spin = float(vehicle.get("heading")) if vehicle else 0.0
-	if vehicle:
-		_tornado_fx = CPUParticles2D.new()
-		_tornado_fx.amount = 30
-		_tornado_fx.lifetime = 0.5
-		_tornado_fx.local_coords = false
-		_tornado_fx.spread = 180.0
-		_tornado_fx.gravity = Vector2.ZERO
-		_tornado_fx.initial_velocity_min = 30.0
-		_tornado_fx.initial_velocity_max = 80.0
-		_tornado_fx.tangential_accel_min = 140.0  # the vortex read
-		_tornado_fx.tangential_accel_max = 220.0
-		_tornado_fx.scale_amount_min = 2.0
-		_tornado_fx.scale_amount_max = 4.0
-		_tornado_fx.color = Color(0.62, 0.56, 0.46, 0.55)  # the swirl carries the read
-		vehicle.add_child(_tornado_fx)
-		_tornado_swirl = TornadoSwirl.new()
-		_tornado_swirl.radius = _tornado_radius()
-		_tornado_swirl.z_index = 2  # over the car, under explosions
-		vehicle.add_child(_tornado_swirl)
+	_build_tornado_fx()
 	return true
+
+## Shared by the live cast and the network mirror.
+func _build_tornado_fx() -> void:
+	var vehicle := get_parent() as Node2D
+	if vehicle == null or _tornado_fx != null:
+		return
+	_tornado_fx = CPUParticles2D.new()
+	_tornado_fx.amount = 30
+	_tornado_fx.lifetime = 0.5
+	_tornado_fx.local_coords = false
+	_tornado_fx.spread = 180.0
+	_tornado_fx.gravity = Vector2.ZERO
+	_tornado_fx.initial_velocity_min = 30.0
+	_tornado_fx.initial_velocity_max = 80.0
+	_tornado_fx.tangential_accel_min = 140.0  # the vortex read
+	_tornado_fx.tangential_accel_max = 220.0
+	_tornado_fx.scale_amount_min = 2.0
+	_tornado_fx.scale_amount_max = 4.0
+	_tornado_fx.color = Color(0.62, 0.56, 0.46, 0.55)  # the swirl carries the read
+	vehicle.add_child(_tornado_fx)
+	_tornado_swirl = TornadoSwirl.new()
+	_tornado_swirl.radius = _tornado_radius()
+	_tornado_swirl.z_index = 2  # over the car, under explosions
+	vehicle.add_child(_tornado_swirl)
 
 func _tornado_tick(delta: float) -> void:
 	var vehicle := get_parent() as CollisionObject2D
@@ -564,6 +574,56 @@ func is_spinning() -> bool:
 ## quantized heading while the tornado runs.
 func tornado_visual_angle() -> float:
 	return _tornado_spin
+
+# ------------------------------------------------------------ network mirrors
+# Puppet-side cosmetics. This controller's _physics_process is OFF on network
+# mirrors, so nothing here can tick damage or timers — the snapshot flag IS
+# the lifecycle. The tornado mirror reuses the real activation fields (a
+# sentinel _tornado_t with no def), so the Vehicle's is_spinning()/
+# tornado_visual_angle() paint seam works unchanged on both ends.
+
+## Host row getters — what the shell broadcasts each snapshot.
+func flame_active() -> bool:
+	return _flame_t > 0.0
+
+func tornado_active() -> bool:
+	return _tornado_t > 0.0
+
+func trigger_armed() -> bool:
+	return _armed
+
+func mirror_flame(on: bool) -> void:
+	if on == (_flame_vis != null):
+		return
+	if on:
+		_build_flame_vis()
+	else:
+		_end_flame(false)  # def is null on a mirror: frees the vis, arms nothing
+
+func mirror_tornado(on: bool) -> void:
+	if on == (_tornado_t > 0.0):
+		return
+	if not on:
+		_end_tornado(false)  # mirrors never randomize the heading — it streams
+		return
+	_tornado_t = 1.0  # sentinel: is_spinning() true, nothing ever ticks it down
+	_tornado_hit = {}
+	var vehicle := get_parent() as Node2D
+	_tornado_spin = float(vehicle.get("heading")) if vehicle else 0.0
+	_build_tornado_fx()
+
+func mirror_armed(on: bool) -> void:
+	_set_armed_fx(on)
+
+## Per-frame animation for mirrored sustained FX, called from the puppet tick.
+## The def-null / timer-sentinel guards keep this inert on the host's live
+## effects (which animate themselves in their own ticks).
+func mirror_tick(delta: float) -> void:
+	if _flame_vis and _flame_t <= 0.0:
+		_flame_vis.polygon = _flame_shape()
+		_flame_vis.color = Color(1.0, lerpf(0.35, 0.6, randf()), 0.08, 0.8)
+	if _tornado_t > 0.0 and _tornado_def == null:
+		_tornado_spin += deg_to_rad(TORNADO_SPIN_DEG) * delta
 
 ## Pulse Wave: a neon shockwave radiating from the CAST POSITION (the wave
 ## detaches — the caster hops away mid-blast) out to projectile_speed x
