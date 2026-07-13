@@ -29,7 +29,7 @@ static var ADVANCE_DELAY := 1.0   # savor beat: seconds between nailing a
 								  # actually SEES the brake/leap/boom land
 static var DING_HP := 40.0        # lesson-4 fender ding (skipped on a hurt car)
 static var JUMP_HEIGHT := 40.0    # airborne px that count as a real launch
-static var JUMP_LANE := Rect2(410, -400, 460, 1400)  # pad + flight path; a
+static var JUMP_LANE := Rect2(346, -400, 460, 1300)  # pad + flight path; a
 								  # ledge hop off the deck must never count
 static var SMASH_COUNT := 3       # yard kills demanded (clamped to what's left)
 								  # — a taste, not a chore; the rest is extra credit

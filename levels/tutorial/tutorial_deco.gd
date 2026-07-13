@@ -10,6 +10,9 @@ extends Node2D
 ##              overhead layer) so cars pass beneath it.
 ##   gate:      caution-striped planking. Rides the ExitGate body as its Vis
 ##              so the closed look and the collision can never disagree.
+##   helipad:   the yard's centerpiece — a repurposed helicopter pad, worn
+##              double ring + blocky H + years of tire scuffs. size.x =
+##              outer diameter. Doubles as the spawn marker.
 
 const CONCRETE := Color(0.52, 0.52, 0.55)
 const PAINT := Color(0.92, 0.92, 0.88, 0.8)    # road-paint white
@@ -33,6 +36,8 @@ func _draw() -> void:
 			_draw_sign()
 		&"gate":
 			_draw_gate()
+		&"helipad":
+			_draw_helipad()
 
 ## Five bands, deepest darkest; jambs overhang the mouth by a hair.
 func _draw_tunnel() -> void:
@@ -90,6 +95,26 @@ func _draw_gate() -> void:
 		idx += 1
 	draw_rect(Rect2(Vector2(-half.x, -half.y), Vector2(size.x, 6.0)), PANEL_FRAME)
 	draw_rect(Rect2(Vector2(-half.x, half.y - 6.0), Vector2(size.x, 6.0)), PANEL_FRAME)
+
+## Somebody used to land here; now somebody practices donuts here.
+func _draw_helipad() -> void:
+	var r := size.x * 0.5
+	draw_arc(Vector2.ZERO, r, 0.0, TAU, 64, PAINT, 10.0)
+	draw_arc(Vector2.ZERO, r - 22.0, 0.0, TAU, 64,
+		Color(PAINT.r, PAINT.g, PAINT.b, 0.35), 4.0)
+	var hh := r * 0.52
+	var hw := r * 0.38
+	var bar := 16.0
+	draw_rect(Rect2(Vector2(-hw - bar * 0.5, -hh), Vector2(bar, hh * 2.0)), PAINT)
+	draw_rect(Rect2(Vector2(hw - bar * 0.5, -hh), Vector2(bar, hh * 2.0)), PAINT)
+	draw_rect(Rect2(Vector2(-hw, -bar * 0.5), Vector2(hw * 2.0, bar)), PAINT)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7  # stable scuffs — deco never flickers between boots
+	for i in 5:
+		var a0 := rng.randf_range(0.0, TAU)
+		var rr := rng.randf_range(r * 0.35, r * 0.95)
+		draw_arc(Vector2.ZERO, rr, a0, a0 + rng.randf_range(0.4, 1.4), 24,
+			Color(0.05, 0.05, 0.06, 0.35), rng.randf_range(5.0, 9.0))
 
 func _string_width(text: String, fs: int, gap: float) -> float:
 	var font := ThemeDB.fallback_font

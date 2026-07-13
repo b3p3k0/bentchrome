@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://levels/tutorial/drivers_ed.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="17_wreck"]
 [ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="18_dblock"]
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="19_clutter"]
+[ext_resource type="Script" path="res://environment/street_deco.gd" id="20_sdeco"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("3_speck")
@@ -82,13 +83,13 @@ shader_parameter/scale = 14.0
 shader_parameter/shimmer = 1.6
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
-size = Vector2(3152, 40)
+size = Vector2(2896, 40)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
-size = Vector2(40, 3152)
+size = Vector2(40, 2896)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_n"]
-size = Vector2(1384, 40)
+size = Vector2(1256, 40)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_jamb"]
 size = Vector2(40, 256)
@@ -116,30 +117,40 @@ script = ExtResource("1_lvl")
 
 [node name="Asphalt" type="Polygon2D" parent="."]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-1536, -1536, 1536, -1536, 1536, 1536, -1536, 1536)
+polygon = PackedVector2Array(-1408, -1408, 1408, -1408, 1408, 1408, -1408, 1408)
 
 [node name="TunnelFloor" type="Polygon2D" parent="."]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-192, -1792, 192, -1792, 192, -1536, -192, -1536)
+polygon = PackedVector2Array(-192, -1664, 192, -1664, 192, -1408, -192, -1408)
 
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("2_grid")
-extent = Vector2(2048, 2048)
+extent = Vector2(1920, 1920)
+
+[node name="Helipad" type="Node2D" parent="."]
+script = ExtResource("12_tdeco")
+kind = &"helipad"
+size = Vector2(380, 380)
+
+[node name="Taxiway" type="Node2D" parent="."]
+script = ExtResource("11_marks")
+points = PackedVector2Array(0, -260, 0, -880)
+style = &"dashed_white"
 
 [node name="TunnelDeco" type="Node2D" parent="."]
-position = Vector2(0, -1536)
+position = Vector2(0, -1408)
 script = ExtResource("12_tdeco")
 kind = &"tunnel"
 size = Vector2(384, 256)
 
 [node name="ExitText" type="Node2D" parent="."]
-position = Vector2(0, -1160)
+position = Vector2(0, -1060)
 script = ExtResource("12_tdeco")
 kind = &"exit_text"
 size = Vector2(384, 120)
 
 [node name="ExitSign" type="Node2D" parent="."]
-position = Vector2(0, -1608)
+position = Vector2(0, -1480)
 z_index = 1
 script = ExtResource("12_tdeco")
 kind = &"sign"
@@ -148,10 +159,10 @@ size = Vector2(300, 90)
 [node name="FZBase" parent="." instance=ExtResource("4_fz")]
 position = Vector2(0, -128)
 floor_index = 1
-size = Vector2(3072, 3328)
+size = Vector2(2816, 3072)
 
 [node name="GrassPatch" type="Area2D" parent="."]
-position = Vector2(-1184, -1136)
+position = Vector2(-1152, -1104)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -167,7 +178,7 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="DirtPatch" type="Area2D" parent="."]
-position = Vector2(-768, -1136)
+position = Vector2(-752, -1104)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -183,7 +194,7 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="MudPatch" type="Area2D" parent="."]
-position = Vector2(-352, -1136)
+position = Vector2(-352, -1104)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -199,7 +210,7 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="SnowPatch" type="Area2D" parent="."]
-position = Vector2(-1184, -720)
+position = Vector2(-1152, -688)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -215,7 +226,7 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="IcePatch" type="Area2D" parent="."]
-position = Vector2(-768, -720)
+position = Vector2(-752, -688)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -231,7 +242,7 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="WaterPatch" type="Area2D" parent="."]
-position = Vector2(-352, -720)
+position = Vector2(-352, -688)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("7_zone")
@@ -247,19 +258,19 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 shape = SubResource("RectangleShape2D_patch")
 
 [node name="DeckPlate" type="Polygon2D" parent="."]
-position = Vector2(1152, -1152)
+position = Vector2(1024, -1024)
 color = Color(0.3, 0.31, 0.35, 1)
 polygon = PackedVector2Array(-384, -384, 384, -384, 384, 384, -384, 384)
 
 [node name="DeckLedgeShadow" type="Node2D" parent="."]
-position = Vector2(768, -1152)
+position = Vector2(640, -1024)
 rotation = 1.5708
 script = ExtResource("10_ddeco")
 kind = &"ledge_shadow"
 size = Vector2(768, 90)
 
 [node name="FZDeck" parent="." instance=ExtResource("4_fz")]
-position = Vector2(1152, -1152)
+position = Vector2(1024, -1024)
 floor_index = 2
 size = Vector2(768, 768)
 
@@ -268,37 +279,42 @@ collision_layer = 28
 collision_mask = 0
 
 [node name="SouthWVis" type="Polygon2D" parent="DeckWalls"]
-position = Vector2(904, -768)
+position = Vector2(776, -640)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-152, -16, 152, -16, 152, 16, -152, 16)
 
 [node name="SouthWCol" type="CollisionShape2D" parent="DeckWalls"]
-position = Vector2(904, -768)
+position = Vector2(776, -640)
 shape = SubResource("RectangleShape2D_deck_seg")
 
 [node name="SouthEVis" type="Polygon2D" parent="DeckWalls"]
-position = Vector2(1400, -768)
+position = Vector2(1272, -640)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-152, -16, 152, -16, 152, 16, -152, 16)
 
 [node name="SouthECol" type="CollisionShape2D" parent="DeckWalls"]
-position = Vector2(1400, -768)
+position = Vector2(1272, -640)
 shape = SubResource("RectangleShape2D_deck_seg")
 
 [node name="DeckRamp" type="Node2D" parent="."]
-position = Vector2(1152, -544)
+position = Vector2(1024, -416)
 script = ExtResource("9_ramp")
 low_floor = 1
 high_floor = 2
 size = Vector2(192, 448)
 
+[node name="DeckTrash" parent="." instance=ExtResource("19_clutter")]
+position = Vector2(1330, -800)
+kind = &"trash"
+floor_index = 2
+
 [node name="JumpRunUpMarks" type="Node2D" parent="."]
 script = ExtResource("11_marks")
-points = PackedVector2Array(640, 860, 640, 460)
+points = PackedVector2Array(576, 820, 576, 430)
 style = &"dashed_white"
 
 [node name="JumpPad" type="Area2D" parent="."]
-position = Vector2(640, 256)
+position = Vector2(576, 224)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("8_jump")
@@ -311,84 +327,116 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 [node name="Col" type="CollisionShape2D" parent="JumpPad"]
 shape = SubResource("RectangleShape2D_pad")
 
+[node name="StreetDeco" type="Node2D" parent="."]
+
+[node name="LightNW" type="Node2D" parent="StreetDeco"]
+position = Vector2(-420, -420)
+script = ExtResource("20_sdeco")
+kind = &"street_light"
+
+[node name="LightNE" type="Node2D" parent="StreetDeco"]
+position = Vector2(420, -420)
+script = ExtResource("20_sdeco")
+kind = &"street_light"
+
+[node name="LightSW" type="Node2D" parent="StreetDeco"]
+position = Vector2(-420, 420)
+script = ExtResource("20_sdeco")
+kind = &"street_light"
+
+[node name="LightSE" type="Node2D" parent="StreetDeco"]
+position = Vector2(420, 420)
+script = ExtResource("20_sdeco")
+kind = &"street_light"
+
+[node name="Steam1" type="Node2D" parent="StreetDeco"]
+position = Vector2(300, -560)
+script = ExtResource("20_sdeco")
+kind = &"manhole"
+
+[node name="Steam2" type="Node2D" parent="StreetDeco"]
+position = Vector2(-560, 340)
+script = ExtResource("20_sdeco")
+kind = &"manhole"
+
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2
 collision_mask = 0
 
 [node name="SouthVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, 1556)
+position = Vector2(0, 1428)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-1576, -20, 1576, -20, 1576, 20, -1576, 20)
+polygon = PackedVector2Array(-1448, -20, 1448, -20, 1448, 20, -1448, 20)
 
 [node name="SouthCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, 1556)
+position = Vector2(0, 1428)
 shape = SubResource("RectangleShape2D_wall_h")
 
 [node name="WestVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(-1556, 0)
+position = Vector2(-1428, 0)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-20, -1576, 20, -1576, 20, 1576, -20, 1576)
+polygon = PackedVector2Array(-20, -1448, 20, -1448, 20, 1448, -20, 1448)
 
 [node name="WestCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(-1556, 0)
+position = Vector2(-1428, 0)
 shape = SubResource("RectangleShape2D_wall_v")
 
 [node name="EastVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(1556, 0)
+position = Vector2(1428, 0)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-20, -1576, 20, -1576, 20, 1576, -20, 1576)
+polygon = PackedVector2Array(-20, -1448, 20, -1448, 20, 1448, -20, 1448)
 
 [node name="EastCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(1556, 0)
+position = Vector2(1428, 0)
 shape = SubResource("RectangleShape2D_wall_v")
 
 [node name="NorthWVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(-884, -1556)
+position = Vector2(-820, -1428)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-692, -20, 692, -20, 692, 20, -692, 20)
+polygon = PackedVector2Array(-628, -20, 628, -20, 628, 20, -628, 20)
 
 [node name="NorthWCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(-884, -1556)
+position = Vector2(-820, -1428)
 shape = SubResource("RectangleShape2D_wall_n")
 
 [node name="NorthEVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(884, -1556)
+position = Vector2(820, -1428)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-692, -20, 692, -20, 692, 20, -692, 20)
+polygon = PackedVector2Array(-628, -20, 628, -20, 628, 20, -628, 20)
 
 [node name="NorthECol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(884, -1556)
+position = Vector2(820, -1428)
 shape = SubResource("RectangleShape2D_wall_n")
 
 [node name="JambWVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(-212, -1664)
+position = Vector2(-212, -1536)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-20, -128, 20, -128, 20, 128, -20, 128)
 
 [node name="JambWCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(-212, -1664)
+position = Vector2(-212, -1536)
 shape = SubResource("RectangleShape2D_jamb")
 
 [node name="JambEVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(212, -1664)
+position = Vector2(212, -1536)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-20, -128, 20, -128, 20, 128, -20, 128)
 
 [node name="JambECol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(212, -1664)
+position = Vector2(212, -1536)
 shape = SubResource("RectangleShape2D_jamb")
 
 [node name="CapVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, -1812)
+position = Vector2(0, -1684)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-232, -20, 232, -20, 232, 20, -232, 20)
 
 [node name="CapCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, -1812)
+position = Vector2(0, -1684)
 shape = SubResource("RectangleShape2D_cap")
 
 [node name="ExitGate" type="StaticBody2D" parent="."]
-position = Vector2(0, -1556)
+position = Vector2(0, -1428)
 collision_layer = 2
 collision_mask = 0
 
@@ -401,7 +449,7 @@ size = Vector2(384, 48)
 shape = SubResource("RectangleShape2D_gate")
 
 [node name="ExitZone" type="Area2D" parent="."]
-position = Vector2(0, -1688)
+position = Vector2(0, -1560)
 collision_layer = 0
 collision_mask = 1
 
@@ -409,174 +457,218 @@ collision_mask = 1
 shape = SubResource("RectangleShape2D_exitzone")
 
 [node name="AmmoStandard" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(-650, 1180)
+position = Vector2(-650, 1080)
 kind = "standard"
 amount = 2
 
 [node name="AmmoHoming" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(-390, 1180)
+position = Vector2(-390, 1080)
 kind = "homing"
 amount = 2
 
 [node name="AmmoPower" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(-130, 1180)
+position = Vector2(-130, 1080)
 kind = "power"
 amount = 1
 
 [node name="AmmoRear" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(130, 1180)
+position = Vector2(130, 1080)
 kind = "rear"
 amount = 2
 
 [node name="AmmoMine" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(390, 1180)
+position = Vector2(390, 1080)
 kind = "mine"
 amount = 1
 
 [node name="AmmoJump" parent="." instance=ExtResource("13_ammo")]
-position = Vector2(650, 1180)
+position = Vector2(650, 1080)
 kind = "jump"
 amount = 1
 
 [node name="HealthStation" parent="." instance=ExtResource("16_station")]
-position = Vector2(0, 1380)
+position = Vector2(0, 1256)
 uses = 4
 
 [node name="Wreck1" parent="." instance=ExtResource("17_wreck")]
-position = Vector2(-1250, -160)
+position = Vector2(-1150, -140)
 rotation = 0.4
 floor_index = 1
 
 [node name="Wreck2" parent="." instance=ExtResource("17_wreck")]
-position = Vector2(-1230, 160)
+position = Vector2(-1130, 160)
 rotation = 1.5708
 floor_index = 1
 
 [node name="Wreck3" parent="." instance=ExtResource("17_wreck")]
-position = Vector2(-1270, 480)
+position = Vector2(-1170, 440)
 rotation = -0.35
 floor_index = 1
 
+[node name="WreckSW" parent="." instance=ExtResource("17_wreck")]
+position = Vector2(-700, 900)
+rotation = 2.2
+floor_index = 1
+
+[node name="WreckE" parent="." instance=ExtResource("17_wreck")]
+position = Vector2(1300, -200)
+rotation = -1.2
+floor_index = 1
+
 [node name="RangeCrate1" parent="." instance=ExtResource("18_dblock")]
-position = Vector2(-1020, 0)
+position = Vector2(-940, 10)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="RangeCrate2" parent="." instance=ExtResource("18_dblock")]
-position = Vector2(-1020, 320)
+position = Vector2(-940, 330)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
+[node name="JunkSW1" parent="." instance=ExtResource("18_dblock")]
+position = Vector2(-800, 800)
+size = Vector2(96, 96)
+max_hp = 40.0
+deco = &"junk"
+floor_index = 1
+
+[node name="JunkSW2" parent="." instance=ExtResource("18_dblock")]
+position = Vector2(-712, 856)
+size = Vector2(80, 80)
+max_hp = 40.0
+deco = &"junk"
+floor_index = 1
+
+[node name="JunkTrash" parent="." instance=ExtResource("19_clutter")]
+position = Vector2(-880, 880)
+kind = &"trash"
+floor_index = 1
+
+[node name="JunkBush" parent="." instance=ExtResource("19_clutter")]
+position = Vector2(-740, 740)
+kind = &"bush"
+floor_index = 1
+
+[node name="EdgeBush" parent="." instance=ExtResource("19_clutter")]
+position = Vector2(-1300, 1200)
+kind = &"bush"
+floor_index = 1
+
+[node name="EdgeCone" parent="." instance=ExtResource("19_clutter")]
+position = Vector2(200, -980)
+kind = &"cone"
+floor_index = 1
+
 [node name="SmashCrate1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(950, 880)
+position = Vector2(850, 780)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashCrate2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1060, 900)
+position = Vector2(960, 800)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashCrate3" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1000, 1000)
+position = Vector2(900, 900)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashCrate4" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1230, 1050)
+position = Vector2(1120, 950)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashCrate5" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1330, 1075)
+position = Vector2(1220, 975)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashCrate6" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1280, 1180)
+position = Vector2(1170, 1080)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
 floor_index = 1
 
 [node name="SmashBarrel1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1080, 690)
+position = Vector2(980, 600)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
 floor_index = 1
 
 [node name="SmashBarrel2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1170, 720)
+position = Vector2(1070, 630)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
 floor_index = 1
 
 [node name="SmashBarrel3" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1260, 755)
+position = Vector2(1160, 665)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
 floor_index = 1
 
 [node name="SmashFenceS1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(990, 1370)
+position = Vector2(886, 1270)
 size = Vector2(352, 12)
 max_hp = 15.0
 deco = &"fence"
 floor_index = 1
 
 [node name="SmashFenceS2" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1346, 1370)
+position = Vector2(1230, 1270)
 size = Vector2(352, 12)
 max_hp = 15.0
 deco = &"fence"
 floor_index = 1
 
 [node name="SmashFenceE1" parent="." instance=ExtResource("18_dblock") groups=["tutorial_smash"]]
-position = Vector2(1380, 1180)
+position = Vector2(1300, 1080)
 size = Vector2(12, 352)
 max_hp = 15.0
 deco = &"fence"
 floor_index = 1
 
 [node name="SmashHydrant" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
-position = Vector2(900, 1150)
+position = Vector2(830, 1140)
 kind = &"hydrant"
 floor_index = 1
 
 [node name="SmashCone1" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
-position = Vector2(930, 780)
+position = Vector2(870, 660)
 kind = &"cone"
 floor_index = 1
 
 [node name="SmashCone2" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
-position = Vector2(1150, 1300)
+position = Vector2(1050, 1180)
 kind = &"cone"
 floor_index = 1
 
 [node name="SmashTrash" parent="." instance=ExtResource("19_clutter") groups=["tutorial_smash"]]
-position = Vector2(1420, 900)
+position = Vector2(1330, 800)
 kind = &"trash"
 floor_index = 1
 
 [node name="Vehicle" parent="." instance=ExtResource("5_veh")]
-position = Vector2(0, 640)
+position = Vector2(0, 64)
 start_floor = 1
 
 [node name="HUD" parent="." instance=ExtResource("6_hud")]
