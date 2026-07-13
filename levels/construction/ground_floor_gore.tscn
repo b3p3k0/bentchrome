@@ -363,55 +363,50 @@ downhill_pull = 120.0
 [node name="NorthwestPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(384, -1152)
 size = Vector2(448, 448)
-rail_edges = 9
 gate_edges = 6
+drop_edges = 9
 
 [node name="RepairPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(1536, -1152)
 size = Vector2(640, 448)
-rail_edges = 2
 gate_edges = 12
-drop_edges = 1
+drop_edges = 3
 
 [node name="SoutheastPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(1536, -128)
 size = Vector2(448, 448)
-rail_edges = 2
 gate_edges = 9
-drop_edges = 4
+drop_edges = 6
 
 [node name="SouthwestPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(384, -128)
 size = Vector2(448, 448)
-rail_edges = 12
 gate_edges = 3
+drop_edges = 12
 
 [node name="CantileverPlatform" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(-384, -640)
 size = Vector2(448, 448)
-rail_edges = 5
 gate_edges = 2
-drop_edges = 8
+drop_edges = 13
 
 [node name="NorthRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(912, -1152)
 size = Vector2(608, 256)
-rail_edges = 1
 gate_edges = 4
 gate_offset = -128.0
+drop_edges = 1
 
 [node name="EastRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(1536, -640)
 size = Vector2(256, 576)
-rail_edges = 2
+gate_edges = 2
 drop_edges = 8
 
 [node name="SouthRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(960, -128)
 size = Vector2(704, 256)
-rail_edges = 4
-gate_edges = 1
-gate_offset = 128.0
+drop_edges = 5
 
 [node name="WestRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(384, -640)
@@ -422,7 +417,7 @@ drop_edges = 2
 [node name="CantileverRun" parent="Scaffold" instance=ExtResource("10_scaffold")]
 position = Vector2(48, -640)
 size = Vector2(416, 256)
-rail_edges = 5
+drop_edges = 5
 
 [node name="CourtyardNorthRamp" type="Node2D" parent="."]
 position = Vector2(784, -832)
@@ -435,13 +430,13 @@ surface_paint = false
 terrain_type = "road"
 downhill_pull = 120.0
 
-[node name="CourtyardSouthRamp" type="Node2D" parent="."]
-position = Vector2(1088, -448)
-rotation = 3.141593
+[node name="EastStripRamp" type="Node2D" parent="."]
+position = Vector2(1792, -640)
+rotation = -1.570796
 script = ExtResource("9_ramp")
 low_floor = 2
 high_floor = 3
-size = Vector2(256, 384)
+size = Vector2(256, 256)
 surface_color = Color(0.4, 0.42, 0.46, 1)
 surface_paint = false
 terrain_type = "road"
@@ -460,6 +455,58 @@ size = Vector2(24, 576)
 [node name="BreakSouth" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
 position = Vector2(1536, 96)
 size = Vector2(448, 24)
+
+[node name="CurbNWTop" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(384, -1376)
+size = Vector2(448, 24)
+
+[node name="CurbNWLeft" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(160, -1152)
+size = Vector2(24, 448)
+
+[node name="CurbRepair" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(1856, -1152)
+size = Vector2(24, 448)
+
+[node name="CurbSERight" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(1760, -128)
+size = Vector2(24, 448)
+
+[node name="CurbSWBottom" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(384, 96)
+size = Vector2(448, 24)
+
+[node name="CurbSWLeft" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(160, -128)
+size = Vector2(24, 448)
+
+[node name="CurbCantTop" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(-384, -864)
+size = Vector2(448, 24)
+
+[node name="CurbCantBot" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(-384, -416)
+size = Vector2(448, 24)
+
+[node name="CurbNorthRun" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(912, -1280)
+size = Vector2(608, 24)
+
+[node name="CurbSouthRunS" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(960, 0)
+size = Vector2(704, 24)
+
+[node name="CurbSouthRunN" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(960, -256)
+size = Vector2(704, 24)
+
+[node name="CurbCantRunT" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(48, -768)
+size = Vector2(416, 24)
+
+[node name="CurbCantRunB" parent="ScaffoldCurbs" instance=ExtResource("12_curb")]
+position = Vector2(48, -512)
+size = Vector2(416, 24)
 
 [node name="FloorConnectors" type="Node2D" parent="."]
 
@@ -512,19 +559,19 @@ approach_dir = Vector2(0, 1)
 kind = &"grade"
 
 [node name="ScaffoldSouthUp" type="Node2D" parent="FloorConnectors"]
-position = Vector2(1088, -640)
+position = Vector2(1900, -640)
 script = ExtResource("11_connector")
 from_floor = 2
 to_floor = 3
-approach_dir = Vector2(0, 1)
+approach_dir = Vector2(-1, 0)
 kind = &"grade"
 
 [node name="ScaffoldSouthDown" type="Node2D" parent="FloorConnectors"]
-position = Vector2(1088, -256)
+position = Vector2(1700, -640)
 script = ExtResource("11_connector")
 from_floor = 3
 to_floor = 2
-approach_dir = Vector2(0, -1)
+approach_dir = Vector2(1, 0)
 kind = &"grade"
 
 [node name="RepairDrop" type="Node2D" parent="FloorConnectors"]
@@ -565,7 +612,7 @@ amount = 2
 floor_index = 1
 
 [node name="StandardFloor2" parent="AmmoPickups" instance=ExtResource("23_ammo")]
-position = Vector2(1700, -700)
+position = Vector2(1850, -350)
 kind = "standard"
 amount = 2
 floor_index = 2
@@ -687,11 +734,11 @@ kind = "scaffold_grade"
 size = Vector2(256, 384)
 
 [node name="CourtyardSouthSkin" type="Node2D" parent="SiteDeco"]
-position = Vector2(1088, -448)
-rotation = 3.141593
+position = Vector2(1792, -640)
+rotation = -1.570796
 script = ExtResource("17_site_deco")
 kind = "scaffold_grade"
-size = Vector2(256, 384)
+size = Vector2(256, 256)
 
 [node name="WashoutStain" type="Node2D" parent="SiteDeco"]
 position = Vector2(1180, 800)
@@ -782,8 +829,7 @@ floor_index = 3
 arena_net_id = 26
 
 [node name="ContainerSlabB" parent="BreakableCover" instance=ExtResource("20_block")]
-position = Vector2(1800, -680)
-rotation = 1.570796
+position = Vector2(1680, -1470)
 size = Vector2(256, 96)
 max_hp = 100.0
 deco = &"container"
@@ -895,6 +941,138 @@ max_hp = 50.0
 deco = &"barrier"
 floor_index = 1
 arena_net_id = 40
+
+[node name="RailBreakNWTop" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(384, -1376)
+z_index = 2
+size = Vector2(448, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 60
+
+[node name="RailBreakNWLeft" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(160, -1152)
+z_index = 2
+size = Vector2(14, 448)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 61
+
+[node name="RailBreakRepair" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1856, -1152)
+z_index = 2
+size = Vector2(14, 448)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 62
+
+[node name="RailBreakSERight" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1760, -128)
+z_index = 2
+size = Vector2(14, 448)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 63
+
+[node name="RailBreakSWBottom" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(384, 96)
+z_index = 2
+size = Vector2(448, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 64
+
+[node name="RailBreakSWLeft" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(160, -128)
+z_index = 2
+size = Vector2(14, 448)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 65
+
+[node name="RailBreakCantTop" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-384, -864)
+z_index = 2
+size = Vector2(448, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 66
+
+[node name="RailBreakCantBot" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(-384, -416)
+z_index = 2
+size = Vector2(448, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 67
+
+[node name="RailBreakNorthRun" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(912, -1280)
+z_index = 2
+size = Vector2(608, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 68
+
+[node name="RailBreakSouthRunS" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(960, 0)
+z_index = 2
+size = Vector2(704, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 69
+
+[node name="RailBreakSouthRunN" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(960, -256)
+z_index = 2
+size = Vector2(704, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 70
+
+[node name="RailBreakCantRunT" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(48, -768)
+z_index = 2
+size = Vector2(416, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 71
+
+[node name="RailBreakCantRunB" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(48, -512)
+z_index = 2
+size = Vector2(416, 14)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 3
+arena_net_id = 72
+[node name="CrateSE1" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1750, 120)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+floor_index = 2
+arena_net_id = 73
+
+[node name="CrateSE2" parent="BreakableCover" instance=ExtResource("20_block")]
+position = Vector2(1830, 170)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+floor_index = 2
+arena_net_id = 74
 
 [node name="FormsSlab" parent="BreakableCover" instance=ExtResource("20_block")]
 position = Vector2(1500, 180)
