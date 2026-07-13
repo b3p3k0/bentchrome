@@ -236,7 +236,52 @@ func test_smash_lesson_counts_the_yard() -> void:
 	barrel.free()
 	director._physics_process(0.016)
 	t.check(director.completed, "smash: barrel down -> syllabus complete")
-	t.check(not (w["gate"] as Node2D).visible, "smash: graduation opens the gate")
+	t.check(director._card.visible, "smash: the closing card takes the stage")
+	t.check((w["gate"] as Node2D).visible, "smash: gate stays barred until the card is read")
+	_dismiss(director._card)
+	t.check(not (w["gate"] as Node2D).visible, "smash: reading the closing card opens the gate")
+	t.check(String(director._hint_label.text).begins_with("head NORTH"),
+		"smash: free-play hint points at the exit")
+	_teardown(w["world"])
+
+## The exit confirm: inert before graduation, NO ("keep practicing") is the
+## default, ESC cancels and restores the world, and a fresh zone entry
+## re-prompts. The confirmed path's scene change stays untested headless —
+## the human pass drives it.
+func test_exit_confirm_flow() -> void:
+	var w := _world()
+	var director: Node = w["director"]
+	var car: Node = w["car"]
+	director.begin(true)
+	_dismiss(director._card)
+
+	director._on_exit_zone_entered(car)
+	t.check(director._confirm == null, "exit: zone is inert before graduation")
+
+	director.completed = true
+	director.lesson_index = director.LESSONS.size()
+	director._on_exit_zone_entered(car)
+	t.check(director._confirm != null, "exit: graduation arms the confirm")
+	t.check(t.paused, "exit: the dialog freezes the world")
+	t.check(director._confirm._index == 1, "exit: KEEP PRACTICING is the default")
+
+	var nav := InputEventAction.new()
+	nav.action = &"select_next"
+	nav.pressed = true
+	director._confirm._unhandled_input(nav)
+	t.check(director._confirm._index == 0, "exit: nav toggles to HIT THE ROAD")
+
+	var esc := InputEventAction.new()
+	esc.action = &"pause"
+	esc.pressed = true
+	director._confirm._unhandled_input(esc)
+	t.check(director._confirm == null, "exit: ESC cancels the dialog")
+	t.check(not t.paused, "exit: cancelling unfreezes the world")
+
+	director._on_exit_zone_entered(car)
+	t.check(director._confirm != null, "exit: re-entry re-prompts")
+	director._close_confirm()
+	t.check(not t.paused, "exit: closed clean")
 	_teardown(w["world"])
 
 func test_test_drive_boots_precompleted() -> void:

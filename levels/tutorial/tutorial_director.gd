@@ -14,8 +14,13 @@ extends Node
 
 const IR := preload("res://game/input_router.gd")
 const CardScript := preload("res://levels/tutorial/tutorial_card.gd")
+const ConfirmScript := preload("res://levels/tutorial/exit_confirm.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
+
+const CLOSING_TITLE := "CLASS DISMISSED"
+const CLOSING_BODY := "That's it — tanks are topped off, guns are cocked, and the keys are in your hand. Continue to experiment here, and head North to the exit when you're ready."
+const FREE_PLAY_HINT := "head NORTH to the EXIT when you're ready"
 
 static var HOLD_MOVE := 0.25      # seconds each of W/S/A/D must accumulate
 static var HOLD_CONTROL := 0.3    # seconds each of brake/handbrake/boost
@@ -86,6 +91,7 @@ var lesson_index := -1
 var completed := false
 
 var _card = null         # tutorial_card CanvasLayer
+var _confirm = null      # exit_confirm CanvasLayer while the dialog is up
 var _latch := {}         # per-lesson accumulators/flags; cleared on advance
 var _hint_label: Label = null
 var _ammo_seen := {}     # rack ammo per slot, last observed — drop = a shot
@@ -118,6 +124,8 @@ func _ready() -> void:
 				_ammo_seen[i] = rack.ammo(i)
 			rack.selection_changed.connect(_on_rack_selection)
 			rack.ammo_changed.connect(_on_rack_ammo)
+	if exit_zone:
+		exit_zone.body_entered.connect(_on_exit_zone_entered)
 
 func _on_rack_selection(_index: int) -> void:
 	_latch[&"cycled"] = 1.0
@@ -159,6 +167,12 @@ func _advance() -> void:
 	_card.show_card(LESSONS[lesson_index]["title"], LESSONS[lesson_index]["body"])
 
 func _on_card_dismissed() -> void:
+	# The closing card: gate opens only once it's read — the tunnel stays
+	# visibly barred through the whole syllabus.
+	if completed and lesson_index >= LESSONS.size():
+		_hint_label.text = FREE_PLAY_HINT
+		_open_gate()
+		return
 	if lesson_index < 0 or lesson_index >= LESSONS.size():
 		return
 	_hint_label.text = LESSONS[lesson_index]["hint"]
@@ -174,12 +188,37 @@ func _on_card_dismissed() -> void:
 	if LESSONS[lesson_index]["id"] == &"smash":
 		_snapshot_smash()
 
-## Graduation: card 8 adds the closing dialog + exit confirm; the gate opens
-## here so free play and test drives share one path.
+## Graduation: the closing card takes the stage; its dismissal drops the gate.
 func _finish() -> void:
 	completed = true
-	_hint_label.text = "head NORTH to the EXIT when you're ready"
-	_open_gate()
+	_card.show_card(CLOSING_TITLE, CLOSING_BODY)
+
+## The exit tunnel. Zone entry is physically gated on the (now open) gate;
+## the completed check is a belt for weird geometry. Backing out and driving
+## in again re-prompts — the zone refires on re-entry.
+func _on_exit_zone_entered(body: Node) -> void:
+	if not completed or _confirm != null:
+		return
+	if not body.is_in_group(&"player"):
+		return
+	_confirm = ConfirmScript.new()
+	_confirm.name = "ExitConfirm"
+	_confirm.confirmed.connect(_leave_yard)
+	_confirm.cancelled.connect(_close_confirm)
+	add_child(_confirm)  # its _ready freezes the tree
+
+func _leave_yard() -> void:
+	# Pause survives scene swaps — every path OUT of the yard unpauses first.
+	get_tree().paused = false
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow:
+		flow.to_title()
+
+func _close_confirm() -> void:
+	get_tree().paused = false
+	if _confirm:
+		_confirm.queue_free()
+		_confirm = null
 
 func _open_gate() -> void:
 	if gate == null:
