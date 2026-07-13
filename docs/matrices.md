@@ -104,7 +104,7 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
 | Toe Jam (Hammertoe) | TRIGGER | 60 flat | — | per arm | — | Armed charge replaces next ram's damage; expires unspent after 5s; bumper glows |
 | Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | none | On hit: burn 3 dps / 15s (range 1360); one recipe, two families |
-| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | none | On hit: disarm 20s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100) |
+| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | none | On hit: disarm 5s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100) |
 | Tornado Alley (Cyclone) | TORNADO | 20 dps | — | per use | — | 3s self-centered spin, AoE 2.2× visual footprint (the wind-swirl ring draws exactly at the boundary), same-floor; caught cars: land-mine spin-out + 220 shove once each (launch_immune exempt); steer ×0.3 while spinning; random exit heading; AI holds to 250px |
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |

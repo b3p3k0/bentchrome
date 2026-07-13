@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="Res_chill_disarm"]
 script = ExtResource("3_fx")
 kind = &"disarm"
-duration = 20.0
+duration = 5.0
 magnitude = 1.0
 
 [resource]
@@ -19,4 +19,4 @@ projectile_speed = 1050.0
 projectile_lifetime = 2.0
 projectile_scene = ExtResource("2_proj")
 on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_chill_disarm")])
-note = "Glowing peace sign: zero damage, victim's MG and weapons offline 20s (collisions still count). Evaporates into glitter. Bosses shrug it off."
+note = "Glowing peace sign: zero damage, victim's MG and weapons offline 5s (collisions still count). Evaporates into glitter. Bosses shrug it off."

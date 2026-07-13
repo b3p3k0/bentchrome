@@ -88,6 +88,13 @@ func test_splat_effect_def() -> void:
 	t.check_approx(fx.magnitude, 0.5, "splat: half speed")
 	t.check_approx(fx.duration, 3.0, "splat: 3s")
 
+func test_chill_out_disarm_duration() -> void:
+	var d := _def("res://data/weapons/chill_out.tres")
+	var fx := _first_effect(d)
+	t.check_approx(d.damage, 0.0, "chill out: peace sign deals no damage")
+	t.check(fx != null and fx.kind == &"disarm", "chill out: hit applies disarm")
+	t.check_approx(fx.duration, 5.0, "chill out: guns return after five seconds")
+
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
 	t.check(not d.stub and d.kind == 4, "blaze: live FLAME column")
