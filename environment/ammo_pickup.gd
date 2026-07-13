@@ -39,6 +39,10 @@ func _on_body_entered(body: Node) -> void:
 		return
 	var slot: WeaponRack.Slot = STYLE.get(kind, STYLE["standard"])["slot"]
 	if rack.add_ammo(slot, amount) > 0:
+		if body.is_in_group(&"player"):  # cue is personal feedback; AI grabs stay silent
+			var audio := get_node_or_null(^"/root/AudioDirector")
+			if audio:
+				audio.play(&"pickup")
 		_collect()
 
 func _collect() -> void:

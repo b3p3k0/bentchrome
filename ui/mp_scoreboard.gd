@@ -17,6 +17,7 @@ func _ready() -> void:
 	print("[boot] mp scoreboard ready")
 	_net.session_changed.connect(_on_session_changed)
 	_build()
+	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
 
 func _on_session_changed() -> void:
 	if not _net.is_active():
@@ -26,6 +27,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(IR.ACTION_PAUSE):
 		return
 	get_viewport().set_input_as_handled()
+	UiSfx.back(self)
 	_to_lobby()
 
 func _to_lobby() -> void:

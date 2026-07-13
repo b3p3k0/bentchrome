@@ -459,3 +459,22 @@ Policies (locked): ONE of each car on the battlefield (claimed set = seats + que
 excludes it — short pool = fewer bots); every queue exit = back of the line; unattributed
 deaths feed THE WASTELAND (own scoreboard row); disconnects vacate creditless; v1 joins
 land in the lobby only. E2E: `tools/nettest.sh` (loopback host+client, cable-pull vacate).
+
+## SFX (sound events & thresholds)
+
+Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
+(naming contract in `assets/sfx/README.md`, reference-link form in
+`assets/sfx/refs.md`). Dev-options SOUNDBOARD auditions any event from Settings.
+
+| Knob | Value | Where | What it does |
+|---|---|---|---|
+| CRASH_HARD_SPEED | 420 px/s | vehicle.gd | impact-into-surface speed splitting crash_soft/crash_hard (audio gate stays bounce_min_speed×2 = 200) |
+| SPLASH_MIN_SPEED | 200 px/s | vehicle.gd | min speed entering water terrain to cue a splash |
+| BRAKE_MIN_SPEED | 233 px/s (~35 mph) | drive_fx.gd | service-brake grind loop floor; phases with brake lights, never handbrake |
+| POOL_GLOBAL / POOL_POSITIONAL / POOL_UI | 8 / 6 / 3 | audio_director.gd | one-shot player pools; UI pool is PROCESS_MODE_ALWAYS (pause-immune — stingers + menu clicks) |
+| UI_EVENTS | ui_*/stings/mp_* | audio_director.gd | events routed through the pause-immune pool |
+| volume_db / pitch_jitter | per event | audio_director.gd CATALOG | per-asset trim + repeat-variation; tune here, not in the asset |
+| overheat cue | once per lock | weapon_mount.gd | player-only, fires when heat crosses heat_max |
+| pickup cue | player-only | ammo_pickup.gd / heal_pickup.gd | AI crate grabs stay silent |
+| mp_join/mp_leave | lobby only | mp_lobby.gd | peer-count diff on peers_changed (name syncs don't cue) |
+| pit/water death sound | pit_fall / sink replace the death boom | vehicle.gd _on_died | `_falling` gates the generic explosion sound like it already gated the visual |

@@ -35,6 +35,8 @@ var _start_btn: Button
 var _status: Label
 var _confirm: Control = null
 var _my_car := ""  # my cycler position (pick when seated, queue car otherwise)
+var _last_peer_count := -1  # join/leave cue diff; -1 = first refresh stays silent
+	# (peers_changed also fires on name/mod syncs — the size diff dedupes)
 
 func _ready() -> void:
 	print("[boot] mp lobby ready")
@@ -53,6 +55,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(IR.ACTION_PAUSE):
 		return
 	get_viewport().set_input_as_handled()
+	UiSfx.back(self)
 	if _confirm:
 		_close_confirm()
 		return
@@ -186,6 +189,12 @@ func _refresh() -> void:
 		_head.text = "NO SESSION"
 		_status.text = "the garage is dark — head back"
 		return
+	var peer_count: int = Net.peers.size()
+	if _last_peer_count >= 0 and peer_count != _last_peer_count:
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		if audio:
+			audio.play(&"mp_join" if peer_count > _last_peer_count else &"mp_leave")
+	_last_peer_count = peer_count
 	var cfg: Dictionary = Net.match_config
 	_head.text = ("HOSTING on port %d" % Net.game_port) if Net.is_host() \
 		else "GARAGE FLOOR — peer %d" % Net.my_id()
@@ -224,6 +233,7 @@ func _refresh() -> void:
 	_status.text = result_line + "%d/%d seated — %s rolls with %d+ driver%s%s" % [
 		seats_filled, Proto.MAX_PLAYERS,
 		String(Config.MODE_NAMES.get(mode, "?")), need, "s" if need > 1 else "", tail]
+	UiSfx.wire(self)  # rows rebuild each refresh; wire() is idempotent per button
 
 func _refresh_seats() -> void:
 	for child in _seat_rows.get_children():

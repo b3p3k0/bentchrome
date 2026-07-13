@@ -1,0 +1,768 @@
+#!/usr/bin/env python3
+"""Procedural SFX generator for Bent Chrome — the regeneration source for
+every assets/sfx/*.ogg. Usage: python3 tools/synth_sfx.py (re-renders all).
+
+Pure-numpy DSP -> wav (stdlib wave) -> ogg (ffmpeg, libvorbis), written
+straight into assets/sfx/ where AudioDirector's drop-in loader finds them.
+Direction: realistic-ish, not cartoony (reference-link workflow lives in
+assets/sfx/refs.md). Needs: numpy, ffmpeg. No sampled sources — every sound
+is synthesized; references are analysis-only.
+"""
+import os
+import subprocess
+import wave
+import numpy as np
+
+
+def _write_wav(path, sr, x_int16):
+    with wave.open(path, "w") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(x_int16.tobytes())
+
+SR = 44100
+SFX_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+    "..", "assets", "sfx"))
+
+rng = np.random.default_rng(0xB3E7)  # deterministic renders
+
+
+# ---- primitives ------------------------------------------------------------
+def t(dur):
+    return np.linspace(0, dur, int(SR * dur), endpoint=False)
+
+
+def noise(dur):
+    return rng.uniform(-1.0, 1.0, int(SR * dur))
+
+
+def sine(freq, dur, phase=0.0):
+    return np.sin(2 * np.pi * freq * t(dur) + phase)
+
+
+def square(freq, dur, duty=0.5):
+    ph = (freq * t(dur)) % 1.0
+    return np.where(ph < duty, 1.0, -1.0)
+
+
+def saw(freq, dur):
+    ph = (freq * t(dur)) % 1.0
+    return 2.0 * ph - 1.0
+
+
+def sweep(f0, f1, dur, kind="lin"):
+    tt = t(dur)
+    if kind == "exp":
+        f = f0 * (f1 / f0) ** (tt / dur)
+    else:
+        f = np.linspace(f0, f1, tt.size)
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    return np.sin(phase)
+
+
+def env_ad(dur, atk, dec, curve=2.0):
+    """Attack/decay envelope, atk+dec in seconds (decay fills the rest)."""
+    n = int(SR * dur)
+    a = max(1, int(SR * atk))
+    d = max(1, n - a)
+    e = np.concatenate([
+        np.linspace(0, 1, a),
+        (1.0 - np.linspace(0, 1, d)) ** curve,
+    ])
+    return e[:n]
+
+
+def env_exp(dur, tau):
+    """Percussive exponential decay."""
+    return np.exp(-t(dur) / tau)
+
+
+def one_pole_lp(x, cutoff):
+    a = np.exp(-2 * np.pi * cutoff / SR)
+    y = np.empty_like(x)
+    acc = 0.0
+    for i in range(x.size):
+        acc = (1 - a) * x[i] + a * acc
+        y[i] = acc
+    return y
+
+
+def one_pole_hp(x, cutoff):
+    return x - one_pole_lp(x, cutoff)
+
+
+def biquad_bp(x, freq, q):
+    """Band-pass (constant skirt) biquad."""
+    w0 = 2 * np.pi * freq / SR
+    alpha = np.sin(w0) / (2 * q)
+    b0, b1, b2 = alpha, 0.0, -alpha
+    a0, a1, a2 = 1 + alpha, -2 * np.cos(w0), 1 - alpha
+    b = np.array([b0, b1, b2]) / a0
+    a = np.array([a1, a2]) / a0
+    y = np.zeros_like(x)
+    x1 = x2 = y1 = y2 = 0.0
+    for i in range(x.size):
+        xi = x[i]
+        yi = b[0] * xi + b[1] * x1 + b[2] * x2 - a[0] * y1 - a[1] * y2
+        x2, x1 = x1, xi
+        y2, y1 = y1, yi
+        y[i] = yi
+    return y
+
+
+def softclip(x, drive=2.0):
+    return np.tanh(x * drive)
+
+
+def fit(a, b):
+    """Sum two signals of differing length (zero-pad shorter)."""
+    n = max(a.size, b.size)
+    out = np.zeros(n)
+    out[:a.size] += a
+    out[:b.size] += b
+    return out
+
+
+def normalize(x, peak=0.95):
+    m = np.max(np.abs(x))
+    return x * (peak / m) if m > 0 else x
+
+
+def declick(x, ms=3.0):
+    """Short fade in/out to kill boundary clicks."""
+    n = int(SR * ms / 1000)
+    n = min(n, x.size // 2)
+    if n <= 0:
+        return x
+    x = x.copy()
+    x[:n] *= np.linspace(0, 1, n)
+    x[-n:] *= np.linspace(1, 0, n)
+    return x
+
+
+def write(name, x, peak=0.95, fade_ms=3.0):
+    x = declick(normalize(x, peak), fade_ms)
+    wav_path = f"/tmp/{name}.wav"
+    ogg_path = f"{SFX_DIR}/{name}.ogg"
+    _write_wav(wav_path, SR, (x * 32767).astype(np.int16))
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", wav_path,
+         "-c:a", "libvorbis", "-q:a", "5", "-ac", "1", "-ar", str(SR), ogg_path],
+        check=True,
+    )
+    dur = x.size / SR
+    print(f"  wrote {ogg_path}  ({dur*1000:.0f}ms, peak {np.max(np.abs(x)):.2f})")
+
+
+# ---- mg_fire ---------------------------------------------------------------
+def friedlander(dur, T):
+    """Blast overpressure model: p(t) = (1 - t/T) * exp(-t/T). Sharp rise,
+    positive phase for t<T, negative undershoot after. T = positive-phase sec."""
+    tt = t(dur)
+    return (1.0 - tt / T) * np.exp(-tt / T)
+
+
+def mg_fire():
+    """7.62-ish MG report: impulsive muzzle blast (Friedlander), low thump,
+    short crackle tail. No pitched oscillators — real gunshots have no pitch."""
+    dur = 0.11
+    # 1) muzzle blast crack: broadband noise shaped by a fast Friedlander +
+    #    exp decay. Instant attack (the sample-zero onset IS the shockwave).
+    blast_env = np.abs(friedlander(dur, 0.0011)) * env_exp(dur, 0.0045)
+    crack = noise(dur) * blast_env
+    crack = one_pole_hp(crack, 450.0)                 # keep it broadband, cut rumble
+    # 2) low-frequency body thump: the pressure weight of a rifle round. Filtered
+    #    noise band around ~110Hz with a fast decay, plus a short down-thump.
+    thump_env = env_exp(dur, 0.016)
+    thump = biquad_bp(noise(dur), 115.0, 1.2) * thump_env
+    downthump = sweep(190, 70, dur, "exp") * env_exp(dur, 0.010)
+    body = one_pole_lp(1.4 * thump + 0.8 * downthump, 900.0)
+    # 3) crackle tail: brief mid/high noise ring-out (report bouncing off ground)
+    tail = one_pole_hp(noise(dur), 1600.0) * env_exp(dur, 0.028) * 0.35
+    # 4) mechanical bolt tick: tiny bright click at onset
+    tick = one_pole_hp(noise(dur), 3500.0) * env_exp(dur, 0.0016) * 0.5
+    x = fit(fit(1.5 * crack, 1.1 * body), fit(tail, tick))
+    x = softclip(x, 2.2)                              # loud/compressed gunshot bite
+    write("mg_fire", x, peak=0.97, fade_ms=1.5)
+
+
+# ---- explosion voice (npc_death / player_death / hit_weapon share this) ----
+def debris_crackle(dur, start, density, decay, hp=2500.0, seed=7):
+    """Sparse random pops scattered through [start, dur] — the debris/fire tail."""
+    r = np.random.default_rng(seed)
+    n = int(SR * dur)
+    out = np.zeros(n)
+    i0 = int(SR * start)
+    npop = int((dur - start) * density)
+    for _ in range(npop):
+        pos = r.integers(i0, n - 1)
+        amp = r.uniform(0.2, 1.0)
+        ln = min(int(SR * 0.02), n - pos)
+        seg = r.uniform(-1, 1, ln) * np.exp(-np.arange(ln) / (SR * decay)) * amp
+        out[pos:pos + ln] += seg
+    return one_pole_hp(out, hp)
+
+
+def explosion(dur, sub_f0, sub_f1, sub_tau, mid_tau, tail_tau, drive, seed=11):
+    """Parametric explosion. Bigger sub_tau/tail_tau = bigger blast."""
+    r = np.random.default_rng(seed)
+    tt = t(dur)
+    # 1) ignition blast: instant broadband crack
+    blast = r.uniform(-1, 1, tt.size) * np.exp(-tt / 0.010)
+    blast = one_pole_hp(blast, 300.0)
+    # 2) sub boom: pitch-down tone + low-passed noise, the chest thump
+    sub_tone = sweep(sub_f0, sub_f1, dur, "exp") * np.exp(-tt / sub_tau)
+    sub_noise = one_pole_lp(r.uniform(-1, 1, tt.size), 140.0) * np.exp(-tt / (sub_tau * 0.8))
+    sub = 1.3 * sub_tone + 1.1 * sub_noise
+    # 3) mid rumble: fire/debris body
+    mid = biquad_bp(r.uniform(-1, 1, tt.size), 320.0, 0.7) * np.exp(-tt / mid_tau)
+    # 4) long rolling tail
+    tail = one_pole_lp(r.uniform(-1, 1, tt.size), 1200.0) * np.exp(-tt / tail_tau) * 0.5
+    # 5) debris crackle
+    crackle = debris_crackle(dur, 0.06, 90, 0.006, seed=seed + 1) * 0.5
+    early = softclip(1.6 * blast + 1.2 * sub + 0.9 * mid, drive)
+    x = fit(early, fit(tail, crackle))
+    return x
+
+
+def npc_death():
+    """~850ms rival explosion (positional). Mid-size blast + rolling tail."""
+    x = explosion(0.85, sub_f0=120, sub_f1=38, sub_tau=0.16, mid_tau=0.13,
+                  tail_tau=0.28, drive=1.8, seed=11)
+    write("npc_death", x, peak=0.97, fade_ms=4.0)
+
+
+def player_death():
+    """~1.4s big send-off: main blast + delayed secondary detonation (fuel
+    cooking off) + fire crackle. All noise-based — the swept-tone groan was
+    the cartoon tell, gone."""
+    dur = 1.4
+    tt = t(dur)
+    r = np.random.default_rng(25)
+    main = explosion(dur, sub_f0=130, sub_f1=30, sub_tau=0.30, mid_tau=0.24,
+                     tail_tau=0.55, drive=2.0, seed=23)
+    # secondary detonation ~0.28s in
+    sec = explosion(0.7, sub_f0=100, sub_f1=34, sub_tau=0.14, mid_tau=0.10,
+                    tail_tau=0.22, drive=1.8, seed=24) * 0.6
+    sec = np.concatenate([np.zeros(int(SR * 0.28)), sec])
+    # burning-wreck settle: rough low band, zero pitch
+    fire = biquad_bp(r.uniform(-1, 1, tt.size), 160.0, 0.6)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 30.0))
+    fire = fire * (rough / (rough.max() + 1e-9)) * np.exp(-tt / 0.5) * 0.7
+    crackle = debris_crackle(dur, 0.15, 120, 0.005, hp=2800.0, seed=26) * 0.45
+    x = fit(fit(main, sec), fit(fire, crackle))
+    write("player_death", x, peak=0.98, fade_ms=8.0)
+
+
+def saw_sweep(f0, f1, dur):
+    tt = t(dur)
+    f = f0 * (f1 / f0) ** (tt / dur)
+    ph = np.cumsum(f) / SR
+    return 2.0 * (ph % 1.0) - 1.0
+
+
+def metal_modes(dur, freqs, decays, amps, seed=3):
+    """Inharmonic decaying sines struck at t=0 — a metal clang/ring."""
+    tt = t(dur)
+    r = np.random.default_rng(seed)
+    out = np.zeros(tt.size)
+    for f, d, a in zip(freqs, decays, amps):
+        det = f * (1.0 + r.uniform(-0.01, 0.01))
+        out += a * np.sin(2 * np.pi * det * tt) * np.exp(-tt / d)
+    return out
+
+
+def svf_bp(x, cutoff_arr, q):
+    """State-variable band-pass with a per-sample cutoff array (for sweeps)."""
+    cutoff_arr = np.clip(cutoff_arr, 20.0, SR * 0.45)
+    f = 2.0 * np.sin(np.pi * cutoff_arr / SR)
+    qc = 1.0 / q
+    low = band = 0.0
+    out = np.empty_like(x)
+    for i in range(x.size):
+        high = x[i] - low - qc * band
+        band = band + f[i] * high
+        low = low + f[i] * band
+        out[i] = band
+    return out
+
+
+def granular_crunch(dur, band, q, decay, rough_hz, seed):
+    """Grinding/crunching deformation: filtered noise chopped by a rough
+    amplitude envelope (rectified low-passed noise). NOT a smooth swoosh."""
+    r = np.random.default_rng(seed)
+    tt = t(dur)
+    x = biquad_bp(r.uniform(-1, 1, tt.size), band, q)
+    amp = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), rough_hz))
+    amp = amp / (amp.max() + 1e-9)
+    return x * amp * np.exp(-tt / decay)
+
+
+def crash_soft():
+    """~380ms fender-bender: pitch-drop thud + granular metal crunch + glass
+    tinkle + scattering tail. Deformation/grit, not a ringing bell."""
+    dur = 0.38
+    tt = t(dur)
+    r = np.random.default_rng(31)
+    # 1) mass thud: fast pitch drop = weight (per crash sound-design trick)
+    thud = sweep(220, 52, dur, "exp") * np.exp(-tt / 0.032) * 1.3
+    thud += one_pole_lp(r.uniform(-1, 1, tt.size), 120.0) * np.exp(-tt / 0.028)
+    # 2) crunch core: two rough-modulated noise bands (low grind + high grit)
+    grind = granular_crunch(dur, 620.0, 0.8, 0.11, 240.0, seed=32)
+    grit = granular_crunch(dur, 2000.0, 0.7, 0.075, 400.0, seed=33)
+    crunch = 1.1 * grind + 0.8 * grit
+    # 3) glass tinkle: bright sparse shards, quick decay
+    glass = debris_crackle(dur, 0.0, 140, 0.003, hp=4000.0, seed=34) * 0.55
+    # 4) scatter tail: parts skittering across pavement
+    scatter = debris_crackle(dur, 0.05, 70, 0.006, hp=1500.0, seed=35) * 0.4
+    # 5) heavily-damped metallic grit (short — a hint, never a ring)
+    metal = metal_modes(dur, [370, 810, 1490], [0.03, 0.022, 0.016],
+                        [0.5, 0.35, 0.25], seed=36)
+    metal = one_pole_hp(metal * (0.5 + 0.5 * np.abs(r.uniform(-1, 1, tt.size))), 300.0) * 0.4
+    x = fit(fit(1.3 * thud, crunch), fit(glass, fit(scatter, metal)))
+    x = softclip(x, 1.7)
+    write("crash_soft", x, peak=0.96, fade_ms=3.0)
+
+
+def missile_fire():
+    """~550ms real rocket launch (TOW/Javelin family): ignition bang +
+    combustion roar + supersonic-exhaust CRACKLE, receding. No whistle —
+    crackle is the real signature (shock discontinuities, not tones)."""
+    dur = 0.55
+    tt = t(dur)
+    r = np.random.default_rng(51)
+    # ignition bang: hard broadband launch-motor pop
+    bang = one_pole_hp(r.uniform(-1, 1, tt.size), 300.0) * np.exp(-tt / 0.014) * 1.3
+    # combustion roar: deep rough-modulated noise, holds then recedes
+    roar_env = np.minimum(tt / 0.03, 1.0) * np.exp(-tt / 0.24)
+    roar = one_pole_lp(r.uniform(-1, 1, tt.size), 380.0)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 140.0))
+    rough = rough / (rough.max() + 1e-9)
+    roar = roar * (0.45 + 0.55 * rough) * roar_env * 1.5
+    # sub weight under the roar
+    sub = one_pole_lp(r.uniform(-1, 1, tt.size), 90.0) * roar_env * 0.9
+    # exhaust crackle: dense sharp pops riding the roar envelope
+    crackle = debris_crackle(dur, 0.0, 900, 0.0012, hp=2200.0, seed=52)
+    crackle = crackle * (0.3 + 0.7 * roar_env) * 0.8
+    x = fit(fit(bang, softclip(roar + sub, 2.4)), crackle)
+    x = softclip(x, 1.4)
+    write("missile_fire", x, peak=0.95, fade_ms=6.0)
+
+
+def mine_drop():
+    """~180ms mechanical clunk: release click + metal chunk + low ground-thud."""
+    dur = 0.18
+    tt = t(dur)
+    r = np.random.default_rng(61)
+    # release click (the arming mechanism)
+    click = one_pole_hp(r.uniform(-1, 1, tt.size), 3500.0) * np.exp(-tt / 0.0018) * 0.7
+    # metallic chunk: short damped band + one short mode
+    chunk = biquad_bp(r.uniform(-1, 1, tt.size), 430.0, 1.0) * np.exp(-tt / 0.03)
+    chunk += metal_modes(dur, [560, 940], [0.035, 0.025], [0.6, 0.35], seed=62) * 0.5
+    chunk = one_pole_hp(chunk, 220.0)
+    # low ground thud (weight settling)
+    thud = sweep(170, 60, dur, "exp") * np.exp(-tt / 0.03) * 1.1
+    thud += one_pole_lp(r.uniform(-1, 1, tt.size), 130.0) * np.exp(-tt / 0.025)
+    x = fit(fit(click, 1.1 * chunk), thud)
+    x = softclip(x, 1.6)
+    write("mine_drop", x, peak=0.95, fade_ms=2.5)
+
+
+def hit_weapon():
+    """~300ms ordnance hit on YOUR hull: blast slap + deep thump + granular
+    metal crunch. No ringing partials (crash-v2 rule: rough noise, not tones)."""
+    dur = 0.30
+    tt = t(dur)
+    r = np.random.default_rng(41)
+    blast = one_pole_hp(r.uniform(-1, 1, tt.size), 350.0) * np.exp(-tt / 0.009) * 1.4
+    # deep thump: fast pitch-drop buried under noise = weight, not melody
+    thump = sweep(160, 45, dur, "exp") * np.exp(-tt / 0.05) * 1.3
+    thump += one_pole_lp(r.uniform(-1, 1, tt.size), 120.0) * np.exp(-tt / 0.05)
+    # granular hull crunch (the crash-v2 texture, shorter)
+    grind = granular_crunch(dur, 700.0, 0.8, 0.07, 260.0, seed=42)
+    grit = granular_crunch(dur, 2100.0, 0.7, 0.05, 420.0, seed=43)
+    debris = debris_crackle(dur, 0.03, 80, 0.004, hp=1800.0, seed=44) * 0.4
+    x = fit(fit(blast, 1.2 * thump), fit(1.0 * grind + 0.7 * grit, debris))
+    x = softclip(x, 2.0)
+    write("hit_weapon", x, peak=0.97, fade_ms=3.0)
+
+
+def hit_mg():
+    """~70ms bullet tink on your hull: sharp strike + tiny damped rattle.
+    Rapid repeats in-game (jittered), so short and dry."""
+    dur = 0.07
+    tt = t(dur)
+    r = np.random.default_rng(71)
+    strike = one_pole_hp(r.uniform(-1, 1, tt.size), 2500.0) * np.exp(-tt / 0.0025) * 1.2
+    body = biquad_bp(r.uniform(-1, 1, tt.size), 950.0, 1.4) * np.exp(-tt / 0.012)
+    low = one_pole_lp(r.uniform(-1, 1, tt.size), 200.0) * np.exp(-tt / 0.008) * 0.5
+    x = fit(fit(strike, 0.9 * body), low)
+    x = softclip(x, 1.5)
+    write("hit_mg", x, peak=0.93, fade_ms=1.5)
+
+
+def skid():
+    """~0.8s SEAMLESS tire-squeal loop (AudioDirector replays on finished).
+    Real squeal = narrow resonant noise band ~1kHz wandering slowly + low
+    rubber judder. Loop seam solved by wrap-crossfading tail into head;
+    write with fade_ms=0 (a declick fade would dip every loop pass)."""
+    body = 0.8
+    xf = 0.06
+    dur = body + xf
+    tt = t(dur)
+    r = np.random.default_rng(81)
+    # squeal band: center freq random-walks 950-1350Hz (the wail)
+    wander = one_pole_lp(r.uniform(-1, 1, tt.size), 3.0)
+    wander = wander / (np.max(np.abs(wander)) + 1e-9)
+    centers = 1150.0 + 200.0 * wander
+    squeal = svf_bp(r.uniform(-1, 1, tt.size), centers, 4.0)
+    # slow amplitude wobble so it breathes instead of buzzing
+    wob = one_pole_lp(r.uniform(-1, 1, tt.size), 6.0)
+    wob = 0.75 + 0.25 * wob / (np.max(np.abs(wob)) + 1e-9)
+    squeal = squeal * wob
+    # rubber judder underneath
+    judder = biquad_bp(r.uniform(-1, 1, tt.size), 320.0, 1.0)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 45.0))
+    judder = judder * (rough / (rough.max() + 1e-9)) * 0.6
+    x = softclip(1.4 * squeal + judder, 1.6)
+    # wrap-crossfade: blend the tail over the head, trim to body length
+    n = int(SR * body)
+    k = int(SR * xf)
+    w = np.linspace(0.0, 1.0, k)
+    out = x[:n].copy()
+    out[:k] = x[n:n + k] * (1.0 - w) + out[:k] * w
+    write("skid", out, peak=0.9, fade_ms=0.0)
+
+
+def spawn():
+    """~1.15s V8 start matched to a measured ref ('68 Road Runner @4.0-5.5s):
+    quiet low crank chugs -> catch cough -> rev spike -> settle to LOPING low
+    idle. Engine = explicit harmonic stack (energy 60-300Hz like the ref, sub
+    modest), steep-filtered — v3's naive pulse train sprayed comb lines to
+    20kHz on the spectrogram, which was the 'sproingy' read."""
+    dur = 1.15
+    tt = t(dur)
+    r = np.random.default_rng(91)
+    n = tt.size
+    # crank: 9Hz chugs of LOW knock (no broadband click), faint starter tick
+    crank_env = np.interp(tt, [0, 0.02, 0.26, 0.30], [0, 1, 1, 0]) * 0.16
+    chug = np.maximum(np.sin(2 * np.pi * 9.0 * tt - 1.2), 0.0) ** 2
+    knock = biquad_bp(r.uniform(-1, 1, n), 140.0, 1.2) + 0.8 * one_pole_lp(r.uniform(-1, 1, n), 90.0)
+    knock = one_pole_lp(one_pole_lp(knock, 300.0), 300.0)
+    tick = one_pole_hp(r.uniform(-1, 1, n), 2000.0) * 0.05
+    crank = (knock + tick) * chug * crank_env * 8.0
+    # engine: harmonic stack; f0 arc catch->rev->settle-to-idle, slight wander
+    f0 = np.interp(tt, [0, 0.30, 0.33, 0.42, 0.60, 0.80, dur], [45, 45, 60, 95, 55, 45, 44])
+    wob = one_pole_lp(r.uniform(-1, 1, n), 4.0)
+    f0 = f0 * (1.0 + 0.03 * wob / (np.max(np.abs(wob)) + 1e-9))
+    ph = np.cumsum(f0) / SR
+    eng = np.zeros(n)
+    for k, a in enumerate([1.0, 1.0, 0.6, 0.35, 0.2, 0.12, 0.07], start=1):
+        eng += a * np.sin(2 * np.pi * k * ph)
+    # combustion unevenness + the muscle-car idle lope
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, n), 55.0))
+    grit = 0.75 + 0.25 * grit / (grit.max() + 1e-9)
+    lope = 0.88 + 0.12 * np.sin(2 * np.pi * 10.5 * tt + 0.7)
+    # ref envelope shape: spike at catch, fast settle, pulsing idle, end low
+    eng_env = np.interp(tt, [0, 0.29, 0.305, 0.33, 0.55, 0.80, 1.02, dur],
+                        [0, 0, 0.3, 1.0, 0.45, 0.20, 0.18, 0.0])
+    eng = softclip(eng * grit * lope, 1.4)
+    eng = one_pole_lp(one_pole_lp(eng, 400.0), 400.0) * eng_env * 1.6
+    # per-cycle exhaust chuff (the ref's 300-1k presence)
+    chuff = biquad_bp(r.uniform(-1, 1, n), 600.0, 0.8)
+    gate = np.clip(np.sin(2 * np.pi * ph), 0.0, 1.0) ** 2
+    chuff = chuff * gate * eng_env
+    chuff = chuff / (np.sqrt(np.mean(chuff ** 2)) + 1e-9) * np.sqrt(np.mean(eng ** 2)) * 0.26
+    # broadband air so it isn't vacuum-sealed (ref has soft haze to ~13k)
+    air = one_pole_hp(one_pole_lp(r.uniform(-1, 1, n), 5000.0), 700.0) * eng_env
+    air = air / (np.sqrt(np.mean(air ** 2)) + 1e-9) * np.sqrt(np.mean(eng ** 2)) * 0.20
+    # catch cough: one dark burst right at ignition
+    cough = one_pole_lp(r.uniform(-1, 1, n), 1500.0) \
+        * np.exp(-np.maximum(tt - 0.30, 0) / 0.03) * (tt >= 0.30) * 0.5
+    x = crank + eng + chuff + air + cough
+    write("spawn", x, peak=0.95, fade_ms=10.0)
+
+
+def ram_warn():
+    """~0.95s Goliath charge tell: dual-tone truck air horn (horns ARE tonal —
+    realistic here) over a revving diesel. Positional in-game."""
+    dur = 0.95
+    tt = t(dur)
+    r = np.random.default_rng(101)
+    # dual-tone horn: two brassy notes, slight detune roughness
+    horn = np.zeros(tt.size)
+    for f, a in [(335.0, 1.0), (422.0, 0.9)]:
+        horn += a * (saw(f, dur) + 0.5 * saw(f * 2.01, dur))
+    hrough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 35.0))
+    horn = horn * (0.88 + 0.12 * hrough / (hrough.max() + 1e-9))
+    horn = one_pole_lp(one_pole_hp(horn, 240.0), 2400.0)
+    horn_env = np.minimum(tt / 0.03, 1.0) * (1.0 - np.clip((tt - 0.72) / 0.23, 0, 1))
+    horn = softclip(horn * horn_env, 2.6)
+    # diesel rev underneath: rising rough pulse train
+    f0 = 55.0 + 40.0 * np.clip(tt / 0.7, 0, 1)
+    ph = np.cumsum(f0) / SR
+    diesel = one_pole_lp(np.where((ph % 1.0) < 0.3, 1.0, -0.4), 220.0)
+    drough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 60.0))
+    diesel = diesel * (0.6 + 0.4 * drough / (drough.max() + 1e-9)) * horn_env
+    x = fit(1.2 * horn, softclip(diesel, 1.8) * 0.8)
+    write("ram_warn", x, peak=0.96, fade_ms=6.0)
+
+
+# ---- expansion batch (2026-07-13): terrain/death/brake/crash-split/UI/MP ----
+def delay(x, sec):
+    """Prefix silence — for placing a layer at an offset inside fit()."""
+    return np.concatenate([np.zeros(int(SR * sec)), x])
+
+
+def crash_hard():
+    """~550ms totaled: everything in crash_soft but heavier — deeper thud,
+    denser glass, longer scatter, extra low boom."""
+    dur = 0.55
+    tt = t(dur)
+    r = np.random.default_rng(37)
+    thud = sweep(200, 45, dur, "exp") * np.exp(-tt / 0.045) * 1.6
+    thud += one_pole_lp(r.uniform(-1, 1, tt.size), 110.0) * np.exp(-tt / 0.06)
+    grind = granular_crunch(dur, 560.0, 0.8, 0.16, 220.0, seed=38)
+    grit = granular_crunch(dur, 1900.0, 0.7, 0.11, 380.0, seed=39)
+    glass = debris_crackle(dur, 0.0, 260, 0.003, hp=4000.0, seed=40) * 0.6
+    scatter = debris_crackle(dur, 0.07, 130, 0.006, hp=1400.0, seed=45) * 0.45
+    boom = one_pole_lp(r.uniform(-1, 1, tt.size), 70.0) * np.exp(-tt / 0.10) * 0.9
+    x = fit(fit(1.4 * thud, 1.2 * grind + 0.85 * grit), fit(glass, fit(scatter, boom)))
+    x = softclip(x, 2.0)
+    write("crash_hard", x, peak=0.97, fade_ms=4.0)
+
+
+def splash():
+    """~420ms shallow-water hit at speed: noise burst body + spray + droplets."""
+    dur = 0.42
+    tt = t(dur)
+    r = np.random.default_rng(111)
+    burst = biquad_bp(r.uniform(-1, 1, tt.size), 900.0, 0.6) * np.exp(-tt / 0.06)
+    spray = one_pole_hp(r.uniform(-1, 1, tt.size), 2500.0) * np.exp(-tt / 0.12) * 0.6
+    body = one_pole_lp(r.uniform(-1, 1, tt.size), 400.0) * np.exp(-tt / 0.09)
+    drops = debris_crackle(dur, 0.08, 160, 0.004, hp=3000.0, seed=112) * 0.5
+    x = fit(fit(1.4 * burst, body), fit(spray, drops))
+    x = softclip(x, 1.6)
+    write("splash", x, peak=0.95, fade_ms=4.0)
+
+
+def sink():
+    """~900ms deep-water death plunge: big whump + splash + glug bubbles."""
+    dur = 0.9
+    tt = t(dur)
+    r = np.random.default_rng(121)
+    whump = sweep(130, 40, dur, "exp") * np.exp(-tt / 0.09) * 1.3
+    whump += one_pole_lp(r.uniform(-1, 1, tt.size), 150.0) * np.exp(-tt / 0.12)
+    burst = biquad_bp(r.uniform(-1, 1, tt.size), 750.0, 0.6) * np.exp(-tt / 0.08) * 1.2
+    spray = one_pole_hp(r.uniform(-1, 1, tt.size), 2200.0) * np.exp(-tt / 0.15) * 0.5
+    # glugs: sparse damped low-band pops as the car goes under
+    glug = np.zeros(tt.size)
+    for i, at in enumerate([0.30, 0.45, 0.58, 0.72]):
+        ln = int(SR * 0.07)
+        seg = biquad_bp(r.uniform(-1, 1, ln), 260.0 - i * 25.0, 2.2) \
+            * np.exp(-np.arange(ln) / (SR * 0.02))
+        j = int(SR * at)
+        glug[j:j + ln] += seg * (0.8 - i * 0.12)
+    x = fit(fit(1.3 * whump, burst), fit(spray, glug * 1.2))
+    x = softclip(x, 1.7)
+    write("sink", x, peak=0.96, fade_ms=6.0)
+
+
+def pit_fall():
+    """~750ms falling away: receding wind band darkening as it drops, faint
+    distant thud at the bottom. Noise-based — no slide-whistle pitch."""
+    dur = 0.75
+    tt = t(dur)
+    r = np.random.default_rng(131)
+    centers = 1400.0 - 1050.0 * np.clip(tt / 0.6, 0, 1)
+    wind = svf_bp(r.uniform(-1, 1, tt.size), centers, 1.2)
+    env = np.minimum(tt / 0.04, 1.0) * (1.0 - np.clip((tt - 0.08) / 0.55, 0, 0.97))
+    wind = wind * env * 1.4
+    thud = delay(one_pole_lp(r.uniform(-1, 1, int(SR * 0.12)), 200.0)
+        * np.exp(-np.arange(int(SR * 0.12)) / (SR * 0.03)), 0.60) * 0.5
+    x = fit(wind, thud)
+    x = softclip(x, 1.4)
+    write("pit_fall", x, peak=0.93, fade_ms=6.0)
+
+
+def brake():
+    """~0.75s SEAMLESS service-brake grind loop (>=35 mph): steady granular
+    crunch + low judder + a faint squeal edge. Same wrap-crossfade as skid."""
+    body = 0.75
+    xf = 0.06
+    dur = body + xf
+    tt = t(dur)
+    r = np.random.default_rng(141)
+    grind = granular_crunch(dur, 480.0, 0.9, 99.0, 220.0, seed=142)  # decay 99 = steady
+    judder = biquad_bp(r.uniform(-1, 1, tt.size), 190.0, 1.0)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 30.0))
+    judder = judder * (rough / (rough.max() + 1e-9)) * 0.8
+    edge = biquad_bp(r.uniform(-1, 1, tt.size), 1900.0, 3.0) * 0.25
+    x = softclip(1.3 * grind + judder + edge, 1.7)
+    n = int(SR * body)
+    k = int(SR * xf)
+    w = np.linspace(0.0, 1.0, k)
+    out = x[:n].copy()
+    out[:k] = x[n:n + k] * (1.0 - w) + out[:k] * w
+    write("brake", out, peak=0.9, fade_ms=0.0)
+
+
+def jump_pad():
+    """~300ms launch whump: compressed air thump + damped mechanical clank."""
+    dur = 0.3
+    tt = t(dur)
+    r = np.random.default_rng(151)
+    whump = sweep(150, 55, dur, "exp") * np.exp(-tt / 0.05) * 1.4
+    whump += one_pole_lp(r.uniform(-1, 1, tt.size), 120.0) * np.exp(-tt / 0.06)
+    clank = metal_modes(dur, [420, 760], [0.025, 0.018], [0.6, 0.4], seed=152)
+    clank = clank * (0.5 + 0.5 * np.abs(r.uniform(-1, 1, tt.size))) * 0.45
+    air = one_pole_hp(r.uniform(-1, 1, tt.size), 900.0) * np.exp(-tt / 0.08) * 0.4
+    x = fit(fit(1.3 * whump, clank), air)
+    x = softclip(x, 1.8)
+    write("jump_pad", x, peak=0.95, fade_ms=3.0)
+
+
+def pickup():
+    """~160ms collect cue: latch click + short bright shimmer. Low-key."""
+    dur = 0.16
+    tt = t(dur)
+    r = np.random.default_rng(161)
+    click = one_pole_hp(r.uniform(-1, 1, tt.size), 2000.0) * np.exp(-tt / 0.004)
+    body = biquad_bp(r.uniform(-1, 1, tt.size), 850.0, 2.0) * np.exp(-tt / 0.03) * 0.8
+    shimmer = biquad_bp(r.uniform(-1, 1, tt.size), 3200.0, 3.0) * np.exp(-tt / 0.05) * 0.35
+    x = fit(fit(click, body), shimmer)
+    x = softclip(x, 1.3)
+    write("pickup", x, peak=0.9, fade_ms=2.0)
+
+
+def overheat():
+    """~650ms MG lockout: metallic lock click, then venting steam hiss."""
+    dur = 0.65
+    tt = t(dur)
+    r = np.random.default_rng(171)
+    click = one_pole_hp(r.uniform(-1, 1, tt.size), 1500.0) * np.exp(-tt / 0.003) * 1.2
+    hiss = one_pole_hp(r.uniform(-1, 1, tt.size), 3000.0) \
+        * np.minimum(tt / 0.03, 1.0) * np.exp(-tt / 0.22)
+    steam = biquad_bp(r.uniform(-1, 1, tt.size), 1200.0, 0.7) \
+        * np.minimum(tt / 0.05, 1.0) * np.exp(-tt / 0.3) * 0.5
+    x = fit(click, 1.1 * hiss + steam)
+    x = softclip(x, 1.2)
+    write("overheat", x, peak=0.9, fade_ms=5.0)
+
+
+def win_sting():
+    """~1.1s triumphant hit: two big percussive booms (low then higher) with a
+    bright accent — drums, not melody; stays in the gritty house voice."""
+    dur = 1.1
+    tt = t(dur)
+    r = np.random.default_rng(181)
+    hit1 = sweep(180, 60, dur, "exp") * np.exp(-tt / 0.12) * 1.4
+    hit1 += one_pole_lp(r.uniform(-1, 1, tt.size), 300.0) * np.exp(-tt / 0.10)
+    n2 = int(SR * (dur - 0.28))
+    t2 = np.linspace(0, dur - 0.28, n2, endpoint=False)
+    hit2 = np.sin(2 * np.pi * np.cumsum(260.0 - 150.0 * np.clip(t2 / 0.3, 0, 1)) / SR) \
+        * np.exp(-t2 / 0.10) * 0.9
+    accent = biquad_bp(r.uniform(-1, 1, n2), 2400.0, 2.0) * np.exp(-t2 / 0.3) * 0.35
+    tail = one_pole_lp(r.uniform(-1, 1, tt.size), 250.0) * np.exp(-tt / 0.5) * 0.4
+    x = fit(fit(softclip(hit1, 2.2), delay(hit2 + accent, 0.28)), tail)
+    write("win_sting", x, peak=0.96, fade_ms=8.0)
+
+
+def lose_sting():
+    """~1.2s deflated: dull thud + dark detuned drone sagging downward."""
+    dur = 1.2
+    tt = t(dur)
+    r = np.random.default_rng(191)
+    thud = sweep(120, 45, dur, "exp") * np.exp(-tt / 0.08) * 1.2
+    f = 80.0 - 22.0 * np.clip(tt / 0.9, 0, 1)  # the sag
+    ph = np.cumsum(f) / SR
+    drone = np.sin(2 * np.pi * ph) + 0.6 * np.sin(2 * np.pi * ph * 1.031) \
+        + 0.4 * np.sin(2 * np.pi * ph * 2.02)
+    env = np.minimum(tt / 0.05, 1.0) * np.exp(-tt / 0.55)
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 25.0))
+    drone = one_pole_lp(drone, 350.0) * env * (0.7 + 0.3 * grit / (grit.max() + 1e-9))
+    x = fit(softclip(thud, 1.8), softclip(drone, 1.6) * 0.9)
+    write("lose_sting", x, peak=0.94, fade_ms=10.0)
+
+
+def ui_move():
+    """~45ms tiny tick — selection moved."""
+    dur = 0.045
+    r = np.random.default_rng(201)
+    x = biquad_bp(r.uniform(-1, 1, int(SR * dur)), 2200.0, 3.0) \
+        * np.exp(-t(dur) / 0.008)
+    write("ui_move", x, peak=0.85, fade_ms=1.5)
+
+
+def ui_select():
+    """~90ms confirm click — a touch more body than the move tick."""
+    dur = 0.09
+    tt = t(dur)
+    r = np.random.default_rng(202)
+    click = one_pole_hp(r.uniform(-1, 1, tt.size), 1800.0) * np.exp(-tt / 0.004)
+    body = biquad_bp(r.uniform(-1, 1, tt.size), 900.0, 2.0) * np.exp(-tt / 0.025) * 0.9
+    x = softclip(fit(click, body), 1.3)
+    write("ui_select", x, peak=0.88, fade_ms=1.5)
+
+
+def ui_back():
+    """~70ms darker tick — stepping back down a level."""
+    dur = 0.07
+    tt = t(dur)
+    r = np.random.default_rng(203)
+    x = biquad_bp(r.uniform(-1, 1, tt.size), 620.0, 2.0) * np.exp(-tt / 0.02)
+    x += one_pole_hp(r.uniform(-1, 1, tt.size), 1500.0) * np.exp(-tt / 0.003) * 0.5
+    write("ui_back", x, peak=0.85, fade_ms=1.5)
+
+
+def _two_tick(name, f1, f2, seed):
+    """MP presence cues: two ticks — second one brighter (join) or darker
+    (leave). Percussive direction cue, not a melody."""
+    dur = 0.2
+    r = np.random.default_rng(seed)
+    ln = int(SR * 0.08)
+    e = np.exp(-np.arange(ln) / (SR * 0.015))
+    t1 = biquad_bp(r.uniform(-1, 1, ln), f1, 2.5) * e
+    t2 = biquad_bp(r.uniform(-1, 1, ln), f2, 2.5) * e
+    x = fit(np.concatenate([t1, np.zeros(int(SR * dur) - ln)]), delay(t2, 0.09))
+    write(name, softclip(x, 1.3), peak=0.88, fade_ms=2.0)
+
+
+def mp_join():
+    _two_tick("mp_join", 900.0, 1500.0, 211)
+
+
+def mp_leave():
+    _two_tick("mp_leave", 1400.0, 680.0, 212)
+
+
+if __name__ == "__main__":
+    print("[synth] rendering...")
+    mg_fire()
+    npc_death()
+    player_death()
+    crash_soft()
+    crash_hard()
+    hit_weapon()
+    missile_fire()
+    mine_drop()
+    hit_mg()
+    skid()
+    spawn()
+    ram_warn()
+    splash()
+    sink()
+    pit_fall()
+    brake()
+    jump_pad()
+    pickup()
+    overheat()
+    win_sting()
+    lose_sting()
+    ui_move()
+    ui_select()
+    ui_back()
+    mp_join()
+    mp_leave()
+    print("[synth] done")

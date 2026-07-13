@@ -68,6 +68,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# to the pause menu instead.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		if _bio and _bio.visible:
 			_bio.visible = false
 		elif _mp_session():
@@ -81,18 +82,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"select_more_info"):
 		get_viewport().set_input_as_handled()
+		UiSfx.select(self)
 		_toggle_bio()
 	elif event.is_action_pressed(&"select_next"):
 		_index = (_index + 1) % _cars.size()
+		UiSfx.move(self)
 		_show()
 	elif event.is_action_pressed(&"select_prev"):
 		_index = (_index - 1 + _cars.size()) % _cars.size()
+		UiSfx.move(self)
 		_show()
 	elif event.is_action_pressed(&"select_confirm"):
 		if _bio and _bio.visible:
 			return  # reading, not racing — close the bio first
 		if _mp_taken().has(String(_cars[_index].id)):
 			return  # somebody's already in it — the [TAKEN] tag says so
+		UiSfx.select(self)
 		_done = true
 		GameState.selected_vehicle_id = _cars[_index].id
 		if _mp_session():

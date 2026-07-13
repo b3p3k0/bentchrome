@@ -13,12 +13,14 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_build_ui()
+	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(IR.ACTION_PAUSE):
 		if get_tree().paused and not visible:
 			return  # something else (end screen) owns the pause — don't unfreeze
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_set_paused(not visible)
 
 func _set_paused(on: bool) -> void:

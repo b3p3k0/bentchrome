@@ -22,10 +22,17 @@ func _on_body_entered(body: Node) -> void:
 		if ctrl == null or ctrl.boost_fuel >= 100.0:
 			return
 		ctrl.boost_fuel = minf(ctrl.boost_fuel + amount, 100.0)
+		_cue()
 		queue_free()
 		return
 	var health = body.get_node_or_null(^"Health")
 	if health == null or health.hp <= 0.0 or health.hp >= health.max_hp:
 		return
 	health.hp = minf(health.hp + amount, health.max_hp)
+	_cue()
 	queue_free()
+
+func _cue() -> void:
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio:
+		audio.play(&"pickup")

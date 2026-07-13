@@ -43,6 +43,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_build_ui()
+	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
 
 func _process(_delta: float) -> void:
 	if _over or get_tree().paused:  # nothing ends while the world is frozen
@@ -74,6 +75,9 @@ func _campaign_next_index() -> int:
 
 func _show(win: bool) -> void:
 	_over = true
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio:  # stingers ride the pause-immune pool — the freeze below can't cut them
+		audio.play(&"win_sting" if win else &"lose_sting")
 	if win and win_keeps_rolling:
 		_show_rolling_win()
 		return

@@ -96,6 +96,10 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 		heat = minf(heat + heat_per_shot, heat_max)
 		if heat >= heat_max:
 			_locked = true
+			if shooter is Node and shooter.is_in_group(&"player"):
+				var audio_h := get_node_or_null(^"/root/AudioDirector")
+				if audio_h:
+					audio_h.play(&"overheat")  # the lockout tell — once per lock
 	_fire_wave(origin, direction, shooter)
 	for n in range(1, bursts):
 		get_tree().create_timer(burst_interval * n).timeout.connect(

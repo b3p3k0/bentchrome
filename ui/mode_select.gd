@@ -45,6 +45,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# ESC steps back one layer: the garage door -> title.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_done = true
 		SceneFlow.to_title()
 		return
@@ -54,10 +55,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		or (event is InputEventMouseButton and event.pressed
 			and event.button_index == MOUSE_BUTTON_LEFT)
 	if up:
+		UiSfx.move(self)
 		_step(-1)
 	elif down:
+		UiSfx.move(self)
 		_step(1)
 	elif confirm:
+		UiSfx.select(self)
 		_activate()
 
 ## Cursor motion that hops greyed-out rows (DISABLED indices can never land).
@@ -93,6 +97,7 @@ func _activate() -> void:
 func _sub_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_close_sub()
 		return
 	var toggle: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"move_down") \
@@ -103,9 +108,11 @@ func _sub_input(event: InputEvent) -> void:
 	if toggle:
 		get_viewport().set_input_as_handled()
 		_sub_index = 1 - _sub_index
+		UiSfx.move(self)
 		_sub_highlight()
 	elif confirm:
 		get_viewport().set_input_as_handled()
+		UiSfx.select(self)
 		_done = true
 		_commit_sub_choice()
 		SceneFlow.to_select()

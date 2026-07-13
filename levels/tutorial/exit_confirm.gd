@@ -32,6 +32,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_done = true
 		cancelled.emit()
 		return
@@ -44,9 +45,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if toggle:
 		get_viewport().set_input_as_handled()
 		_index = 1 - _index
+		UiSfx.move(self)
 		_highlight()
 	elif confirm:
 		get_viewport().set_input_as_handled()
+		UiSfx.select(self)
 		_done = true
 		if _index == 0:
 			confirmed.emit()

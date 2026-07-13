@@ -38,6 +38,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# ESC steps back one layer: the DMV -> mode select.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_done = true
 		SceneFlow.to_mode_select()
 		return
@@ -48,11 +49,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT)
 	if up:
 		_index = wrapi(_index - 1, 0, _entries.size())
+		UiSfx.move(self)
 		_highlight()
 	elif down:
 		_index = wrapi(_index + 1, 0, _entries.size())
+		UiSfx.move(self)
 		_highlight()
 	elif confirm:
+		UiSfx.select(self)
 		_done = true
 		Difficulty.tier = ORDER[_index]
 		SceneFlow.to_select()

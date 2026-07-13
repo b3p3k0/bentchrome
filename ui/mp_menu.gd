@@ -38,6 +38,7 @@ var _join_status: Label
 func _ready() -> void:
 	print("[boot] mp menu ready")
 	_build_panels()
+	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs:
 		_name_edit.text = String(gs.player_name)
@@ -71,6 +72,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(IR.ACTION_PAUSE):
 		return
 	get_viewport().set_input_as_handled()
+	UiSfx.back(self)
 	match _active:
 		&"home":
 			SceneFlow.to_title()

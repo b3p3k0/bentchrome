@@ -26,6 +26,11 @@ var _dev_index := 0
 var _dev_rows: Array = []
 var _dev_name_labels: Array = []
 var _dev_value_labels: Array = []
+var _sb_dialog: Control  # soundboard: third-level modal over the dev dialog
+var _sb_index := 0
+var _sb_events: Array = []
+var _sb_name_labels: Array = []
+var _sb_value_labels: Array = []
 var _settings_path := "user://settings.json"  # overridden only by hermetic tests
 
 @onready var _gs: Node = get_node(^"/root/GameState")
@@ -46,6 +51,8 @@ func _ready() -> void:
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
 		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
 		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
+		{"name": "SOUNDBOARD", "adjust": _adj_soundboard, "value": _val_open,
+			"kind": &"submenu", "persist": false},
 		{"name": "BACK", "adjust": _adj_close_dev, "value": _val_blank,
 			"kind": &"action", "persist": false},
 	]
@@ -105,6 +112,9 @@ func _adj_back(_d: int) -> void:
 func _adj_close_dev(_d: int) -> void:
 	_close_dev_dialog()
 
+func _adj_soundboard(_d: int) -> void:
+	_open_soundboard()
+
 func _val_blank() -> Array:
 	return ["", DIM_TEXT]
 
@@ -126,14 +136,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if key == MenuKey.NONE:
 		return
 	get_viewport().set_input_as_handled()
+	if _sb_dialog:
+		_sb_input(key)
+		return
 	if _dev_dialog:
 		_dev_input(key)
 		return
 	match key:
 		MenuKey.UP:
 			_index = wrapi(_index - 1, 0, _rows.size())
+			UiSfx.move(self)
 		MenuKey.DOWN:
 			_index = wrapi(_index + 1, 0, _rows.size())
+			UiSfx.move(self)
 		MenuKey.LEFT:
 			_adjust(-1)
 			return
@@ -141,6 +156,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_adjust(1)
 			return
 		MenuKey.BACK:
+			UiSfx.back(self)
 			_flow.to_title()
 			return
 	_refresh()
@@ -149,6 +165,7 @@ func _adjust(dir: int) -> void:
 	var row: Dictionary = _rows[_index]
 	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
 		return
+	UiSfx.select(self)
 	(row.adjust as Callable).call(dir)
 	if bool(row.get("persist", true)):
 		_gs.save_settings(_settings_path)
@@ -244,8 +261,10 @@ func _dev_input(key: MenuKey) -> void:
 	match key:
 		MenuKey.UP:
 			_step_dev(-1)
+			UiSfx.move(self)
 		MenuKey.DOWN:
 			_step_dev(1)
+			UiSfx.move(self)
 		MenuKey.LEFT:
 			_adjust_dev(-1)
 			return
@@ -253,6 +272,7 @@ func _dev_input(key: MenuKey) -> void:
 			_adjust_dev(1)
 			return
 		MenuKey.BACK:
+			UiSfx.back(self)
 			_close_dev_dialog()
 			return
 	_refresh_dev()
@@ -274,6 +294,7 @@ func _adjust_dev(dir: int) -> void:
 	var row: Dictionary = _dev_rows[_dev_index]
 	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
 		return
+	UiSfx.select(self)
 	(row.adjust as Callable).call(dir)
 	if bool(row.get("persist", true)):
 		_gs.save_settings(_settings_path)
@@ -363,3 +384,117 @@ func _refresh_dev() -> void:
 		var v: Array = (_dev_rows[i].value as Callable).call()
 		_dev_value_labels[i].text = v[0]
 		_dev_value_labels[i].modulate = v[1] if enabled else LOCKED_TEXT
+
+# --- soundboard dialog (dev options -> SOUNDBOARD) ----------------------------
+## Third-level modal following the dev-dialog pattern: raw arrows, ESC closes
+## this level only. RIGHT auditions the selected AudioDirector event exactly as
+## the game would play it (volume trim + pitch jitter included).
+
+func _sb_input(key: MenuKey) -> void:
+	match key:
+		MenuKey.UP:
+			_sb_index = wrapi(_sb_index - 1, 0, _sb_events.size())
+			UiSfx.move(self)
+		MenuKey.DOWN:
+			_sb_index = wrapi(_sb_index + 1, 0, _sb_events.size())
+			UiSfx.move(self)
+		MenuKey.RIGHT:
+			var audio := get_node_or_null(^"/root/AudioDirector")
+			if audio:
+				audio.play(_sb_events[_sb_index])
+			return
+		MenuKey.LEFT:
+			return
+		MenuKey.BACK:
+			UiSfx.back(self)
+			_close_soundboard()
+			return
+	_refresh_soundboard()
+
+func _open_soundboard() -> void:
+	if _sb_dialog:
+		return
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio == null:
+		return
+	_sb_index = 0
+	_sb_events = audio.CATALOG.keys()
+	_sb_dialog = Control.new()
+	_sb_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_sb_dialog)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sb_dialog.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sb_dialog.add_child(center)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_BG
+	style.border_color = AMBER
+	for side in ["left", "right", "top", "bottom"]:
+		style.set("border_width_" + side, 6)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.custom_minimum_size = Vector2(480, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 22)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 3)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "SOUNDBOARD"
+	title.add_theme_font_size_override("font_size", 26)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = AMBER
+	vbox.add_child(title)
+
+	for event in _sb_events:
+		var hbox := HBoxContainer.new()
+		var name_lbl := Label.new()
+		name_lbl.text = String(event)
+		name_lbl.add_theme_font_size_override("font_size", 15)
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(name_lbl)
+		var value_lbl := Label.new()
+		value_lbl.add_theme_font_size_override("font_size", 15)
+		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		hbox.add_child(value_lbl)
+		vbox.add_child(hbox)
+		_sb_name_labels.append(name_lbl)
+		_sb_value_labels.append(value_lbl)
+
+	var hint := Label.new()
+	hint.text = "UP/DOWN select    RIGHT play    ESC back"
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.modulate = DIM_TEXT
+	vbox.add_child(hint)
+	_refresh_soundboard()
+
+func _close_soundboard() -> void:
+	if not _sb_dialog:
+		return
+	_sb_dialog.queue_free()
+	_sb_dialog = null
+	_sb_name_labels.clear()
+	_sb_value_labels.clear()
+	_refresh_dev()
+
+func _refresh_soundboard() -> void:
+	if not _sb_dialog:
+		return
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	for i in _sb_events.size():
+		_sb_name_labels[i].modulate = AMBER if i == _sb_index else ALIVE_TEXT
+		var loaded: bool = audio != null and audio.has_asset(_sb_events[i])
+		_sb_value_labels[i].text = "PLAY ->" if loaded else "NO FILE"
+		_sb_value_labels[i].modulate = DIM_TEXT if loaded else WARN

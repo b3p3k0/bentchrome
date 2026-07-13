@@ -106,9 +106,9 @@ func test_developer_options_menu_contract() -> void:
 	var dev_names: Array[String] = []
 	for row in screen._dev_rows:
 		dev_names.append(String(row.name))
-	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "BACK"],
+	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "SOUNDBOARD", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
-	t.check(not bool(screen._rows[2].persist) and not bool(screen._dev_rows[3].persist),
+	t.check(not bool(screen._rows[2].persist) and not bool(screen._dev_rows[4].persist),
 		"developer dialog: opening and closing are non-persisting navigation")
 	t.check(screen._rows[2].kind == &"submenu" and screen._rows[3].kind == &"action",
 		"settings menu: row kinds distinguish values from right-only destinations")
@@ -149,7 +149,7 @@ func test_developer_options_menu_contract() -> void:
 		"developer dialog: locked child adjustments preserve remembered values")
 	screen._dev_index = 0
 	screen._step_dev(1)
-	t.check(screen._dev_index == 3, "developer dialog: navigation skips locked children")
+	t.check(screen._dev_index == 4, "developer dialog: navigation skips locked children")
 	gs.dev_mode = true
 	screen._dev_index = 0
 	screen._step_dev(1)

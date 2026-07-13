@@ -46,6 +46,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(IR.ACTION_PAUSE):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_open_quit_confirm()
 		return
 	var up: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"select_prev")
@@ -55,11 +56,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT)
 	if up:
 		_index = wrapi(_index - 1, 0, _entries.size())
+		UiSfx.move(self)
 		_highlight()
 	elif down:
 		_index = wrapi(_index + 1, 0, _entries.size())
+		UiSfx.move(self)
 		_highlight()
 	elif confirm:
+		UiSfx.select(self)
 		_activate()
 
 func _highlight() -> void:
@@ -92,6 +96,7 @@ func _activate() -> void:
 func _quit_input(event: InputEvent) -> void:
 	if event.is_action_pressed(IR.ACTION_PAUSE):
 		get_viewport().set_input_as_handled()
+		UiSfx.back(self)
 		_close_quit()
 		return
 	var toggle: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"move_down") \
@@ -102,9 +107,11 @@ func _quit_input(event: InputEvent) -> void:
 	if toggle:
 		get_viewport().set_input_as_handled()
 		_quit_index = 1 - _quit_index
+		UiSfx.move(self)
 		_quit_highlight()
 	elif confirm:
 		get_viewport().set_input_as_handled()
+		UiSfx.select(self)
 		if _quit_index == 0:
 			get_tree().quit()
 		else:

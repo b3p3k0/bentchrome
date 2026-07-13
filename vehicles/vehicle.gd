@@ -23,6 +23,9 @@ const LAYER_GROUND := 1
 const LAYER_WALL := 2
 const LAYER_OBSTACLE := 4
 const DEFAULT_SHIELD_SECONDS := 2.0
+const CRASH_HARD_SPEED := 420.0  # impact px/s into the surface: >= this = totaled
+	# sound, below (but over the 2x bounce gate) = fender-bender
+const SPLASH_MIN_SPEED := 200.0  # min speed entering water terrain to cue a splash
 const HEADING_STEPS := 16  # quantize the visual to N compass steps (retro
 							# directional-sprite feel); 0 = smooth rotation
 const FLOOR_SCALE_TWEEN := 0.25  # size-cue tween on floor change (visuals only)
@@ -78,6 +81,7 @@ signal combat_hit(attacker: Node2D)
 
 var heading: float = 0.0  # radians; the direction the nose points
 var current_terrain: StringName = &"road"
+var _prev_terrain: StringName = &"road"  # splash edge-detect (water entry SFX)
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
 var floor_index := -1     # terrace we drive on; -1 = legacy single-plane level
@@ -343,6 +347,15 @@ func _physics_process(delta: float) -> void:
 		return
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
+	if current_terrain != _prev_terrain:
+		if current_terrain == &"water" and get_speed() > SPLASH_MIN_SPEED:
+			var audio_w := get_node_or_null(^"/root/AudioDirector")
+			if audio_w:
+				if is_in_group(&"player"):
+					audio_w.play(&"splash")
+				else:
+					audio_w.play_at(&"splash", global_position)
+		_prev_terrain = current_terrain
 	if current_terrain == &"water" and _status and _status.has_effect(&"burn"):
 		_status.clear_kind(&"burn")  # shallow water douses hull fire on contact
 	_update_floor()
@@ -737,6 +750,12 @@ func launch_from_jump() -> void:
 	if _repairing or height > 0.0 or launch_immune or velocity.length() < min_launch_speed:
 		return
 	vz = jump_launch
+	var audio_j := get_node_or_null(^"/root/AudioDirector")
+	if audio_j:
+		if is_in_group(&"player"):
+			audio_j.play(&"jump_pad")
+		else:
+			audio_j.play_at(&"jump_pad", global_position)
 	_set_airborne(true)
 
 ## Over the edge: kill physics and collisions, shrink into the void, then die
@@ -745,6 +764,12 @@ func fall_into_pit() -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	var audio_p := get_node_or_null(^"/root/AudioDirector")
+	if audio_p:
+		if is_in_group(&"player"):
+			audio_p.play(&"pit_fall")
+		else:
+			audio_p.play_at(&"pit_fall", global_position)
 	set_physics_process(false)
 	velocity = Vector2.ZERO
 	set_deferred("collision_layer", 0)
@@ -766,6 +791,12 @@ func sink_into_water() -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	var audio_k := get_node_or_null(^"/root/AudioDirector")
+	if audio_k:
+		if is_in_group(&"player"):
+			audio_k.play(&"sink")
+		else:
+			audio_k.play_at(&"sink", global_position)
 	set_physics_process(false)
 	velocity = Vector2.ZERO
 	set_deferred("collision_layer", 0)
@@ -800,14 +831,16 @@ func _on_died() -> void:
 		drive_fx.clear_splat_tracks()
 	if not _falling:
 		_spawn_explosion()
+	# Pit/water deaths already cued their own sound (pit_fall/sink) at fall
+	# start — an explosion boom with no explosion visual would read wrong.
 	var audio_d := get_node_or_null(^"/root/AudioDirector")
 	if is_in_group(&"player"):
-		if audio_d:
+		if audio_d and not _falling:
 			audio_d.play(&"player_death")
 		set_physics_process(false)
 		print("[player] destroyed")
 	else:
-		if audio_d:
+		if audio_d and not _falling:
 			audio_d.play_at(&"npc_death", global_position)
 		queue_free()
 
@@ -1078,12 +1111,13 @@ func _apply_bounce(pre_vel: Vector2) -> void:
 	if other is Vehicle and other != self:
 		other.velocity -= n * into * bounce_factor * 0.5
 	# Crash audio rides the same impact moments the shake does; player-involved
-	# only (either seat). Sub-2x-threshold contact is grinding, not a crash.
+	# only (either seat). Sub-2x-threshold contact is grinding, not a crash;
+	# past CRASH_HARD_SPEED the fender-bender becomes a totaling.
 	if into >= bounce_min_speed * 2.0 \
 			and (is_in_group(&"player") or (other is Node and other.is_in_group(&"player"))):
 		var audio_c := get_node_or_null(^"/root/AudioDirector")
 		if audio_c:
-			audio_c.play(&"crash")
+			audio_c.play(&"crash_hard" if into >= CRASH_HARD_SPEED else &"crash_soft")
 
 ## Rams involving the player are lethal BOTH ways (your bumper finishes NPCs,
 ## theirs finishes you). AI-on-AI rams never land the killing blow (>=1% HP

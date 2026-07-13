@@ -17,6 +17,8 @@ const SKID_COLORS := {
 }
 const SKID_WIDTH := 5.0
 const SKID_MIN_SPEED := 200.0
+const BRAKE_MIN_SPEED := 233.0  # service-brake grind cue floor: ~35 mph
+	# (HUD MPH_PER_PXS 0.15) — light low-speed braking stays silent
 const SKID_SLIP_MIN := 120.0  # sideways px/s that marks an off-road surface
 const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
@@ -197,6 +199,9 @@ func _physics_process(_delta: float) -> void:
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		if audio:
 			audio.loop_set(&"skid", not _skids.is_empty())
+			# Service-brake grind (phases with the brake lights, not the handbrake).
+			audio.loop_set(&"brake", grounded and ctrl.service_braking
+				and speed > BRAKE_MIN_SPEED)
 	if not _skids.is_empty():
 		var offs: Array = _skid_offsets()  # rear tire contacts (bike lays one line)
 		for i in mini(_skids.size(), offs.size()):
