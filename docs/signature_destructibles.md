@@ -73,7 +73,7 @@ For each new landmark, document and test:
 
 ## Prototype precedent: power generator
 
-Ground Floor Gore proves the contract with a 450 HP floor-1 cabinet. Below 90%
+Ground Floor Gore proves the contract with a 220 HP floor-1 cabinet. Below 90%
 HP it pops intermittent insulator sparks and a smoke wisp (amplified below
 75%) — the early "this is interactive" cue. At 25% HP it warns 1.2s, arcs to
 every visible same-floor car within 480px for 2s, then waits 60s. Its 16-damage full latch and interference are environmental. Death

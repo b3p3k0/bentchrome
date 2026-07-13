@@ -17,7 +17,7 @@ same scene supports campaign and eight-car LAN play.
 | Dominant terrain | dirt |
 | Accents | three mud basins, two shallow-water puddles |
 | Floors | yard 1, foundation 2, scaffold 3 (+ two-tier south dirt pile 1→2→3) |
-| Lighting | rainy dusk: `night_arena` CanvasModulate `(0.62,0.65,0.78)`, five lit worklights, viewer glow, explosion blooms |
+| Lighting | rainy dusk: `night_arena` CanvasModulate `(0.62,0.65,0.78)`, five SHOOTABLE 30-HP worklights (varied aim), headlight beams on every car (viewer cool-white, others warm), explosion blooms |
 | LAN | MP-ready, protocol 8 arena-state rows |
 
 Arena bounds are `x=-2304…2304`, `y=-1920…1920`. The dry outer haul road is
@@ -62,6 +62,12 @@ faces driveable, relief-shaded slopes against flat caps, with the relocated
 land-mine crate on top. The pile forced the generator west and reshuffled the
 south yard (Enemy2, dump truck, southwest mud, stray props).
 
+Two smaller **twin heaps** (320px summits, grade 200, floors 1→2, outer 520)
+fill the southwest corner at `(-1750,1350)` and `(-1150,950)` with a driveable
+saddle between them; the player spawn moved to `(-900,1650)`, the southwest
+mud basin to `(-1500,380)` beside the porta lane, and the wheelbarrow crew
+patrols the west lane around them.
+
 Four poured `112×112` **SlabColumns** stand on the slab's painted sixteen-anchor
 512px grid — a courtyard cover pair at `(576,-944)`/`(1088,-944)`, a west
 corridor column at `(64,-432)`, and a south strip column at `(1088,80)`. They
@@ -89,11 +95,11 @@ without cutting the dependable dry perimeter route.
 
 ## Signature generator
 
-The floor-1 generator is a `256×192`, 450 HP landmark at `(-1420,-60)` in the
+The floor-1 generator is a `256×192`, 220 HP landmark at `(-1420,-60)` in the
 west service yard (flanked by fuel barrels and a pipe bundle). Below 90% HP it
 pops intermittent insulator sparks and a smoke wisp, amplified below 75% — the
 early interactivity cue, visual-only and identical on LAN puppets. It is
-ordinary cover until HP reaches 112.5, then warns for 1.2s, arcs for 2s, and
+ordinary cover until HP reaches 55, then warns for 1.2s, arcs for 2s, and
 waits exactly 60s after the burst. Every same-floor, line-of-sight car within
 480px is latched impartially. A full latch deals 16 environmental damage and
 refreshes 50% interference through a 0.4s tail. The warning ring, cabinet cover,
@@ -110,8 +116,9 @@ charred pad. Full reusable rules are in
 Sixteen baseline workers are authored as 10 on floor 1, four on floor 2, and
 two supply carriers on floor 3. Empty-handed, wheelbarrow, and supply variants
 share the existing nonblocking 1 HP soft-target contract. Eight west-side
-porta-potties have 20 HP and stable LAN identities; each has a host-authoritative
-20% chance to release one worker who panics for 2.5s before wandering normally.
+`48×60` porta-potties (72px pitch, doors east with one leaf hanging ajar) have
+20 HP and stable LAN identities; each has a host-authoritative 20% chance to
+release one worker who panics for 2.5s before wandering normally.
 
 Rain is cosmetic. `RainSquall` supplies bounded GPU streaks and opt-in
 world-space ripples to mud and shallow water without altering traction,
@@ -134,6 +141,8 @@ IDs are unsigned 16-bit values unique within this scene:
 | 37–38 | slab crates |
 | 39–40 | entry barriers |
 | 41–47 | parking-lot derelicts (NW corner, mundane pool) |
+| 48–54 | promoted site props: forms, two spools, two pipe bundles, two rebar cages |
+| 55–59 | shootable worklights (dark toppled-mast tombstones) |
 
 Destroyed networked props remain hidden, noncolliding tombstones so late and
 repeated snapshots converge without replaying their death presentation.
