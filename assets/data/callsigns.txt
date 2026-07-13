@@ -1,0 +1,45 @@
+# Bent Chrome callsign roulette — one name per line, '#' lines are comments.
+# The game copies this to user://callsigns.txt on first multiplayer visit;
+# edit THAT copy to make the roulette yours (this one ships read-only).
+Roadkill Romeo
+Mad Mags
+Sister Static
+Diesel Deacon
+Rust Bucket
+Neon Nomad
+Crowbar Kelly
+Redline Rev
+Muffler Mike
+Tumbleweed
+Sparks McGee
+Grease Fire
+Hub Cap Hank
+Ditch Witch
+Motor Mouth
+Slick Vic
+Jackknife Jane
+Piston Pete
+Low Octane
+Chrome Coyote
+Backfire Betty
+Tread Head
+Lug Nut Lou
+Wrecking Belle
+Skid Marks
+Nitro Nun
+Junkyard Jules
+Fender Bender
+Axle Rose
+Overdrive Otis
+Blowout Bill
+Radiator Rita
+Clutch Cassidy
+Torque Tony
+Gridlock Greta
+Bumper Crop
+Whiplash Wade
+Detour Dot
+Flat Tire Fred
+Hot Rod Hattie
+Gasket
+Spare Change

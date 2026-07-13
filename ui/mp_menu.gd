@@ -7,6 +7,7 @@ extends Control
 const IR := preload("res://game/input_router.gd")  # consts, not the autoload
 const Proto := preload("res://game/net/net_protocol.gd")
 const Discovery := preload("res://game/net/net_discovery.gd")
+const CallsignRoulette := preload("res://ui/callsigns.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
@@ -41,6 +42,10 @@ func _ready() -> void:
 	if gs:
 		_name_edit.text = String(gs.player_name)
 	_prefill_mp_prefs()
+	if DisplayServer.get_name() != "headless":  # smoke stays hermetic
+		CallsignRoulette.ensure_user_copy()
+		if _name_edit.text.strip_edges().is_empty():
+			_roll_callsign()  # nobody enters the wasteland nameless
 	Net.session_changed.connect(_on_session_changed)
 	Net.join_failed.connect(_on_join_failed)
 	_show(&"home")
@@ -98,6 +103,12 @@ func _build_home() -> Control:
 	_name_edit = _line_edit(name_row, "Wastelander", 220)
 	_name_edit.max_length = 24
 	_name_edit.focus_exited.connect(_persist_name)
+	var reroll := Button.new()
+	reroll.text = "↻"
+	reroll.tooltip_text = "spin a new callsign (edit user://callsigns.txt to add your own)"
+	reroll.add_theme_font_size_override("font_size", 16)
+	reroll.pressed.connect(_roll_callsign)
+	name_row.add_child(reroll)
 	_button(vbox, "HOST A GAME", func() -> void: _show(&"host"))
 	_button(vbox, "JOIN A GAME", func() -> void: _show(&"join"))
 	_button(vbox, "BACK TO TITLE", func() -> void: SceneFlow.to_title())
@@ -177,6 +188,10 @@ func _persist_name() -> void:
 	if gs and String(gs.player_name) != _name_edit.text:
 		gs.player_name = _name_edit.text
 		gs.save_settings()
+
+func _roll_callsign() -> void:
+	_name_edit.text = CallsignRoulette.random_name(_name_edit.text)
+	_persist_name()
 
 ## Screen memory on every host/join attempt (even failed dials — a typo'd IP
 ## re-shown beats a blank field). Passwords never touch the disk.
