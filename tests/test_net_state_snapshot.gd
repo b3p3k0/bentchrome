@@ -19,7 +19,7 @@ func _row_a() -> Dictionary:
 		"heading": 2.35, "height": 42.0, "floor": 2, "hp": 87.5,
 		"alive": true, "boost": true, "handbrake": false, "brake": true, "burn": true,
 		"shield": false, "mg_locked": true, "repairing": true, "disarm": true,
-		"flame": true, "tornado": false, "armed_trigger": true,
+		"flame": true, "tornado": false, "armed_trigger": true, "freeze": true,
 		"heat": 0.66, "boost_fuel": 73.0, "slot": 3,
 		"ammo": [2, 5, 0, 1, 4, 3, 0], "recharge": 0.4,
 	}
@@ -44,10 +44,12 @@ func test_rows_round_trip() -> void:
 	t.check(a.disarm, "snap: the flags2 disarm bit survives")
 	t.check(a.flame and a.armed_trigger and not a.tornado,
 		"snap: flags2 special-cosmetic bits survive independently")
+	t.check(a.freeze, "snap: the flags2 freeze bit survives")
 	var d0: Dictionary = back.rows[1]
 	t.check(not d0.disarm, "snap: absent disarm stays false")
 	t.check(not d0.flame and not d0.tornado and not d0.armed_trigger,
 		"snap: absent special bits stay false")
+	t.check(not d0.freeze, "snap: absent freeze stays false")
 	t.check(absf(float(a.heat) - 0.66) < 0.005 and is_equal_approx(float(a.boost_fuel), 73.0),
 		"snap: HUD mirrors survive")
 	t.check(int(a.slot) == 3 and a.ammo == [2, 5, 0, 1, 4, 3, 0],

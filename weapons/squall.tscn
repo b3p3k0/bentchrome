@@ -1,0 +1,70 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://weapons/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_squall"]
+radius = 6.0
+
+[node name="Squall" type="Area2D"]
+collision_layer = 0
+collision_mask = 7
+script = ExtResource("1_proj")
+spin_deg = 300.0
+impact_style = 5
+
+[node name="Flurry" type="CPUParticles2D" parent="."]
+amount = 28
+lifetime = 0.6
+local_coords = false
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 12.0
+initial_velocity_max = 36.0
+scale_amount_min = 2.0
+scale_amount_max = 3.6
+color = Color(0.85, 0.95, 1, 0.85)
+
+[node name="CometCore" type="CPUParticles2D" parent="."]
+amount = 10
+lifetime = 0.25
+local_coords = false
+spread = 30.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 4.0
+initial_velocity_max = 14.0
+scale_amount_min = 1.4
+scale_amount_max = 2.2
+color = Color(0.95, 1, 1, 0.9)
+
+[node name="Vis" type="Node2D" parent="."]
+
+[node name="Glow" type="Polygon2D" parent="Vis"]
+color = Color(0.55, 0.8, 1, 0.3)
+polygon = PackedVector2Array(11, 0, 7.8, 7.8, 0, 11, -7.8, 7.8, -11, 0, -7.8, -7.8, 0, -11, 7.8, -7.8)
+
+[node name="GustShadow" type="Line2D" parent="Vis"]
+points = PackedVector2Array(7, 0, 4.95, 4.95, 0, 7, -4.95, 4.95, -7, 0, -4.95, -4.95, 0, -7)
+width = 4.6
+default_color = Color(0.05, 0.08, 0.12, 0.9)
+
+[node name="InnerGustShadow" type="Line2D" parent="Vis"]
+points = PackedVector2Array(0, -3.6, 3.6, 0, 0, 3.6, -3.6, 0)
+width = 3.8
+default_color = Color(0.05, 0.08, 0.12, 0.9)
+
+[node name="Gust" type="Line2D" parent="Vis"]
+points = PackedVector2Array(7, 0, 4.95, 4.95, 0, 7, -4.95, 4.95, -7, 0, -4.95, -4.95, 0, -7)
+width = 2.2
+default_color = Color(0.88, 0.97, 1, 1)
+
+[node name="InnerGust" type="Line2D" parent="Vis"]
+points = PackedVector2Array(0, -3.6, 3.6, 0, 0, 3.6, -3.6, 0)
+width = 1.8
+default_color = Color(0.78, 0.92, 1, 1)
+
+[node name="Core" type="Polygon2D" parent="Vis"]
+color = Color(0.96, 1, 1, 1)
+polygon = PackedVector2Array(1.6, 0, 1.1, 1.1, 0, 1.6, -1.1, 1.1, -1.6, 0, -1.1, -1.1, 0, -1.6, 1.1, -1.1)
+
+[node name="Col" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_squall")

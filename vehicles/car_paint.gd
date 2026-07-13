@@ -35,6 +35,7 @@ const STYLE_SCRIPTS := {
 	&"hornet": preload("res://vehicles/paint/hornet.gd"),
 	&"hubcap": preload("res://vehicles/paint/hubcap.gd"),
 	&"lovebug": preload("res://vehicles/paint/lovebug.gd"),
+	&"coldfront": preload("res://vehicles/paint/coldfront.gd"),
 	&"lackey": preload("res://vehicles/paint/lackey.gd"),
 	&"goliath_cab": preload("res://vehicles/paint/goliath_cab.gd"),
 	&"goliath_trailer": preload("res://vehicles/paint/goliath_trailer.gd"),

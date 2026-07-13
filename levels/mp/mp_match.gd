@@ -343,6 +343,7 @@ func _collect_rows() -> Array:
 			"repairing": car.is_repairing(),
 			"burn": car.is_burning(), "shield": car.is_shielded(),
 			"disarm": car.is_disarmed(),
+			"freeze": car.is_frozen(),
 			"flame": car.is_flame_active(),
 			"tornado": car.is_tornado_active(),
 			"armed_trigger": car.is_trigger_armed(),

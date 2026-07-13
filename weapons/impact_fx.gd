@@ -10,6 +10,7 @@ const SPARK := 1
 const MISSILE := 2
 const SPATTER := 3
 const GLITTER := 4
+const ICE := 5
 
 var style := NONE
 var _age := 0.0
@@ -66,6 +67,14 @@ func _draw() -> void:
 				var hue := 0.78 + rng.randf_range(-0.14, 0.1)
 				draw_circle(at, rng.randf_range(0.8, 1.7) * fade,
 					Color.from_hsv(hue, rng.randf_range(0.35, 0.6), 1.0, fade * 0.85))
+		ICE:
+			# A squall bursting: blue-white shards flying out of a frost puff.
+			draw_circle(Vector2.ZERO, 4.5 * fade, Color(0.88, 0.96, 1.0, fade * 0.5))
+			for i in 6 + rng.randi_range(0, 2):
+				var dir := Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU))
+				var reach := rng.randf_range(6.0, 15.0) * (0.4 + t)
+				draw_line(dir * reach * 0.3, dir * reach,
+					Color(0.72, 0.9, 1.0, fade * 0.8), 1.4)
 
 func _despawn() -> void:
 	var spawner := get_node_or_null(^"/root/Spawner")

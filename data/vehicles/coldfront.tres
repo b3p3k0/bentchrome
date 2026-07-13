@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="VehicleStats" format=3]
+
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_nb4ot"]
+[ext_resource type="Resource" path="res://data/weapons/chilblain.tres" id="2_cgn21"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_h6ani"]
+
+[sub_resource type="Resource" id="Resource_uad7c"]
+script = ExtResource("3_h6ani")
+terrain = &"snow"
+accel = 1.1764705882
+top = 1.1111111111
+grip = 2.2222222222
+
+[sub_resource type="Resource" id="Resource_w7xl2"]
+script = ExtResource("3_h6ani")
+terrain = &"ice"
+accel = 1.8181818182
+grip = 12.5
+steer = 0.8333333333
+
+[resource]
+script = ExtResource("1_nb4ot")
+id = &"coldfront"
+car_name = "Coldfront"
+driver_name = "Marta Laviini"
+flavor = "A crimson '80s pickup wearing a yellow county snowplow like a permanent scowl. Marta plowed mountain passes for twenty winters and never once got thanked. Snow, ice, whiteout — the truck doesn't notice; asphalt manners on the worst surfaces in the game. The plow makes her wide, the payload makes her stubborn, and the handling is strictly no-hurry. Cross her lane and she'll leave you parked in a block of ice."
+special_name = "Chilblain"
+special_desc = "a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 5 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow."
+handling = 3
+armor = 7
+special_power = 8
+mass = 7
+primary_color = Color(0.7529412, 0.09411765, 0.17254902, 1)
+accent_color = Color(0.9490196, 0.75686276, 0.11764706, 1)
+special = ExtResource("2_cgn21")
+special_ammo_cap = 2
+special_recharge_seconds = 45.0
+terrain_modifiers = Array[ExtResource("3_h6ani")]([SubResource("Resource_uad7c"), SubResource("Resource_w7xl2")])

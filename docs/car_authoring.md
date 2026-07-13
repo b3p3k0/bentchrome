@@ -42,7 +42,7 @@ the suite goes red and names it.
 - **Radius is gameplay.** Hitbox stays 1:1 while the body renders at
   `FLEET_SCALE` 1.25 — deliberate near-miss forgiveness, don't "fix" it.
   Corner-escape AI budgets couple to radius (kandykane pinned at 22).
-  Taken radii: 12, 13.5, 14, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 26.
+  Taken radii: 12, 13.5, 14, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 23, 26.
 - **Stat budget (advisory)**: the fleet totals 27-35 points across the five
   stats (Cyclone's 35 is paid for by the offroad penalty box). Stay in the
   band unless the car IS the gimmick; low armor buys speed.
@@ -51,7 +51,7 @@ the suite goes red and names it.
 - **Terrain identity**: only where it sells the car (Cricket dirt, 4WD snow);
   omitted surfaces are neutral ×1.0. Unknown names fail import.
 
-## Role grid (the current thirteen) — open niches for the rest of the fleet
+## Role grid (the current fourteen) — open niches for the rest of the fleet
 
 | id        | mass | speed/armor  | special kind        | archetype   | terrain    |
 |-----------|------|--------------|---------------------|-------------|------------|
@@ -66,13 +66,14 @@ the suite goes red and names it.
 | bumper    | 6    | slow/heavy   | FLAME               | defender    | —          |
 | smoky     | 6    | punchy/heavy | BEAM                | defender    | 4WD        |
 | kandykane | 7    | slow/heavy   | PROJECTILE (burn)   | mini_boss   | —          |
+| coldfront | 7    | mid/heavy    | PROJECTILE (freeze) | opportunist | snow/ice=road |
 | razorback | 7    | slow/heavy   | PROJECTILE (salvo)  | defender    | 4WD        |
 | hammertoe | 8    | mid/heavy    | TRIGGER             | ambusher    | all-road   |
 
 Open niches: BEAM/FLAME/DASH/TRIGGER/TORNADO/PULSE each have exactly one owner;
 **no DROP signature** (mines are only shared slots); no rear-launch special;
-no ice or snow specialist; mass 9-10 unused (boss territory); radius gaps
-under 12, at 20.5, 23-25, and above 26.
+mass 9-10 unused (boss territory); radius gaps under 12, at 20.5, 24-25,
+and above 26. (Ice/snow specialist: taken — coldfront.)
 
 ## New special Kind recipe (when data isn't enough)
 

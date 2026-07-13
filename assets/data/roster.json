@@ -25,6 +25,42 @@
       "mass": 6
     },
     {
+      "id": "coldfront",
+      "car_name": "Coldfront",
+      "driver_name": "Marta Laviini",
+      "flavor": "A crimson '80s pickup wearing a yellow county snowplow like a permanent scowl. Marta plowed mountain passes for twenty winters and never once got thanked. Snow, ice, whiteout — the truck doesn't notice; asphalt manners on the worst surfaces in the game. The plow makes her wide, the payload makes her stubborn, and the handling is strictly no-hurry. Cross her lane and she'll leave you parked in a block of ice.",
+      "special_weapon": "Chilblain: a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 5 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow.",
+      "special_def": "chilblain",
+      "stats": {
+        "acceleration": 5,
+        "top_speed": 5,
+        "handling": 3,
+        "armor": 7,
+        "special_power": 8
+      },
+      "colors": {
+        "primary": "#c0182c",
+        "accent": "#f2c11e"
+      },
+      "portrait": "res://assets/img/bios/coldfront.png",
+      "ai_archetype": "opportunist",
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0,
+      "terrain_modifiers": {
+        "snow": {
+          "accel": 1.1764705882,
+          "top": 1.1111111111,
+          "grip": 2.2222222222
+        },
+        "ice": {
+          "accel": 1.8181818182,
+          "grip": 12.5,
+          "steer": 0.8333333333
+        }
+      },
+      "mass": 7
+    },
+    {
       "id": "cricket",
       "car_name": "Cricket",
       "driver_name": "Mae Hemm",

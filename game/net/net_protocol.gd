@@ -4,7 +4,7 @@ extends RefCounted
 ## tree. PROTOCOL_VERSION gates every handshake: bump it whenever the auth
 ## payload, the control RPC surface, or the snapshot format changes shape.
 
-const PROTOCOL_VERSION := 9  # 9: EV_PROJECTILE tint+z; flags2 flame/tornado/armed
+const PROTOCOL_VERSION := 10  # 10: flags2 freeze bit (Chilblain ice block)
 
 # Peer budget: 4 drivers + 8 observers.
 const MAX_PLAYERS := 4

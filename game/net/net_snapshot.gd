@@ -24,6 +24,7 @@ const F2_DISARM := 1
 const F2_FLAME := 2
 const F2_TORNADO := 4
 const F2_ARMED := 8
+const F2_FREEZE := 16
 
 const AMMO_SLOTS := 7  # WeaponRack's fixed loadout width
 const EV_PROJECTILE := 1
@@ -117,6 +118,8 @@ static func pack_snapshot(tick: int, rows: Array, events: Array,
 			flags2 |= F2_TORNADO
 		if row.get("armed_trigger", false):
 			flags2 |= F2_ARMED
+		if row.get("freeze", false):
+			flags2 |= F2_FREEZE
 		buf.put_u8(flags2)
 		buf.put_8(int(row.get("floor", -1)))
 		var pos: Vector2 = row.get("pos", Vector2.ZERO)
@@ -224,6 +227,7 @@ static func unpack_snapshot(bytes: PackedByteArray) -> Dictionary:
 			"flame": (flags2 & F2_FLAME) != 0,
 			"tornado": (flags2 & F2_TORNADO) != 0,
 			"armed_trigger": (flags2 & F2_ARMED) != 0,
+			"freeze": (flags2 & F2_FREEZE) != 0,
 			"heat": heat, "boost_fuel": boost_fuel, "slot": slot, "ammo": ammo,
 			"recharge": recharge,
 		})

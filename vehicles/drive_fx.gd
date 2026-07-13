@@ -42,6 +42,7 @@ const FLING_SCALE_CALM := 3.0
 const FLING_SCALE_HARD := 6.0
 
 const PeaceMarkerScript := preload("res://vehicles/peace_marker.gd")
+const FrostMarkerScript := preload("res://vehicles/frost_marker.gd")
 
 var _vehicle: CharacterBody2D
 var _skids: Array = []  # the active pair of Line2Ds, parented to the level
@@ -49,6 +50,7 @@ var _dust: CPUParticles2D
 var _flame: Polygon2D
 var _burn_fx: CPUParticles2D
 var _peace: Node2D
+var _frost: Node2D
 var _blood_tracks: Array = []
 var _blood_t := 0.0
 
@@ -84,6 +86,11 @@ func _ready() -> void:
 	_peace.visible = false
 	_peace.z_index = 3  # over the car, under explosions
 	add_child(_peace)
+	# Frozen: the snowflake hangs where the peace sign would (Chilblain).
+	_frost = FrostMarkerScript.new()
+	_frost.visible = false
+	_frost.z_index = 3
+	add_child(_frost)
 	var visual := _vehicle.get_node_or_null(^"Visual") if _vehicle else null
 	if visual:
 		_flame = Polygon2D.new()
@@ -150,6 +157,12 @@ func _physics_process(_delta: float) -> void:
 		if disarmed and not _peace.visible:
 			_peace.position = Vector2(0, -(_marker_lift() + 12.0))
 		_peace.visible = disarmed
+
+	if _frost:
+		var frozen: bool = _vehicle.has_method(&"is_frozen") and _vehicle.is_frozen()
+		if frozen and not _frost.visible:
+			_frost.position = Vector2(0, -(_marker_lift() + 12.0))
+		_frost.visible = frozen
 
 	var terrain: StringName = _vehicle.current_terrain
 	# Sideways slip = how hard the car is sliding, derived from kinematics alone

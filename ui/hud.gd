@@ -99,6 +99,8 @@ func _process(_delta: float) -> void:
 			var tone: Color = SELECTED if i == _rack.selected_index() else Color.WHITE
 			if _player.is_disarmed():  # Chill Out, Man: triggers offline
 				tone = Color(0.5, 0.44, 0.6)
+			if _player.is_frozen():  # Chilblain: everything offline
+				tone = Color(0.45, 0.56, 0.66)
 			lbl.modulate = tone
 
 func _bind_player() -> void:

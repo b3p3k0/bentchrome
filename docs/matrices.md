@@ -19,6 +19,7 @@ Stats are design-scale 1-10; HP derives from Armor via StatCurves (see mapping b
 | Car | Driver | Accel | Top | Handling | Armor | Sp.Pwr | Mass | HP | Special | Cap | Recharge | Archetype |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Bumper | Chester J. Banks | 3 | 6 | 5 | 7 | 7 | 6 | 143 | Blunt Blaze | 2 | 90s | defender |
+| Coldfront | Marta Laviini | 5 | 5 | 3 | 7 | 8 | 7 | 143 | Chilblain | 2 | 45s | opportunist |
 | Cricket | Mae Hemm | 8 | 8 | 4 | 4 | 8 | 2 | 107 | Leap | 1 | 10s | aggressor |
 | Cyclone | Mandy Joule | 9 | 10 | 6 | 2 | 8 | 2 | 82 | Tornado Alley | 1 | 30s | ambusher |
 | Ghost | Chad Duché | 8 | 9 | 7 | 3 | 6 | 3 | 94 | Phantom Phire | 1 | 12s | aggressor |
@@ -101,6 +102,7 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 |---|---|---|---|---|---|---|
 | Blunt Blaze (Bumper) | FLAME | 34 dps | — | 15s post-fire | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
 | Leap (Cricket) | DASH | ram @1400 | 1400 | per use | lock ≤700 | 0.4s body-check (~560px), sails over obstacles; dirt activation snapshots ×1.15 ram damage through surface crossings; hit: victim slow ×0.5/2s, caster invuln 2s |
+| Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 5s (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
 | Toe Jam (Hammertoe) | TRIGGER | 60 flat | — | per arm | — | Armed charge replaces next ram's damage; expires unspent after 5s; bumper glows |
 | Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | none | On hit: burn 3 dps / 15s (range 1360); one recipe, two families |
@@ -134,7 +136,7 @@ Sources: `vehicles/driving_controller.gd` `TERRAIN` + typed `VehicleTerrainModif
 
 ### Vehicle terrain profiles (effective results)
 
-These are the final global × vehicle values seen by the shared player/AI controller. Every unlisted ride/surface equals the global table; ice is deliberately unmodified for the whole fleet.
+These are the final global × vehicle values seen by the shared player/AI controller. Every unlisted ride/surface equals the global table; ice is deliberately unmodified for the whole fleet except Coldfront.
 
 | Vehicle | Surface | Accel | Top | Grip | Steer | Extra |
 |---|---|---:|---:|---:|---:|---|
@@ -145,6 +147,8 @@ These are the final global × vehicle values seen by the shared player/AI contro
 | Hammertoe | Dirt | 0.94 | 0.95 | 0.72 | 1.00 | — |
 | Hammertoe | Water | 0.66 | 0.70 | 0.77 | 1.00 | shallow only |
 | Lovebug | Water | 1.00 | 1.00 | 1.00 | 1.00 | floats like the commercial — shallow water = dry road; test-locked |
+| Coldfront | Snow | 1.00 | 1.00 | 1.00 | 1.00 | twenty winters — snow = plowed asphalt |
+| Coldfront | Ice | 1.00 | 1.00 | 1.00 | 1.00 | the fleet's only ice profile; test-locked |
 | Cyclone | Road | 1.10 | 1.05 | 1.25 | 1.10 | slicks on pavement; test-locked |
 | Cyclone | Grass/Snow/Dirt | ×0.75 | ×0.80 | ×0.60 | 1.00 | penalty box (dirt nets 0.60/0.68/0.36; test-locked) |
 | Cyclone | Water | 0.28 | 0.34 | 0.56 | 1.00 | slicks in a river |
@@ -214,6 +218,8 @@ Source: `vehicles/status_receiver.gd` + effect specs in weapon `.tres` files. Sa
 | Burn | Molotov / Blunt Blaze | 3 dps / 4 dps | 15s / 10s | Visible hull fire; **boost extinguishes it**; DoT bypasses the AI-vs-AI governor |
 | Slow | Splat / Taser / Leap hit | ×0.5 speed | 3s / while latched / 2s | Multiplies accel + top |
 | Invuln | Spawn shield / Leap connect | full immunity | 2s | Blink FX; does NOT survive pits |
+| Disarm | Chill Out, Man | — | 5s | MG + weapons offline, driving fine; purple peace marker + dimmed rack; fixed_loadout immune |
+| Freeze | Chilblain | — | 5s | All intent stripped; velocity damps to zero at `Vehicle.FREEZE_DECEL` 900 px/s²; snowflake marker + dimmed rack; fixed_loadout immune; flags2 bit over LAN |
 
 ---
 
@@ -422,7 +428,7 @@ listen server: 4 seats + 8 observers (12 ENet peers). Wire changes bump `PROTOCO
 
 | Knob | Value | Where | Notes |
 |---|---|---|---|
-| PROTOCOL_VERSION | 7 | net_protocol.gd (const) | handshake + snapshot header gate; 7 ammo slots, brake + repair flags, flags2 disarm bit, hit + shot-ID impact events |
+| PROTOCOL_VERSION | 10 | net_protocol.gd (const) | handshake + snapshot header gate; 7 ammo slots, brake + repair flags, flags2 disarm/flame/tornado/armed/freeze bits, arena-state rows, tinted shot events |
 | default_game_port | 42998 | net_protocol.gd | host-screen overridable |
 | discovery_port | 42999 | net_protocol.gd | UDP beacon/browse; one browser per box |
 | snapshot_hz | 30 | net_protocol.gd | host→all state rate (~26 B/car/row) + projectile/hit/impact events |

@@ -113,6 +113,10 @@ var last_attacker: Node2D = null:
 		last_attacker_ms = Time.get_ticks_msec()
 var last_attacker_ms := 0
 
+# Chilblain encasement: a frozen car loses all intent while its momentum
+# skates down to a dead stop under this damping (px/s^2).
+static var FREEZE_DECEL := 900.0
+
 # --- Network puppet (LAN clients render EVERY car through this; the host runs
 # the real sim). The whole _physics_process body is bypassed; state arrives as
 # snapshot slices and the puppet interpolates between the two newest, then
@@ -360,7 +364,10 @@ func _physics_process(delta: float) -> void:
 		_update_depth(delta)
 		return
 	var intent: Dictionary = _driver.get_intent(self, delta) if _driver else {}
-	if _status and _status.is_stunned():
+	if _status and _status.has_effect(&"freeze"):
+		intent = {}  # encased in ice: no pedals, no triggers
+		velocity = velocity.move_toward(Vector2.ZERO, FREEZE_DECEL * delta)
+	elif _status and _status.is_stunned():
 		intent = {}  # stunned: hands off the wheel — friction owns the car
 	elif _status and _status.has_effect(&"disarm"):
 		intent.erase("fire_mg")  # disarmed: pedals work, triggers don't
@@ -536,6 +543,9 @@ func apply_net_state(slice: Dictionary) -> void:
 	if _status and slice.has("disarm"):
 		# Marker + HUD dim read is_disarmed() — the host owns the actual gate.
 		_status.set_cosmetic(&"disarm", bool(slice.disarm))
+	if _status and slice.has("freeze"):
+		# Frost marker reads is_frozen(); streamed pos/vel already carry the stop.
+		_status.set_cosmetic(&"freeze", bool(slice.freeze))
 	if _special:
 		# Sustained special cosmetics (protocol 9): the flag IS the lifecycle.
 		if slice.has("flame"):
@@ -912,6 +922,9 @@ func is_burning() -> bool:
 
 func is_disarmed() -> bool:
 	return _status != null and _status.has_effect(&"disarm")
+
+func is_frozen() -> bool:
+	return _status != null and _status.has_effect(&"freeze")
 
 ## MG launch point. Styles with authored mg_points (Hubcap's twin barrels)
 ## alternate between them — same mount, same rate and heat, the rounds just

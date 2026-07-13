@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://resources/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://weapons/squall.tscn" id="2_proj"]
+[ext_resource type="Script" path="res://resources/status_effect.gd" id="3_fx"]
+
+[sub_resource type="Resource" id="Res_chilblain_freeze"]
+script = ExtResource("3_fx")
+kind = &"freeze"
+duration = 5.0
+magnitude = 1.0
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Chilblain"
+cooldown = 2.0
+damage = 12.0
+projectile_speed = 1000.0
+projectile_lifetime = 4.0
+turn_rate_deg = 165.0
+acquisition_radius = 1200.0
+projectile_scene = ExtResource("2_proj")
+projectile_tint = Color(0.78, 0.92, 1, 1)
+on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_chilblain_freeze")])
+note = "Bluish-white squall with fire-missile tracking: mild damage, victim iced solid 5s (no pedals, no triggers; momentum skates to a stop). Bosses shrug it off."

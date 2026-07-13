@@ -9,7 +9,8 @@ const VehicleScene := preload("res://vehicles/vehicle.tscn")
 
 # Canon size order, smallest first. Lackey sits above via depot body_scale 1.5.
 const ORDER := [&"mrghastly", &"cyclone", &"hubcap", &"cricket", &"lovebug", &"ghost",
-	&"hornet", &"splatcat", &"bumper", &"smoky", &"razorback", &"kandykane", &"hammertoe"]
+	&"hornet", &"splatcat", &"bumper", &"smoky", &"razorback", &"kandykane", &"coldfront",
+	&"hammertoe"]
 
 var t
 

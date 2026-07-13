@@ -11,8 +11,10 @@ var _active: Array = []  # each: {kind: StringName, remaining: float, magnitude:
 func apply(spec: StatusEffectSpec) -> void:
 	if spec == null:
 		return
-	# Bosses keep their trigger fingers: fixed_loadout rigs refuse the disarm.
-	if spec.kind == &"disarm" and get_parent() and bool(get_parent().get("fixed_loadout")):
+	# Bosses keep their trigger fingers (and their momentum): fixed_loadout
+	# rigs refuse the disarm and the ice block alike.
+	if (spec.kind == &"disarm" or spec.kind == &"freeze") \
+			and get_parent() and bool(get_parent().get("fixed_loadout")):
 		return
 	for e in _active:  # same kind refreshes (longest remaining wins)
 		if e.kind == spec.kind:
