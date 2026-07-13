@@ -38,11 +38,9 @@ func _process(_delta: float) -> void:
 		viewer_screen = PLAY_RECT.get_center()
 	var seen: Dictionary = {}
 	_draw_records.clear()
-	for car_v in VehiclesHelper.all(tree):
+	for car_v in VehiclesHelper.live_others(tree, viewer):
 		var car := car_v as Node2D
-		if car == null or car == viewer or not is_instance_valid(car):
-			continue
-		if car.has_method(&"get_hp") and float(car.call(&"get_hp")) <= 0.0:
+		if car == null:
 			continue
 		var id := car.get_instance_id()
 		seen[id] = true
@@ -61,8 +59,7 @@ func _process(_delta: float) -> void:
 			var edge_rect := PLAY_RECT.grow(-EDGE_INSET)
 			var pos := edge_intersection(viewer_screen, screen, edge_rect)
 			var dir := (screen - viewer_screen).normalized()
-			var paint: Variant = car.get("body_color")
-			var color: Color = paint if paint is Color else Color.WHITE
+			var color := marker_color(car)
 			state.pos = pos
 			state.angle = dir.angle()
 			state.color = color
@@ -114,8 +111,7 @@ func _on_combat_hit(attacker: Node2D, victim: Node2D) -> void:
 	var boom := ExplosionScene.instantiate()
 	boom.name = "FatalHitBurst" if fatal else "HitBurst"
 	boom.position = tracked_position(victim)
-	var paint: Variant = victim.get("body_color")
-	boom.tint = paint if paint is Color else Color.WHITE
+	boom.tint = marker_color(victim)
 	boom.size_scale = HIT_BURST_SCALE
 	boom.allow_camera_shake = false
 	boom.allow_night_light = false
@@ -142,9 +138,10 @@ static func edge_intersection(origin: Vector2, target: Vector2, rect: Rect2) -> 
 		clampf(hit.y, rect.position.y, rect.end.y))
 
 static func contrast_outline(color: Color) -> Color:
-	var luminance := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
-	return Color(0.92, 0.94, 0.98, 0.95) if luminance < 0.38 \
-		else Color(0.04, 0.04, 0.06, 0.95)
+	return VehiclesHelper.contrast_outline(color)
+
+static func marker_color(car: Node) -> Color:
+	return VehiclesHelper.paint_color(car)
 
 ## Spread close markers along the edge they already occupy; bearings remain in
 ## order and no marker can leak into the opaque gutters.

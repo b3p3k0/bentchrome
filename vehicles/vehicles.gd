@@ -27,3 +27,29 @@ static func local(tree: SceneTree) -> Node:
 ## Every combatant, for roster-style iteration.
 static func all(tree: SceneTree) -> Array:
 	return tree.get_nodes_in_group(&"vehicles")
+
+## Presentation roster shared by the radar and edge tracker: every other live
+## combatant, regardless of faction. LAN humans and AI read identically here.
+static func live_others(tree: SceneTree, viewer: Node) -> Array:
+	var out: Array = []
+	for candidate_v in all(tree):
+		var candidate := candidate_v as Node
+		if candidate == null or candidate == viewer or not is_instance_valid(candidate):
+			continue
+		if candidate.has_method(&"get_hp") and float(candidate.call(&"get_hp")) <= 0.0:
+			continue
+		out.append(candidate)
+	return out
+
+## One tactical identity across presentation surfaces. Vehicle.body_color is
+## duck-typed so this helper stays safe for lightweight fixtures and puppets.
+static func paint_color(vehicle: Node, fallback: Color = Color.WHITE) -> Color:
+	if vehicle == null or not is_instance_valid(vehicle):
+		return fallback
+	var paint: Variant = vehicle.get("body_color")
+	return paint if paint is Color else fallback
+
+static func contrast_outline(color: Color) -> Color:
+	var luminance := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+	return Color(0.92, 0.94, 0.98, 0.95) if luminance < 0.38 \
+		else Color(0.04, 0.04, 0.06, 0.95)

@@ -1,14 +1,13 @@
 extends Control
 ## North-up minimap: the whole arena at a glance — walls, buildings
 ## (destructibles vanish when smashed), terrain patches, the repair pad — plus
-## live blips. Enemy blips only paint within RANGE of the player, so tracking
-## the pack stays a skill. Geometry is duck-typed off collision layers and
+## live blips. Every other live combatant paints map-wide in its vehicle color.
+## Geometry is duck-typed off collision layers and
 ## script properties (no class references), snapshotted once the level's
 ## Boundary exists; the static rects are trivial to redraw every frame.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
-const RANGE := 1500.0
 const MIN_BLIP := 48.0  # breakables smaller than this (clutter) stay off the map
 const BG := Color(0.03, 0.08, 0.05)
 const FRAME := Color(0.25, 0.5, 0.3)
@@ -16,7 +15,6 @@ const BUILDING := Color(0.32, 0.32, 0.38)
 const BREAKABLE := Color(0.45, 0.38, 0.28)
 const STATION := Color(0.92, 0.92, 0.95)
 const PLAYER_COLOR := Color(1.0, 0.85, 0.2)
-const ENEMY_COLOR := Color(0.95, 0.25, 0.2)
 const DUMMY_COLOR := Color(0.5, 0.5, 0.5, 0.6)
 const FLOOR_LOW := Color(0.0, 0.0, 0.0, 0.24)      # sea-level plates read sunken
 const FLOOR_HIGH := Color(0.75, 0.8, 0.9, 0.16)    # roof/deck plates read raised
@@ -67,26 +65,30 @@ func _draw() -> void:
 		draw_circle(_map(d.global_position), 2.0, DUMMY_COLOR)
 	# Blips are shape-coded against the player's terrace: same floor (or a
 	# legacy level) = the classic dot, a floor above = ^, below = v.
-	# DEVGOD sees everything map-wide — a testing aid riding the settings
-	# toggle; normal play keeps the RANGE skill gate.
-	var gs := get_node_or_null(^"/root/GameState")
-	var all_seeing: bool = gs != null and gs.is_devgod_enabled()
 	var pf := _floor_of(player)
-	for e in get_tree().get_nodes_in_group(&"enemies"):
-		if not all_seeing and e.global_position.distance_to(player.global_position) > RANGE:
+	for e_v in opponents(get_tree(), player):
+		var e := e_v as Node2D
+		if e == null:
 			continue
 		var p := _map(e.global_position)
 		var ef := _floor_of(e)
+		var color := blip_color(e)
+		var outline := blip_outline(e)
 		if pf >= 1 and ef >= 1 and ef > pf:
-			draw_polyline(PackedVector2Array([
+			var points := PackedVector2Array([
 				p + Vector2(-CHEV, 3), p + Vector2(0, -4), p + Vector2(CHEV, 3),
-			]), ENEMY_COLOR, 2.0)
+			])
+			draw_polyline(points, outline, 4.0)
+			draw_polyline(points, color, 2.0)
 		elif pf >= 1 and ef >= 1 and ef < pf:
-			draw_polyline(PackedVector2Array([
+			var points := PackedVector2Array([
 				p + Vector2(-CHEV, -3), p + Vector2(0, 4), p + Vector2(CHEV, -3),
-			]), ENEMY_COLOR, 2.0)
+			])
+			draw_polyline(points, outline, 4.0)
+			draw_polyline(points, color, 2.0)
 		else:
-			draw_circle(p, 3.0, ENEMY_COLOR)
+			draw_circle(p, 4.0, outline)
+			draw_circle(p, 3.0, color)
 	var spin: float = player.heading + PI / 2
 	var p := _map(player.global_position)
 	draw_colored_polygon(PackedVector2Array([
@@ -184,3 +186,12 @@ func _has_health(node: Node) -> bool:
 func _floor_of(node: Node) -> int:
 	var f: Variant = node.get("floor_index")
 	return int(f) if f is int else -1
+
+static func opponents(tree: SceneTree, viewer: Node) -> Array:
+	return VehiclesHelper.live_others(tree, viewer)
+
+static func blip_color(car: Node) -> Color:
+	return VehiclesHelper.paint_color(car)
+
+static func blip_outline(car: Node) -> Color:
+	return VehiclesHelper.contrast_outline(blip_color(car))
