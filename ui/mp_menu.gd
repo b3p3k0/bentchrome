@@ -34,6 +34,12 @@ var _ip_edit: LineEdit
 var _join_port_edit: LineEdit
 var _join_pass_edit: LineEdit
 var _join_status: Label
+var _join_hint: Label          # dim instruction line under a held alert
+var _join_alert_until := 0     # msec deadline: the scanner may not stomp this
+
+## How long a join failure stays on screen before the scanner may reclaim the
+## line (any user action — connect, re-entering the panel — clears it early).
+static var ALERT_HOLD_S := 12.0
 
 func _ready() -> void:
 	print("[boot] mp menu ready")
@@ -141,6 +147,9 @@ func _build_join() -> Control:
 	_server_list.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(_server_list)
 	_join_status = _status_label(vbox)
+	_join_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_join_status.custom_minimum_size = Vector2(560, 0)
+	_join_hint = _status_label(vbox)
 	_ip_edit = _line_edit(_row(vbox, "DIRECT IP"), "", 220)
 	_join_port_edit = _line_edit(_row(vbox, "PORT"), str(Proto.default_game_port), 100)
 	_join_pass_edit = _line_edit(_row(vbox, "PASSWORD"), "", 220)
@@ -176,14 +185,15 @@ func _do_join() -> void:
 		ip = String(entry.ip)
 		port = int(entry.info.get("game_port", port))
 	if ip.is_empty():
-		_alert(_join_status, "pick a garage or type an address")
+		_join_alert("pick a garage or type an address")
 		return
+	_clear_join_alert()  # a fresh attempt supersedes whatever was held
 	var err: String = Net.join(ip, port, _join_pass_edit.text)
 	if err.is_empty():
 		_join_status.modulate = DIM_TEXT
 		_join_status.text = "dialing %s:%d ..." % [ip, port]
 	else:
-		_alert(_join_status, err)
+		_join_alert(err)
 
 func _persist_name() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
@@ -231,12 +241,31 @@ func _on_session_changed() -> void:
 		SceneFlow.to_mp_lobby()
 
 func _on_join_failed(reason: String) -> void:
-	if _active == &"join":
-		_alert(_join_status, "no dice: " + reason)
+	if _active != &"join":
+		return
+	var hint := ""
+	if reason.contains("build v") or reason.contains("protocol mismatch"):
+		hint = "(every machine must run the same build to play)"
+	_join_alert("CAN'T RIDE ALONG: " + reason, hint)
+
+## A join-panel alert the scanner may not stomp until the hold expires or the
+## user acts (connect / re-entering the panel).
+func _join_alert(text: String, hint := "") -> void:
+	_alert(_join_status, text)
+	_join_hint.text = hint
+	_join_alert_until = Time.get_ticks_msec() + int(ALERT_HOLD_S * 1000.0)
+
+func _join_alert_live() -> bool:
+	return Time.get_ticks_msec() < _join_alert_until
+
+func _clear_join_alert() -> void:
+	_join_alert_until = 0
+	_join_hint.text = ""
 
 # ---------------------------------------------------------------- discovery
 
 func _start_browse() -> void:
+	_clear_join_alert()  # re-entering the panel is a user action
 	if _browse == null:
 		_browse = Discovery.new()
 	if _browse.is_browsing():
@@ -245,7 +274,7 @@ func _start_browse() -> void:
 		_join_status.modulate = DIM_TEXT
 		_join_status.text = "scanning the wasteland ..."
 	else:
-		_alert(_join_status, "discovery port busy (another instance listening) — direct IP still works")
+		_join_alert("discovery port busy (another instance listening) — direct IP still works")
 
 func _stop_browse() -> void:
 	if _browse:
@@ -267,9 +296,13 @@ func _refresh_server_list() -> void:
 		var idx := _server_list.add_item(line)
 		if int(info.get("proto", -1)) != Proto.PROTOCOL_VERSION:
 			_server_list.set_item_custom_fg_color(idx, ALERT)
-			_server_list.set_item_text(idx, line + "  [other version]")
+			_server_list.set_item_text(idx,
+				line + "  [build v%d — mismatch]" % int(info.get("proto", -1)))
 		if String(entry.ip) == picked_ip:
 			_server_list.select(idx)
+	if _join_alert_live():
+		return  # a held alert owns the status line — the scanner waits its turn
+	_join_hint.text = ""
 	if _server_entries.is_empty():
 		_join_status.modulate = DIM_TEXT
 		_join_status.text = "scanning the wasteland ..."

@@ -64,8 +64,10 @@ func test_decide_rejections() -> void:
 	var bad_proto := _resp(ctx)
 	bad_proto["proto"] = Proto.PROTOCOL_VERSION + 1
 	t.check(not Auth.decide(bad_proto, ctx).admit, "auth: proto mismatch rejected")
-	t.check(Auth.decide(bad_proto, ctx).reason == "protocol mismatch",
-		"auth: proto reject carries reason")
+	var proto_reason := String(Auth.decide(bad_proto, ctx).reason)
+	t.check(proto_reason.contains("protocol mismatch")
+			and proto_reason.contains("v%d" % Proto.PROTOCOL_VERSION),
+		"auth: proto reject names both builds")
 	t.check(not Auth.decide({}, ctx).admit, "auth: empty response rejected")
 	var full := _ctx({"peers": Proto.MAX_PEERS})
 	t.check(not Auth.decide(_resp(full), full).admit, "auth: 13th peer bounced")

@@ -561,6 +561,14 @@ func _on_auth_packet(id: int, bytes: PackedByteArray) -> void:
 			_fail_join(_last_reject)
 			return
 		if msg.has("nonce"):
+			# The challenge carries the host's protocol — diagnose a mismatch
+			# HERE, locally, and name who needs the newer build (lower = older).
+			var host_proto := int(msg.get("proto", -1))
+			if host_proto != Proto.PROTOCOL_VERSION:
+				var who := "THEY need" if host_proto < Proto.PROTOCOL_VERSION else "YOU need"
+				_fail_join("the host runs build v%d — yours is v%d. %s the newer build."
+					% [host_proto, Proto.PROTOCOL_VERSION, who])
+				return
 			var resp: Dictionary = Auth.response(
 				msg, _join_password, display_name(), Manifest.cached())
 			sm.send_auth(1, Auth.pack(resp))
