@@ -26,6 +26,7 @@ const OBSERVER_RESERVE := 96.0
 
 var _panel: PanelContainer
 var _head: Label
+var _deal: Label  # THE DEAL — the ruleset in plain language
 var _seat_rows: VBoxContainer
 var _rig_row: HBoxContainer
 var _rig_value: Label
@@ -137,6 +138,17 @@ func _build() -> void:
 	_add_rule(right, "brawl_time_cap", "BRAWL TIME CAP")
 	_add_rule(right, "difficulty", "AI DIFFICULTY")
 
+	# THE DEAL: the ruleset in plain language, live for every peer. Height is
+	# RESERVED (worst-case lines) so the locked border never moves.
+	right.add_child(_section("THE DEAL"))
+	_deal = Label.new()
+	_deal.add_theme_font_size_override("font_size", 14)
+	_deal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_deal.custom_minimum_size = Vector2(470, 108)
+	_deal.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_deal.modulate = Color(0.8, 0.82, 0.86)
+	right.add_child(_deal)
+
 	var footer := HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	footer.add_theme_constant_override("separation", 24)
@@ -215,6 +227,10 @@ func _refresh() -> void:
 	_rig_value.text = Config.car_name(_my_car)
 	_refresh_observers()
 	_refresh_rules(cfg)
+	var maps: Array = SceneFlow.MP_MAPS
+	var map_idx := clampi(int(cfg.get("map", 0)), 0, maps.size() - 1)
+	_deal.text = " ".join(Config.describe(cfg, String(maps[map_idx].name),
+		String(Difficulty.NAMES.get(int(cfg.get("difficulty", 2)), "?"))))
 
 	var seats_filled: int = Net.roster.seated_ids().size()
 	var mode := StringName(String(cfg.get("mode", &"melee")))

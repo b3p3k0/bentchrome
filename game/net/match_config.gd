@@ -60,6 +60,44 @@ static func normalize(cfg: Dictionary, map_count: int) -> Dictionary:
 	out.difficulty = clampi(int(cfg.get("difficulty", out.difficulty)), 0, 2)
 	return out
 
+## The ruleset in plain language — three sentences (mode, format, bench) for
+## the lobby's THE DEAL block. Pure and unit-tested so the wording can't rot.
+static func describe(cfg: Dictionary, map_name: String, tier_name: String) -> Array[String]:
+	var lines: Array[String] = []
+	if StringName(String(cfg.get("mode", &"melee"))) == &"grudge":
+		lines.append("Humans only on %s — settle it among yourselves." % map_name)
+	else:
+		lines.append("Free-for-all on %s — empty seats fill with AI drivers (%s)."
+			% [map_name, tier_name])
+	match StringName(String(cfg.get("format", &"brawl"))):
+		&"brawl":
+			var frag_cap := int(cfg.get("brawl_frag_cap", 0))
+			var time_cap := int(cfg.get("brawl_time_cap", 0))
+			if frag_cap > 0 and time_cap > 0:
+				lines.append("Rolling brawl to %d wrecks or %d minutes — whichever lands first."
+					% [frag_cap, time_cap / 60])
+			elif frag_cap > 0:
+				lines.append("Rolling brawl to %d wrecks." % frag_cap)
+			elif time_cap > 0:
+				lines.append("Rolling brawl on a %d-minute clock." % (time_cap / 60))
+			else:
+				lines.append("Rolling brawl, no finish line — the host calls time.")
+		&"frag":
+			lines.append("First driver to %d wrecks takes it." % int(cfg.get("frag_target", 10)))
+		&"timed":
+			lines.append("%d minutes on the clock — most wrecks wins; ties share the crown."
+				% (int(cfg.get("time_limit", 300)) / 60))
+		&"lives":
+			lines.append("Everyone gets %d lives; run dry and you're benched. Last one rolling wins."
+				% int(cfg.get("lives", 3)))
+	if not bool(cfg.get("observers", true)):
+		lines.append("Seats only — no spectators this time.")
+	elif bool(cfg.get("gotnext", true)):
+		lines.append("Death rotates: whoever called NEXT takes the open wheel.")
+	else:
+		lines.append("Spectators welcome; seats hold until someone leaves.")
+	return lines
+
 ## Roster car slugs, cached once (the queue and garage validate picks here).
 static func car_ids() -> Array:
 	_load_roster()
