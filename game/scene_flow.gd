@@ -7,6 +7,7 @@ const DIFFICULTY := "res://ui/difficulty_select.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const ARENA := "res://levels/arena/arena.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
+const TUTORIAL := "res://levels/tutorial/drivers_ed.tscn"
 const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 const MP_MENU := "res://ui/mp_menu.tscn"
@@ -79,6 +80,11 @@ func to_level(index: int) -> void:
 	index = clampi(index, 0, CAMPAIGN.size() - 1)
 	GameState.level_index = index
 	goto_scene(CAMPAIGN[index].scene)
+
+## Driver's Ed / test drive — a one-off outside CAMPAIGN, so the end screen
+## never auto-advances and the arena contract never applies.
+func to_tutorial() -> void:
+	goto_scene(TUTORIAL)
 
 func to_interstitial() -> void:
 	goto_scene(INTERSTITIAL)

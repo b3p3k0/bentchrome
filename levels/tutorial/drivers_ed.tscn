@@ -1,0 +1,134 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://levels/tutorial/drivers_ed.gd" id="1_lvl"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="3_speck"]
+[ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="4_fz"]
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="5_veh"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="6_hud"]
+
+[sub_resource type="ShaderMaterial" id="SM_asphalt"]
+shader = ExtResource("3_speck")
+shader_parameter/base_color = Color(0.11, 0.11, 0.13, 1)
+shader_parameter/speckle_color = Color(0.06, 0.06, 0.08, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
+size = Vector2(4176, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
+size = Vector2(40, 4176)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_n"]
+size = Vector2(1896, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jamb"]
+size = Vector2(40, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cap"]
+size = Vector2(464, 40)
+
+[node name="DriversEd" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Asphalt" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-2048, -2048, 2048, -2048, 2048, 2048, -2048, 2048)
+
+[node name="TunnelFloor" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-192, -2304, 192, -2304, 192, -2048, -192, -2048)
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("2_grid")
+extent = Vector2(2560, 2560)
+
+[node name="FZBase" parent="." instance=ExtResource("4_fz")]
+position = Vector2(0, -128)
+floor_index = 1
+size = Vector2(4096, 4352)
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="SouthVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, 2068)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-2088, -20, 2088, -20, 2088, 20, -2088, 20)
+
+[node name="SouthCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 2068)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="WestVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-2068, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -2088, 20, -2088, 20, 2088, -20, 2088)
+
+[node name="WestCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-2068, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="EastVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(2068, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -2088, 20, -2088, 20, 2088, -20, 2088)
+
+[node name="EastCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(2068, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="NorthWVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-1140, -2068)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-948, -20, 948, -20, 948, 20, -948, 20)
+
+[node name="NorthWCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-1140, -2068)
+shape = SubResource("RectangleShape2D_wall_n")
+
+[node name="NorthEVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(1140, -2068)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-948, -20, 948, -20, 948, 20, -948, 20)
+
+[node name="NorthECol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(1140, -2068)
+shape = SubResource("RectangleShape2D_wall_n")
+
+[node name="JambWVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-212, -2176)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -128, 20, -128, 20, 128, -20, 128)
+
+[node name="JambWCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-212, -2176)
+shape = SubResource("RectangleShape2D_jamb")
+
+[node name="JambEVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(212, -2176)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -128, 20, -128, 20, 128, -20, 128)
+
+[node name="JambECol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(212, -2176)
+shape = SubResource("RectangleShape2D_jamb")
+
+[node name="CapVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, -2324)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-232, -20, 232, -20, 232, 20, -232, 20)
+
+[node name="CapCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -2324)
+shape = SubResource("RectangleShape2D_cap")
+
+[node name="Vehicle" parent="." instance=ExtResource("5_veh")]
+position = Vector2(0, 800)
+start_floor = 1
+
+[node name="HUD" parent="." instance=ExtResource("6_hud")]
