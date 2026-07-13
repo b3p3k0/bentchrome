@@ -33,7 +33,9 @@ func _process(delta: float) -> void:
 		if not node is Node2D:
 			continue
 		var car := node as Node2D
-		var beam := car.get_meta(&"gfg_beam", null) as PointLight2D
+		var beam: PointLight2D = null
+		if car.has_meta(&"gfg_beam"):
+			beam = car.get_meta(&"gfg_beam") as PointLight2D
 		if beam == null or not is_instance_valid(beam):
 			beam = LightKit.make_beam(BEAM_LENGTH, BEAM_SPREAD, BEAM_ENERGY, BEAM_OTHERS)
 			beam.position = Vector2(BEAM_NOSE + float(beam.get_meta(&"center_ahead")), 0.0)

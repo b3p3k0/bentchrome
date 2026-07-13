@@ -678,6 +678,7 @@ rotation = 1.570796
 script = ExtResource("17_site_deco")
 kind = "embankment"
 size = Vector2(384, 512)
+slope_material = SubResource("SM_dirt")
 
 [node name="CourtyardNorthSkin" type="Node2D" parent="SiteDeco"]
 position = Vector2(784, -832)

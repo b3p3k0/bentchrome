@@ -6,6 +6,7 @@ const UnderFade := preload("res://environment/under_fade.gd")
 
 @export_enum("crane", "embankment", "scaffold_grade", "washout", "ruts") var kind := "washout"
 @export var size := Vector2(192, 128)
+@export var slope_material: Material  # embankment only: speckle base for the relief skin
 var _t := 0.0
 var _under_area: Area2D = null
 
@@ -18,7 +19,69 @@ func _ready() -> void:
 		ground.name = "Ground"
 		ground.z_index = -1
 		add_child(ground)
+	elif kind == "embankment":
+		_build_embankment()
 	queue_redraw()
+
+## The embankment wears the same smooth relief-shaded dirt as the hills: a
+## Polygon2D whose origin sits on the HIGH lip with relief_summit_half.y = 0,
+## so the octagon metric degenerates to one continuous downhill face (crest
+## highlight on the lip, foot darkening at the mouth, projected speckle in
+## between). Berms/ruts/apron ride a Detail child drawn over the skin.
+func _build_embankment() -> void:
+	var half := size * 0.5
+	var poly := Polygon2D.new()
+	poly.name = "Slope"
+	poly.position = Vector2(0, -half.y)
+	poly.polygon = PackedVector2Array([
+		Vector2(-half.x, 0), Vector2(half.x, 0),
+		Vector2(half.x, size.y), Vector2(-half.x, size.y),
+	])
+	if slope_material:
+		var mat := slope_material.duplicate() as Material
+		if mat is ShaderMaterial:
+			var sm := mat as ShaderMaterial
+			sm.set_shader_parameter("relief_enabled", true)
+			sm.set_shader_parameter("relief_summit_half", Vector2(half.x, 0.0))
+			sm.set_shader_parameter("relief_grade_half", size.y)
+			sm.set_shader_parameter("relief_strength", 0.26)
+			sm.set_shader_parameter("relief_projection", 1.55)
+			sm.set_shader_parameter("relief_slope_darkening", 0.08)
+			# World NW expressed in this skin's rotated local frame.
+			sm.set_shader_parameter("relief_light_dir", Vector2(-1, 1).normalized())
+			sm.set_shader_parameter("relief_crest", 0.10)
+			sm.set_shader_parameter("relief_crest_width", 18.0)
+			sm.set_shader_parameter("relief_foot", 0.12)
+			sm.set_shader_parameter("relief_foot_width", 20.0)
+		poly.material = mat
+	add_child(poly)
+	var detail := EmbankmentDetail.new()
+	detail.name = "Detail"
+	add_child(detail)
+
+class EmbankmentDetail:
+	extends Node2D
+	func _draw() -> void:
+		get_parent().call(&"_paint_embankment_detail", self)
+
+func _paint_embankment_detail(c: CanvasItem) -> void:
+	var half := size * 0.5
+	c.draw_colored_polygon(PackedVector2Array([
+		Vector2(-half.x, half.y), Vector2(half.x, half.y),
+		Vector2(half.x + 36.0, half.y + 44.0), Vector2(-half.x - 36.0, half.y + 44.0),
+	]), Color(0.44, 0.32, 0.19, 0.85))
+	c.draw_rect(Rect2(-half, Vector2(14.0, size.y)), Color(0.33, 0.24, 0.14))
+	c.draw_rect(Rect2(Vector2(half.x - 14.0, -half.y), Vector2(14.0, size.y)),
+		Color(0.33, 0.24, 0.14))
+	for s: float in [-1.0, 1.0]:
+		var pts := PackedVector2Array()
+		var y := -half.y + 8.0
+		while y <= half.y - 8.0:
+			pts.append(Vector2(s * size.x * 0.22 + sin(y * 0.03 + s) * 7.0, y))
+			y += 24.0
+		c.draw_polyline(pts, Color(0.30, 0.21, 0.12, 0.85), 9.0)
+	c.draw_line(Vector2(-half.x, -half.y + 2.0), Vector2(half.x, -half.y + 2.0),
+		Color(0.25, 0.20, 0.13), 4.0)
 
 ## Ballast pad, anchor bolts, and the long jib shadow stay on the ground while
 ## the overhead jib fades for traffic passing beneath (the deck seam pattern).
@@ -37,46 +100,23 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	match kind:
 		"crane": _draw_crane()
-		"embankment": _draw_embankment()
 		"scaffold_grade": _draw_scaffold_grade()
 		"washout": _draw_washout()
 		"ruts": _draw_ruts()
 		_: pass
 
 ## The ramp.gd band idiom for surface_paint=false grades: lit high end (-y),
-## shaded low end — the slope read every driveable grade in the game shares.
+## shaded low end — enough steps that the falloff reads as a gradient, not
+## stripes, at combat zoom.
 func _draw_grade_bands(half: Vector2) -> void:
-	var step_h := size.y / 6.0
-	for i in 6:
-		var t := float(i) / 5.0
+	var steps := 16
+	var step_h := size.y / float(steps)
+	for i in steps:
+		var t := float(i) / float(steps - 1)
 		var band := Rect2(Vector2(-half.x, -half.y + float(i) * step_h),
 			Vector2(size.x, step_h + 1.0))
 		draw_rect(band, Color(1, 1, 1, 0.14 * (1.0 - t)))
 		draw_rect(band, Color(0, 0, 0, 0.16 * t))
-
-## Skin for the west dirt embankment (its Ramp runs zones/rails/pull with
-## surface_paint=false): packed haul dirt, pushed-up berms, twin ruts, an
-## apron fanning onto the yard at the low mouth, a cut line at the slab lip.
-func _draw_embankment() -> void:
-	var half := size * 0.5
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(-half.x, half.y), Vector2(half.x, half.y),
-		Vector2(half.x + 36.0, half.y + 44.0), Vector2(-half.x - 36.0, half.y + 44.0),
-	]), Color(0.44, 0.32, 0.19, 0.85))
-	draw_rect(Rect2(-half, size), Color(0.48, 0.36, 0.22))
-	draw_rect(Rect2(-half, Vector2(14.0, size.y)), Color(0.33, 0.24, 0.14))
-	draw_rect(Rect2(Vector2(half.x - 14.0, -half.y), Vector2(14.0, size.y)),
-		Color(0.33, 0.24, 0.14))
-	_draw_grade_bands(half)
-	for s: float in [-1.0, 1.0]:
-		var pts := PackedVector2Array()
-		var y := -half.y + 8.0
-		while y <= half.y - 8.0:
-			pts.append(Vector2(s * size.x * 0.22 + sin(y * 0.03 + s) * 7.0, y))
-			y += 24.0
-		draw_polyline(pts, Color(0.30, 0.21, 0.12, 0.85), 9.0)
-	draw_line(Vector2(-half.x, -half.y + 2.0), Vector2(half.x, -half.y + 2.0),
-		Color(0.25, 0.20, 0.13), 4.0)
 
 ## Skin for the courtyard scaffold ramps: steel treads, side stringers, the
 ## deck rack's yellow lips, and up-slope chevrons matching ramp grammar.
