@@ -31,6 +31,8 @@ var _sb_index := 0
 var _sb_events: Array = []
 var _sb_name_labels: Array = []
 var _sb_value_labels: Array = []
+var _sb_scroll: ScrollContainer  # rows live in a capped-height scroll — the
+	# catalog outgrew the viewport and will keep growing (car specials queued)
 var _settings_path := "user://settings.json"  # overridden only by hermetic tests
 
 @onready var _gs: Node = get_node(^"/root/GameState")
@@ -439,7 +441,7 @@ func _open_soundboard() -> void:
 	for side in ["left", "right", "top", "bottom"]:
 		style.set("border_width_" + side, 6)
 	panel.add_theme_stylebox_override("panel", style)
-	panel.custom_minimum_size = Vector2(480, 0)
+	panel.custom_minimum_size = Vector2(620, 0)  # match the dev dialog's width
 	center.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -457,6 +459,17 @@ func _open_soundboard() -> void:
 	title.modulate = AMBER
 	vbox.add_child(title)
 
+	# Rows scroll inside a capped viewport; title/hint stay pinned outside it,
+	# so the amber border always closes no matter how long the catalog gets.
+	_sb_scroll = ScrollContainer.new()
+	_sb_scroll.custom_minimum_size = Vector2(0, 440)
+	_sb_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(_sb_scroll)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 3)
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sb_scroll.add_child(rows)
+
 	for event in _sb_events:
 		var hbox := HBoxContainer.new()
 		var name_lbl := Label.new()
@@ -468,7 +481,7 @@ func _open_soundboard() -> void:
 		value_lbl.add_theme_font_size_override("font_size", 15)
 		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		hbox.add_child(value_lbl)
-		vbox.add_child(hbox)
+		rows.add_child(hbox)
 		_sb_name_labels.append(name_lbl)
 		_sb_value_labels.append(value_lbl)
 
@@ -485,6 +498,7 @@ func _close_soundboard() -> void:
 		return
 	_sb_dialog.queue_free()
 	_sb_dialog = null
+	_sb_scroll = null
 	_sb_name_labels.clear()
 	_sb_value_labels.clear()
 	_refresh_dev()
@@ -498,3 +512,7 @@ func _refresh_soundboard() -> void:
 		var loaded: bool = audio != null and audio.has_asset(_sb_events[i])
 		_sb_value_labels[i].text = "PLAY ->" if loaded else "NO FILE"
 		_sb_value_labels[i].modulate = DIM_TEXT if loaded else WARN
+	if _sb_scroll and _sb_index < _sb_name_labels.size():
+		var row := _sb_name_labels[_sb_index].get_parent() as Control
+		if row:
+			_sb_scroll.ensure_control_visible(row)
