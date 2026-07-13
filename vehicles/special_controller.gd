@@ -9,6 +9,7 @@ extends Node
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
+const NetEvents := preload("res://game/net/net_events.gd")  # host-armed FX tap (leaf)
 const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
 const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-honest blast ring
 const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
@@ -160,6 +161,11 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 		if mine is CanvasItem and int(mine.floor_index) >= 3:
 			mine.z_index = 2  # sit ON the terrace deck paint, not under it
 	scene.add_child(mine)
+	if "net_id" in mine:
+		# Reliable plane: clients grow a cosmetic twin they can actually SEE.
+		mine.net_id = NetEvents.next_mine_id()
+		NetEvents.mine_drop(int(mine.net_id), def.projectile_scene.resource_path,
+			mine.global_position, int(mine.get("floor_index")), bool(mine.get("jump")))
 	return true
 
 ## Taser: burst zap — latch the nearest vehicle in close range and shock it for
@@ -182,6 +188,7 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	if shooter is CanvasItem:
 		_beam_fx.z_index = (shooter as CanvasItem).z_index  # arcs above fl-3 decks
 	fx_scene.add_child(_beam_fx)
+	NetEvents.beam_on(shooter as Node2D, tgt)  # clients mirror the latch
 	return true
 
 func _physics_process(delta: float) -> void:
@@ -248,6 +255,8 @@ func _end_beam(arm_cooldown := true) -> void:
 	if _beam_fx:
 		_beam_fx.queue_free()
 		_beam_fx = null
+	if was_active:
+		NetEvents.beam_off(get_parent() as Node2D)  # early breaks included
 
 func _los_clear(from: Vector2, target: Node2D, shooter: Node) -> bool:
 	var body := shooter as CollisionObject2D
@@ -650,6 +659,8 @@ func _pulse(pressed: bool, def: WeaponDef, shooter: Node) -> bool:
 		_pulse_ring.range_px = _pulse_range(def)
 		_pulse_ring.z_index = 2
 		host.add_child(_pulse_ring)
+	NetEvents.pulse(_pulse_origin, _pulse_range(def),
+		maxf(def.projectile_lifetime, 0.05))  # the wave is deterministic from these
 	return true
 
 func _pulse_range(def: WeaponDef) -> float:

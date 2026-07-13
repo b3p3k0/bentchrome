@@ -22,6 +22,9 @@ const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 const PauseOverlayScene := preload("res://ui/mp_pause_overlay.tscn")
 const RigScene := preload("res://levels/mp/spectator_rig.tscn")
 const ImpactScene := preload("res://weapons/impact_fx.tscn")
+const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
+const PulseRingScript := preload("res://vehicles/pulse_ring.gd")
+const ExplosionScene := preload("res://environment/explosion.tscn")
 
 const FEED_LINES := 4
 const FEED_TTL := 4.0
@@ -39,6 +42,8 @@ var _snap_tick := 0
 var _visual_shots: Dictionary = {}  # u32 host shot id -> pooled client twin
 var _arena_entities: Dictionary = {} # u16 stable id -> opt-in level prop
 var _arena_seen: Dictionary = {}
+var _beam_mirrors: Dictionary = {}  # shooter actor -> {arc, target_actor}
+var _mine_twins: Dictionary = {}    # host mine id -> cosmetic mine node
 
 # Autoloads by path, never bare identifier — this script rides the test
 # runner's preload chain, where -s compilation can't bind autoload names.
@@ -67,6 +72,7 @@ func _ready() -> void:
 		_spawn_host_side()
 	else:
 		_net.actor_swapped.connect(_on_actor_swapped_client)
+		_net.fx_event.connect(_on_fx_event)
 		_spawn_client_side()
 	if _my_actor_index() < 0:
 		_deploy_rig()  # on the bench from the first green flag
@@ -94,14 +100,17 @@ func _physics_process(delta: float) -> void:
 			_snap_tick += 1
 			_net.broadcast_snapshot(Snapshot.pack_snapshot(
 				_snap_tick, _collect_rows(), _drain_events(), _collect_arena_rows()))
-	elif _my_driver and _my_car and is_instance_valid(_my_car):
-		# The client's whole contribution: this tick's sampled intent.
-		var intent: Dictionary = _my_driver.get_intent(_my_car, delta)
-		_net.send_input(intent)
-		if intent.get("weapon_prev", false):
-			_net.send_weapon_cycle(-1)
-		if intent.get("weapon_next", false):
-			_net.send_weapon_cycle(1)
+		_drain_fx()  # reliable plane: every tick, nothing waits on the cadence
+	else:
+		_update_beam_mirrors()
+		if _my_driver and _my_car and is_instance_valid(_my_car):
+			# The client's whole contribution: this tick's sampled intent.
+			var intent: Dictionary = _my_driver.get_intent(_my_car, delta)
+			_net.send_input(intent)
+			if intent.get("weapon_prev", false):
+				_net.send_weapon_cycle(-1)
+			if intent.get("weapon_next", false):
+				_net.send_weapon_cycle(1)
 
 func _load_arena() -> void:
 	var cfg: Dictionary = _net.match_config
@@ -463,6 +472,112 @@ func _present_impact_event(ev: Dictionary) -> void:
 	if shot != null and is_instance_valid(shot):
 		shot.call(&"_despawn")
 	_visual_shots.erase(shot_id)
+
+# --------------------------------------------------------- reliable FX plane
+
+## Host: relay beams/pulses/mines with node refs resolved to actor indices.
+func _drain_fx() -> void:
+	for ev_v in NetEvents.drain_fx():
+		var ev: Dictionary = ev_v
+		if ev.has("shooter"):
+			ev["shooter_actor"] = _actor_index_of(ev.shooter)
+			ev.erase("shooter")
+		if ev.has("target"):
+			ev["target_actor"] = _actor_index_of(ev.target)
+			ev.erase("target")
+		_net.push_fx(ev)
+
+func _actor_index_of(node: Variant) -> int:
+	if node is Node2D and is_instance_valid(node):
+		return _actor_cars.find(node)
+	return -1
+
+## Client: one reliable FX order lands.
+func _on_fx_event(ev: Dictionary) -> void:
+	match StringName(String(ev.get("kind", ""))):
+		&"beam_on":
+			_mirror_beam_on(int(ev.get("shooter_actor", -1)), int(ev.get("target_actor", -1)))
+		&"beam_off":
+			_mirror_beam_off(int(ev.get("shooter_actor", -1)))
+		&"pulse":
+			var ring: Node2D = PulseRingScript.new()
+			ring.global_position = ev.get("pos", Vector2.ZERO)
+			ring.z_index = 2
+			_arena.add_child(ring)
+			ring.travel(float(ev.get("range", 270.0)), float(ev.get("duration", 0.5)))
+		&"mine_drop":
+			_mirror_mine_drop(ev)
+		&"mine_clear":
+			_mirror_mine_clear(ev)
+
+func _mirror_beam_on(shooter_actor: int, target_actor: int) -> void:
+	_mirror_beam_off(shooter_actor)
+	if _puppet_at(shooter_actor) == null or _puppet_at(target_actor) == null:
+		return
+	var arc: Node2D = ElectricArcScene.instantiate()
+	_arena.add_child(arc)
+	_beam_mirrors[shooter_actor] = {"arc": arc, "target_actor": target_actor}
+
+func _mirror_beam_off(shooter_actor: int) -> void:
+	var mirror: Dictionary = _beam_mirrors.get(shooter_actor, {})
+	if not mirror.is_empty() and is_instance_valid(mirror.arc):
+		(mirror.arc as Node).queue_free()
+	_beam_mirrors.erase(shooter_actor)
+
+## Endpoints chase the puppets every client tick — same seam as the host's
+## _beam_tick feeding set_arc from the live muzzle and target.
+func _update_beam_mirrors() -> void:
+	for actor in _beam_mirrors.keys():
+		var mirror: Dictionary = _beam_mirrors[actor]
+		var shooter := _puppet_at(int(actor))
+		var target := _puppet_at(int(mirror.target_actor))
+		if shooter == null or target == null or not is_instance_valid(mirror.arc):
+			_mirror_beam_off(int(actor))
+			continue
+		var arc: Node2D = mirror.arc
+		var muzzle := shooter.get_node_or_null(^"Visual/Muzzle") as Node2D
+		var origin: Vector2 = muzzle.global_position if muzzle else shooter.global_position
+		arc.z_index = shooter.z_index  # arcs above fl-3 decks, like the host's
+		arc.set_arc(origin, target.global_position)
+
+func _puppet_at(actor: int) -> Node2D:
+	if actor < 0 or actor >= _actor_cars.size():
+		return null
+	var car: Node2D = _actor_cars[actor] if is_instance_valid(_actor_cars[actor]) else null
+	return car if car != null and car.visible else null
+
+## The mine the client can finally SEE: the same scene, told to just sit
+## there — cosmetic twins draw and arm-blink but never scan or bill.
+func _mirror_mine_drop(ev: Dictionary) -> void:
+	var path := String(ev.get("path", ""))
+	if not path.begins_with("res://") or not path.ends_with(".tscn"):
+		return  # fuzzed path — not today
+	var scene: PackedScene = load(path)
+	if scene == null:
+		return
+	var mine: Node2D = scene.instantiate()
+	mine.set("cosmetic", true)  # _ready reads it: masks stay zero, no scanning
+	mine.set("floor_index", int(ev.get("floor", -1)))
+	mine.global_position = ev.get("pos", Vector2.ZERO)
+	if int(ev.get("floor", -1)) >= 3:
+		mine.z_index = 2  # sit ON the terrace deck paint, like the host's
+	_arena.add_child(mine)
+	_mine_twins[int(ev.get("id", 0))] = mine
+
+func _mirror_mine_clear(ev: Dictionary) -> void:
+	var id := int(ev.get("id", 0))
+	var twin: Node2D = _mine_twins.get(id) if is_instance_valid(_mine_twins.get(id)) else null
+	_mine_twins.erase(id)
+	if twin:
+		twin.queue_free()
+	if bool(ev.get("exploded", false)):
+		# Same boom the host's mine pops (params from mine.gd _trigger).
+		var jump := bool(ev.get("jump", false))
+		var boom: Node2D = ExplosionScene.instantiate()
+		boom.global_position = ev.get("pos", Vector2.ZERO)
+		boom.size_scale = 0.35 if jump else 0.5
+		boom.tint = Color(0.4, 0.75, 0.95) if jump else Color(0.85, 0.4, 0.15)
+		_arena.add_child(boom)
 
 ## A cosmetic twin of the host's shot: zero damage, zero collision, same pool.
 ## Dead-reckons on its own lifetime; homing tracks the target's puppet.

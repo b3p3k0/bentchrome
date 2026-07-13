@@ -12,7 +12,23 @@ const AFTERGLOW := Color(0.5, 1.0, 0.65)
 var radius := 0.0  # the live damage front
 var range_px := 270.0  # full reach — drives the fade-out
 
-func _process(_delta: float) -> void:
+var _auto_t := -1.0  # network mirror: self-animating (no controller feeds radius)
+var _auto_duration := 0.0
+
+## MP client mirror: nobody feeds radius, so the ring drives itself across
+## the same range/lifetime the host's wave ran, then frees.
+func travel(p_range: float, duration: float) -> void:
+	range_px = maxf(p_range, 1.0)
+	_auto_duration = maxf(duration, 0.05)
+	_auto_t = 0.0
+
+func _process(delta: float) -> void:
+	if _auto_t >= 0.0:
+		_auto_t += delta
+		radius = range_px * clampf(_auto_t / _auto_duration, 0.0, 1.0)
+		if _auto_t >= _auto_duration:
+			queue_free()
+			return
 	queue_redraw()
 
 func _draw() -> void:

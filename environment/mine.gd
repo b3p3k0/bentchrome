@@ -7,6 +7,7 @@ extends Area2D
 ##                 (±45-80°). Disruption, not a catapult.
 
 const Floors := preload("res://game/floors.gd")  # dependency-free floor gate
+const NetEvents := preload("res://game/net/net_events.gd")  # host-armed FX tap (leaf)
 
 const ARM_DELAY := 1.0
 const DROPPER_GRACE := 2.0
@@ -24,12 +25,14 @@ const JUMP_TRIGGER_RADIUS := 26.0
 var damage := 20.0
 var dropper: Node = null
 var floor_index := -1  # stamped at drop; the mine only arms for its own terrace
+var net_id := 0        # MP: stamped at drop so clients can twin + clear it
+var cosmetic := false  # MP client twin: draws and arms, never scans or bills
 
 var _age := 0.0
 
 func _ready() -> void:
 	collision_layer = 0
-	collision_mask = 1
+	collision_mask = 0 if cosmetic else 1  # a network twin senses nothing
 	var col := CollisionShape2D.new()
 	var shape := CircleShape2D.new()
 	shape.radius = JUMP_TRIGGER_RADIUS if jump else LAND_TRIGGER_RADIUS
@@ -42,6 +45,8 @@ func _physics_process(delta: float) -> void:
 	if _age < ARM_DELAY:
 		return
 	queue_redraw()
+	if cosmetic:
+		return  # the host's original does the scanning; this one just sits there
 	for body in get_overlapping_bodies():
 		if body == dropper and _age < DROPPER_GRACE:
 			continue
@@ -93,6 +98,7 @@ func _trigger(body: CharacterBody2D) -> void:
 		boom.size_scale = 0.5 if not jump else 0.35
 		boom.tint = Color(0.85, 0.4, 0.15) if not jump else Color(0.4, 0.75, 0.95)
 		scene.add_child(boom)
+	NetEvents.mine_clear(net_id, true, global_position, jump)  # twin pops too
 	queue_free()
 
 func _draw() -> void:

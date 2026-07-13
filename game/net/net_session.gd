@@ -25,6 +25,7 @@ signal match_started()
 signal snapshot_arrived(data: Dictionary)
 signal match_status_changed()
 signal kill_feed(text: String)
+signal fx_event(ev: Dictionary)
 signal actor_swapped(actor_idx: int, peer: int, car: String, name: String)
 signal match_ended(result: Dictionary)
 signal join_failed(reason: String)
@@ -362,6 +363,17 @@ func push_kill_feed(text: String) -> void:
 		return
 	rpc_kill_feed.rpc(text)
 	kill_feed.emit(text)
+
+## Reliable FX plane (beams, pulse rings, mines): stateful/one-shot visuals
+## that must never vanish to a dropped packet. Host renders its own real FX,
+## so this is broadcast-only — no local emit.
+func push_fx(ev: Dictionary) -> void:
+	if mode == Mode.HOSTING:
+		rpc_fx.rpc(ev)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_fx(ev: Dictionary) -> void:
+	fx_event.emit(ev)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_kill_feed(text: String) -> void:
