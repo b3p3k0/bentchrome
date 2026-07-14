@@ -68,10 +68,10 @@ func _process(_delta: float) -> void:
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
-			# Empty slots vanish (matching the wheel's skip); the special always
-			# shows — it recharges — and the selection is never hidden.
-			lbl.visible = i == WeaponRack.Slot.SPECIAL \
-				or _rack.ammo(i) > 0 or i == _rack.selected_index()
+			# Empty slots vanish (matching the wheel's skip) — including a spent
+			# special: it hides while recharging and re-pops like a pickup the
+			# instant the rack ticks a round back. The selection is never hidden.
+			lbl.visible = _rack.ammo(i) > 0 or i == _rack.selected_index()
 			if not lbl.visible:
 				continue
 			var name_txt := "—"
@@ -92,8 +92,6 @@ func _process(_delta: float) -> void:
 				WeaponRack.Slot.JUMP_MINE:
 					name_txt = "Jump Mine"
 			var count := "x%d" % _rack.ammo(i)
-			if i == WeaponRack.Slot.SPECIAL and _rack.recharge_fraction() < 1.0:
-				count += "  %d%%" % int(_rack.recharge_fraction() * 100.0)
 			var marker := "> " if i == _rack.selected_index() else "  "
 			lbl.text = "%s%-18s %s" % [marker, name_txt, count]
 			var tone: Color = SELECTED if i == _rack.selected_index() else Color.WHITE
