@@ -5,6 +5,7 @@ extends CanvasLayer
 
 const IR := preload("res://game/input_router.gd")  # consts, not the autoload —
 												   # compiles under headless -s
+const UiStyle := preload("res://ui/ui_style.gd")
 
 var _resume_btn: Button
 
@@ -61,18 +62,21 @@ func _build_ui() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiStyle.panel_style())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
+		margin.add_theme_constant_override("margin_" + side, 28)
 	panel.add_child(margin)
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 10)
+	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
 
 	var title := Label.new()
 	title.text = "PAUSED"
+	title.add_theme_font_size_override("font_size", 24)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = UiStyle.AMBER
 	vbox.add_child(title)
 
 	_resume_btn = _button(vbox, "Resume", func() -> void: _set_paused(false))
@@ -87,6 +91,7 @@ func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
 	b.text = label
 	b.custom_minimum_size = Vector2(220, 0)
+	UiStyle.theme_button(b)
 	b.pressed.connect(on_pressed)
 	parent.add_child(b)
 	return b
