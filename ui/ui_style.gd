@@ -49,3 +49,13 @@ static func theme_button(btn: Button) -> void:
 	btn.add_theme_stylebox_override("disabled", _button_box(Color(0.09, 0.09, 0.11), Color(0.20, 0.20, 0.22)))
 	# Focus is drawn OVER the base box — a transparent amber ring, not a fill.
 	btn.add_theme_stylebox_override("focus", _button_box(Color(0, 0, 0, 0), AMBER))
+
+## Retheme every Button under `root` in one call — for screens that scatter
+## button construction across helpers and inline sites. Run it after the panel
+## tree is built (and again after any lazily-built sub-panel).
+static func theme_all_buttons(root: Node) -> void:
+	for child in root.get_children():
+		if child is Button:
+			theme_button(child)
+		if child.get_child_count() > 0:
+			theme_all_buttons(child)

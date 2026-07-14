@@ -6,6 +6,8 @@ extends CanvasLayer
 ## the persisting player node. Freezes the tree on show; PROCESS_MODE_ALWAYS
 ## keeps the buttons alive. Instanced per-level next to the pause menu.
 
+const UiStyle := preload("res://ui/ui_style.gd")
+
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
 const PANEL_BG := Color(0.07, 0.07, 0.09)
@@ -303,6 +305,7 @@ func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
 	b.text = label
 	b.custom_minimum_size = Vector2(220, 0)
+	UiStyle.theme_button(b)
 	b.pressed.connect(on_pressed)
 	parent.add_child(b)
 	_buttons.append(b)

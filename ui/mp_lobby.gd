@@ -10,6 +10,7 @@ const IR := preload("res://game/input_router.gd")  # consts, not the autoload
 const Proto := preload("res://game/net/net_protocol.gd")
 const Config := preload("res://game/net/match_config.gd")
 const Difficulty := preload("res://game/difficulty.gd")
+const UiStyle := preload("res://ui/ui_style.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
@@ -158,11 +159,13 @@ func _build() -> void:
 	_start_btn = Button.new()
 	_start_btn.text = "START MATCH"
 	_start_btn.add_theme_font_size_override("font_size", 18)
+	UiStyle.theme_button(_start_btn)
 	_start_btn.pressed.connect(_do_start)
 	footer.add_child(_start_btn)
 	_leave_btn = Button.new()
 	_leave_btn.text = "LEAVE GARAGE"
 	_leave_btn.add_theme_font_size_override("font_size", 18)
+	UiStyle.theme_button(_leave_btn)
 	_leave_btn.pressed.connect(_do_leave)
 	footer.add_child(_leave_btn)
 	vbox.add_child(footer)
@@ -545,6 +548,7 @@ func _arrow(caption: String, action: Callable) -> Button:
 	btn.text = caption
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.custom_minimum_size = Vector2(34, 0)
+	UiStyle.theme_button(btn)
 	btn.pressed.connect(action)
 	return btn
 
@@ -552,6 +556,7 @@ func _small_button(caption: String, action: Callable) -> Button:
 	var btn := Button.new()
 	btn.text = caption
 	btn.add_theme_font_size_override("font_size", 13)
+	UiStyle.theme_button(btn)
 	btn.pressed.connect(action)
 	return btn
 
@@ -610,6 +615,7 @@ func _open_confirm(text: String, yes_label: String, no_label: String, on_yes: Ca
 	var yes := Button.new()
 	yes.text = yes_label
 	yes.add_theme_font_size_override("font_size", 16)
+	UiStyle.theme_button(yes)
 	yes.pressed.connect(func() -> void:
 		_close_confirm()
 		on_yes.call())
@@ -617,6 +623,7 @@ func _open_confirm(text: String, yes_label: String, no_label: String, on_yes: Ca
 	var no := Button.new()
 	no.text = no_label
 	no.add_theme_font_size_override("font_size", 16)
+	UiStyle.theme_button(no)
 	no.pressed.connect(_close_confirm)
 	row.add_child(no)
 	UiSfx.wire(_confirm)

@@ -8,6 +8,7 @@ const IR := preload("res://game/input_router.gd")  # consts, not the autoload
 const Proto := preload("res://game/net/net_protocol.gd")
 const Discovery := preload("res://game/net/net_discovery.gd")
 const CallsignRoulette := preload("res://ui/callsigns.gd")
+const UiStyle := preload("res://ui/ui_style.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
@@ -45,6 +46,7 @@ static var ALERT_HOLD_S := 12.0
 func _ready() -> void:
 	print("[boot] mp menu ready")
 	_build_panels()
+	UiStyle.theme_all_buttons(self)  # amber-on-dark chrome to match the SP menus
 	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs:

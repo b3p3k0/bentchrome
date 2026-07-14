@@ -6,6 +6,7 @@ extends Control
 ## Autoloads by path — smoke cold-boots this scene.
 
 const IR := preload("res://game/input_router.gd")
+const UiStyle := preload("res://ui/ui_style.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
@@ -145,5 +146,6 @@ func _button(caption: String, action: Callable) -> Button:
 	var btn := Button.new()
 	btn.text = caption
 	btn.add_theme_font_size_override("font_size", 17)
+	UiStyle.theme_button(btn)
 	btn.pressed.connect(action)
 	return btn
