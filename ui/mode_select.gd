@@ -7,6 +7,8 @@ extends Control
 ## mode exists. Manual-highlight menu idiom cloned from title.gd — no focus
 ## system. ESC steps back to title; ESC inside the sub-dialog closes it.
 
+const Difficulty := preload("res://game/difficulty.gd")
+
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const DISABLED_TEXT := Color(0.3, 0.32, 0.35)
@@ -25,7 +27,7 @@ const SUB_OPTIONS := ["FIRST TIME DRIVER", "JUST HERE FOR A TEST DRIVE"]
 const SUB_MODES: Array[StringName] = [&"tutorial", &"test_drive"]
 
 var _done := false
-var _index := 0
+var _index := 1  # ROAD TRIP — get players into the campaign by default
 var _sub: Control
 var _sub_index := 0
 var _sub_entries: Array[Label] = []
@@ -88,10 +90,16 @@ func _activate() -> void:
 			_open_sub()
 		1:
 			_done = true
-			GameState.game_mode = &"campaign"
+			_commit_road_trip()
 			SceneFlow.to_difficulty()
 		_:
 			pass  # disabled rows are unreachable, but confirm stays inert anyway
+
+## A newly selected campaign starts at the middle license class. Difficulty
+## selection itself remains sticky when the player backs up from car select.
+func _commit_road_trip() -> void:
+	GameState.game_mode = &"campaign"
+	Difficulty.tier = Difficulty.Tier.MEDIUM
 
 ## The Driver's Ed sign-up window: lessons or just the yard?
 func _sub_input(event: InputEvent) -> void:

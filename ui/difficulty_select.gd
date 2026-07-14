@@ -2,10 +2,10 @@ extends Control
 ## The DMV window: pick a license class before picking a ride. Sits between
 ## mode select (ROAD TRIP) and car select; the tier is run state (difficulty.gd static),
 ## fixed for the whole campaign — the end screen's Restart never comes back
-## here, only Quit to Title does. Cursor lands on the current tier, so first
-## boot opens on REVOKED LICENSE (hard IS the game as intended) and a
-## reflexive double-confirm preserves the classic flow. Manual-highlight
-## menu idiom cloned from title.gd — no focus system.
+## here, only Quit to Title does. Cursor lands on the current tier: choosing
+## ROAD TRIP initializes it to ROAD RAGING COMMUTER, while backing up from car
+## select preserves an explicit pick. Manual-highlight menu idiom cloned from
+## title.gd — no focus system.
 
 const Difficulty := preload("res://game/difficulty.gd")
 

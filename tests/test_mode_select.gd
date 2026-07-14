@@ -5,8 +5,11 @@ extends RefCounted
 ## GameState.game_mode. The scene is load()ed at test time, NOT const-
 ## preloaded: mode_select.gd names autoloads, which only compile once
 ## autoloads are registered — suite preloads happen before that. Branches
-## that swap scenes (ESC to title, ROAD TRIP, sub-dialog launch) stay
-## untested here; the human flow pass covers them.
+## that swap scenes (ESC to title, ROAD TRIP routing, sub-dialog launch) stay
+## untested here; their state commits are isolated below and the human flow
+## pass covers navigation.
+
+const Difficulty := preload("res://game/difficulty.gd")
 
 var t
 
@@ -26,11 +29,13 @@ func _press(menu: Control, action: StringName) -> void:
 
 func test_nav_skips_disabled_row() -> void:
 	var menu := _fresh()
-	t.check(menu._index == 0, "mode: cursor boots on DRIVER'S ED")
-	_press(menu, &"move_down")
-	t.check(menu._index == 1, "mode: down lands on ROAD TRIP")
+	t.check(menu._index == 1, "mode: cursor boots on ROAD TRIP")
 	_press(menu, &"move_down")
 	t.check(menu._index == 0, "mode: down from ROAD TRIP hops SINGLE BATTLE")
+	_press(menu, &"move_down")
+	t.check(menu._index == 1, "mode: down from DRIVER'S ED lands on ROAD TRIP")
+	_press(menu, &"move_up")
+	t.check(menu._index == 0, "mode: up from ROAD TRIP lands on DRIVER'S ED")
 	_press(menu, &"move_up")
 	t.check(menu._index == 1, "mode: up from DRIVER'S ED hops SINGLE BATTLE")
 	t.check(menu._entries[2].modulate == menu.DISABLED_TEXT,
@@ -51,7 +56,8 @@ func test_disabled_confirm_inert() -> void:
 
 func test_sub_dialog_open_toggle_close() -> void:
 	var menu := _fresh()
-	menu._activate()  # cursor boots on DRIVER'S ED
+	menu._index = 0
+	menu._activate()
 	t.check(menu._sub != null, "mode: DRIVER'S ED opens the sign-up dialog")
 	t.check(not menu._done, "mode: the dialog alone leaves the screen live")
 	t.check(menu._sub_index == 0, "mode: FIRST TIME DRIVER is the default")
@@ -64,6 +70,35 @@ func test_sub_dialog_open_toggle_close() -> void:
 	t.check(not menu._done, "mode: list is live again after the dialog closes")
 	t.root.remove_child(menu)
 	menu.free()
+
+func test_road_trip_starts_on_medium() -> void:
+	var gs: Node = t.root.get_node_or_null("/root/GameState")
+	t.check(gs != null, "mode: GameState autoload live for ROAD TRIP")
+	if gs == null:
+		return
+	var before_mode: StringName = gs.game_mode
+	var before_tier: int = Difficulty.tier
+	var menu := _fresh()
+	Difficulty.tier = Difficulty.Tier.HARD
+	menu._commit_road_trip()
+	t.check(gs.game_mode == &"campaign", "mode: ROAD TRIP stamps campaign")
+	t.check(Difficulty.tier == Difficulty.Tier.MEDIUM,
+		"mode: ROAD TRIP starts on ROAD RAGING COMMUTER")
+	gs.game_mode = before_mode
+	Difficulty.tier = before_tier
+	t.root.remove_child(menu)
+	menu.free()
+
+func test_difficulty_return_keeps_explicit_pick() -> void:
+	var before_tier: int = Difficulty.tier
+	Difficulty.tier = Difficulty.Tier.EASY
+	var screen: Control = (load("res://ui/difficulty_select.tscn") as PackedScene).instantiate()
+	t.root.add_child(screen)
+	t.check(screen._index == screen.ORDER.find(Difficulty.Tier.EASY),
+		"mode: returning to difficulty keeps the explicit license pick")
+	Difficulty.tier = before_tier
+	t.root.remove_child(screen)
+	screen.free()
 
 func test_sub_choice_stamps_game_mode() -> void:
 	var gs: Node = t.root.get_node_or_null("/root/GameState")

@@ -180,7 +180,7 @@ function Show-LaunchHint {
     Write-Host "      cd `"$RepoDir`""
     Write-Host '      godot'
     if ($NoLaunch) { return }
-    if (Confirm-YesNo 'Launch Bent Chrome now?' $false) {
+    if (Confirm-YesNo "Setup's locked and loaded. LET'S BEND SOME CHROME! Launch now?" $true) {
         Start-Process -FilePath $gui -ArgumentList @('--path', ('"{0}"' -f $RepoDir))
     }
 }

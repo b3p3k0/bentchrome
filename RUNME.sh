@@ -336,7 +336,7 @@ launch_hint() {
   if [ "$NO_LAUNCH" -eq 1 ]; then
     return 0
   fi
-  if ask_yesno "Launch Bent Chrome now?" N; then
+  if ask_yesno "Setup's locked and loaded. LET'S BEND SOME CHROME! Launch now?" Y; then
     local launch_bin="$GODOT_DEST"
     command -v godot >/dev/null 2>&1 && launch_bin="godot"
     "$launch_bin" --path "$REPO_DIR"
