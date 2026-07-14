@@ -65,8 +65,6 @@ func _ready() -> void:
 			"kind": &"submenu", "persist": false},
 		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
 			"kind": &"action", "persist": false},
-		{"name": "BACK", "adjust": _adj_back, "value": _val_blank,
-			"kind": &"action", "persist": false},
 	]
 	_dev_rows = [
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
@@ -143,9 +141,6 @@ func _val_dev() -> Array:
 func _adj_reset(_d: int) -> void:
 	_gs.reset_settings()
 	_sync_dev()
-
-func _adj_back(_d: int) -> void:
-	_flow.to_title()
 
 func _adj_close_dev(_d: int) -> void:
 	_close_dev_dialog()
