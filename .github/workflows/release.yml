@@ -1,0 +1,45 @@
+name: release
+
+# Cut a release by pushing a version tag (e.g. `v0.4.2`). This builds the FLAT
+# archive the in-game updater expects — `git archive` puts tracked files at the
+# zip root (no top-level dir) and omits `.git` and untracked caches, so a tester
+# extracting it over their game folder lands a runnable project. GitHub's
+# auto-generated "Source code (zip)" has a top-level dir and must NOT be used;
+# that's why we build and attach our own asset. See docs/releasing.md.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sanity-check version.txt matches the tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          file_ver="$(tr -d '[:space:]' < version.txt || true)"
+          if [ "$file_ver" != "$tag" ]; then
+            echo "::error::version.txt is '$file_ver' but the tag is '$tag' — bump version.txt to match before tagging."
+            exit 1
+          fi
+
+      - name: Build flat archive
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          git archive --format=zip -o "bentchrome-${tag}.zip" "${tag}"
+          sha256sum "bentchrome-${tag}.zip"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bentchrome-*.zip
+          generate_release_notes: true

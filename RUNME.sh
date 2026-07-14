@@ -325,21 +325,15 @@ launch_hint() {
   echo
   ok "Setup complete."
   echo
-  printf "  To play:\n"
+  printf "  To play (now and every time — it also applies in-game updates):\n"
   printf "      %scd %s%s\n" "$C_BOLD" "$REPO_DIR" "$C_RESET"
-  printf "      %sgodot%s\n" "$C_BOLD" "$C_RESET"
+  printf "      %s./PLAY.sh%s\n" "$C_BOLD" "$C_RESET"
   echo
-  if ! command -v godot >/dev/null 2>&1; then
-    warn "'godot' isn't on this shell's PATH yet. Either open a new terminal,"
-    warn "or launch directly with: $GODOT_DEST"
-  fi
   if [ "$NO_LAUNCH" -eq 1 ]; then
     return 0
   fi
   if ask_yesno "Setup's locked and loaded. LET'S BEND SOME CHROME! Launch now?" Y; then
-    local launch_bin="$GODOT_DEST"
-    command -v godot >/dev/null 2>&1 && launch_bin="godot"
-    "$launch_bin" --path "$REPO_DIR"
+    "$REPO_DIR/PLAY.sh"
   fi
 }
 

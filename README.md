@@ -13,10 +13,10 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
    - Linux: `./RUNME.sh`
    - macOS: `./RUNME.sh`
    - Windows: double-click `RUNME.cmd`, or run `RUNME.cmd` from Command Prompt or PowerShell
-3. **Open a new terminal if prompted**, then launch with `godot --path .`. The installer pins Godot 4.7, verifies the official download, and imports the project assets for you.
-4. **Manual setup, if preferred**: put Godot 4.7 on your path and run `godot --headless --path . --import` once before launching.
-5. **Optional housekeeping**: `git submodule update --init` in case we stash vendor junk later.
-6. **Builds**: When binaries arrive they’ll live under `builds/`. Until then, run straight from the editor and pretend crashes are deliberate explosions.
+3. **Play the game — now and every time**: launch with `./PLAY.sh` (Linux/macOS) or double-click `PLAY.cmd` (Windows). The installer pins Godot 4.7, verifies the official download, and imports the project assets for you the first time.
+4. **Staying current — no git required**: open **Settings → CHECK FOR UPDATES** in-game. If there's a newer build you'll see the changelog; hit DOWNLOAD, then RESTART, and the next launch through `PLAY` unpacks it, reimports, and boots the fresh build. Because updates arrive on that launcher, **always start the game with `PLAY`** rather than calling `godot` directly.
+5. **Manual setup, if preferred**: put Godot 4.7 on your path and run `godot --headless --path . --import` once, then launch with `godot --path .` (you'll just have to apply updates by re-running `PLAY`).
+6. **Builds**: When standalone binaries arrive they’ll live under `dist/`. Until then, run straight from the source checkout and pretend crashes are deliberate explosions.
 
 ## Getting Started & Controls
 

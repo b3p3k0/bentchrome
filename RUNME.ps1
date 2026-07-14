@@ -172,16 +172,15 @@ function Show-Summary {
 }
 
 function Show-LaunchHint {
-    $details = Get-ArchitectureDetails
-    $gui = Join-Path $InstallDir $details.Gui
+    $play = Join-Path $RepoDir 'PLAY.cmd'
     Write-Host ''
     Write-Ok 'Setup complete.'
-    Write-Host '  Open a new terminal, then run:'
-    Write-Host "      cd `"$RepoDir`""
-    Write-Host '      godot'
+    Write-Host '  To play (now and every time - it also applies in-game updates):'
+    Write-Host "      double-click PLAY.cmd in $RepoDir"
+    Write-Host '      (or run PLAY.cmd from a terminal)'
     if ($NoLaunch) { return }
     if (Confirm-YesNo "Setup's locked and loaded. LET'S BEND SOME CHROME! Launch now?" $true) {
-        Start-Process -FilePath $gui -ArgumentList @('--path', ('"{0}"' -f $RepoDir))
+        Start-Process -FilePath $play
     }
 }
 

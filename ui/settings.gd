@@ -28,12 +28,20 @@ var _dev_rows: Array = []
 var _dev_name_labels: Array = []
 var _dev_value_labels: Array = []
 var _sb_dialog: Control  # soundboard: third-level modal over the dev dialog
+var _ct_dialog: Control  # car tuner: third-level modal, MOUSE-driven grid (the
+	# one documented dev-tool exception to this screen's keyboard contract);
+	# the funnel below still owns ESC-to-close
 var _sb_index := 0
 var _sb_events: Array = []
 var _sb_name_labels: Array = []
 var _sb_value_labels: Array = []
 var _sb_scroll: ScrollContainer  # rows live in a capped-height scroll — the
 	# catalog outgrew the viewport and will keep growing (car specials queued)
+var _up_dialog: Control  # check-for-updates: second-level modal, state-driven
+var _up_version_lbl: Label
+var _up_status_lbl: Label
+var _up_changelog_lbl: Label
+var _up_action_lbl: Label
 var _settings_path := "user://settings.json"  # overridden only by hermetic tests
 
 @onready var _gs: Node = get_node(^"/root/GameState")
@@ -46,6 +54,8 @@ func _ready() -> void:
 		{"name": "MASTER VOLUME", "adjust": _adj_vol_master, "value": _val_vol_master},
 		{"name": "MUSIC VOLUME", "adjust": _adj_vol_music, "value": _val_vol_music},
 		{"name": "SFX VOLUME", "adjust": _adj_vol_sfx, "value": _val_vol_sfx},
+		{"name": "CHECK FOR UPDATES", "adjust": _adj_check_updates, "value": _val_updates,
+			"locked": _locked_updates, "kind": &"submenu", "persist": false},
 		{"name": "DEVELOPER OPTIONS", "adjust": _adj_dev_options, "value": _val_open,
 			"kind": &"submenu", "persist": false},
 		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
@@ -58,6 +68,8 @@ func _ready() -> void:
 		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
 		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
 		{"name": "SOUNDBOARD", "adjust": _adj_soundboard, "value": _val_open,
+			"kind": &"submenu", "persist": false},
+		{"name": "CAR TUNER", "adjust": _adj_car_tuner, "value": _val_open,
 			"kind": &"submenu", "persist": false},
 		{"name": "BACK", "adjust": _adj_close_dev, "value": _val_blank,
 			"kind": &"action", "persist": false},
@@ -136,6 +148,23 @@ func _adj_close_dev(_d: int) -> void:
 func _adj_soundboard(_d: int) -> void:
 	_open_soundboard()
 
+func _adj_car_tuner(_d: int) -> void:
+	_open_car_tuner()
+
+func _open_car_tuner() -> void:
+	if _ct_dialog:
+		return
+	_ct_dialog = load("res://ui/car_tuner.tscn").instantiate()
+	_ct_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_ct_dialog)
+
+func _close_car_tuner() -> void:
+	if not _ct_dialog:
+		return
+	_ct_dialog.queue_free()
+	_ct_dialog = null
+	_refresh_dev()
+
 func _val_blank() -> Array:
 	return ["", DIM_TEXT]
 
@@ -157,11 +186,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if key == MenuKey.NONE:
 		return
 	get_viewport().set_input_as_handled()
+	if _ct_dialog:
+		if key == MenuKey.BACK:
+			UiSfx.back(self)
+			_close_car_tuner()
+		return  # arrows no-op: the tuner grid is mouse-driven
 	if _sb_dialog:
 		_sb_input(key)
 		return
 	if _dev_dialog:
 		_dev_input(key)
+		return
+	if _up_dialog:
+		_up_input(key)
 		return
 	match key:
 		MenuKey.UP:
@@ -184,6 +221,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _adjust(dir: int) -> void:
 	var row: Dictionary = _rows[_index]
+	if row.has("locked") and (row.locked as Callable).call():
+		UiSfx.back(self)  # ghosted row: acknowledge, do nothing
+		return
 	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
 		return
 	UiSfx.select(self)
@@ -214,7 +254,8 @@ func _menu_key(event: InputEvent) -> MenuKey:
 func _refresh() -> void:
 	for i in _rows.size():
 		var selected := i == _index
-		_name_labels[i].modulate = AMBER if selected else ALIVE_TEXT
+		var locked: bool = _rows[i].has("locked") and (_rows[i].locked as Callable).call()
+		_name_labels[i].modulate = LOCKED_TEXT if locked else (AMBER if selected else ALIVE_TEXT)
 		var v: Array = (_rows[i].value as Callable).call()
 		_value_labels[i].text = v[0]
 		_value_labels[i].modulate = v[1]
@@ -562,3 +603,187 @@ func _refresh_soundboard() -> void:
 		var row := _sb_name_labels[_sb_index].get_parent() as Control
 		if row:
 			_sb_scroll.ensure_control_visible(row)
+
+# --- check-for-updates dialog (SETTINGS -> CHECK FOR UPDATES) -----------------
+## Second-level modal following the dev-dialog shell, but state-driven off the
+## Updater autoload rather than a fixed row list: RIGHT runs the one action that
+## makes sense for the current state (download / restart / re-check), ESC closes.
+## The game only checks + downloads here; the PLAY launcher applies on restart.
+
+func _adj_check_updates(_d: int) -> void:
+	if not Updater.RELEASES_LIVE:
+		return  # defensive: _adjust already blocks locked rows
+	_open_update_dialog()
+
+func _val_updates() -> Array:
+	if not Updater.RELEASES_LIVE:
+		return ["COMING SOON", LOCKED_TEXT]
+	return ["-->", DIM_TEXT]
+
+func _locked_updates() -> bool:
+	return not Updater.RELEASES_LIVE
+
+func _up_input(key: MenuKey) -> void:
+	match key:
+		MenuKey.RIGHT:
+			UiSfx.select(self)
+			_up_primary()
+		MenuKey.BACK:
+			UiSfx.back(self)
+			_close_update_dialog()
+
+func _up_primary() -> void:
+	match Updater.state:
+		Updater.State.AVAILABLE:
+			Updater.download()
+		Updater.State.DOWNLOADED:
+			if not Updater.relaunch():
+				_up_status_lbl.text = "Update ready — close and reopen with PLAY to finish."
+				_up_status_lbl.modulate = AMBER
+				_up_action_lbl.text = ""
+		Updater.State.UP_TO_DATE, Updater.State.ERROR:
+			Updater.check()
+
+func _open_update_dialog() -> void:
+	if _up_dialog:
+		return
+	_up_dialog = Control.new()
+	_up_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_up_dialog)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_up_dialog.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_up_dialog.add_child(center)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_BG
+	style.border_color = AMBER
+	for side in ["left", "right", "top", "bottom"]:
+		style.set("border_width_" + side, 6)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.custom_minimum_size = Vector2(640, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 28)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "CHECK FOR UPDATES"
+	title.add_theme_font_size_override("font_size", 32)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = AMBER
+	vbox.add_child(title)
+
+	_up_version_lbl = Label.new()
+	_up_version_lbl.add_theme_font_size_override("font_size", 18)
+	_up_version_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_up_version_lbl.modulate = DIM_TEXT
+	vbox.add_child(_up_version_lbl)
+
+	_up_status_lbl = Label.new()
+	_up_status_lbl.add_theme_font_size_override("font_size", 22)
+	_up_status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_up_status_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_up_status_lbl.custom_minimum_size = Vector2(560, 0)
+	vbox.add_child(_up_status_lbl)
+
+	# Changelog scrolls inside a capped viewport so the amber border always
+	# closes no matter how long the release notes run.
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(560, 150)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+	_up_changelog_lbl = Label.new()
+	_up_changelog_lbl.add_theme_font_size_override("font_size", 15)
+	_up_changelog_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_up_changelog_lbl.custom_minimum_size = Vector2(560, 0)
+	_up_changelog_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_up_changelog_lbl.modulate = ALIVE_TEXT
+	scroll.add_child(_up_changelog_lbl)
+
+	_up_action_lbl = Label.new()
+	_up_action_lbl.add_theme_font_size_override("font_size", 22)
+	_up_action_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_up_action_lbl.modulate = AMBER
+	vbox.add_child(_up_action_lbl)
+
+	var hint := Label.new()
+	hint.text = "RIGHT does the action    ESC back"
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.modulate = DIM_TEXT
+	vbox.add_child(hint)
+
+	Updater.state_changed.connect(_on_update_state)
+	Updater.progress_changed.connect(_on_update_progress)
+	Updater.check()  # auto-check the moment the panel opens
+	_refresh_update()
+
+func _close_update_dialog() -> void:
+	if not _up_dialog:
+		return
+	if Updater.state_changed.is_connected(_on_update_state):
+		Updater.state_changed.disconnect(_on_update_state)
+	if Updater.progress_changed.is_connected(_on_update_progress):
+		Updater.progress_changed.disconnect(_on_update_progress)
+	_up_dialog.queue_free()
+	_up_dialog = null
+	_up_version_lbl = null
+	_up_status_lbl = null
+	_up_changelog_lbl = null
+	_up_action_lbl = null
+	_refresh()
+
+func _on_update_state(_s: int) -> void:
+	_refresh_update()
+
+func _on_update_progress(_f: float) -> void:
+	_refresh_update()
+
+func _refresh_update() -> void:
+	if not _up_dialog:
+		return
+	var cur: String = Updater.current_version()
+	var latest: String = Updater.latest_version
+	_up_version_lbl.text = "Current: %s" % cur if latest == "" \
+		else "Current: %s    Latest: %s" % [cur, latest]
+	_up_changelog_lbl.text = Updater.changelog
+	match Updater.state:
+		Updater.State.CHECKING:
+			_up_status_lbl.text = "Checking…"
+			_up_status_lbl.modulate = DIM_TEXT
+			_up_action_lbl.text = ""
+		Updater.State.UP_TO_DATE:
+			_up_status_lbl.text = "You're on the latest — no updates yet."
+			_up_status_lbl.modulate = ALIVE_TEXT
+			_up_action_lbl.text = "CHECK AGAIN -->"
+		Updater.State.AVAILABLE:
+			_up_status_lbl.text = "Update available: %s" % Updater.latest_version
+			_up_status_lbl.modulate = AMBER
+			_up_action_lbl.text = "DOWNLOAD -->"
+		Updater.State.DOWNLOADING:
+			_up_status_lbl.text = "Downloading… %d%%" % int(round(Updater.download_fraction * 100.0))
+			_up_status_lbl.modulate = ALIVE_TEXT
+			_up_action_lbl.text = ""
+		Updater.State.DOWNLOADED:
+			_up_status_lbl.text = "Downloaded — restart to finish."
+			_up_status_lbl.modulate = AMBER
+			_up_action_lbl.text = "RESTART NOW -->"
+		Updater.State.ERROR:
+			_up_status_lbl.text = Updater.error_text
+			_up_status_lbl.modulate = WARN
+			_up_action_lbl.text = "TRY AGAIN -->"
+		_:
+			_up_status_lbl.text = ""
+			_up_action_lbl.text = ""

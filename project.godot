@@ -25,6 +25,7 @@ InputRouter="*res://game/input_router.gd"
 AudioDirector="*res://game/audio_director.gd"
 MusicDirector="*res://game/music_director.gd"
 Net="*res://game/net/net_session.gd"
+Updater="*res://game/updater.gd"
 
 [display]
 
