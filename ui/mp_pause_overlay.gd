@@ -28,6 +28,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _set_open(open: bool) -> void:
 	_panel.visible = open
+	# Reveal the pointer while the overlay is up (buttons are clickable); the
+	# match view runs cursor-hidden otherwise.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_HIDDEN)
 	if open and _resume_btn:
 		_resume_btn.grab_focus()
 	elif not open:

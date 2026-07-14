@@ -26,6 +26,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _set_paused(on: bool) -> void:
 	get_tree().paused = on
 	visible = on
+	# Reveal the pointer while paused so the buttons are clickable; gameplay
+	# hides it again on resume.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if on else Input.MOUSE_MODE_HIDDEN)
 	if on and _resume_btn:
 		_resume_btn.grab_focus()
 

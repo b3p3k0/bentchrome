@@ -53,6 +53,7 @@ var _mine_twins: Dictionary = {}    # host mine id -> cosmetic mine node
 
 func _ready() -> void:
 	print("[boot] mp match ready")
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)  # clean combat view; pause/menus restore it
 	if not _net.is_active():
 		# Cold boot (smoke, curiosity): nothing to host, nothing to mirror.
 		print("[mp] no session — returning to the front door")

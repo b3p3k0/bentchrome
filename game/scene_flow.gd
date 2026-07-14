@@ -113,4 +113,7 @@ func to_custom_level(path: String) -> void:
 	goto_scene(CUSTOM)
 
 func goto_scene(path: String) -> void:
+	# Every screen change funnels here — the single reset that undoes gameplay's
+	# hidden cursor. Combat/MP levels re-hide it in their own _ready.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	get_tree().change_scene_to_file(path)

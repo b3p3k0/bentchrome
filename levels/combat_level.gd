@@ -24,6 +24,10 @@ var _spawn_heading := 0.0
 var _respawning := false
 
 func _ready() -> void:
+	# The wheel keeps reading button/wheel events — hide the pointer so the
+	# combat view stays clean and DOS-terminal-honest. Menus (and pause/end
+	# overlays) put it back; SceneFlow.goto_scene resets it on the way out.
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)

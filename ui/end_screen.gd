@@ -75,6 +75,9 @@ func _campaign_next_index() -> int:
 
 func _show(win: bool) -> void:
 	_over = true
+	# The match view runs cursor-hidden; the end card is clickable, so put the
+	# pointer back. The next SceneFlow.goto_scene resets it either way.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio:  # stingers ride the pause-immune pool — the freeze below can't cut them
 		audio.play(&"win_sting" if win else &"lose_sting")
