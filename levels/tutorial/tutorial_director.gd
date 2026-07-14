@@ -101,6 +101,11 @@ var _latch := {}         # per-lesson accumulators/flags; cleared on advance
 var _hint_label: Label = null
 var _ammo_seen := {}     # rack ammo per slot, last observed — drop = a shot
 						 # left the bay, rise = a crate landed
+# The smash lesson's baseline is the UNTOUCHED yard, captured once at boot so
+# anything the player flattens during earlier free play still counts toward the
+# quota. It lives outside _latch (which clears every advance). -1 = uncaptured.
+var _smash_base := -1
+var _smash_barrel_base := -1
 
 func _ready() -> void:
 	_card = CardScript.new()
@@ -131,6 +136,9 @@ func _ready() -> void:
 			rack.ammo_changed.connect(_on_rack_ammo)
 	if exit_zone:
 		exit_zone.body_entered.connect(_on_exit_zone_entered)
+	# Baseline the smash yard now, before the player can touch anything, so
+	# free-play vandalism counts once the smash lesson finally goes live.
+	_snapshot_smash()
 
 func _on_rack_selection(_index: int) -> void:
 	_latch[&"cycled"] = 1.0
@@ -204,10 +212,6 @@ func _on_card_dismissed() -> void:
 		var health: Node = player.get_node_or_null("Health")
 		if health and player.get_hp() > DING_HP + 15.0:
 			health.take_damage(DING_HP)
-	# The smash quota counts from the moment the lesson goes live — anything
-	# the player flattened during earlier free play stays off the bill.
-	if LESSONS[lesson_index]["id"] == &"smash":
-		_snapshot_smash()
 
 ## Graduation: the closing card takes the stage; its dismissal drops the gate.
 func _finish() -> void:
@@ -309,21 +313,22 @@ func _lesson_done(id: StringName, delta: float) -> bool:
 					return false
 			return true
 		&"smash":
-			if not _latch.has(&"smash_base"):
-				_snapshot_smash()  # entered without a dismissal (safety net)
+			if _smash_base < 0:
+				_snapshot_smash()  # boot somehow missed it (safety net)
 			var live: Array[int] = _smash_counts()
-			var destroyed: int = int(_latch[&"smash_base"]) - live[0]
-			var barrels_gone: int = int(_latch[&"smash_barrels"]) - live[1]
+			# Delta from the boot baseline — so kills BEFORE the lesson count too.
+			var destroyed: int = _smash_base - live[0]
+			var barrels_gone: int = _smash_barrel_base - live[1]
 			# A pre-flattened yard owes nothing; otherwise the quota clamps to
-			# what's standing and at least one barrel has to go up.
-			return destroyed >= mini(SMASH_COUNT, int(_latch[&"smash_base"])) \
-				and (barrels_gone > 0 or int(_latch[&"smash_barrels"]) == 0)
+			# what was standing at boot and at least one barrel has to go up.
+			return destroyed >= mini(SMASH_COUNT, _smash_base) \
+				and (barrels_gone > 0 or _smash_barrel_base == 0)
 	return false
 
 func _snapshot_smash() -> void:
 	var counts: Array[int] = _smash_counts()
-	_latch[&"smash_base"] = counts[0]
-	_latch[&"smash_barrels"] = counts[1]
+	_smash_base = counts[0]
+	_smash_barrel_base = counts[1]
 
 func _smash_counts() -> Array[int]:
 	var members := 0

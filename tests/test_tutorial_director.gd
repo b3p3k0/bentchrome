@@ -220,7 +220,7 @@ func test_jump_floors_terrain_lessons() -> void:
 		_dismiss(director._card)
 	_teardown(w["world"])
 
-func test_smash_lesson_counts_the_yard() -> void:
+func test_smash_lesson_credits_the_whole_yard() -> void:
 	var w := _world()
 	var director: Node = w["director"]
 	director.begin(true)
@@ -236,18 +236,23 @@ func test_smash_lesson_counts_the_yard() -> void:
 	barrel.position = Vector2(3000, 3000)
 	barrel.add_to_group(&"tutorial_smash")
 	w["world"].add_child(barrel)
-	director.lesson_index = 7
-	director._latch.clear()
-	director._on_card_dismissed()  # snapshots the yard: 7 targets, 1 barrel
+	director._snapshot_smash()  # boot baseline: 7 targets, 1 barrel
 
+	# Vandalize the yard BEFORE the smash lesson goes live — the case the old
+	# lesson-start snapshot lost. Five stubs down, barrel still standing.
 	for i in 5:
 		stubs[i].free()
+
+	director.lesson_index = 7
+	director._latch.clear()
+	director._on_card_dismissed()  # no longer re-snapshots the yard
 	director._physics_process(0.016)
-	t.check(director.lesson_index == 7, "smash: quota without the barrel is not enough")
+	t.check(director.lesson_index == 7,
+		"smash: pre-lesson kills count, but the barrel is still owed")
 	barrel.free()
 	director._physics_process(0.016)
 	director._physics_process(director.ADVANCE_DELAY + 0.1)
-	t.check(director.completed, "smash: barrel down -> syllabus complete")
+	t.check(director.completed, "smash: pre-lesson vandalism + barrel -> syllabus complete")
 	t.check(director._card.visible, "smash: the closing card takes the stage")
 	t.check((w["gate"] as Node2D).visible, "smash: gate stays barred until the card is read")
 	_dismiss(director._card)
