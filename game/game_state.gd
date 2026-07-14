@@ -35,9 +35,9 @@ var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
 var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
-var volume_master := 1.0   # settings sliders, 0-1 linear; applied to the
-var volume_music := 1.0    # Master/Music/SFX buses via apply_audio_settings()
-var volume_sfx := 1.0
+var volume_master := 0.80  # settings sliders, 0-1 linear; applied to the
+var volume_music := 0.30   # Master/Music/SFX buses via apply_audio_settings()
+var volume_sfx := 0.55
 
 # MP screen memory: last host entry + garage prefs, so a LAN night doesn't
 # start with retyping. Passwords deliberately NEVER persist (plain-text file).
@@ -117,9 +117,9 @@ func reset_settings() -> void:
 	mp_host_port = 0
 	mp_host_garage = ""
 	mp_host_strict = false
-	volume_master = 1.0
-	volume_music = 1.0
-	volume_sfx = 1.0
+	volume_master = 0.80
+	volume_music = 0.30
+	volume_sfx = 0.55
 	apply_audio_settings()
 	save_settings()
 
