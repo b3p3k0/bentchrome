@@ -43,9 +43,12 @@ def finalize(name, x2, song, wav_only=False, reverb_wet=0.08, room=0.45,
     x = _chain(reverb_wet, room)(x2.astype(np.float32), E.SR).astype(np.float64)
     gain_db = TARGET_RMS_DB + rms_offset_db - _median_rms_db(x)
     x *= 10.0 ** (gain_db / 20.0)
+    # Bake BEFORE the limiter: the wrap crossfade can sum correlated peaks
+    # past any ceiling applied earlier — limiting last keeps every track at
+    # the same loudness instead of punishing hot seams with a global rescale.
+    x = E.bake_loop(x, song.bar_samples, song.bars)
     x = Limiter(threshold_db=PEAK_DB, release_ms=120.0)(
         x.astype(np.float32), E.SR).astype(np.float64)
-    x = E.bake_loop(x, song.bar_samples, song.bars)
     peak = float(np.max(np.abs(x)))
     ceiling = 10 ** (PEAK_DB / 20.0)
     if peak > ceiling:
