@@ -2,7 +2,7 @@
 track; adding a track = one module + one row here (+ a MusicDirector TRACKS
 row if it's a new scene)."""
 from . import (arena, menu, freeway, suburbs, snowy, depot, buzzard_run,
-    dock, ground_floor_gore)
+    dock, ground_floor_gore, stadium_p1, stadium_p2)
 
 TRACKS = {
     "bgm_menu": menu,
@@ -14,4 +14,6 @@ TRACKS = {
     "bgm_buzzard_run": buzzard_run,
     "bgm_dock": dock,
     "bgm_ground_floor_gore": ground_floor_gore,
+    "bgm_stadium_p1": stadium_p1,
+    "bgm_stadium_p2": stadium_p2,
 }

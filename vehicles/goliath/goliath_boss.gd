@@ -86,6 +86,12 @@ func _begin_transition() -> void:
 func start_phase2() -> void:
 	phase = 2
 	trailer = null  # the cutscene (or the instant path) already freed it
+	# The soundtrack shifts gears with him. The cutscene path holds the tree
+	# paused, so p2 fades in ducked and swells exactly as the world unfreezes;
+	# scene exit / restart clears the override back to p1.
+	var music := get_node_or_null(^"/root/MusicDirector")
+	if music:
+		music.set_override(&"bgm_stadium_p2")
 	if _health:
 		_health.god = false
 		var pool2 := PHASE2_HP * Difficulty.knob(&"goliath_hp")
