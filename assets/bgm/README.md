@@ -20,6 +20,9 @@ wrap-crossfades it over the head, so never hand-trim these files.
   rows to the music director instead of the SFX pools.
 - Loudness convention: every track masters through the same chain to the same
   RMS target (`tools/bgm/master.py`), so no per-track trim exists in-game.
+- Music players ride the `Music` audio bus (SFX pools ride `SFX`); the
+  Settings screen's MASTER/MUSIC/SFX VOLUME sliders drive the buses via
+  `GameState.apply_audio_settings()`.
 - Regenerate with `./venv312/bin/python tools/synth_bgm.py [track ...]`
   (repo venv; `pip` deps: numpy, scipy, pedalboard — dev-box only, the game
   ships zero synthesis code). Only re-render tracks whose recipe changed:

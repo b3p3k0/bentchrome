@@ -14,6 +14,7 @@ const LOCKED_TEXT := Color(0.32, 0.34, 0.37)
 const ZOOM_MIN := 0.45
 const ZOOM_MAX := 0.72
 const ZOOM_STEP := 0.01
+const VOL_STEP := 0.05
 
 enum MenuKey { NONE, UP, DOWN, LEFT, RIGHT, BACK }
 
@@ -42,6 +43,9 @@ func _ready() -> void:
 	_rows = [
 		{"name": "ZOOM DEPTH", "adjust": _adj_zoom, "value": _val_zoom},
 		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
+		{"name": "MASTER VOLUME", "adjust": _adj_vol_master, "value": _val_vol_master},
+		{"name": "MUSIC VOLUME", "adjust": _adj_vol_music, "value": _val_vol_music},
+		{"name": "SFX VOLUME", "adjust": _adj_vol_sfx, "value": _val_vol_sfx},
 		{"name": "DEVELOPER OPTIONS", "adjust": _adj_dev_options, "value": _val_open,
 			"kind": &"submenu", "persist": false},
 		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
@@ -84,6 +88,21 @@ func _adj_level(d: int) -> void:
 
 func _val_level() -> Array:
 	return [String(_flow.CAMPAIGN[_gs.start_level_index].name).to_upper(), DIM_TEXT]
+
+func _adj_vol(field: String, d: int) -> void:
+	_gs.set(field, clampf(_gs.get(field) + d * VOL_STEP, 0.0, 1.0))
+	_gs.apply_audio_settings()  # sliders move live audio; _adjust persists
+
+func _val_vol(field: String) -> Array:
+	var v: float = _gs.get(field)
+	return ["%3d%%  %s" % [roundi(v * 100.0), _bar(v, 0.0, 1.0)], DIM_TEXT]
+
+func _adj_vol_master(d: int) -> void: _adj_vol("volume_master", d)
+func _adj_vol_music(d: int) -> void: _adj_vol("volume_music", d)
+func _adj_vol_sfx(d: int) -> void: _adj_vol("volume_sfx", d)
+func _val_vol_master() -> Array: return _val_vol("volume_master")
+func _val_vol_music() -> Array: return _val_vol("volume_music")
+func _val_vol_sfx() -> Array: return _val_vol("volume_sfx")
 
 func _adj_shake(_d: int) -> void:
 	_gs.screen_shake = not _gs.screen_shake

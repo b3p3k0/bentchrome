@@ -35,6 +35,9 @@ var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
 var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
+var volume_master := 1.0   # settings sliders, 0-1 linear; applied to the
+var volume_music := 1.0    # Master/Music/SFX buses via apply_audio_settings()
+var volume_sfx := 1.0
 
 # MP screen memory: last host entry + garage prefs, so a LAN night doesn't
 # start with retyping. Passwords deliberately NEVER persist (plain-text file).
@@ -59,6 +62,7 @@ func effective_start_level_index() -> int:
 const SETTINGS_PATH := "user://settings.json"
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
 	"dev_mode", "start_level_index", "screen_shake", "player_name",
+	"volume_master", "volume_music", "volume_sfx",
 	"mp_join_ip", "mp_join_port", "mp_host_port", "mp_host_garage",
 	"mp_host_strict"]
 
@@ -97,6 +101,7 @@ func load_settings(path := SETTINGS_PATH) -> void:
 			set(k, float(data[k]))  # JSON round numbers come back as ints
 		elif data.has(k) and get(k) is int and data[k] is float:
 			set(k, int(data[k]))
+	apply_audio_settings()
 
 func reset_settings() -> void:
 	zoom_combat = 0.58
@@ -112,4 +117,22 @@ func reset_settings() -> void:
 	mp_host_port = 0
 	mp_host_garage = ""
 	mp_host_strict = false
+	volume_master = 1.0
+	volume_music = 1.0
+	volume_sfx = 1.0
+	apply_audio_settings()
 	save_settings()
+
+## Push the persisted sliders onto the audio buses (default_bus_layout.tres:
+## Master + Music + SFX). Bus-less contexts (hermetic tests) no-op per bus.
+func apply_audio_settings() -> void:
+	_apply_bus(&"Master", volume_master)
+	_apply_bus(&"Music", volume_music)
+	_apply_bus(&"SFX", volume_sfx)
+
+func _apply_bus(bus_name: StringName, v: float) -> void:
+	var idx := AudioServer.get_bus_index(bus_name)
+	if idx < 0:
+		return
+	AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(v, 0.0001)))
+	AudioServer.set_bus_mute(idx, v <= 0.0)

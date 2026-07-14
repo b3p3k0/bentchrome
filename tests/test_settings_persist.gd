@@ -34,6 +34,9 @@ func test_settings_round_trip() -> void:
 	gs.mp_join_port = 43555
 	gs.mp_host_garage = "Kevin's Chop Shop"
 	gs.mp_host_strict = true
+	gs.volume_master = 0.85
+	gs.volume_music = 0.35
+	gs.volume_sfx = 0.6
 	gs.save_settings(TMP)
 	gs.zoom_combat = 0.62
 	gs.devgod = false
@@ -44,6 +47,9 @@ func test_settings_round_trip() -> void:
 	gs.mp_join_port = 0
 	gs.mp_host_garage = ""
 	gs.mp_host_strict = false
+	gs.volume_master = 1.0
+	gs.volume_music = 1.0
+	gs.volume_sfx = 1.0
 	gs.load_settings(TMP)
 	t.check(is_equal_approx(gs.zoom_combat, 0.51), "settings: zoom round-trips")
 	t.check(gs.devgod and gs.dev_mode, "settings: toggles round-trip")
@@ -53,6 +59,8 @@ func test_settings_round_trip() -> void:
 		"settings: last host entry round-trips")
 	t.check(gs.mp_host_garage == "Kevin's Chop Shop" and gs.mp_host_strict,
 		"settings: garage prefs round-trip (passwords never persist by design)")
+	t.check(is_equal_approx(gs.volume_master, 0.85) and is_equal_approx(gs.volume_music, 0.35)
+		and is_equal_approx(gs.volume_sfx, 0.6), "settings: volume sliders round-trip")
 
 	# Corrupt file: silently keeps current values (instance-parse, no engine ERROR).
 	var f := FileAccess.open(TMP, FileAccess.WRITE)
@@ -99,7 +107,8 @@ func test_developer_options_menu_contract() -> void:
 	var main_names: Array[String] = []
 	for row in screen._rows:
 		main_names.append(String(row.name))
-	t.check(main_names == ["ZOOM DEPTH", "SCREEN SHAKE", "DEVELOPER OPTIONS",
+	t.check(main_names == ["ZOOM DEPTH", "SCREEN SHAKE", "MASTER VOLUME",
+		"MUSIC VOLUME", "SFX VOLUME", "DEVELOPER OPTIONS",
 		"RESET TO DEFAULTS", "BACK"], "settings menu: developer controls collapse to one entry")
 	t.check(screen._val_open()[0] == "-->",
 		"settings menu: developer entry reads as a submenu")
@@ -108,9 +117,9 @@ func test_developer_options_menu_contract() -> void:
 		dev_names.append(String(row.name))
 	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "SOUNDBOARD", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
-	t.check(not bool(screen._rows[2].persist) and not bool(screen._dev_rows[4].persist),
+	t.check(not bool(screen._rows[5].persist) and not bool(screen._dev_rows[4].persist),
 		"developer dialog: opening and closing are non-persisting navigation")
-	t.check(screen._rows[2].kind == &"submenu" and screen._rows[3].kind == &"action",
+	t.check(screen._rows[5].kind == &"submenu" and screen._rows[6].kind == &"action",
 		"settings menu: row kinds distinguish values from right-only destinations")
 
 	screen._settings_path = TMP
@@ -131,7 +140,7 @@ func test_developer_options_menu_contract() -> void:
 		screen._unhandled_input(_key(ignored))
 		t.check(screen._index == index_before and is_equal_approx(gs.zoom_combat, zoom_ignored),
 			"settings input: legacy key %s is ignored" % ignored)
-	screen._index = 2
+	screen._index = 5
 	screen._unhandled_input(_key(KEY_LEFT))
 	t.check(screen._dev_dialog == null, "settings input: left cannot enter a submenu")
 	screen._unhandled_input(_key(KEY_RIGHT))

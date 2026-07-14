@@ -117,17 +117,21 @@ func _ready() -> void:
 			_streams[event] = stream
 		else:
 			missing.append(String(event))
+	var bus := _bus(&"SFX")
 	for i in POOL_GLOBAL:
 		var p := AudioStreamPlayer.new()
+		p.bus = bus
 		add_child(p)
 		_pool.append(p)
 	for i in POOL_POSITIONAL:
 		var p := AudioStreamPlayer2D.new()
+		p.bus = bus
 		add_child(p)
 		_pool_2d.append(p)
 	for i in POOL_UI:
 		var p := AudioStreamPlayer.new()
 		p.process_mode = Node.PROCESS_MODE_ALWAYS
+		p.bus = bus
 		add_child(p)
 		_pool_ui.append(p)
 	# Wording matters: the smoke gate greps boot output for /missing/i, so this
@@ -199,6 +203,7 @@ func loop_set(event: StringName, on: bool) -> void:
 	var p: AudioStreamPlayer = _loopers.get(event)
 	if p == null:
 		p = AudioStreamPlayer.new()
+		p.bus = _bus(&"SFX")
 		p.stream = stream
 		p.volume_db = CATALOG[event]["volume_db"]
 		p.finished.connect(func() -> void:
@@ -219,6 +224,11 @@ func has_asset(event: StringName) -> bool:
 ## the registry of authored special voices — SpecialController keys off this.
 func has_event(event: StringName) -> bool:
 	return CATALOG.has(event)
+
+## The named bus when the layout is loaded, Master otherwise — hermetic tests
+## and bus-less contexts keep working without warnings.
+func _bus(bus_name: StringName) -> StringName:
+	return bus_name if AudioServer.get_bus_index(bus_name) >= 0 else &"Master"
 
 func _jitter(event: StringName) -> float:
 	var j: float = CATALOG[event]["pitch_jitter"]

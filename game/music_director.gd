@@ -77,6 +77,9 @@ func _ready() -> void:
 			missing.append(String(event))
 	for i in 2:
 		var p := AudioStreamPlayer.new()
+		# The Music bus when the layout is loaded, Master otherwise (hermetic
+		# tests and bus-less contexts keep working without warnings).
+		p.bus = &"Music" if AudioServer.get_bus_index(&"Music") >= 0 else &"Master"
 		add_child(p)
 		_players.append(p)
 	# Same wording contract as AudioDirector: the smoke gate greps boot output

@@ -502,3 +502,5 @@ SOUNDBOARD lists `bgm_*` rows with PLAY/STOP toggles.
 | loop stamp | code, not .import | music_director.gd _looped | every resolved stream loops; assets bake the seam (wrap-crossfaded tail bar) |
 | SEED / BPM / BARS | per track | tools/bgm/tracks/*.py | deterministic composition constants (arena: 0xD3B1 / 122 / 72) |
 | TARGET_RMS_DB / PEAK_DB | -18 / -1 | tools/bgm/master.py | one loudness convention across all tracks — no per-track trim in-game |
+| audio buses | Master / Music / SFX | default_bus_layout.tres (default path, no project setting needed) | MusicDirector players ride Music, all AudioDirector pools ride SFX; bus-less contexts fall back to Master |
+| MASTER/MUSIC/SFX VOLUME | 0-100% in 5% steps | ui/settings.gd + GameState.volume_* | persisted sliders; GameState.apply_audio_settings() pushes linear_to_db onto the buses at boot/adjust/reset; 0% mutes the bus |
