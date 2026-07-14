@@ -137,7 +137,13 @@ func set_weapon(def: WeaponDef) -> void:
 	_def = def
 	if _mount:
 		_mount.set_weapon(def)   # projectile-kind firing lives in the mount
-		_mount.sfx_override = special_sfx_event(def)
+		# EVERY rack selection routes through here — missiles and mines too
+		# (vehicle.gd wires selection_changed straight in). Voice the mount
+		# only for AUTHORED specials (their sp_* CATALOG row is the registry);
+		# a blanket override once beefed every standard missile launch.
+		var event := special_sfx_event(def)
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		_mount.sfx_override = event if (audio and audio.has_event(event)) else &""
 
 ## Twin special: a second barrel on the same ammo pool (non-PROJECTILE kinds
 ## only — the mount owns projectile defs). Chosen per activation.

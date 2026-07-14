@@ -215,6 +215,11 @@ func loop_set(event: StringName, on: bool) -> void:
 func has_asset(event: StringName) -> bool:
 	return _streams.has(event)
 
+## True when the event is CATALOGUED at all (asset or not). The sp_* rows are
+## the registry of authored special voices — SpecialController keys off this.
+func has_event(event: StringName) -> bool:
+	return CATALOG.has(event)
+
 func _jitter(event: StringName) -> float:
 	var j: float = CATALOG[event]["pitch_jitter"]
 	return 1.0 + randf_range(-j, j) if j > 0.0 else 1.0

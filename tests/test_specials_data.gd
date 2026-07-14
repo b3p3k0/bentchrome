@@ -267,3 +267,32 @@ func test_trigger_window_expires_unspent() -> void:
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter), "trigger window: can re-arm after expiry")
 	shooter.free()
 	sc.free()
+
+func test_special_sfx_override_scoping() -> void:
+	# Regression ("the beef bug"): EVERY rack selection routes through
+	# set_weapon — missiles included — so the mount's special voice must
+	# engage only for authored specials (their sp_* CATALOG row), or every
+	# standard missile launch plays the sp_placeholder.
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var shooter := Node2D.new()
+	container.add_child(shooter)
+	var mount := WeaponMount.new()
+	mount.name = "SecondaryMount"
+	shooter.add_child(mount)
+	var ctrl = ControllerScript.new()
+	shooter.add_child(ctrl)
+	ctrl.set_weapon(load("res://data/weapons/molotov.tres"))
+	t.check(mount.sfx_override == &"sp_molotov",
+		"sfx override: authored special voices the mount")
+	ctrl.set_weapon(load("res://data/weapons/missile_standard.tres"))
+	t.check(mount.sfx_override == &"",
+		"sfx override: standard missile clears it (no beef)")
+	ctrl.set_weapon(load("res://data/weapons/chilblain.tres"))
+	t.check(mount.sfx_override == &"sp_chilblain",
+		"sfx override: assetless special keeps its row (placeholder intended)")
+	ctrl.set_weapon(load("res://data/weapons/mine_land.tres"))
+	t.check(mount.sfx_override == &"",
+		"sfx override: mines clear it too")
+	t.root.remove_child(container)
+	container.free()
