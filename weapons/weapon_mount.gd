@@ -137,8 +137,11 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		if audio:
 			var event: StringName = &"mg_fire" if heat_per_shot > 0.0 else &"missile_fire"
-			if sfx_override != &"" and audio.has_asset(sfx_override):
-				event = sfx_override
+			if sfx_override != &"":
+				if audio.has_asset(sfx_override):
+					event = sfx_override
+				elif audio.has_asset(&"sp_placeholder"):
+					event = &"sp_placeholder"  # where's the beef?
 			audio.play(event)
 	var spawner := get_node_or_null(^"/root/Spawner")  # may be absent in bare fixtures
 	# One flash per wave (not per pellet) — pooled; the MG asks 12 times a second.

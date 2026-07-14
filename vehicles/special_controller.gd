@@ -94,6 +94,7 @@ static func special_sfx_event(def: WeaponDef) -> StringName:
 	return StringName("sp_" + def.resource_path.get_file().get_basename())
 
 ## One-shot special voice: viewer's car plays flat, everyone else positional.
+## A special without its own asset falls back to sp_placeholder (the beef).
 func _play_special_sfx(def: WeaponDef) -> void:
 	var event := special_sfx_event(def)
 	if event == &"":
@@ -101,11 +102,17 @@ func _play_special_sfx(def: WeaponDef) -> void:
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio == null:
 		return
+	if not audio.has_asset(event) and audio.has_asset(&"sp_placeholder"):
+		event = &"sp_placeholder"
 	var vehicle := get_parent()
 	if vehicle and vehicle.is_in_group(&"player"):
 		audio.play(event)
 	elif vehicle is Node2D:
 		audio.play_at(event, (vehicle as Node2D).global_position)
+
+func _has_asset(event: StringName) -> bool:
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	return audio != null and event != &"" and audio.has_asset(event)
 
 ## Sustained-special loops (taser/blaze), player-only, driven from state each
 ## frame — every end path (timeout, LoS break, roof drop, death) goes silent
@@ -175,8 +182,9 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			var beam_ok := _beam(pressed, origin, direction, shooter, def)
 			if beam_ok:
 				_beam_sfx = special_sfx_event(def)  # player loop (synced per frame)
-				if shooter is Node and not shooter.is_in_group(&"player"):
-					_play_special_sfx(def)  # AI: positional one-shot instead
+				if not _has_asset(_beam_sfx) \
+						or (shooter is Node and not shooter.is_in_group(&"player")):
+					_play_special_sfx(def)  # AI positional / assetless placeholder
 			return beam_ok
 		WeaponDef.Kind.DASH:
 			var dash_ok := _dash(pressed, origin, direction, shooter)
@@ -190,7 +198,8 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 			var flame_ok := _flame(pressed, def)
 			if flame_ok:
 				_flame_sfx = special_sfx_event(def)
-				if shooter is Node and not shooter.is_in_group(&"player"):
+				if not _has_asset(_flame_sfx) \
+						or (shooter is Node and not shooter.is_in_group(&"player")):
 					_play_special_sfx(def)
 			return flame_ok
 		WeaponDef.Kind.DROP:
@@ -814,10 +823,13 @@ func take_armed_hit() -> float:
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		var vehicle := get_parent()
 		if audio and vehicle:
+			var ev := _armed_sfx
+			if not audio.has_asset(ev) and audio.has_asset(&"sp_placeholder"):
+				ev = &"sp_placeholder"
 			if vehicle.is_in_group(&"player"):
-				audio.play(_armed_sfx)
+				audio.play(ev)
 			elif vehicle is Node2D:
-				audio.play_at(_armed_sfx, (vehicle as Node2D).global_position)
+				audio.play_at(ev, (vehicle as Node2D).global_position)
 		_armed_sfx = &""
 	return _armed_damage
 

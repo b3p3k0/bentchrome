@@ -63,6 +63,8 @@ const CATALOG := {
 	&"sp_taser": {"volume_db": -4.0, "pitch_jitter": 0.0},  # loops while latched
 	&"sp_toe_jam": {"volume_db": 0.0, "pitch_jitter": 0.0},  # on the LANDED hit
 	&"sp_tornado_alley": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"sp_placeholder": {"volume_db": 0.0, "pitch_jitter": 0.04},  # "where's the
+		# beef?" — plays for any special that fires without its own sp_* asset
 }
 
 var _streams: Dictionary = {}  # event -> AudioStream (absent = no asset yet)

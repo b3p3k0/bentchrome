@@ -936,6 +936,54 @@ def sp_red_glare():
     write("sp_red_glare", x, peak=0.94, fade_ms=4.0)
 
 
+def sp_placeholder():
+    """~1.15s 'WHERE'S THE BEEF?' — hand-rolled FORMANT SYNTHESIS (no TTS on
+    the box; Kevin chose delightfully robotic). Glottal harmonic buzz through
+    three keyframed formant resonators (svf_bp with per-sample tracks) +
+    consonant noise bursts; prosody matched to the ref's indignant ~320Hz
+    shout; finished through a wasteland-radio band + bitcrush. Plays whenever
+    a special fires without its own sp_* asset."""
+    dur = 1.15
+    tt = t(dur)
+    n = tt.size
+    r = np.random.default_rng(401)
+    # prosody keyframes: WHERE'S(0-0.38) the(0.40-0.52) [b]BEEF!(0.58-1.08)
+    kt = [0.00, 0.06, 0.26, 0.32, 0.38, 0.40, 0.44, 0.52, 0.58, 0.62, 0.80, 0.95, 1.00, 1.15]
+    f0 = np.interp(tt, kt, [240, 255, 250, 235, 230, 225, 220, 220, 320, 335, 320, 290, 270, 250])
+    jig = one_pole_lp(r.uniform(-1, 1, n), 9.0)
+    f0 = f0 * (1.0 + 0.012 * jig / (np.max(np.abs(jig)) + 1e-9))
+    voiced = np.interp(tt,
+        [0.00, 0.03, 0.30, 0.34, 0.385, 0.40, 0.42, 0.50, 0.52, 0.585, 0.60, 0.90, 0.945, 0.96, 1.15],
+        [0.0, 0.55, 0.60, 0.40, 0.15, 0.0, 0.30, 0.35, 0.0, 0.0, 1.0, 0.95, 0.30, 0.0, 0.0])
+    # glottal buzz: harmonic stack, gated by voicing
+    ph = np.cumsum(f0) / SR
+    src = np.zeros(n)
+    for k in range(1, 15):
+        src += np.sin(2 * np.pi * k * ph) / k
+    src *= voiced
+    # formant tracks: w -> EH(air) -> r(F3 dip) -> z | dh-uh | b -> EE -> f
+    F1 = np.interp(tt, kt, [350, 650, 640, 560, 500, 480, 520, 520, 200, 320, 320, 320, 300, 300])
+    F2 = np.interp(tt, kt, [700, 1900, 1850, 1500, 1500, 1450, 1500, 1500, 900, 2600, 2650, 2600, 2400, 2200])
+    F3 = np.interp(tt, kt, [2300, 2800, 2750, 1800, 2400, 2500, 2600, 2600, 2500, 3200, 3200, 3150, 3000, 3000])
+    v = svf_bp(src, F1, 6.0) + 0.6 * svf_bp(src, F2, 8.0) + 0.3 * svf_bp(src, F3, 8.0)
+    v = v / (np.max(np.abs(v)) + 1e-9)
+    # consonants: z, dh, b-burst, f
+    def seg_env(a, b, atk=0.01):
+        return np.clip((tt - a) / atk, 0, 1) * np.clip((b - tt) / atk, 0, 1)
+    zz = one_pole_hp(r.uniform(-1, 1, n), 3500.0) * seg_env(0.32, 0.40) * 0.22
+    dh = biquad_bp(r.uniform(-1, 1, n), 1400.0, 1.0)
+    dh = dh / (np.sqrt(np.mean(dh ** 2)) + 1e-9) * 0.06 * seg_env(0.40, 0.45)
+    bb = one_pole_lp(r.uniform(-1, 1, n), 400.0) * seg_env(0.58, 0.605, 0.004) * 0.8
+    ff = one_pole_hp(r.uniform(-1, 1, n), 3000.0) * seg_env(0.95, 1.10) * 0.28
+    x = v + zz + dh + bb + ff
+    # wasteland radio: drive + crunchy quantize FIRST, band-limit last so the
+    # quantization grit stays inside the radio band instead of hissing to 20k
+    x = softclip(x * 2.2, 1.8)
+    x = np.round(x * 28.0) / 28.0
+    x = one_pole_hp(one_pole_lp(x, 3000.0), 250.0)
+    write("sp_placeholder", x, peak=0.92, fade_ms=6.0)
+
+
 if __name__ == "__main__":
     print("[synth] rendering...")
     mg_fire()
@@ -973,4 +1021,5 @@ if __name__ == "__main__":
     sp_pulse_wave()
     sp_chill_out()
     sp_red_glare()
+    sp_placeholder()
     print("[synth] done")
