@@ -132,6 +132,15 @@ func _show_rolling_win() -> void:
 	_rolling_hint.visible = false  # the short beat before the ask
 	add_child(_rolling_hint)
 	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_claim, CONNECT_ONE_SHOT)
+	# The PA calls it — finale-only by construction (only the stadium sets
+	# win_keeps_rolling). Baked speech; a beat after the sting so they don't mash.
+	get_tree().create_timer(0.8, true).timeout.connect(_announce_winner, CONNECT_ONE_SHOT)
+
+func _announce_winner() -> void:
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	var gs := get_node_or_null(^"/root/GameState")
+	if audio and gs:
+		audio.play(StringName("announcer_" + String(gs.selected_vehicle_id)))
 
 func _arm_claim() -> void:
 	_claim_armed = true

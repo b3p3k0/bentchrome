@@ -984,6 +984,66 @@ def sp_placeholder():
     write("sp_placeholder", x, peak=0.92, fade_ms=6.0)
 
 
+# ---- PA announcer (2026-07-14): baked speech, no runtime TTS ----------------
+# Rendered on the dev box via espeak-ng (optional dep — section skips with a
+# notice when absent; the .ogg files are committed, so other boxes never need
+# it). Deep mechanical voice through a stadium-PA chain: horn-speaker band,
+# drive, slap echoes, light flutter.
+import shutil
+
+ANNOUNCER_NAMES = {  # id -> spoken text (roster car_name)
+    "bumper": "Bumper", "coldfront": "Coldfront", "cricket": "Cricket",
+    "cyclone": "Cyclone", "ghost": "Ghost", "hammertoe": "Hammertoe",
+    "hornet": "Hornet", "hubcap": "Hubcap", "kandykane": "Kandy Kane",
+    "lovebug": "Lovebug", "mrghastly": "Mister Ghastly",
+    "razorback": "Razorback", "smoky": "Smoky", "splatkat": "Splat Kat",
+}
+
+
+def _load_audio(path):
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", path, "-f", "f32le", "-ac", "1",
+         "-ar", str(SR), "-"], capture_output=True).stdout
+    return np.frombuffer(raw, dtype=np.float32).astype(np.float64)
+
+
+def _pa_chain(x, seed=7):
+    """Stadium PA: horn-speaker band-limit + drive + slap echoes + flutter."""
+    r = np.random.default_rng(seed)
+    n = x.size
+    # horn speakers have no lows and no air
+    x = one_pole_hp(one_pole_lp(x, 4000.0), 350.0)
+    # overdriven amp
+    x = softclip(x * 2.6, 1.9)
+    # light AM flutter (aging electronics)
+    flut = one_pole_lp(r.uniform(-1, 1, n), 6.0)
+    x = x * (0.92 + 0.08 * flut / (np.max(np.abs(flut)) + 1e-9))
+    # stadium slap echoes
+    out = np.zeros(n + int(SR * 0.4))
+    out[:n] += x
+    for dly, g in [(0.12, 0.45), (0.26, 0.25)]:
+        j = int(SR * dly)
+        out[j:j + n] += x * g
+    return out
+
+
+def announcer():
+    espeak = shutil.which("espeak-ng")
+    if espeak is None:
+        print("  [announcer] espeak-ng not found — skipping (assets are committed)")
+        return
+    for car_id, spoken in ANNOUNCER_NAMES.items():
+        tmp = f"/tmp/announcer_{car_id}.wav"
+        subprocess.run([espeak, "-v", "en-us+m2", "-p", "18", "-s", "135",
+            "-a", "190", "-w", tmp, "%s wins!" % spoken], check=True)
+        x = _load_audio(tmp)
+        # trim espeak's lead/tail silence to a tight cue
+        loud = np.where(np.abs(x) > 0.01)[0]
+        if loud.size:
+            x = x[max(0, loud[0] - int(SR * 0.02)):loud[-1] + int(SR * 0.05)]
+        write("announcer_" + car_id, _pa_chain(x), peak=0.95, fade_ms=6.0)
+
+
 if __name__ == "__main__":
     print("[synth] rendering...")
     mg_fire()
@@ -1022,4 +1082,5 @@ if __name__ == "__main__":
     sp_chill_out()
     sp_red_glare()
     sp_placeholder()
+    announcer()
     print("[synth] done")

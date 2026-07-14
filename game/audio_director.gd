@@ -65,6 +65,23 @@ const CATALOG := {
 	&"sp_tornado_alley": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"sp_placeholder": {"volume_db": 0.0, "pitch_jitter": 0.04},  # "where's the
 		# beef?" — plays for any special that fires without its own sp_* asset
+	# PA announcer, campaign finale only: "<Carname> wins!" — baked speech
+	# (tools/synth_sfx.py announcer(), espeak-ng on the dev box; the game
+	# ships only these oggs). Keyed by roster id.
+	&"announcer_bumper": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_coldfront": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cricket": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cyclone": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_ghost": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hammertoe": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hornet": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hubcap": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_kandykane": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_lovebug": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_mrghastly": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_razorback": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_smoky": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_splatkat": {"volume_db": 0.0, "pitch_jitter": 0.0},
 }
 
 var _streams: Dictionary = {}  # event -> AudioStream (absent = no asset yet)
