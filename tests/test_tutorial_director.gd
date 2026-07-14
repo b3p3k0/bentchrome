@@ -174,38 +174,38 @@ func test_weapons_and_pickup_lessons() -> void:
 ## Lessons 5-7 drive the director's _physics_process DIRECTLY with forced
 ## vehicle state — no frame pumping, so the vehicle's own sensors never
 ## overwrite the forced fields between set and poll.
-func test_floors_jump_terrain_lessons() -> void:
+func test_jump_floors_terrain_lessons() -> void:
 	var w := _world()
 	var director: Node = w["director"]
 	var car: Node = w["car"]
 	director.begin(true)
 	_dismiss(director._card)
-	director.lesson_index = 4  # floors
+	director.lesson_index = 4  # jump — the pad lesson now leads the ramp lesson
 	director._latch.clear()
 	director._on_card_dismissed()
-
-	car.floor_index = 1
-	director._physics_process(0.016)
-	t.check(director.lesson_index == 4, "floors: starting low is not the lesson")
-	car.floor_index = 2
-	director._physics_process(0.016)
-	car.floor_index = 1
-	director._physics_process(0.016)  # arms the savor beat
-	t.check(String(director._hint_label.text).begins_with("✓"),
-		"floors: the hint flips to a check while the beat holds")
-	director._physics_process(director.ADVANCE_DELAY + 0.1)
-	t.check(director.lesson_index == 5, "floors: up then down -> jump lesson")
-	_dismiss(director._card)
 
 	car.height = 60.0
 	car.global_position = Vector2(0, 800)
 	director._physics_process(0.016)
-	t.check(director.lesson_index == 5, "jump: airborne OFF the lane doesn't count")
+	t.check(director.lesson_index == 4, "jump: airborne OFF the lane doesn't count")
 	car.global_position = Vector2(640, 200)  # inside JUMP_LANE
+	director._physics_process(0.016)  # arms the savor beat
+	t.check(String(director._hint_label.text).begins_with("✓"),
+		"jump: the hint flips to a check while the beat holds")
+	director._physics_process(director.ADVANCE_DELAY + 0.1)
+	t.check(director.lesson_index == 5, "jump: pad-lane air -> floors lesson")
+	car.height = 0.0
+	_dismiss(director._card)
+
+	car.floor_index = 1
+	director._physics_process(0.016)
+	t.check(director.lesson_index == 5, "floors: starting low is not the lesson")
+	car.floor_index = 2
+	director._physics_process(0.016)
+	car.floor_index = 1
 	director._physics_process(0.016)
 	director._physics_process(director.ADVANCE_DELAY + 0.1)
-	t.check(director.lesson_index == 6, "jump: pad-lane air -> terrain lesson")
-	car.height = 0.0
+	t.check(director.lesson_index == 6, "floors: up then down -> terrain lesson")
 	_dismiss(director._card)
 
 	for surface in [&"grass", &"dirt", &"mud", &"snow", &"ice"]:
