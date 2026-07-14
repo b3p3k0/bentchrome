@@ -481,3 +481,5 @@ Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
 | pickup cue | player-only | ammo_pickup.gd / heal_pickup.gd | AI crate grabs stay silent |
 | mp_join/mp_leave | lobby only | mp_lobby.gd | peer-count diff on peers_changed (name syncs don't cue) |
 | pit/water death sound | pit_fall / sink replace the death boom | vehicle.gd _on_died | `_falling` gates the generic explosion sound like it already gated the visual |
+| sp_<special> events | 13 (9 assets live) | special_controller.gd special_sfx_event | per-car special voices: sp_ + def basename; taser/blaze loop with the effect, toe_jam voices the LANDED hit, red_glare repeats per rocket; PROJECTILE fallback = missile_fire via WeaponMount.sfx_override |
+| brake cue | one-shot on hard-brake start | drive_fx.gd _was_braking_hard | was a loop; Kevin redesigned to a single quick bite (2026-07-14) |

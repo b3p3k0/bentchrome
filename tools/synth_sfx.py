@@ -326,28 +326,31 @@ def crash_soft():
 
 
 def missile_fire():
-    """~550ms real rocket launch (TOW/Javelin family): ignition bang +
-    combustion roar + supersonic-exhaust CRACKLE, receding. No whistle —
-    crackle is the real signature (shock discontinuities, not tones)."""
-    dur = 0.55
+    """~0.9s pop-THWoop, matched to Kevin's TOW-style ref (2s window @1.5s):
+    sharp launch pop, beat of air, then the breathy mid whoosh of the round
+    leaving. Ref bands: .3-1k 32% / 1-4k 32%, little sub — mid-forward, not
+    the sub-heavy roar of v2."""
+    dur = 0.9
     tt = t(dur)
     r = np.random.default_rng(51)
-    # ignition bang: hard broadband launch-motor pop
-    bang = one_pole_hp(r.uniform(-1, 1, tt.size), 300.0) * np.exp(-tt / 0.014) * 1.3
-    # combustion roar: deep rough-modulated noise, holds then recedes
-    roar_env = np.minimum(tt / 0.03, 1.0) * np.exp(-tt / 0.24)
-    roar = one_pole_lp(r.uniform(-1, 1, tt.size), 380.0)
-    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 140.0))
-    rough = rough / (rough.max() + 1e-9)
-    roar = roar * (0.45 + 0.55 * rough) * roar_env * 1.5
-    # sub weight under the roar
-    sub = one_pole_lp(r.uniform(-1, 1, tt.size), 90.0) * roar_env * 0.9
-    # exhaust crackle: dense sharp pops riding the roar envelope
-    crackle = debris_crackle(dur, 0.0, 900, 0.0012, hp=2200.0, seed=52)
-    crackle = crackle * (0.3 + 0.7 * roar_env) * 0.8
-    x = fit(fit(bang, softclip(roar + sub, 2.4)), crackle)
-    x = softclip(x, 1.4)
-    write("missile_fire", x, peak=0.95, fade_ms=6.0)
+    # the POP: broadband mid crack, fast decay
+    pop = biquad_bp(r.uniform(-1, 1, tt.size), 700.0, 0.5) * np.exp(-tt / 0.02) * 1.6
+    pop += one_pole_hp(r.uniform(-1, 1, tt.size), 1800.0) * np.exp(-tt / 0.012) * 0.8
+    # the THWOOP: breathy band-swept whoosh arriving ~0.15s after the pop
+    n2 = int(SR * (dur - 0.15))
+    t2 = np.linspace(0, dur - 0.15, n2, endpoint=False)
+    cut = 450 + 1050 * np.clip(t2 / 0.10, 0, 1) - 900 * np.clip((t2 - 0.10) / 0.5, 0, 1)
+    woo = svf_bp(r.uniform(-1, 1, n2), cut, 1.0)
+    woo_env = np.minimum(t2 / 0.04, 1.0) * np.exp(-t2 / 0.20)
+    woo = woo / (np.sqrt(np.mean(woo ** 2)) + 1e-9) * 0.30 * woo_env
+    # mid body + restrained crackle riding the whoosh
+    body = biquad_bp(r.uniform(-1, 1, n2), 380.0, 0.6)
+    body = body / (np.sqrt(np.mean(body ** 2)) + 1e-9) * 0.22 * woo_env
+    crk = debris_crackle(dur - 0.15, 0.0, 400, 0.0012, hp=2500.0, seed=52)
+    crk = crk / (np.sqrt(np.mean(crk ** 2)) + 1e-9) * 0.10 * woo_env
+    x = fit(pop, delay(softclip((woo + body) * 3.0, 1.6) + crk, 0.15))
+    x = one_pole_lp(softclip(x, 1.3), 5200.0)
+    write("missile_fire", x, peak=0.95, fade_ms=5.0)
 
 
 def mine_drop():
@@ -548,24 +551,30 @@ def splash():
 
 
 def sink():
-    """~900ms deep-water death plunge: big whump + splash + glug bubbles."""
-    dur = 0.9
+    """~0.85s deep plunge, matched to Kevin's ref (single concentrated deep
+    'bloomp' — 60-120Hz 44%, little spray): soft-attack pitch-drop bloop +
+    low noise body, restrained spray, small bubble settle."""
+    dur = 0.85
     tt = t(dur)
     r = np.random.default_rng(121)
-    whump = sweep(130, 40, dur, "exp") * np.exp(-tt / 0.09) * 1.3
-    whump += one_pole_lp(r.uniform(-1, 1, tt.size), 150.0) * np.exp(-tt / 0.12)
-    burst = biquad_bp(r.uniform(-1, 1, tt.size), 750.0, 0.6) * np.exp(-tt / 0.08) * 1.2
-    spray = one_pole_hp(r.uniform(-1, 1, tt.size), 2200.0) * np.exp(-tt / 0.15) * 0.5
-    # glugs: sparse damped low-band pops as the car goes under
+    # the bloomp: pitched drop with a SOFT attack (water swallows, not slaps)
+    atk = np.minimum(tt / 0.03, 1.0)
+    bloop = sweep(115, 52, dur, "exp") * atk * np.exp(-tt / 0.14) * 1.5
+    body = one_pole_lp(r.uniform(-1, 1, tt.size), 140.0) * atk * np.exp(-tt / 0.12)
+    # restrained splash edge (ref keeps highs modest)
+    edge = biquad_bp(r.uniform(-1, 1, tt.size), 700.0, 0.6)
+    edge = edge / (np.sqrt(np.mean(edge ** 2)) + 1e-9) * 0.35 * np.exp(-tt / 0.06)
+    spray = one_pole_hp(one_pole_lp(r.uniform(-1, 1, tt.size), 6000.0), 1500.0) \
+        * np.exp(-tt / 0.06) * 0.18
+    # a couple of settle glugs
     glug = np.zeros(tt.size)
-    for i, at in enumerate([0.30, 0.45, 0.58, 0.72]):
-        ln = int(SR * 0.07)
-        seg = biquad_bp(r.uniform(-1, 1, ln), 260.0 - i * 25.0, 2.2) \
-            * np.exp(-np.arange(ln) / (SR * 0.02))
-        j = int(SR * at)
-        glug[j:j + ln] += seg * (0.8 - i * 0.12)
-    x = fit(fit(1.3 * whump, burst), fit(spray, glug * 1.2))
-    x = softclip(x, 1.7)
+    for i, at in enumerate([0.42, 0.62]):
+        ln = int(SR * 0.06)
+        seg = biquad_bp(r.uniform(-1, 1, ln), 240.0 - i * 30.0, 2.2) \
+            * np.exp(-np.arange(ln) / (SR * 0.018))
+        glug[int(SR * at):int(SR * at) + ln] += seg * (0.55 - i * 0.15)
+    x = fit(fit(1.4 * bloop, body), fit(edge, fit(spray, glug)))
+    x = softclip(x, 1.6)
     write("sink", x, peak=0.96, fade_ms=6.0)
 
 
@@ -587,25 +596,19 @@ def pit_fall():
 
 
 def brake():
-    """~0.75s SEAMLESS service-brake grind loop (>=35 mph): steady granular
-    crunch + low judder + a faint squeal edge. Same wrap-crossfade as skid."""
-    body = 0.75
-    xf = 0.06
-    dur = body + xf
+    """~0.45s one-shot brake bite (Kevin: no loop — play once quickly when
+    hard braking starts): crunchy grind burst + low judder, fast decay."""
+    dur = 0.45
     tt = t(dur)
     r = np.random.default_rng(141)
-    grind = granular_crunch(dur, 480.0, 0.9, 99.0, 220.0, seed=142)  # decay 99 = steady
+    grind = granular_crunch(dur, 480.0, 0.9, 0.14, 220.0, seed=142)
     judder = biquad_bp(r.uniform(-1, 1, tt.size), 190.0, 1.0)
     rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 30.0))
-    judder = judder * (rough / (rough.max() + 1e-9)) * 0.8
-    edge = biquad_bp(r.uniform(-1, 1, tt.size), 1900.0, 3.0) * 0.25
-    x = softclip(1.3 * grind + judder + edge, 1.7)
-    n = int(SR * body)
-    k = int(SR * xf)
-    w = np.linspace(0.0, 1.0, k)
-    out = x[:n].copy()
-    out[:k] = x[n:n + k] * (1.0 - w) + out[:k] * w
-    write("brake", out, peak=0.9, fade_ms=0.0)
+    judder = judder * (rough / (rough.max() + 1e-9)) * np.exp(-tt / 0.12) * 0.8
+    edge = biquad_bp(r.uniform(-1, 1, tt.size), 1900.0, 3.0) * np.exp(-tt / 0.10) * 0.3
+    bite = one_pole_hp(r.uniform(-1, 1, tt.size), 1200.0) * np.exp(-tt / 0.008) * 0.6
+    x = softclip(1.3 * grind + judder + edge + bite, 1.7)
+    write("brake", x, peak=0.9, fade_ms=4.0)
 
 
 def jump_pad():
@@ -737,6 +740,202 @@ def mp_leave():
     _two_tick("mp_leave", 1400.0, 680.0, 212)
 
 
+# ---- per-car specials (2026-07-14): sp_<def basename>, ref-matched ---------
+def loopify(x, body, xf=0.06):
+    """Wrap-crossfade the tail over the head and trim to body seconds — the
+    skid-loop seam technique, shared by the sustained specials."""
+    n = int(SR * body)
+    k = int(SR * xf)
+    w = np.linspace(0.0, 1.0, k)
+    out = x[:n].copy()
+    out[:k] = x[n:n + k] * (1.0 - w) + out[:k] * w
+    return out
+
+
+def sp_blunt_blaze():
+    """~1s SEAMLESS flamethrower loop (ref: sub-heavy roar 53% + breathy hiss):
+    deep rough rumble under a gas hiss. Loops while the flame is on."""
+    body = 1.0
+    dur = body + 0.06
+    tt = t(dur)
+    r = np.random.default_rng(301)
+    rumble = one_pole_lp(r.uniform(-1, 1, tt.size), 130.0)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 22.0))
+    rumble = rumble * (0.55 + 0.45 * rough / (rough.max() + 1e-9))
+    rumble = rumble / (np.sqrt(np.mean(rumble ** 2)) + 1e-9)
+    sub = one_pole_lp(r.uniform(-1, 1, tt.size), 55.0)
+    sub = sub / (np.sqrt(np.mean(sub ** 2)) + 1e-9) * 0.9
+    hiss = one_pole_hp(r.uniform(-1, 1, tt.size), 3500.0)
+    hiss = hiss / (np.sqrt(np.mean(hiss ** 2)) + 1e-9) * 0.22
+    mid = biquad_bp(r.uniform(-1, 1, tt.size), 420.0, 0.6)
+    mid = mid / (np.sqrt(np.mean(mid ** 2)) + 1e-9) * 0.30
+    x = softclip((rumble + sub + hiss + mid) * 1.2, 1.8)
+    write("sp_blunt_blaze", loopify(x, body), peak=0.92, fade_ms=0.0)
+
+
+def sp_taser():
+    """~0.9s SEAMLESS electric-arc loop (ref: >4k 67% — bright dense crackle)."""
+    body = 0.9
+    dur = body + 0.06
+    tt = t(dur)
+    r = np.random.default_rng(311)
+    # dense sharp arc snaps
+    snaps = debris_crackle(dur, 0.0, 1400, 0.0008, hp=4500.0, seed=312)
+    snaps = snaps / (np.sqrt(np.mean(snaps ** 2)) + 1e-9)
+    sizzle = biquad_bp(r.uniform(-1, 1, tt.size), 1900.0, 0.8)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 90.0))
+    sizzle = sizzle * (0.4 + 0.6 * rough / (rough.max() + 1e-9))
+    sizzle = sizzle / (np.sqrt(np.mean(sizzle ** 2)) + 1e-9) * 0.75
+    x = softclip((snaps + sizzle) * 0.8, 1.5)
+    write("sp_taser", loopify(x, body), peak=0.9, fade_ms=0.0)
+
+
+def sp_leap():
+    """~0.85s dash lunge (ref: dirt racer accelerating — 60-300Hz engine roar
+    ramp): rough rising rev burst that cuts off as the car leaves."""
+    dur = 0.85
+    tt = t(dur)
+    r = np.random.default_rng(321)
+    f0 = 55.0 + 65.0 * np.clip(tt / 0.5, 0, 1)
+    ph = np.cumsum(f0) / SR
+    eng = np.zeros(tt.size)
+    for k, a in enumerate([0.9, 1.0, 0.7, 0.45, 0.28, 0.16], start=1):
+        eng += a * np.sin(2 * np.pi * k * ph)
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 60.0))
+    eng = eng * (0.7 + 0.3 * grit / (grit.max() + 1e-9))
+    env = np.minimum(tt / 0.05, 1.0) * (1.0 - np.clip((tt - 0.62) / 0.20, 0, 1))
+    eng = softclip(eng * env * 1.8, 2.2)
+    eng = one_pole_lp(eng, 1500.0)
+    dirt = biquad_bp(r.uniform(-1, 1, tt.size), 900.0, 0.7)
+    dirt = dirt / (np.sqrt(np.mean(dirt ** 2)) + 1e-9) * 0.30 * env
+    x = fit(eng, dirt)
+    write("sp_leap", x, peak=0.94, fade_ms=5.0)
+
+
+def sp_tornado_alley():
+    """~3s whirlwind matching the spin duration (ref: real tornado — broadband
+    roar 120Hz-1k with slow undulation, real sub): fade in fast, churn, die."""
+    dur = 3.0
+    tt = t(dur)
+    r = np.random.default_rng(331)
+    roar = biquad_bp(r.uniform(-1, 1, tt.size), 240.0, 0.5)
+    roar = roar / (np.sqrt(np.mean(roar ** 2)) + 1e-9)
+    midr = biquad_bp(r.uniform(-1, 1, tt.size), 550.0, 0.7)
+    midr = midr / (np.sqrt(np.mean(midr ** 2)) + 1e-9) * 0.8
+    low = one_pole_lp(r.uniform(-1, 1, tt.size), 110.0)
+    low = low / (np.sqrt(np.mean(low ** 2)) + 1e-9) * 0.75
+    sub = one_pole_lp(r.uniform(-1, 1, tt.size), 50.0)
+    sub = sub / (np.sqrt(np.mean(sub ** 2)) + 1e-9) * 0.65
+    und = one_pole_lp(r.uniform(-1, 1, tt.size), 1.8)
+    und = 0.65 + 0.35 * und / (np.max(np.abs(und)) + 1e-9)
+    env = np.minimum(tt / 0.25, 1.0) * (1.0 - np.clip((tt - 2.45) / 0.55, 0, 1))
+    x = one_pole_lp(softclip((roar + midr + low + sub) * und * 0.7, 1.9), 1600.0) * env
+    write("sp_tornado_alley", x, peak=0.94, fade_ms=8.0)
+
+
+def sp_toe_jam():
+    """~1.1s trap-landed stab: an ORIGINAL distorted power-chord hit in the
+    ref riff's character (chug-chug-STAB rhythm, 120-300 body + 1-4k edge) —
+    vibe-alike, not the song's melody."""
+    dur = 1.1
+    r = np.random.default_rng(341)
+    def chord(dur_c, f, drive, seed):
+        tc = t(dur_c)
+        rr = np.random.default_rng(seed)
+        x = saw(f, dur_c) + saw(f * 1.5, dur_c) + 0.7 * saw(f * 2.0, dur_c) \
+            + 0.4 * saw(f * 1.007, dur_c)  # detune grit
+        x = softclip(x * drive, 3.0)
+        x = one_pole_lp(x, 5200.0)
+        sn = one_pole_hp(one_pole_lp(rr.uniform(-1, 1, tc.size), 6000.0), 2500.0)
+        x += sn * 0.4  # string/pick noise
+        return x
+    # two palm-muted chugs then the open stab
+    chug1 = chord(0.14, 82.0, 2.5, 342) * env_exp(0.14, 0.05)
+    chug2 = chord(0.14, 82.0, 2.5, 343) * env_exp(0.14, 0.05)
+    stab = chord(0.75, 110.0, 2.2, 344) * env_exp(0.75, 0.28)
+    x = fit(fit(chug1, delay(chug2, 0.17)), delay(stab, 0.34))
+    write("sp_toe_jam", x, peak=0.94, fade_ms=6.0)
+
+
+def sp_molotov():
+    """~1.2s glass smash + fire whump (ref: smash spike then 120-300Hz-heavy
+    fire bloom, modest highs)."""
+    dur = 1.2
+    tt = t(dur)
+    r = np.random.default_rng(351)
+    glass = debris_crackle(dur, 0.0, 300, 0.0025, hp=3800.0, seed=352)
+    glass = glass / (np.sqrt(np.mean(glass ** 2)) + 1e-9) * 0.18 * np.exp(-tt / 0.09)
+    # fire whump blooming just after the smash
+    n2 = int(SR * (dur - 0.08))
+    t2 = np.linspace(0, dur - 0.08, n2, endpoint=False)
+    r2 = np.random.default_rng(353)
+    whump = biquad_bp(r2.uniform(-1, 1, n2), 200.0, 0.5)
+    whump = whump / (np.sqrt(np.mean(whump ** 2)) + 1e-9) * 1.7 \
+        * np.minimum(t2 / 0.06, 1.0) * np.exp(-t2 / 0.30)
+    lowb = one_pole_lp(r2.uniform(-1, 1, n2), 110.0)
+    lowb = lowb / (np.sqrt(np.mean(lowb ** 2)) + 1e-9) * 0.45 * np.exp(-t2 / 0.18)
+    firecrk = debris_crackle(dur - 0.08, 0.15, 90, 0.005, hp=2200.0, seed=354)
+    firecrk = firecrk / (np.sqrt(np.mean(firecrk ** 2)) + 1e-9) * 0.12
+    x = fit(glass, delay(softclip(whump + lowb, 1.7) + firecrk, 0.08))
+    write("sp_molotov", x, peak=0.95, fade_ms=6.0)
+
+
+def sp_pulse_wave():
+    """~1.4s expanding shockwave (ref: 60-120Hz 70% — a deep slow bloom):
+    sub swell rising then rolling away, faint bright front edge."""
+    dur = 1.4
+    tt = t(dur)
+    r = np.random.default_rng(361)
+    f = 82.0 - 26.0 * np.clip(tt / 1.1, 0, 1)
+    ph = np.cumsum(f) / SR
+    swell = np.sin(2 * np.pi * ph) + 0.5 * np.sin(2 * np.pi * 2.0 * ph)
+    env = np.minimum(tt / 0.22, 1.0) * (1.0 - np.clip((tt - 0.75) / 0.6, 0, 1))
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 18.0))
+    swell = softclip(swell * (0.75 + 0.25 * grit / (grit.max() + 1e-9)) * env * 1.6, 1.8)
+    lown = one_pole_lp(r.uniform(-1, 1, tt.size), 100.0) * env * 0.7
+    edge = biquad_bp(r.uniform(-1, 1, tt.size), 2200.0, 1.5)
+    edge = edge / (np.sqrt(np.mean(edge ** 2)) + 1e-9) * 0.16 * env
+    mid = biquad_bp(r.uniform(-1, 1, tt.size), 500.0, 0.8)
+    mid = mid / (np.sqrt(np.mean(mid ** 2)) + 1e-9) * 0.20 * env
+    edge = edge + mid
+    x = swell + lown + edge
+    write("sp_pulse_wave", x, peak=0.95, fade_ms=8.0)
+
+
+def sp_chill_out():
+    """~0.6s 'beep!beep!' from a weak nasal horn (ref: 1-4k 86%) — the
+    pacifist's love-tap."""
+    r = np.random.default_rng(371)
+    def beep(dur_b, seed):
+        tb = t(dur_b)
+        x = np.sin(2 * np.pi * 1240.0 * tb) + 0.9 * np.sin(2 * np.pi * 1860.0 * tb) \
+            + 0.45 * np.sin(2 * np.pi * 2480.0 * tb) + 0.25 * np.sin(2 * np.pi * 3720.0 * tb)
+        x = softclip(x * 1.6, 2.0)  # nasal squawk, not a pure tone
+        e = np.minimum(tb / 0.012, 1.0) * (1.0 - np.clip((tb - dur_b + 0.03) / 0.03, 0, 1))
+        return x * e
+    x = fit(beep(0.16, 372), delay(beep(0.20, 373), 0.25))
+    write("sp_chill_out", x, peak=0.9, fade_ms=3.0)
+
+
+def sp_red_glare():
+    """~0.7s single rocket leaving (plays once per volley rocket, x3): snappy
+    bang + fast bright whoosh (ref: .3-1k 36% / 1-4k 41%, instant attack)."""
+    dur = 0.7
+    tt = t(dur)
+    r = np.random.default_rng(381)
+    bang = one_pole_hp(r.uniform(-1, 1, tt.size), 500.0) * np.exp(-tt / 0.012) * 1.4
+    cut = 600 + 1300 * np.clip(tt / 0.06, 0, 1) - 1100 * np.clip((tt - 0.06) / 0.4, 0, 1)
+    woo = svf_bp(r.uniform(-1, 1, tt.size), cut, 1.0)
+    woo = woo / (np.sqrt(np.mean(woo ** 2)) + 1e-9) * 0.35 \
+        * np.minimum(tt / 0.02, 1.0) * np.exp(-tt / 0.16)
+    body = biquad_bp(r.uniform(-1, 1, tt.size), 420.0, 0.6)
+    body = body / (np.sqrt(np.mean(body ** 2)) + 1e-9) * 0.18 * np.exp(-tt / 0.14)
+    crk = debris_crackle(dur, 0.0, 500, 0.001, hp=2800.0, seed=382)
+    crk = crk / (np.sqrt(np.mean(crk ** 2)) + 1e-9) * 0.10 * np.exp(-tt / 0.15)
+    x = one_pole_lp(softclip(fit(bang * 0.7, (woo + body) * 3.0) + crk, 1.5), 5200.0)
+    write("sp_red_glare", x, peak=0.94, fade_ms=4.0)
+
+
 if __name__ == "__main__":
     print("[synth] rendering...")
     mg_fire()
@@ -765,4 +964,13 @@ if __name__ == "__main__":
     ui_back()
     mp_join()
     mp_leave()
+    sp_blunt_blaze()
+    sp_taser()
+    sp_leap()
+    sp_tornado_alley()
+    sp_toe_jam()
+    sp_molotov()
+    sp_pulse_wave()
+    sp_chill_out()
+    sp_red_glare()
     print("[synth] done")

@@ -82,10 +82,55 @@ var _pulse_ring: Node2D = null
 
 @onready var _mount: WeaponMount = get_parent().get_node_or_null("SecondaryMount") if get_parent() else null
 
+var _beam_sfx: StringName = &""   # player loop events for the running effects;
+var _flame_sfx: StringName = &""  # synced from state each frame (all end paths)
+var _armed_sfx: StringName = &""  # TRIGGER voice — plays when the hit LANDS
+
+## Per-special audio event, derived from the def's file: blunt_blaze.tres ->
+## sp_blunt_blaze. The name IS the wiring, same contract as assets/sfx.
+static func special_sfx_event(def: WeaponDef) -> StringName:
+	if def == null or def.resource_path.is_empty():
+		return &""
+	return StringName("sp_" + def.resource_path.get_file().get_basename())
+
+## One-shot special voice: viewer's car plays flat, everyone else positional.
+func _play_special_sfx(def: WeaponDef) -> void:
+	var event := special_sfx_event(def)
+	if event == &"":
+		return
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio == null:
+		return
+	var vehicle := get_parent()
+	if vehicle and vehicle.is_in_group(&"player"):
+		audio.play(event)
+	elif vehicle is Node2D:
+		audio.play_at(event, (vehicle as Node2D).global_position)
+
+## Sustained-special loops (taser/blaze), player-only, driven from state each
+## frame — every end path (timeout, LoS break, roof drop, death) goes silent
+## without per-seam bookkeeping. Same idempotent idiom as the skid loop.
+func _sync_special_loops() -> void:
+	var vehicle := get_parent()
+	if vehicle == null or not vehicle.is_in_group(&"player"):
+		return
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio == null:
+		return
+	if _beam_sfx != &"":
+		audio.loop_set(_beam_sfx, _beam_t > 0.0)
+		if _beam_t <= 0.0:
+			_beam_sfx = &""
+	if _flame_sfx != &"":
+		audio.loop_set(_flame_sfx, _flame_t > 0.0)
+		if _flame_t <= 0.0:
+			_flame_sfx = &""
+
 func set_weapon(def: WeaponDef) -> void:
 	_def = def
 	if _mount:
 		_mount.set_weapon(def)   # projectile-kind firing lives in the mount
+		_mount.sfx_override = special_sfx_event(def)
 
 ## Twin special: a second barrel on the same ammo pool (non-PROJECTILE kinds
 ## only — the mount owns projectile defs). Chosen per activation.
@@ -125,20 +170,42 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 		WeaponDef.Kind.PROJECTILE:
 			if pressed and _mount:
 				return _mount.try_fire(origin, direction, shooter)
+				# (the mount voices projectile specials via sfx_override)
 		WeaponDef.Kind.BEAM:
-			return _beam(pressed, origin, direction, shooter, def)
+			var beam_ok := _beam(pressed, origin, direction, shooter, def)
+			if beam_ok:
+				_beam_sfx = special_sfx_event(def)  # player loop (synced per frame)
+				if shooter is Node and not shooter.is_in_group(&"player"):
+					_play_special_sfx(def)  # AI: positional one-shot instead
+			return beam_ok
 		WeaponDef.Kind.DASH:
-			return _dash(pressed, origin, direction, shooter)
+			var dash_ok := _dash(pressed, origin, direction, shooter)
+			if dash_ok:
+				_play_special_sfx(def)
+			return dash_ok
 		WeaponDef.Kind.TRIGGER:
 			return _trigger(pressed, def)
+			# (silent here — the TRIGGER voice plays when the hit lands)
 		WeaponDef.Kind.FLAME:
-			return _flame(pressed, def)
+			var flame_ok := _flame(pressed, def)
+			if flame_ok:
+				_flame_sfx = special_sfx_event(def)
+				if shooter is Node and not shooter.is_in_group(&"player"):
+					_play_special_sfx(def)
+			return flame_ok
 		WeaponDef.Kind.DROP:
 			return _drop(pressed, shooter, def)
+			# (mine_drop already voices deploys — vehicle.gd)
 		WeaponDef.Kind.TORNADO:
-			return _tornado(pressed, def)
+			var tornado_ok := _tornado(pressed, def)
+			if tornado_ok:
+				_play_special_sfx(def)
+			return tornado_ok
 		WeaponDef.Kind.PULSE:
-			return _pulse(pressed, def, shooter)
+			var pulse_ok := _pulse(pressed, def, shooter)
+			if pulse_ok:
+				_play_special_sfx(def)
+			return pulse_ok
 	return false
 
 ## Mines: deploy off the REAR bumper. Internal cooldown so a held button lays
@@ -192,6 +259,7 @@ func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, d
 	return true
 
 func _physics_process(delta: float) -> void:
+	_sync_special_loops()
 	# Tick before active effects: when one ends below and arms the cooldown, its
 	# first full frame is the NEXT frame — firing time never pays the lockout.
 	if _sustained_cooldown_t > 0.0 and _beam_t <= 0.0 and _flame_t <= 0.0:
@@ -730,6 +798,7 @@ func _trigger(pressed: bool, def: WeaponDef) -> bool:
 	_armed = true
 	_armed_t = TRIGGER_WINDOW
 	_armed_damage = def.damage if def else 0.0  # captured: swaps can't re-price it
+	_armed_sfx = special_sfx_event(def)         # voiced when the hit LANDS
 	_set_armed_fx(true)
 	return true
 
@@ -741,6 +810,15 @@ func take_armed_hit() -> float:
 	_armed = false
 	_armed_t = 0.0
 	_set_armed_fx(false)
+	if _armed_sfx != &"":
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		var vehicle := get_parent()
+		if audio and vehicle:
+			if vehicle.is_in_group(&"player"):
+				audio.play(_armed_sfx)
+			elif vehicle is Node2D:
+				audio.play_at(_armed_sfx, (vehicle as Node2D).global_position)
+		_armed_sfx = &""
 	return _armed_damage
 
 func _disarm_expired() -> void:

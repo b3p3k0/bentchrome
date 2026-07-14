@@ -27,7 +27,7 @@ and the boot log always tells you the score:
 | `crash_soft` | player-involved collision under `Vehicle.CRASH_HARD_SPEED` | fender-bender crunch |
 | `crash_hard` | player-involved collision at/over that speed | totaled-the-car smash |
 | `skid` | **loops** while your handbrake lays rubber | seamless tire squeal loop |
-| `brake` | **loops** while service-braking above ~35 mph | seamless grind loop |
+| `brake` | once, when hard service-braking starts above ~35 mph | short crunchy bite |
 | `hit_mg` | MG fire hits YOU | small tink (rapid repeats) |
 | `hit_weapon` | a missile/special/mine hits YOU | meaty thud |
 | `player_death` | you're destroyed | big send-off |
@@ -47,6 +47,7 @@ and the boot log always tells you the score:
 | `ui_back` | menu back/escape | darker tick |
 | `mp_join` | a peer joins the MP lobby | brief rising two-tick |
 | `mp_leave` | a peer leaves the MP lobby | brief falling two-tick |
+| `sp_<special>` | that car's signature special fires | one per def file: `sp_` + the def's basename (`blunt_blaze.tres` → `sp_blunt_blaze`); Kandykane shares Hornet's `sp_molotov` via the shared def. `sp_taser`/`sp_blunt_blaze` **loop** while the effect runs; `sp_toe_jam` plays when the armed hit LANDS; `sp_red_glare` plays per rocket (×3); PROJECTILE specials without an asset fall back to `missile_fire` |
 
 Adding a NEW event = one `CATALOG` row in `game/audio_director.gd` plus a
 `play()`/`play_at()`/`loop_set()` call at the gameplay moment. (UI screens go

@@ -82,6 +82,10 @@ func net_mirror_heat(frac: float, locked: bool) -> void:
 	heat = clampf(frac, 0.0, 1.0) * heat_max
 	_locked = locked
 
+## Special-slot voice: when set (sp_<def id>, from SpecialController) the wave
+## audio plays this instead of the generic missile_fire — if its asset exists.
+var sfx_override: StringName = &""
+
 func is_locked() -> bool:
 	return _locked
 
@@ -104,10 +108,6 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	for n in range(1, bursts):
 		get_tree().create_timer(burst_interval * n).timeout.connect(
 			_burst_wave.bind(origin, direction, shooter), CONNECT_ONE_SHOT)
-	if shooter is Node and shooter.is_in_group(&"player"):
-		var audio := get_node_or_null(^"/root/AudioDirector")
-		if audio:
-			audio.play(&"mg_fire" if heat_per_shot > 0.0 else &"missile_fire")
 	return true
 
 ## Follow-up wave: launched off the shooter's CURRENT muzzle/heading (the car
@@ -130,6 +130,16 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node) -> void:
 	var scene := get_tree().current_scene
 	if scene == null:
 		return
+	# Audio rides the WAVE, not the press — multi-burst volleys (red_glare x3)
+	# repeat their launch sound per rocket. sfx_override = the special's own
+	# voice (sp_<def>, set by SpecialController); missing asset falls back.
+	if shooter is Node and shooter.is_in_group(&"player"):
+		var audio := get_node_or_null(^"/root/AudioDirector")
+		if audio:
+			var event: StringName = &"mg_fire" if heat_per_shot > 0.0 else &"missile_fire"
+			if sfx_override != &"" and audio.has_asset(sfx_override):
+				event = sfx_override
+			audio.play(event)
 	var spawner := get_node_or_null(^"/root/Spawner")  # may be absent in bare fixtures
 	# One flash per wave (not per pellet) — pooled; the MG asks 12 times a second.
 	var flash := (spawner.acquire(FlashScene) if spawner else FlashScene.instantiate()) as Node2D

@@ -25,8 +25,8 @@ const CATALOG := {
 	&"crash_soft": {"volume_db": -2.0, "pitch_jitter": 0.1},   # fender-bender
 	&"crash_hard": {"volume_db": 1.0, "pitch_jitter": 0.08},   # totaled (>= Vehicle.CRASH_HARD_SPEED)
 	&"skid": {"volume_db": -4.0, "pitch_jitter": 0.0, "loop": true},
-	&"brake": {"volume_db": -6.0, "pitch_jitter": 0.0, "loop": true},  # service
-		# brake grind above ~35 mph (drive_fx)
+	&"brake": {"volume_db": -6.0, "pitch_jitter": 0.06},  # one-shot crunch when
+		# hard braking STARTS above ~35 mph (drive_fx edge-trigger)
 	&"hit_mg": {"volume_db": -8.0, "pitch_jitter": 0.08},
 	&"hit_weapon": {"volume_db": 0.0, "pitch_jitter": 0.08},
 	&"player_death": {"volume_db": 2.0, "pitch_jitter": 0.0},
@@ -47,6 +47,22 @@ const CATALOG := {
 	&"ui_back": {"volume_db": -12.0, "pitch_jitter": 0.0},
 	&"mp_join": {"volume_db": -6.0, "pitch_jitter": 0.0},
 	&"mp_leave": {"volume_db": -6.0, "pitch_jitter": 0.0},
+	# Per-car specials: sp_<def basename> (SpecialController.special_sfx_event).
+	# Kandykane shares Hornet's molotov by sharing the def. Missing assets are
+	# the usual silent no-op (PROJECTILE specials fall back to missile_fire).
+	&"sp_blunt_blaze": {"volume_db": -4.0, "pitch_jitter": 0.0},  # loops while flaming
+	&"sp_chilblain": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_chill_out": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_leap": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_molotov": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_phantom_phire": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_pulse_wave": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_red_glare": {"volume_db": -2.0, "pitch_jitter": 0.06},  # plays per rocket (x3)
+	&"sp_rusty_poon": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_scythe": {"volume_db": 0.0, "pitch_jitter": 0.05},
+	&"sp_taser": {"volume_db": -4.0, "pitch_jitter": 0.0},  # loops while latched
+	&"sp_toe_jam": {"volume_db": 0.0, "pitch_jitter": 0.0},  # on the LANDED hit
+	&"sp_tornado_alley": {"volume_db": 0.0, "pitch_jitter": 0.0},
 }
 
 var _streams: Dictionary = {}  # event -> AudioStream (absent = no asset yet)
