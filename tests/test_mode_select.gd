@@ -31,17 +31,23 @@ func test_nav_skips_disabled_row() -> void:
 	var menu := _fresh()
 	t.check(menu._index == 1, "mode: cursor boots on ROAD TRIP")
 	_press(menu, &"move_down")
-	t.check(menu._index == 0, "mode: down from ROAD TRIP hops SINGLE BATTLE")
+	t.check(menu._index == menu.BACK_INDEX, "mode: down from ROAD TRIP hops to BACK")
+	_press(menu, &"move_down")
+	t.check(menu._index == 0, "mode: down from BACK wraps to DRIVER'S ED")
 	_press(menu, &"move_down")
 	t.check(menu._index == 1, "mode: down from DRIVER'S ED lands on ROAD TRIP")
 	_press(menu, &"move_up")
 	t.check(menu._index == 0, "mode: up from ROAD TRIP lands on DRIVER'S ED")
 	_press(menu, &"move_up")
-	t.check(menu._index == 1, "mode: up from DRIVER'S ED hops SINGLE BATTLE")
+	t.check(menu._index == menu.BACK_INDEX, "mode: up from DRIVER'S ED lands on BACK")
+	_press(menu, &"move_up")
+	t.check(menu._index == 1, "mode: up from BACK hops SINGLE BATTLE")
 	t.check(menu._entries[2].modulate == menu.DISABLED_TEXT,
 		"mode: SINGLE BATTLE wears the disabled grey")
 	t.check(not menu._entries[2].text.begins_with("["),
 		"mode: SINGLE BATTLE never renders the cursor brackets")
+	t.check(menu._entries[menu.BACK_INDEX].text == "BACK",
+		"mode: BACK is a visible selectable row")
 	t.root.remove_child(menu)
 	menu.free()
 
@@ -71,6 +77,34 @@ func test_sub_dialog_open_toggle_close() -> void:
 	t.root.remove_child(menu)
 	menu.free()
 
+func test_sub_dialog_explicit_back() -> void:
+	var menu := _fresh()
+	menu._index = 0
+	menu._activate()
+	_press(menu, &"move_up")  # first choice wraps to the visible BACK row
+	t.check(menu._sub_index == menu.SUB_BACK_INDEX,
+		"mode: Driver's Ed dialog exposes BACK")
+	_press(menu, &"select_confirm")
+	t.check(menu._sub == null, "mode: dialog BACK closes only the dialog")
+	t.check(not menu._done, "mode: dialog BACK leaves lane selection live")
+	t.root.remove_child(menu)
+	menu.free()
+
+func test_title_quit_entry_uses_safe_confirm() -> void:
+	var title: Control = (load("res://ui/title.tscn") as PackedScene).instantiate()
+	t.root.add_child(title)
+	t.check(title._entries.size() == 5 and title.ENTRY_NAMES[4] == "QUIT GAME",
+		"title: QUIT GAME is a visible fifth entry")
+	title._index = 4
+	title._activate()
+	t.check(title._quit != null and title._quit_index == 1,
+		"title: explicit quit opens the existing confirm on NO")
+	_press(title, &"pause")
+	t.check(title._quit == null and not title._done,
+		"title: ESC still closes the quit confirm without leaving")
+	t.root.remove_child(title)
+	title.free()
+
 func test_road_trip_starts_on_medium() -> void:
 	var gs: Node = t.root.get_node_or_null("/root/GameState")
 	t.check(gs != null, "mode: GameState autoload live for ROAD TRIP")
@@ -96,6 +130,12 @@ func test_difficulty_return_keeps_explicit_pick() -> void:
 	t.root.add_child(screen)
 	t.check(screen._index == screen.ORDER.find(Difficulty.Tier.EASY),
 		"mode: returning to difficulty keeps the explicit license pick")
+	screen._index = screen.BACK_INDEX
+	screen._highlight()
+	t.check(screen._entries[screen.BACK_INDEX].text == "[ BACK ]",
+		"mode: difficulty exposes selectable BACK")
+	t.check(Difficulty.tier == Difficulty.Tier.EASY,
+		"mode: browsing difficulty BACK does not mutate the tier")
 	Difficulty.tier = before_tier
 	t.root.remove_child(screen)
 	screen.free()

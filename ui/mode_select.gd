@@ -5,7 +5,7 @@ extends Control
 ## car select into the practice yard); ROAD TRIP is the campaign (difficulty
 ## select -> car select); SINGLE BATTLE is a greyed placeholder until that
 ## mode exists. Manual-highlight menu idiom cloned from title.gd — no focus
-## system. ESC steps back to title; ESC inside the sub-dialog closes it.
+## system. BACK and ESC return to title; the sub-dialog has the same pair.
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -13,18 +13,21 @@ const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const DISABLED_TEXT := Color(0.3, 0.32, 0.35)
 
-const ENTRY_NAMES := ["DRIVER'S ED", "ROAD TRIP", "SINGLE BATTLE"]
+const ENTRY_NAMES := ["DRIVER'S ED", "ROAD TRIP", "SINGLE BATTLE", "BACK"]
 const DISABLED := {2: true}  # SINGLE BATTLE — placeholder, cursor skips it
+const BACK_INDEX := 3
 # Blurb copy is placeholder — Kevin's to word.
 const BLURBS := [
 	"learn the ropes — nobody shoots back",
 	"the campaign: downtown to the coliseum",
 	"coming soon",
+	"back to the front door",
 ]
 
 const SUB_PROMPT := "WELCOME TO DRIVER'S ED"
-const SUB_OPTIONS := ["FIRST TIME DRIVER", "JUST HERE FOR A TEST DRIVE"]
+const SUB_OPTIONS := ["FIRST TIME DRIVER", "JUST HERE FOR A TEST DRIVE", "BACK"]
 const SUB_MODES: Array[StringName] = [&"tutorial", &"test_drive"]
+const SUB_BACK_INDEX := 2
 
 var _done := false
 var _index := 1  # ROAD TRIP — get players into the campaign by default
@@ -32,7 +35,8 @@ var _sub: Control
 var _sub_index := 0
 var _sub_entries: Array[Label] = []
 
-@onready var _entries: Array[Label] = [$Menu/DriversEd, $Menu/RoadTrip, $Menu/SingleBattle]
+@onready var _entries: Array[Label] = [
+	$Menu/DriversEd, $Menu/RoadTrip, $Menu/SingleBattle, $Menu/Back]
 @onready var _blurb: Label = $Blurb
 
 func _ready() -> void:
@@ -63,7 +67,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		UiSfx.move(self)
 		_step(1)
 	elif confirm:
-		UiSfx.select(self)
+		if _index == BACK_INDEX:
+			UiSfx.back(self)
+		else:
+			UiSfx.select(self)
 		_activate()
 
 ## Cursor motion that hops greyed-out rows (DISABLED indices can never land).
@@ -92,6 +99,9 @@ func _activate() -> void:
 			_done = true
 			_commit_road_trip()
 			SceneFlow.to_difficulty()
+		BACK_INDEX:
+			_done = true
+			SceneFlow.to_title()
 		_:
 			pass  # disabled rows are unreachable, but confirm stays inert anyway
 
@@ -108,22 +118,26 @@ func _sub_input(event: InputEvent) -> void:
 		UiSfx.back(self)
 		_close_sub()
 		return
-	var toggle: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"move_down") \
-		or event.is_action_pressed(&"select_prev") or event.is_action_pressed(&"select_next")
+	var up: bool = event.is_action_pressed(&"move_up") or event.is_action_pressed(&"select_prev")
+	var down: bool = event.is_action_pressed(&"move_down") or event.is_action_pressed(&"select_next")
 	var confirm: bool = event.is_action_pressed(&"select_confirm") \
 		or (event is InputEventMouseButton and event.pressed
 			and event.button_index == MOUSE_BUTTON_LEFT)
-	if toggle:
+	if up or down:
 		get_viewport().set_input_as_handled()
-		_sub_index = 1 - _sub_index
+		_sub_index = wrapi(_sub_index + (-1 if up else 1), 0, SUB_OPTIONS.size())
 		UiSfx.move(self)
 		_sub_highlight()
 	elif confirm:
 		get_viewport().set_input_as_handled()
-		UiSfx.select(self)
-		_done = true
-		_commit_sub_choice()
-		SceneFlow.to_select()
+		if _sub_index == SUB_BACK_INDEX:
+			UiSfx.back(self)
+			_close_sub()
+		else:
+			UiSfx.select(self)
+			_done = true
+			_commit_sub_choice()
+			SceneFlow.to_select()
 
 ## Split from the confirm so tests can assert the mode stamp without
 ## triggering a live scene change.

@@ -75,6 +75,7 @@ const SUITES := [
 	preload("res://tests/test_net_puppet.gd"),
 	preload("res://tests/test_network_driver.gd"),
 	preload("res://tests/test_mp_match.gd"),
+	preload("res://tests/test_mp_ui_focus.gd"),
 	preload("res://tests/test_net_state_snapshot.gd"),
 	preload("res://tests/test_net_fx.gd"),
 	preload("res://tests/test_callsigns.gd"),

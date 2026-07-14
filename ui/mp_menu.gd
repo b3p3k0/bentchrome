@@ -16,6 +16,7 @@ const BROWSE_POLL := 0.5
 
 var _panels := {}
 var _active := &""
+var _panel_default_focus := {}
 
 var _name_edit: LineEdit
 var _home_status: Label
@@ -95,6 +96,12 @@ func _show(panel: StringName) -> void:
 		_start_browse()
 	else:
 		_stop_browse()
+	call_deferred("_focus_active_panel")
+
+func _focus_active_panel() -> void:
+	var target: Control = _panel_default_focus.get(_active) as Control
+	if target and is_instance_valid(target) and target.is_visible_in_tree():
+		target.grab_focus()
 
 func _build_panels() -> void:
 	var center := $Center as CenterContainer
@@ -117,10 +124,11 @@ func _build_home() -> Control:
 	reroll.add_theme_font_size_override("font_size", 16)
 	reroll.pressed.connect(_roll_callsign)
 	name_row.add_child(reroll)
-	_button(vbox, "HOST A GAME", func() -> void: _show(&"host"))
+	var host_btn := _button(vbox, "HOST A GAME", func() -> void: _show(&"host"))
 	_button(vbox, "JOIN A GAME", func() -> void: _show(&"join"))
 	_button(vbox, "BACK TO TITLE", func() -> void: SceneFlow.to_title())
 	_home_status = _status_label(vbox)
+	_panel_default_focus[&"home"] = host_btn
 	return _wrap(vbox)
 
 func _build_host() -> Control:
@@ -135,9 +143,10 @@ func _build_host() -> Control:
 	_strict_check.text = "reject modded builds"
 	_strict_check.add_theme_font_size_override("font_size", 16)
 	strict_row.add_child(_strict_check)
-	_button(vbox, "OPEN THE DOORS", _do_host)
+	var open_btn := _button(vbox, "OPEN THE DOORS", _do_host)
 	_button(vbox, "BACK", func() -> void: _show(&"home"))
 	_host_status = _status_label(vbox)
+	_panel_default_focus[&"host"] = open_btn
 	return _wrap(vbox)
 
 func _build_join() -> Control:
@@ -145,6 +154,7 @@ func _build_join() -> Control:
 	_server_list = ItemList.new()
 	_server_list.custom_minimum_size = Vector2(560, 170)
 	_server_list.add_theme_font_size_override("font_size", 16)
+	_server_list.item_activated.connect(func(_index: int) -> void: _do_join())
 	vbox.add_child(_server_list)
 	_join_status = _status_label(vbox)
 	_join_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -157,6 +167,7 @@ func _build_join() -> Control:
 	_ip_edit.text_submitted.connect(func(_t: String) -> void: _do_join())
 	_button(vbox, "CONNECT", _do_join)
 	_button(vbox, "BACK", func() -> void: _show(&"home"))
+	_panel_default_focus[&"join"] = _server_list
 	return _wrap(vbox)
 
 # ------------------------------------------------------------------ actions

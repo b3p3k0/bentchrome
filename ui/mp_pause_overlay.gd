@@ -10,18 +10,30 @@ const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 
 var _panel: Control
+var _resume_btn: Button
 
 func _ready() -> void:
 	layer = 20  # above the arena HUD
 	_panel = _build()
 	_panel.visible = false
 	add_child(_panel)
+	UiSfx.wire(self)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed(IR.ACTION_PAUSE):
 		return
 	get_viewport().set_input_as_handled()
-	_panel.visible = not _panel.visible
+	UiSfx.back(self)
+	_set_open(not _panel.visible)
+
+func _set_open(open: bool) -> void:
+	_panel.visible = open
+	if open and _resume_btn:
+		_resume_btn.grab_focus()
+	elif not open:
+		var focused := get_viewport().gui_get_focus_owner()
+		if focused and _panel.is_ancestor_of(focused):
+			focused.release_focus()
 
 func _build() -> Control:
 	var root := Control.new()
@@ -60,7 +72,8 @@ func _build() -> Control:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
-	vbox.add_child(_button("RESUME", func() -> void: _panel.visible = false))
+	_resume_btn = _button("RESUME", func() -> void: _set_open(false))
+	vbox.add_child(_resume_btn)
 	var net := get_node(^"/root/Net")
 	if net and net.is_host():
 		# Capless brawls need an exit; the shell owns the director.

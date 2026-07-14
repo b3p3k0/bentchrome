@@ -1,7 +1,7 @@
 extends Control
-## Title screen: splash art + SINGLE PLAYER/STORY menu. SINGLE PLAYER -> mode select;
+## Title screen: splash art + the front-door menu. SINGLE PLAYER -> mode select;
 ## STORY -> full-screen story art (placeholder copy until the real text lands).
-## ESC pops the quit confirm ("Awww, giving up so soon?") — NO is the default;
+## QUIT GAME and ESC both pop the same confirmation — NO is the default;
 ## quitting takes intent.
 
 const IR := preload("res://game/input_router.gd")  # consts, not the autoload
@@ -19,9 +19,10 @@ var _quit: Control
 var _quit_index := 1  # NO
 var _quit_entries: Array[Label] = []
 
-const ENTRY_NAMES := ["SINGLE PLAYER", "MULTIPLAYER", "STORY", "SETTINGS"]
+const ENTRY_NAMES := ["SINGLE PLAYER", "MULTIPLAYER", "STORY", "SETTINGS", "QUIT GAME"]
 
-@onready var _entries: Array[Label] = [$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Settings]
+@onready var _entries: Array[Label] = [
+	$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Settings, $Menu/Quit]
 
 func _ready() -> void:
 	var bg := $Bg as TextureRect
@@ -90,6 +91,8 @@ func _activate() -> void:
 			_done = true
 			if flow:
 				flow.to_settings()
+		4:
+			_open_quit_confirm()
 
 ## The quit confirm's own input loop: any nav key toggles YES/NO, confirm
 ## activates, a second ESC backs out.

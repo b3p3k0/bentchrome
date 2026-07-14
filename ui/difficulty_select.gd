@@ -4,8 +4,8 @@ extends Control
 ## fixed for the whole campaign — the end screen's Restart never comes back
 ## here, only Quit to Title does. Cursor lands on the current tier: choosing
 ## ROAD TRIP initializes it to ROAD RAGING COMMUTER, while backing up from car
-## select preserves an explicit pick. Manual-highlight menu idiom cloned from
-## title.gd — no focus system.
+## select preserves an explicit pick. BACK and ESC both return to mode select.
+## Manual-highlight menu idiom cloned from title.gd — no focus system.
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -14,6 +14,7 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 
 # Top-to-bottom menu order: escalation. Blurb copy is placeholder — Kevin's to word.
 const ORDER := [Difficulty.Tier.EASY, Difficulty.Tier.MEDIUM, Difficulty.Tier.HARD]
+const BACK_INDEX := 3
 const BLURBS := {
 	Difficulty.Tier.EASY: "soft hits, lazy triggers, patient bosses",
 	Difficulty.Tier.MEDIUM: "they mean it, but they let you breathe",
@@ -23,7 +24,7 @@ const BLURBS := {
 var _done := false
 var _index := 0
 
-@onready var _entries: Array[Label] = [$Menu/Easy, $Menu/Medium, $Menu/Hard]
+@onready var _entries: Array[Label] = [$Menu/Easy, $Menu/Medium, $Menu/Hard, $Menu/Back]
 @onready var _blurb: Label = $Blurb
 
 func _ready() -> void:
@@ -56,15 +57,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		UiSfx.move(self)
 		_highlight()
 	elif confirm:
-		UiSfx.select(self)
-		_done = true
-		Difficulty.tier = ORDER[_index]
-		SceneFlow.to_select()
+		if _index == BACK_INDEX:
+			UiSfx.back(self)
+			_done = true
+			SceneFlow.to_mode_select()
+		else:
+			UiSfx.select(self)
+			_done = true
+			Difficulty.tier = ORDER[_index]
+			SceneFlow.to_select()
 
 func _highlight() -> void:
 	for i in _entries.size():
-		var title: String = Difficulty.NAMES[ORDER[i]]
+		var title := "BACK" if i == BACK_INDEX else String(Difficulty.NAMES[ORDER[i]])
 		_entries[i].modulate = AMBER if i == _index else DIM_TEXT
 		_entries[i].text = ("[ %s ]" if i == _index else "%s") % title
 	if _blurb:
-		_blurb.text = BLURBS[ORDER[_index]]
+		_blurb.text = "back to lane selection" if _index == BACK_INDEX else BLURBS[ORDER[_index]]

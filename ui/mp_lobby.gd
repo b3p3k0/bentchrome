@@ -33,8 +33,10 @@ var _rig_value: Label
 var _obs_rows: VBoxContainer
 var _rule_rows := {}  # key -> {row, value}
 var _start_btn: Button
+var _leave_btn: Button
 var _status: Label
 var _confirm: Control = null
+var _focus_before_confirm: Control = null
 var _my_car := ""  # my cycler position (pick when seated, queue car otherwise)
 var _last_peer_count := -1  # join/leave cue diff; -1 = first refresh stays silent
 	# (peers_changed also fires on name/mod syncs — the size diff dedupes)
@@ -42,6 +44,7 @@ var _last_peer_count := -1  # join/leave cue diff; -1 = first refresh stays sile
 func _ready() -> void:
 	print("[boot] mp lobby ready")
 	_build()
+	UiSfx.wire(self)
 	Net.session_changed.connect(_on_session_changed)
 	Net.peers_changed.connect(_refresh)
 	Net.lobby_changed.connect(_refresh)
@@ -157,11 +160,11 @@ func _build() -> void:
 	_start_btn.add_theme_font_size_override("font_size", 18)
 	_start_btn.pressed.connect(_do_start)
 	footer.add_child(_start_btn)
-	var leave_btn := Button.new()
-	leave_btn.text = "LEAVE GARAGE"
-	leave_btn.add_theme_font_size_override("font_size", 18)
-	leave_btn.pressed.connect(_do_leave)
-	footer.add_child(leave_btn)
+	_leave_btn = Button.new()
+	_leave_btn.text = "LEAVE GARAGE"
+	_leave_btn.add_theme_font_size_override("font_size", 18)
+	_leave_btn.pressed.connect(_do_leave)
+	footer.add_child(_leave_btn)
 	vbox.add_child(footer)
 
 	_status = Label.new()
@@ -200,6 +203,7 @@ func _refresh() -> void:
 	if not Net.is_active() or Net.roster == null:
 		_head.text = "NO SESSION"
 		_status.text = "the garage is dark — head back"
+		call_deferred("_ensure_keyboard_focus")
 		return
 	var peer_count: int = Net.peers.size()
 	if _last_peer_count >= 0 and peer_count != _last_peer_count:
@@ -260,6 +264,7 @@ func _refresh() -> void:
 		+ "CONNECTED — %d DRIVING · %d IN LINE · %d WATCHING · %d IN THE GARAGE%s" \
 		% [driving, in_line, watching, total, tail]
 	UiSfx.wire(self)  # rows rebuild each refresh; wire() is idempotent per button
+	call_deferred("_ensure_keyboard_focus")
 
 func _refresh_seats() -> void:
 	for child in _seat_rows.get_children():
@@ -563,9 +568,10 @@ func _peer_name(id: int) -> String:
 func _peer_modded(id: int) -> bool:
 	return bool(Net.peers[id].modded) if Net.peers.has(id) else false
 
-# The house confirm overlay (title.gd's quit-confirm pattern, mouse-driven).
+# The house confirm overlay (title.gd's quit-confirm pattern).
 func _open_confirm(text: String, yes_label: String, no_label: String, on_yes: Callable) -> void:
 	_close_confirm()
+	_focus_before_confirm = get_viewport().gui_get_focus_owner()
 	_confirm = Control.new()
 	_confirm.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_confirm)
@@ -613,8 +619,43 @@ func _open_confirm(text: String, yes_label: String, no_label: String, on_yes: Ca
 	no.add_theme_font_size_override("font_size", 16)
 	no.pressed.connect(_close_confirm)
 	row.add_child(no)
+	UiSfx.wire(_confirm)
+	no.grab_focus()  # destructive confirms always boot on the safe choice
 
 func _close_confirm() -> void:
-	if _confirm:
-		_confirm.queue_free()
-		_confirm = null
+	if _confirm == null:
+		return
+	_confirm.queue_free()
+	_confirm = null
+	call_deferred("_restore_keyboard_focus")
+
+func _restore_keyboard_focus() -> void:
+	if _can_focus(_focus_before_confirm):
+		_focus_before_confirm.grab_focus()
+	else:
+		_ensure_keyboard_focus()
+	_focus_before_confirm = null
+
+func _ensure_keyboard_focus() -> void:
+	var scope: Control = _confirm if _confirm else _panel
+	if scope == null or not is_instance_valid(scope):
+		return
+	var current := get_viewport().gui_get_focus_owner()
+	if _can_focus(current) and scope.is_ancestor_of(current):
+		return
+	if _can_focus(_start_btn):
+		_start_btn.grab_focus()
+		return
+	for node in scope.find_children("*", "Control", true, false):
+		var control := node as Control
+		if _can_focus(control):
+			control.grab_focus()
+			return
+	if _can_focus(_leave_btn):
+		_leave_btn.grab_focus()
+
+func _can_focus(control: Control) -> bool:
+	return control != null and is_instance_valid(control) \
+		and control.is_inside_tree() and not control.is_queued_for_deletion() \
+		and control.is_visible_in_tree() and control.focus_mode != Control.FOCUS_NONE \
+		and (not control is BaseButton or not (control as BaseButton).disabled)

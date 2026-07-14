@@ -12,12 +12,15 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 
 @onready var _net: Node = get_node(^"/root/Net")
 @onready var _flow: Node = get_node(^"/root/SceneFlow")
+var _primary_btn: Button
 
 func _ready() -> void:
 	print("[boot] mp scoreboard ready")
 	_net.session_changed.connect(_on_session_changed)
 	_build()
 	UiSfx.wire(self)  # buttons: pressed = select, focus arrival = move
+	if _primary_btn:
+		_primary_btn.grab_focus()
 
 func _on_session_changed() -> void:
 	if not _net.is_active():
@@ -103,16 +106,18 @@ func _build() -> void:
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	footer.add_theme_constant_override("separation", 24)
 	if _net.is_active():
-		footer.add_child(_button("BACK TO THE GARAGE", func() -> void:
+		_primary_btn = _button("BACK TO THE GARAGE", func() -> void:
 			if _net.is_host():
 				_net.return_to_lobby()
 			else:
-				_flow.to_mp_lobby()))
+				_flow.to_mp_lobby())
+		footer.add_child(_primary_btn)
 		footer.add_child(_button("LEAVE SESSION", func() -> void:
 			_net.leave()
 			_flow.to_mp_menu()))
 	else:
-		footer.add_child(_button("FRONT DOOR", _to_lobby))
+		_primary_btn = _button("FRONT DOOR", _to_lobby)
+		footer.add_child(_primary_btn)
 	vbox.add_child(footer)
 
 	var hint := Label.new()
