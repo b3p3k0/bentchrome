@@ -38,6 +38,9 @@ and the boot log always tells you the score:
 | `sink` | a car dies in deep water (positional for rivals) | big plunge + glug |
 | `pit_fall` | a car dies in a pit (positional for rivals) | receding fall |
 | `jump_pad` | a pad launches a car (positional for rivals) | launch whump |
+| `boost` | once, when your boost ignites | quick engine roar rising into the whoosh |
+| `boost_loop` | **loops** while boosting | seamless airy whoosh |
+| `splat` / `crunch` | a soft target dies (run over or shot; positional) | wet/dry gore — living targets coinflip between them, ambient props always crunch |
 | `pickup` | the player collects any crate/heal/boost | short grab cue |
 | `overheat` | your MG heat-locks | steam hiss / lock click |
 | `win_sting` | the end screen lands a win | short triumphant hit |

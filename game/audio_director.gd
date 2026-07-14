@@ -38,6 +38,11 @@ const CATALOG := {
 	&"sink": {"volume_db": 0.0, "pitch_jitter": 0.05},     # deep-water death plunge
 	&"pit_fall": {"volume_db": 0.0, "pitch_jitter": 0.05}, # pit death drop
 	&"jump_pad": {"volume_db": -2.0, "pitch_jitter": 0.08},
+	&"boost": {"volume_db": -3.0, "pitch_jitter": 0.05},  # ignition roar (edge)
+	&"boost_loop": {"volume_db": -7.0, "pitch_jitter": 0.0, "loop": true},  # the
+		# whoosh riding the burn (drive_fx loop_set)
+	&"splat": {"volume_db": -2.0, "pitch_jitter": 0.12},  # soft target, wet verdict
+	&"crunch": {"volume_db": -2.0, "pitch_jitter": 0.12}, # soft target, dry verdict
 	&"pickup": {"volume_db": -4.0, "pitch_jitter": 0.05},  # crate/heal/boost collect
 	&"overheat": {"volume_db": -4.0, "pitch_jitter": 0.0}, # MG heat lockout trips
 	&"win_sting": {"volume_db": 0.0, "pitch_jitter": 0.0},

@@ -936,6 +936,85 @@ def sp_red_glare():
     write("sp_red_glare", x, peak=0.94, fade_ms=4.0)
 
 
+def boost():
+    """~0.8s ignition roar morphing into a rising whoosh — the onset voice;
+    boost_loop takes over for the duration. Engine bite = harmonic stack rev,
+    no clean sweeps."""
+    dur = 0.8
+    tt = t(dur)
+    r = np.random.default_rng(501)
+    # rev bite: f0 kicks 70->130Hz fast, gritty
+    f0 = 70.0 + 60.0 * np.clip(tt / 0.18, 0, 1)
+    ph = np.cumsum(f0) / SR
+    eng = np.zeros(tt.size)
+    for k, a in enumerate([0.9, 1.0, 0.7, 0.45, 0.25, 0.14], start=1):
+        eng += a * np.sin(2 * np.pi * k * ph)
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 70.0))
+    eng = eng * (0.7 + 0.3 * grit / (grit.max() + 1e-9))
+    eng_env = np.minimum(tt / 0.02, 1.0) * (1.0 - np.clip((tt - 0.30) / 0.35, 0, 1))
+    eng = one_pole_lp(softclip(eng * eng_env * 2.0, 2.2), 1200.0)
+    # whoosh rises as the roar hands off (crossfades toward the loop's voice)
+    cut = 500 + 1300 * np.clip((tt - 0.15) / 0.45, 0, 1)
+    woo = svf_bp(r.uniform(-1, 1, tt.size), cut, 1.0)
+    woo_env = np.clip((tt - 0.15) / 0.25, 0, 1)
+    woo = woo / (np.sqrt(np.mean(woo ** 2)) + 1e-9) * 0.30 * woo_env
+    rumble = one_pole_lp(r.uniform(-1, 1, tt.size), 140.0)
+    rumble = rumble / (np.sqrt(np.mean(rumble ** 2)) + 1e-9) * 0.35 * woo_env
+    x = fit(eng, softclip((woo + rumble) * 2.0, 1.5))
+    write("boost", x, peak=0.94, fade_ms=5.0)
+
+
+def boost_loop():
+    """~0.9s SEAMLESS whoosh loop riding the burn: airy band + low rumble,
+    rough-modulated so it breathes. Same wrap-crossfade seam as skid."""
+    body = 0.9
+    dur = body + 0.06
+    tt = t(dur)
+    r = np.random.default_rng(511)
+    air = biquad_bp(r.uniform(-1, 1, tt.size), 1500.0, 0.7)
+    air = air / (np.sqrt(np.mean(air ** 2)) + 1e-9)
+    wob = one_pole_lp(r.uniform(-1, 1, tt.size), 5.0)
+    air = air * (0.75 + 0.25 * wob / (np.max(np.abs(wob)) + 1e-9))
+    rumble = one_pole_lp(r.uniform(-1, 1, tt.size), 140.0)
+    rumble = rumble / (np.sqrt(np.mean(rumble ** 2)) + 1e-9) * 0.8
+    x = softclip((air + rumble) * 0.8, 1.6)
+    write("boost_loop", loopify(x, body), peak=0.9, fade_ms=0.0)
+
+
+def splat():
+    """~0.28s wet verdict for a soft target: low thud + wet mid burst +
+    irregular droplet spatter."""
+    dur = 0.28
+    tt = t(dur)
+    r = np.random.default_rng(521)
+    thud = sweep(150, 60, dur, "exp") * np.exp(-tt / 0.03) * 1.2
+    wet = biquad_bp(r.uniform(-1, 1, tt.size), 650.0, 0.6)
+    wet = wet / (np.sqrt(np.mean(wet ** 2)) + 1e-9) * 0.9 * np.exp(-tt / 0.045)
+    spatter = debris_crackle(dur, 0.015, 220, 0.003, hp=1200.0, seed=522)
+    spatter = spatter / (np.sqrt(np.mean(spatter ** 2)) + 1e-9) * 0.35 \
+        * np.exp(-tt / 0.09)
+    x = softclip(fit(thud, wet) + spatter, 1.7)
+    write("splat", x, peak=0.93, fade_ms=3.0)
+
+
+def crunch():
+    """~0.25s dry verdict: granular crunch + discrete snaps + small thud."""
+    dur = 0.25
+    tt = t(dur)
+    r = np.random.default_rng(531)
+    grind = granular_crunch(dur, 750.0, 0.8, 0.05, 300.0, seed=532)
+    grit = granular_crunch(dur, 2100.0, 0.7, 0.035, 450.0, seed=533)
+    snaps = np.zeros(tt.size)
+    for at in [0.004, 0.05, 0.11]:
+        ln = int(SR * 0.015)
+        seg = one_pole_hp(r.uniform(-1, 1, ln), 1800.0) \
+            * np.exp(-np.arange(ln) / (SR * 0.003))
+        snaps[int(SR * at):int(SR * at) + ln] += seg
+    thud = sweep(140, 70, dur, "exp") * np.exp(-tt / 0.02) * 0.7
+    x = softclip(1.1 * grind + 0.7 * grit + 0.8 * snaps + thud, 1.8)
+    write("crunch", x, peak=0.93, fade_ms=3.0)
+
+
 def sp_placeholder():
     """~1.15s 'WHERE'S THE BEEF?' — hand-rolled FORMANT SYNTHESIS (no TTS on
     the box; Kevin chose delightfully robotic). Glottal harmonic buzz through
@@ -1085,5 +1164,9 @@ if __name__ == "__main__":
     sp_chill_out()
     sp_red_glare()
     sp_placeholder()
+    boost()
+    boost_loop()
+    splat()
+    crunch()
     announcer()
     print("[synth] done")

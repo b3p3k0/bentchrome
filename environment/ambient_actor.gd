@@ -260,6 +260,10 @@ func _die() -> void:
 	if _dead:
 		return
 	_dead = true
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio:  # gore coinflip for living targets; ambient props stay dry
+		audio.play_at(&"splat" if leaves_splat and randf() < 0.5 else &"crunch",
+			global_position)
 	set_deferred(&"monitoring", false)
 	call_deferred(&"_finish_die")
 

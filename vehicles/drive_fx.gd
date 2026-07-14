@@ -21,6 +21,7 @@ const BRAKE_MIN_SPEED := 233.0  # service-brake cue floor: ~35 mph
 	# (HUD MPH_PER_PXS 0.15) — light low-speed braking stays silent
 
 var _was_braking_hard := false  # edge detector: the crunch fires once per bite
+var _was_boosting := false      # edge detector: the boost roar fires at ignition
 const SKID_SLIP_MIN := 120.0  # sideways px/s that marks an off-road surface
 const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
@@ -208,6 +209,11 @@ func _physics_process(_delta: float) -> void:
 			if braking_hard and not _was_braking_hard:
 				audio.play(&"brake")
 			_was_braking_hard = braking_hard
+			# Boost voice: the roar bites at ignition, the whoosh rides the burn.
+			if ctrl.boosting and not _was_boosting:
+				audio.play(&"boost")
+			audio.loop_set(&"boost_loop", ctrl.boosting)
+			_was_boosting = ctrl.boosting
 	if not _skids.is_empty():
 		var offs: Array = _skid_offsets()  # rear tire contacts (bike lays one line)
 		for i in mini(_skids.size(), offs.size()):
