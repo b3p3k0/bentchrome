@@ -68,7 +68,9 @@ func test_effective_surface_composes_global_and_profile() -> void:
 func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 	var expected := {
 		&"cricket": {
-			&"dirt": [1.12, 1.08, 0.81, 1.15],
+			# 2026-07 balance pass: dirt accel ratio 1.5 — the road nerf is
+			# repaid on the midget's home surface.
+			&"dirt": [1.2, 1.08, 0.81, 1.15],
 			&"grass": [1.01, 1.01, 0.92, 1.08],
 			&"mud": [0.62, 0.65, 0.50, 0.98],
 		},
@@ -87,11 +89,13 @@ func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 			&"mud": [0.72, 0.74, 0.55, 0.96],
 		},
 		&"razorback": {
+			# 2026-07 balance pass: inline overlay over awd_utility — the
+			# military 4WD out-grunts the cop SUV on dirt/mud accel only.
 			&"grass": [0.95, 0.95, 0.86, 1.0],
 			&"snow": [0.90, 0.94, 0.53, 1.0],
-			&"dirt": [0.88, 0.92, 0.67, 1.0],
+			&"dirt": [0.96, 0.92, 0.67, 1.0],
 			&"water": [0.50, 0.55, 0.74, 1.0],
-			&"mud": [0.72, 0.74, 0.55, 0.96],
+			&"mud": [0.80, 0.74, 0.55, 0.96],
 		},
 		# The VW commercial was true: shallow water reads as dry road (net 1.0).
 		&"lovebug": {
@@ -136,7 +140,7 @@ func test_dashboard_reports_current_effective_surface() -> void:
 	vehicle.stats = cricket
 	vehicle.current_terrain = &"dirt"
 	var text := Dashboard.terrain_readout(vehicle)
-	t.check(text.contains("dirt") and text.contains("accel 1.12")
+	t.check(text.contains("dirt") and text.contains("accel 1.20")
 		and text.contains("top 1.08") and text.contains("steer 1.15"),
 		"terrain profile: dashboard exposes current effective values")
 

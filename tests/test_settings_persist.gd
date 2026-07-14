@@ -108,18 +108,18 @@ func test_developer_options_menu_contract() -> void:
 	for row in screen._rows:
 		main_names.append(String(row.name))
 	t.check(main_names == ["ZOOM DEPTH", "SCREEN SHAKE", "MASTER VOLUME",
-		"MUSIC VOLUME", "SFX VOLUME", "DEVELOPER OPTIONS",
+		"MUSIC VOLUME", "SFX VOLUME", "CHECK FOR UPDATES", "DEVELOPER OPTIONS",
 		"RESET TO DEFAULTS", "BACK"], "settings menu: developer controls collapse to one entry")
 	t.check(screen._val_open()[0] == "-->",
 		"settings menu: developer entry reads as a submenu")
 	var dev_names: Array[String] = []
 	for row in screen._dev_rows:
 		dev_names.append(String(row.name))
-	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "SOUNDBOARD", "BACK"],
+	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "SOUNDBOARD", "CAR TUNER", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
-	t.check(not bool(screen._rows[5].persist) and not bool(screen._dev_rows[4].persist),
+	t.check(not bool(screen._rows[6].persist) and not bool(screen._dev_rows[5].persist),
 		"developer dialog: opening and closing are non-persisting navigation")
-	t.check(screen._rows[5].kind == &"submenu" and screen._rows[6].kind == &"action",
+	t.check(screen._rows[6].kind == &"submenu" and screen._rows[7].kind == &"action",
 		"settings menu: row kinds distinguish values from right-only destinations")
 
 	screen._settings_path = TMP
@@ -140,7 +140,7 @@ func test_developer_options_menu_contract() -> void:
 		screen._unhandled_input(_key(ignored))
 		t.check(screen._index == index_before and is_equal_approx(gs.zoom_combat, zoom_ignored),
 			"settings input: legacy key %s is ignored" % ignored)
-	screen._index = 5
+	screen._index = 6  # DEVELOPER OPTIONS (volume rows + CHECK FOR UPDATES precede it)
 	screen._unhandled_input(_key(KEY_LEFT))
 	t.check(screen._dev_dialog == null, "settings input: left cannot enter a submenu")
 	screen._unhandled_input(_key(KEY_RIGHT))
@@ -158,7 +158,7 @@ func test_developer_options_menu_contract() -> void:
 		"developer dialog: locked child adjustments preserve remembered values")
 	screen._dev_index = 0
 	screen._step_dev(1)
-	t.check(screen._dev_index == 4, "developer dialog: navigation skips locked children")
+	t.check(screen._dev_index == 5, "developer dialog: navigation skips locked children")
 	gs.dev_mode = true
 	screen._dev_index = 0
 	screen._step_dev(1)

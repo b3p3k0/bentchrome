@@ -8,7 +8,7 @@ const TUNABLE := [
 	"max_speed", "acceleration", "turn_rate_deg", "lateral_grip",
 	"brake_deceleration", "reverse_max_speed", "coast_deceleration",
 	"turn_authority_speed", "min_turn_authority",
-	"mass", "accel_taper", "launch_boost",
+	"mass", "accel_taper", "launch_boost", "launch_factor",
 	"handbrake_deceleration", "handbrake_grip_factor",
 ]
 const RANGES := {
@@ -24,9 +24,13 @@ const RANGES := {
 	"mass": [1.0, 10.0, 0.5],
 	"accel_taper": [0.0, 0.95, 0.01],
 	"launch_boost": [1.0, 3.0, 0.05],
+	"launch_factor": [0.0, 2.0, 0.05],
 	"handbrake_deceleration": [100.0, 1200.0, 10.0],
 	"handbrake_grip_factor": [0.0, 1.0, 0.01],
 }
+
+const MPH_PER_PXS := 0.15       # ui/hud.gd display anchor (US units)
+const SIXTY_MPH_PXS := 400.0    # 60 mph
 
 var _player: Node = null
 var _cars: Array = []
@@ -34,8 +38,18 @@ var _panel: PanelContainer
 var _car_picker: OptionButton
 var _status: Label
 var _terrain_status: Label
+var _feel_status: Label
 var _sliders := {}
 var _value_labels := {}
+
+## Minimal ride for the 0-60 sim: apply() only touches these members.
+class FeelStub:
+	var heading := 0.0
+	var velocity := Vector2.ZERO
+	var current_terrain: StringName = &"road"
+	var stats = null
+	func get_speed_scale() -> float:
+		return 1.0
 
 func _ready() -> void:
 	layer = 50
@@ -84,12 +98,13 @@ func _refresh() -> void:
 	for knob in TUNABLE:
 		var v: float = c.get(knob)
 		_sliders[knob].set_value_no_signal(v)
-		_value_labels[knob].text = "%.2f" % v
+		_value_labels[knob].text = _fmt_value(knob, v)
 	var sid: StringName = _player.stats.id if _player.stats else &""
 	for i in _cars.size():
 		if _cars[i].id == sid:
 			_car_picker.select(i)
 	_refresh_terrain_status()
+	_refresh_feel_status()
 
 func _refresh_terrain_status() -> void:
 	if _terrain_status and _player and is_instance_valid(_player):
@@ -107,7 +122,37 @@ static func terrain_readout(vehicle) -> String:
 func _on_knob_changed(value: float, knob: String) -> void:
 	if _player and is_instance_valid(_player):
 		_player.get_controller().set(knob, value)
-	_value_labels[knob].text = "%.2f" % value
+	_value_labels[knob].text = _fmt_value(knob, value)
+	_refresh_feel_status()
+
+static func _fmt_value(knob: String, v: float) -> String:
+	if knob == "max_speed":
+		return "%.0f (%.0fmph)" % [v, v * MPH_PER_PXS]
+	return "%.2f" % v
+
+## Measured 0-60 mph (time to 400 px/s on the current knobs + the car's road
+## terrain factors) — simulated on a scratch controller, so tuning against the
+## baselines table is a number, not vibes. Recomputed on car pick/knob drag
+## only; too heavy for _process.
+func _refresh_feel_status() -> void:
+	if _feel_status == null or _player == null or not is_instance_valid(_player):
+		return
+	var c = _player.get_controller()
+	if c == null:
+		return
+	var sim := DrivingController.new()
+	for knob in TUNABLE:
+		sim.set(knob, c.get(knob))
+	var stub := FeelStub.new()
+	stub.stats = _player.get("stats")
+	var intent := {"throttle": 1.0, "steer": 0.0}
+	var elapsed := 0.0
+	while stub.velocity.dot(Vector2.RIGHT.rotated(stub.heading)) < SIXTY_MPH_PXS \
+			and elapsed < 30.0:
+		sim.apply(stub, intent, 1.0 / 60.0)
+		elapsed += 1.0 / 60.0
+	sim.free()
+	_feel_status.text = "0-60 mph: %s" % ("%.2fs" % elapsed if elapsed < 30.0 else "never (top < 60)")
 
 func _on_car_picked(index: int) -> void:
 	if _player and is_instance_valid(_player) and index < _cars.size():
@@ -169,6 +214,10 @@ func _build_ui() -> void:
 	_terrain_status = Label.new()
 	_terrain_status.modulate = Color(0.65, 0.82, 0.95)
 	vbox.add_child(_terrain_status)
+
+	_feel_status = Label.new()
+	_feel_status.modulate = Color(0.95, 0.85, 0.6)
+	vbox.add_child(_feel_status)
 
 	for knob in TUNABLE:
 		var row := HBoxContainer.new()

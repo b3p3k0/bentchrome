@@ -86,11 +86,15 @@ func test_importer_rejects_bad_entries() -> void:
 	t.check(_has_error(_fixture({"special_def": "not_a_weapon"}), "special_def"), "dead special rejected")
 	t.check(_has_error(_fixture({"portrait": "res://assets/img/bios/nobody.png"}), "portrait"), "missing portrait rejected")
 	var hot := _fixture()
-	hot.stats = {"acceleration": 11, "top_speed": 8, "handling": 4, "armor": 4, "special_power": 8}
+	hot.stats = {"acceleration": 21, "top_speed": 8, "handling": 4, "armor": 4, "special_power": 8}
 	t.check(_has_error(hot, "acceleration"), "out-of-band stat rejected")
+	var wide := _fixture()
+	wide.stats = {"acceleration": 11, "top_speed": 8, "handling": 4, "armor": 4, "special_power": 8}
+	t.check(Importer.character_errors(wide).is_empty(), "schema v2: stat 11 valid on the 1-20 scale")
 	var dup := {"characters": [_fixture(), _fixture()]}
 	var dup_errors := Importer.roster_errors(dup)
 	t.check(", ".join(dup_errors).contains("duplicate"), "duplicate id rejected")
+	t.check(", ".join(dup_errors).contains("schema_version"), "missing schema_version rejected")
 
 func _fixture(overrides: Dictionary = {}, drop: Array = []) -> Dictionary:
 	var entry := {

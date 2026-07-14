@@ -1,22 +1,23 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ikpa5"]
-[ext_resource type="Resource" path="res://data/weapons/scythe.tres" id="2_iu8v1"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_iu8v1"]
+[ext_resource type="Resource" path="res://data/weapons/scythe.tres" id="2_xdsfp"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_myfja"]
 
 [resource]
-script = ExtResource("1_ikpa5")
+script = ExtResource("1_iu8v1")
 id = &"mrghastly"
 car_name = "Mr. Ghastly"
 driver_name = "???"
 flavor = "A roaring old-school Harley ridden by death in leather. The bike is viciously quick and dances through gaps. Armor is a rumor; every hit matters. The rider’s gaze never blinks. Miss him once and he is gone."
 special_name = "Scythe of the Damned"
 special_desc = "a straight-line, slightly slow, recharging projectile. Immense damage if it connects, no homing. Demands precise timing and lane control."
-acceleration = 8
-top_speed = 8
-handling = 7
-armor = 2
-special_power = 9
+top_speed = 15
+handling = 13
+armor = 3
+special_power = 17
 mass = 1
+launch = 15
 primary_color = Color(1, 0.2, 0.26666668, 1)
 accent_color = Color(0.6509804, 0, 0.06666667, 1)
-special = ExtResource("2_iu8v1")
+special = ExtResource("2_xdsfp")

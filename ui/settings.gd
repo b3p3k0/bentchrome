@@ -11,6 +11,8 @@ const ALIVE_TEXT := Color(0.8, 0.82, 0.86)
 const WARN := Color(1.0, 0.35, 0.3)
 const LOCKED_TEXT := Color(0.32, 0.34, 0.37)
 
+const UpdaterScript := preload("res://game/updater.gd")
+
 const ZOOM_MIN := 0.45
 const ZOOM_MAX := 0.72
 const ZOOM_STEP := 0.01
@@ -46,6 +48,9 @@ var _settings_path := "user://settings.json"  # overridden only by hermetic test
 
 @onready var _gs: Node = get_node(^"/root/GameState")
 @onready var _flow: Node = get_node(^"/root/SceneFlow")
+# Path-based per repo convention (bare autoload identifiers die on the test
+# runner's -s chain); the SCRIPT is preloaded for compile-safe enum/const access.
+@onready var _updater: Node = get_node_or_null(^"/root/Updater")
 
 func _ready() -> void:
 	_rows = [
@@ -611,17 +616,17 @@ func _refresh_soundboard() -> void:
 ## The game only checks + downloads here; the PLAY launcher applies on restart.
 
 func _adj_check_updates(_d: int) -> void:
-	if not Updater.RELEASES_LIVE:
+	if not UpdaterScript.RELEASES_LIVE:
 		return  # defensive: _adjust already blocks locked rows
 	_open_update_dialog()
 
 func _val_updates() -> Array:
-	if not Updater.RELEASES_LIVE:
+	if not UpdaterScript.RELEASES_LIVE:
 		return ["COMING SOON", LOCKED_TEXT]
 	return ["-->", DIM_TEXT]
 
 func _locked_updates() -> bool:
-	return not Updater.RELEASES_LIVE
+	return not UpdaterScript.RELEASES_LIVE
 
 func _up_input(key: MenuKey) -> void:
 	match key:
@@ -633,19 +638,19 @@ func _up_input(key: MenuKey) -> void:
 			_close_update_dialog()
 
 func _up_primary() -> void:
-	match Updater.state:
-		Updater.State.AVAILABLE:
-			Updater.download()
-		Updater.State.DOWNLOADED:
-			if not Updater.relaunch():
+	match _updater.state:
+		UpdaterScript.State.AVAILABLE:
+			_updater.download()
+		UpdaterScript.State.DOWNLOADED:
+			if not _updater.relaunch():
 				_up_status_lbl.text = "Update ready — close and reopen with PLAY to finish."
 				_up_status_lbl.modulate = AMBER
 				_up_action_lbl.text = ""
-		Updater.State.UP_TO_DATE, Updater.State.ERROR:
-			Updater.check()
+		UpdaterScript.State.UP_TO_DATE, UpdaterScript.State.ERROR:
+			_updater.check()
 
 func _open_update_dialog() -> void:
-	if _up_dialog:
+	if _up_dialog or _updater == null:
 		return
 	_up_dialog = Control.new()
 	_up_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -725,18 +730,18 @@ func _open_update_dialog() -> void:
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
 
-	Updater.state_changed.connect(_on_update_state)
-	Updater.progress_changed.connect(_on_update_progress)
-	Updater.check()  # auto-check the moment the panel opens
+	_updater.state_changed.connect(_on_update_state)
+	_updater.progress_changed.connect(_on_update_progress)
+	_updater.check()  # auto-check the moment the panel opens
 	_refresh_update()
 
 func _close_update_dialog() -> void:
 	if not _up_dialog:
 		return
-	if Updater.state_changed.is_connected(_on_update_state):
-		Updater.state_changed.disconnect(_on_update_state)
-	if Updater.progress_changed.is_connected(_on_update_progress):
-		Updater.progress_changed.disconnect(_on_update_progress)
+	if _updater and _updater.state_changed.is_connected(_on_update_state):
+		_updater.state_changed.disconnect(_on_update_state)
+	if _updater and _updater.progress_changed.is_connected(_on_update_progress):
+		_updater.progress_changed.disconnect(_on_update_progress)
 	_up_dialog.queue_free()
 	_up_dialog = null
 	_up_version_lbl = null
@@ -754,34 +759,34 @@ func _on_update_progress(_f: float) -> void:
 func _refresh_update() -> void:
 	if not _up_dialog:
 		return
-	var cur: String = Updater.current_version()
-	var latest: String = Updater.latest_version
+	var cur: String = _updater.current_version()
+	var latest: String = _updater.latest_version
 	_up_version_lbl.text = "Current: %s" % cur if latest == "" \
 		else "Current: %s    Latest: %s" % [cur, latest]
-	_up_changelog_lbl.text = Updater.changelog
-	match Updater.state:
-		Updater.State.CHECKING:
+	_up_changelog_lbl.text = _updater.changelog
+	match _updater.state:
+		UpdaterScript.State.CHECKING:
 			_up_status_lbl.text = "Checking…"
 			_up_status_lbl.modulate = DIM_TEXT
 			_up_action_lbl.text = ""
-		Updater.State.UP_TO_DATE:
+		UpdaterScript.State.UP_TO_DATE:
 			_up_status_lbl.text = "You're on the latest — no updates yet."
 			_up_status_lbl.modulate = ALIVE_TEXT
 			_up_action_lbl.text = "CHECK AGAIN -->"
-		Updater.State.AVAILABLE:
-			_up_status_lbl.text = "Update available: %s" % Updater.latest_version
+		UpdaterScript.State.AVAILABLE:
+			_up_status_lbl.text = "Update available: %s" % _updater.latest_version
 			_up_status_lbl.modulate = AMBER
 			_up_action_lbl.text = "DOWNLOAD -->"
-		Updater.State.DOWNLOADING:
-			_up_status_lbl.text = "Downloading… %d%%" % int(round(Updater.download_fraction * 100.0))
+		UpdaterScript.State.DOWNLOADING:
+			_up_status_lbl.text = "Downloading… %d%%" % int(round(_updater.download_fraction * 100.0))
 			_up_status_lbl.modulate = ALIVE_TEXT
 			_up_action_lbl.text = ""
-		Updater.State.DOWNLOADED:
+		UpdaterScript.State.DOWNLOADED:
 			_up_status_lbl.text = "Downloaded — restart to finish."
 			_up_status_lbl.modulate = AMBER
 			_up_action_lbl.text = "RESTART NOW -->"
-		Updater.State.ERROR:
-			_up_status_lbl.text = Updater.error_text
+		UpdaterScript.State.ERROR:
+			_up_status_lbl.text = _updater.error_text
 			_up_status_lbl.modulate = WARN
 			_up_action_lbl.text = "TRY AGAIN -->"
 		_:

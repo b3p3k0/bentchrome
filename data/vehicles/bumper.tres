@@ -1,23 +1,25 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_ptqcd"]
-[ext_resource type="Resource" path="res://data/weapons/blunt_blaze.tres" id="2_52mi2"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_52mi2"]
+[ext_resource type="Resource" path="res://data/weapons/blunt_blaze.tres" id="2_7d4u7"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_oa8ac"]
 
 [resource]
-script = ExtResource("1_ptqcd")
+script = ExtResource("1_52mi2")
 id = &"bumper"
 car_name = "Bumper"
 driver_name = "Chester J. Banks"
 flavor = "Country-club rebel in a hot-pink land yacht. The Cadillac floats, then thuds when it lands. It is slow off the line yet cruises steady once moving. Steering is lazy but predictable. He weaponizes swagger and wide fenders."
 special_name = "Blunt Blaze"
 special_desc = "a two-second front cone of fire that widens with distance, followed by a long recovery. Applies heavy burn while bathed, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial."
-acceleration = 3
-top_speed = 6
-armor = 7
-special_power = 7
-mass = 6
+acceleration = 7
+top_speed = 11
+armor = 13
+special_power = 13
+mass = 11
+launch = 11
 primary_color = Color(1, 0.23921569, 0.65882355, 1)
 accent_color = Color(1, 0.83137256, 0.9411765, 1)
-special = ExtResource("2_52mi2")
+special = ExtResource("2_7d4u7")
 special_ammo_cap = 2
 special_recharge_seconds = 90.0

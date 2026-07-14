@@ -414,3 +414,39 @@ angle at `straighten_snap_rate_deg` (80°/s). Gated on >30 px/s forward; any ste
 or handbrake resets the grace. Guarded on `"HEADING_STEPS" in vehicle`, so smooth-mode
 (HEADING_STEPS = 0) self-disables the snap. Locked by two suite tests; the original
 feel bands are untouched (single-tick grip asserts sit inside the grace window).
+
+### Phase 4.2 (July 2026) — The 1-20 stats rebase (feel-frozen)
+Backend restructure ahead of the mods garage; NO car drives differently. Design
+ints moved from 1-10 to 1-20 (migration v' = 2v-1 — `tools/migrate_roster_v2.py`,
+committed for audit) and `StatCurves` became 20-slot per-axis lookup tables
+generated from the legacy anchors over (s-1)/18, which puts every odd slot
+bit-exactly on the old (v-1)/9 ramp. Even slots and slot 20 (~98.3 mph) are new
+tuning room. MPH is the tuning vocabulary (`MPH_PER_PXS 0.15`): top_speed
+slot 1 = 54 mph → slot 19 = 96 mph. Engine mass stays the controller's native
+1-10 knob (`(authored+1)/2`), so the Phase-4 mass model and its feel bands are
+untouched. New `launch` stat (0 = mass-derived sentinel) splits standing-start
+torque out of mass via `DrivingController.launch_factor` — the derived branch
+keeps the Phase-4 expression verbatim. Shared terrain tables moved to named
+roster `terrain_profiles` (ratios verbatim; inline per-car entries overlay).
+Freeze is triple-locked: `tests/test_stat_rebase.gd`'s golden lock (written
+pre-flip, never edited, exact == on all 20 rides), the untouched Phase-4 feel
+bands, and the `tools/probes/stat_baseline.gd` capture (engine values + 0-60s
+byte-identical across the flip). Real-world tuning targets for the NEXT pass:
+`docs/car_tuning_baselines.md`.
+
+### Phase 4.3 (July 2026) — The fleet balance pass
+First intentional feel change since Phase 4; the whole 1-20/launch backend was
+built for it. Anchors held (cyclone the rabbit, hornet the yardstick); the
+pack spread around them, tuned against docs/car_tuning_baselines.md (√-com-
+pressed real-world 0-60 anchors) via the stat_baseline probe's measured 0-60.
+The launch axis debuted: hammertoe 17 (fleet-strongest, monster torque),
+razorback 15 (HMMWV dead-stop grunt + a dirt/mud accel overlay over
+awd_utility — first live use of the terrain overlay seam), mrghastly/ghost/
+smoky/bumper/coldfront authored pops, kandykane 5 and lovebug 1 (the founding
+"Beetle needs a running start" example, 1.90s → 4.28s, flavor reworded).
+Hammertoe's accel 12 is the first even (half-step) slot. Ghost's recharge
+12→18 pays for the strongest default special. 0-60 ladder after the pass:
+0.98 / 1.43 / 1.62 / 1.77 / 1.77 / 2.22 / 2.28 / 2.50 / 3.02 / 3.43 / 3.77 /
+3.97 / 3.98 / 4.28. Golden lock re-pinned to the new authored ints (now
+includes launch); terrain pins re-pinned for razorback/cricket; bosses and
+buzzards byte-identical throughout.

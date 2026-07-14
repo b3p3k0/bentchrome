@@ -1,13 +1,16 @@
 extends Node
 ## Dev mode — toggled from the settings menu (DEVELOPER MODE row) and persisted
 ## with the other settings; the old `--dev` cmdline flag is retired. Gates
-## dev-only tools: the F1 handling dashboard, the F2 tuning editor, and the
-## tuning deck (user://tuning.json overrides, boot-applied here).
+## dev-only tools: the F1 handling dashboard, the F2 tuning editor, the car
+## tuner (Settings -> DEVELOPER OPTIONS), and their decks (user://tuning.json
+## + user://car_tuner.json overrides, boot-applied here).
 
 const TuningDeck := preload("res://game/tuning_deck.gd")
+const CarDeck := preload("res://game/car_deck.gd")
 
 var enabled := false
-var tuning = null  # TuningDeck instance while dev mode is on
+var tuning = null    # TuningDeck instance while dev mode is on
+var car_deck = null  # CarDeck instance while dev mode is on
 
 func _ready() -> void:
 	_apply_windowed_flag()
@@ -38,10 +41,12 @@ func _ensure_tuning() -> void:
 	if tuning != null:
 		return
 	tuning = TuningDeck.new()
+	car_deck = CarDeck.new()
 	# Same hermetic rule as settings: live tuning overrides never leak into
 	# headless gate runs (they mutate shared weapon resources process-wide).
 	if DisplayServer.get_name() != "headless":
 		tuning.load_and_apply()
+		car_deck.load_and_apply()
 	get_tree().node_added.connect(_on_node_added)
 	for v in get_tree().get_nodes_in_group(&"vehicles"):
 		_apply_vehicle_overrides(v)
@@ -67,3 +72,20 @@ func _apply_vehicle_overrides(vehicle) -> void:
 func apply_combat_overrides_now() -> void:
 	for v in get_tree().get_nodes_in_group(&"vehicles"):
 		_apply_vehicle_overrides(v)
+
+## Car-tuner edit landed on a .tres singleton: any live car of that id
+## re-reads it (no-op on the settings screen — no vehicles there; kept for
+## any future in-game host). set_stats is a full re-init (repaint + HP
+## refill) — accepted dev behavior, same as F1's car picker.
+func reapply_car_stats(id: String) -> void:
+	for v in get_tree().get_nodes_in_group(&"vehicles"):
+		if v.get("stats") != null and String(v.stats.id) == id and v.has_method(&"set_stats"):
+			v.set_stats(v.stats)
+
+## MP standardization hook (see docs/net_dev_request_data_tuning.md): pushes
+## roster-truth values back onto every car .tres WITHOUT touching the player's
+## saved tuning file — net dev calls this at session start for both roles so
+## matches always run pristine data. Overrides re-apply on next boot (SP).
+func suspend_data_tuning() -> void:
+	if car_deck != null:
+		car_deck.restore_baselines()

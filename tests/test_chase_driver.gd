@@ -199,14 +199,14 @@ func test_technical_holds_lane_and_never_fires() -> void:
 func test_buzzard_data_shape() -> void:
 	var bike = load("res://data/vehicles/buzz_bike.tres")
 	var sedan = load("res://data/vehicles/buzz_sedan.tres")
-	t.check(bike.armor <= 2 and sedan.armor <= 3, "buzzardz: glass cannons, thin plating")
+	t.check(bike.armor <= 3 and sedan.armor <= 5, "buzzardz: glass cannons, thin plating")
 	t.check(bike.no_mines and sedan.no_mines, "buzzardz: never mine the road")
 	t.check(bike.special == null, "buzzardz: scouts carry no signature weapon")
 	t.check(sedan.special != null and sedan.special.damage <= 15.0,
 		"buzzardz: sedan rocket stays a nuisance")
-	t.check(bike.top_speed >= 7, "buzzardz: bikes can actually catch you")
+	t.check(bike.top_speed >= 13, "buzzardz: bikes can actually catch you")
 	var tech = load("res://data/vehicles/buzz_technical.tres")
-	t.check(tech.top_speed <= 3, "buzzardz: the technical can't chase — it doesn't have to")
+	t.check(tech.top_speed <= 5, "buzzardz: the technical can't chase — it doesn't have to")
 	t.check(tech.no_mines, "buzzardz: technicals never mine the road")
 	t.check(tech.turret != null and tech.turret.damage <= 15.0 and tech.turret.cooldown >= 2.0
 		and tech.turret.projectile_speed <= 800.0,

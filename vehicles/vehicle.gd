@@ -3,7 +3,7 @@ extends CharacterBody2D
 ## The one vehicle. A Driver supplies intent; a DrivingController turns it into
 ## motion. Player and AI both instance this scene — only the Driver, faction, and
 ## stats differ. If a VehicleStats resource is assigned, StatCurves configures the
-## controller + health from its 1-10 design stats, then per-car handling_overrides
+## controller + health from its 1-20 design stats, then per-car handling_overrides
 ## (from the dev dashboard) win. The body stays axis-aligned (so a child Camera2D
 ## never spins); only the Visual rotates. Combat is free-for-all: faction is
 ## identity only, not damage immunity.

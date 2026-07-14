@@ -1,8 +1,9 @@
 class_name VehicleStats
 extends Resource
-## Per-vehicle identity + design stats (1-10). StatCurves maps the stats to engine
-## units so each car's feel comes from data, not code. Generated from
-## assets/data/roster.json by tools/import_roster.gd (the authoring source).
+## Per-vehicle identity + design stats (1-20; odd values = the migrated legacy
+## 1-10 line). StatCurves maps the stats to engine units so each car's feel
+## comes from data, not code. Generated from assets/data/roster.json by
+## tools/import_roster.gd (the authoring source).
 
 @export var id: StringName = &""
 @export var car_name: String = ""
@@ -11,12 +12,13 @@ extends Resource
 @export var special_name: String = ""
 @export_multiline var special_desc: String = ""
 
-@export_range(1, 10) var acceleration: int = 5
-@export_range(1, 10) var top_speed: int = 5
-@export_range(1, 10) var handling: int = 5
-@export_range(1, 10) var armor: int = 5
-@export_range(1, 10) var special_power: int = 5
-@export_range(1, 10) var mass: int = 5  # 1 = motorcycle, 8 = monster truck; >8 reserved
+@export_range(1, 20) var acceleration: int = 9
+@export_range(1, 20) var top_speed: int = 9
+@export_range(1, 20) var handling: int = 9
+@export_range(1, 20) var armor: int = 9
+@export_range(1, 20) var special_power: int = 9  # display-only today; future special axis
+@export_range(1, 20) var mass: int = 9  # 1 = motorcycle, 15 = monster truck; 17+ boss
+@export_range(0, 20) var launch: int = 0  # standing-start torque; 0 = derive from mass
 
 @export var primary_color := Color(0.85, 0.2, 0.3)
 @export var accent_color := Color(1, 1, 1)

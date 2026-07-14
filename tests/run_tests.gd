@@ -87,6 +87,8 @@ const SUITES := [
 	preload("res://tests/test_mode_select.gd"),
 	preload("res://tests/test_tutorial_director.gd"),
 	preload("res://tests/test_floor_props.gd"),
+	preload("res://tests/test_car_deck.gd"),
+	preload("res://tests/test_stat_rebase.gd"),  # keep LAST: golden lock audits .tres hygiene
 ]
 
 var _checks := 0

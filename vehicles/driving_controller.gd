@@ -12,6 +12,8 @@ extends Node
 @export var coast_deceleration := 260.0  # lift-off falloff; mass stretches/shrinks it
 @export_range(0.0, 0.95) var accel_taper := 0.65  # pull lost as speed nears top
 @export var launch_boost := 1.6          # extra shove below 30% of top speed
+@export var launch_factor := 0.0         # authored torque (StatCurves LAUNCH): >0 scales
+										 # launch_boost directly; 0 = derive from mass
 
 @export_group("Steering")
 @export var turn_rate_deg := 190.0
@@ -35,7 +37,8 @@ extends Node
 @export var straighten_snap_rate_deg := 80.0
 
 @export_group("Mass")
-@export_range(1.0, 10.0) var mass := 5.0  # design 1-10 (StatCurves); shapes launch/coast/brake
+@export_range(1.0, 10.0) var mass := 5.0  # engine 1-10 knob (authored 1-20 mass folds
+										  # down via StatCurves); shapes launch/coast/brake
 
 @export_group("Boost")
 @export var boost_top_factor := 1.5
@@ -135,7 +138,11 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	# brakes; light = jumps off the line, sheds speed on lift, bites when braking.
 	var mf := clampf((mass - 1.0) / 9.0, 0.0, 1.0)
 	var accel_mass := lerpf(1.3, 0.5, mf)
-	var boost_top := lerpf(launch_boost * 1.4, launch_boost * 0.7, mf)
+	# Standing-start shove: authored launch_factor wins (torque decoupled from
+	# mass — a loaded HMMWV can still pull from a dead stop); 0 keeps the
+	# mass-derived default.
+	var boost_top := launch_factor * launch_boost if launch_factor > 0.0 \
+		else lerpf(launch_boost * 1.4, launch_boost * 0.7, mf)
 	var boost := lerpf(maxf(boost_top, 1.0), 1.0, clampf(fwd_speed / maxf(top * 0.3, 1.0), 0.0, 1.0))
 	var taper := 1.0 - accel_taper * clampf(fwd_speed / maxf(top, 1.0), 0.0, 1.0)
 	var accel_eff := accel * accel_mass * boost * taper
