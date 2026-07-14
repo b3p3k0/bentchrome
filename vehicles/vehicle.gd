@@ -322,6 +322,9 @@ func body_metrics() -> Dictionary:
 func get_controller() -> DrivingController:
 	return _controller
 
+func get_driver() -> Driver:
+	return _driver
+
 ## Runtime driver swap (the victory lap): frees the seated driver, seats the
 ## new one, and re-points the cached reference — @onready never re-runs.
 func set_driver(driver: Driver) -> void:

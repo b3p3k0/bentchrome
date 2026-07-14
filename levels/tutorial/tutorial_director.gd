@@ -183,6 +183,11 @@ func _advance() -> void:
 	_card.show_card(LESSONS[lesson_index]["title"], LESSONS[lesson_index]["body"])
 
 func _on_card_dismissed() -> void:
+	# The dismiss key is also fire — re-arm the player's release gate so the
+	# press that closed the card can't bleed a round into the yard on unpause.
+	var drv: Node = player.get_driver() if player else null
+	if drv and drv.has_method(&"arm_fire_gate"):
+		drv.arm_fire_gate()
 	# The closing card: gate opens only once it's read — the tunnel stays
 	# visibly barred through the whole syllabus.
 	if completed and lesson_index >= LESSONS.size():
