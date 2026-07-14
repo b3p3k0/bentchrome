@@ -12,7 +12,7 @@ magnitude = 0.5
 
 [resource]
 script = ExtResource("1_def")
-display_name = "Splat Effect"
+display_name = "Rusty 'Poon"
 cooldown = 2.0
 damage = 10.0
 projectile_speed = 820.0

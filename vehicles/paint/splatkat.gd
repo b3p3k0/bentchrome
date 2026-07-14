@@ -1,5 +1,5 @@
 extends RefCounted
-## Splat Cat: muscle — fat rear tires poking out, hood scoop, hunched roof.
+## Splat Kat: muscle — fat rear tires poking out, hood scoop, hunched roof.
 
 const Parts := preload("res://vehicles/paint/parts.gd")
 
