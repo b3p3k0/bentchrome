@@ -84,20 +84,77 @@ def crash(variant=0):
     return _cached(("crash", variant), build)
 
 
+def tom(pitch=0, variant=0):
+    """Floor/rack tom family — pitch 0 low .. 2 high. Doom/boss artillery."""
+    def build():
+        rng = np.random.default_rng(600 + pitch * 10 + variant)
+        dur = 0.4
+        f0 = [190.0, 240.0, 300.0][pitch]
+        body = E.sweep(f0, f0 * 0.55, dur) * E.env_exp(dur, 0.12)
+        skin = E.bp(rng.uniform(-1, 1, int(E.SR * dur)), 400, 1800)
+        skin = E.rms_match(skin, E.rms(body), -6.0) * E.env_exp(dur, 0.03)
+        return E.softclip(body * 1.5 + skin, 2.0) * 0.9
+    return _cached(("tom", pitch, variant), build)
+
+
+def clap(variant=0):
+    """Electro clap — three micro-bursts + band flam. The snowy/chase snare."""
+    def build():
+        rng = np.random.default_rng(700 + variant)
+        dur = 0.20
+        n = int(E.SR * dur)
+        x = np.zeros(n)
+        for k, at in enumerate([0.0, 0.011, 0.023]):
+            i = int(E.SR * at)
+            burst = E.bp(rng.uniform(-1, 1, n - i), 900, 3600)
+            env = E.env_exp(dur - at, 0.008 if k < 2 else 0.05)
+            m = min(burst.size, env.size)
+            x[i:i + m] += burst[:m] * env[:m]
+        return E.softclip(x * 1.6, 2.2) * 0.85
+    return _cached(("clap", variant), build)
+
+
+def hard_kick(variant=0):
+    """Overdriven 909-style four-floor — the digital-hardcore engine block."""
+    def build():
+        base = kick(variant)
+        return E.softclip(base * 3.0, 2.5) * 0.95
+    return _cached(("hard_kick", variant), build)
+
+
+def pile_thud(variant=0):
+    """Pile-driver hit — construction-yard sub thump with a metal lip."""
+    def build():
+        rng = np.random.default_rng(800 + variant)
+        dur = 0.5
+        sub = E.sweep(70.0, 38.0, dur) * E.env_exp(dur, 0.14)
+        lip = E.bp(rng.uniform(-1, 1, int(E.SR * 0.08)), 1200, 3200) * 0.5
+        x = sub * 1.8
+        x[:lip.size] += lip * E.env_exp(0.08, 0.01)[:lip.size]
+        return E.softclip(x, 2.0) * 0.95
+    return _cached(("pile", variant), build)
+
+
 # ---- bass ----------------------------------------------------------------------
-def bass_note(freq, dur, vel=1.0):
+def bass_note(freq, dur, vel=1.0, grit=1.0):
+    """grit 1.0 = saturated house bass; ~1.8 = Lemmy-lane overdriven grind."""
     def build():
         n = int(E.SR * dur)
         x = E.saw(freq, dur) + 0.5 * E.square(freq * 0.5, dur, 0.48)
-        x = E.lp(x, 620)
-        x = E.softclip(x * 2.4, 1.8)          # first saturation stage
+        x = E.lp(x, 620 + 500 * (grit - 1.0))
+        x = E.softclip(x * 2.4 * grit, 1.8)   # first saturation stage
         x = E.softclip(x * 1.4, 1.5)          # second — "saturated", not fuzz
         env = E.env_ad(dur, 0.004, 1.6)
         gate = np.ones(n)
         rel = max(1, int(E.SR * 0.012))
         gate[-rel:] = np.linspace(1, 0, rel)  # tight release between 8ths
         return x[:n] * env * gate
-    return _cached(("bass", round(freq, 2), round(dur, 4)), build) * vel
+    return _cached(("bass", round(freq, 2), round(dur, 4), grit), build) * vel
+
+
+def bass_render(grit=1.0):
+    """notes() renderer with a fixed grit (renderers take freq/dur/vel only)."""
+    return lambda freq, dur, vel: bass_note(freq, dur, vel, grit)
 
 
 # ---- guitar --------------------------------------------------------------------
@@ -140,6 +197,20 @@ def gtr_lane_render(seed):
     return render
 
 
+def _gtr_amp_clean(x):
+    """Low-gain 'clean-ish' stage for grunge verses — edge-of-breakup, dark."""
+    x = E.hp(x, 110)
+    x = E.softclip(x * 1.8, 1.4)
+    return E.lp(x, 5200, order=2)
+
+
+def gtr_lane_render_clean(seed):
+    """Open-voiced, longer-ringing take for quiet grunge sections."""
+    def render(freq, dur, vel):
+        return power_chord(freq, dur * 1.5, vel * 0.8, False, seed + 10)
+    return render
+
+
 # ---- synth stab / textures ------------------------------------------------------
 def stab(freq, dur, vel=1.0):
     """Dissonant minor-2nd cluster stab through a band sweep + slap echoes —
@@ -179,6 +250,63 @@ def drone(freq, dur):
     x = E.lp(x, 240, order=4)
     swell = 0.75 + 0.25 * np.sin(2 * np.pi * 0.09 * E.t(dur) - np.pi / 2)
     return E.softclip(x * swell, 1.5)
+
+
+def arp_note(freq, dur, vel=1.0):
+    """Cold synth pluck — the NIN-lane sequenced pulse. Dark square/saw blend
+    with a fast filter bite, no ringing tail."""
+    def build():
+        n = int(E.SR * dur)
+        x = 0.7 * E.square(freq, dur, 0.46) + 0.5 * E.saw(freq * 1.004, dur)
+        x = E.lp(x, 1400)
+        x = E.softclip(x * 1.8, 1.6)
+        env = E.env_ad(dur, 0.002, 2.6)
+        return x[:n] * env
+    return _cached(("arp", round(freq, 2), round(dur, 4)), build) * vel
+
+
+def rave_stab(freq, dur, vel=1.0):
+    """Hoover-adjacent rave hit — thick detuned saw cluster, hard-clipped.
+    The digital-hardcore shout; rough by construction."""
+    def build():
+        x = (E.saw(freq, dur) + E.saw(freq * 1.011, dur, 0.4)
+            + E.saw(freq * 0.989, dur, 0.7) + 0.8 * E.saw(freq * 2.02, dur))
+        x = E.bp(x, 300, 3200)
+        x = E.softclip(x * 3.5, 2.4)
+        return x * E.env_ad(dur, 0.004, 1.4)
+    return _cached(("rave", round(freq, 2), round(dur, 3)), build) * vel
+
+
+def icy_pad(freqs, dur, seed=21):
+    """High glassy pad under shimmer noise — cold, slow-breathing. Detune and
+    rough shimmer keep it off the clean-tone tell."""
+    rng = np.random.default_rng(seed)
+    n = int(E.SR * dur)
+    x = np.zeros(n)
+    for k, f in enumerate(freqs):
+        x += E.sine(f * (1.0 + 0.0025 * ((k % 3) - 1)), dur, rng.uniform(0, 6.0))
+    shimmer = E.hp(rng.uniform(-1, 1, n), 5200) * 0.12
+    breathe = 0.7 + 0.3 * np.sin(2 * np.pi * 0.11 * E.t(dur) + 1.0)
+    return E.softclip((x / max(len(freqs), 1) + shimmer) * breathe, 1.3)
+
+
+def air_rattle(dur, seed=31):
+    """Air-wrench / chain rattle burst — construction-yard garnish."""
+    rng = np.random.default_rng(seed)
+    n = int(E.SR * dur)
+    gate = (np.sin(2 * np.pi * 33.0 * E.t(dur)) > 0.3).astype(float)
+    x = E.bp(rng.uniform(-1, 1, n), 2200, 7800) * gate
+    return x * E.env_ad(dur, 0.01, 1.2)
+
+
+def crowd_swell(dur, seed=41):
+    """Distant stadium roar — broad dark noise, slow surges, no voices."""
+    rng = np.random.default_rng(seed)
+    n = int(E.SR * dur)
+    x = E.bp(rng.uniform(-1, 1, n), 300, 1600)
+    surge = 0.6 + 0.4 * np.sin(2 * np.pi * 0.07 * E.t(dur) + rng.uniform(0, 6))
+    surge *= 1.0 + 0.15 * np.sin(2 * np.pi * 0.23 * E.t(dur))
+    return E.one_pole_lp(x * surge, 1200)
 
 
 def riser(dur, seed=11):

@@ -34,8 +34,10 @@ def main(argv):
         return 1
     for name in names:
         print("== %s" % name)
-        x2, song = TRACKS[name].build()
-        wav_path = master.finalize(name, x2, song, wav_only)
+        mod = TRACKS[name]
+        x2, song = mod.build()
+        wav_path = master.finalize(name, x2, song, wav_only,
+            **getattr(mod, "MASTER", {}))
         if do_analyze:
             analyze.report(wav_path)
     return 0

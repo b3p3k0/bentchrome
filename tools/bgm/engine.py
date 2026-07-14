@@ -145,7 +145,7 @@ class Song:
         self.bars = bars                       # loop length (tail bar excluded)
         self.rng = np.random.default_rng(seed)
         self.spb = int(round(SR * 60.0 / bpm / 4.0))   # samples per 16th step
-        self.steps_per_bar = beats_per_bar * 4
+        self.steps_per_bar = int(round(beats_per_bar * 4))  # 3.5 -> 7/8 lurch
         self.bar_samples = self.spb * self.steps_per_bar
         self.total = self.bar_samples * (bars + 1)     # +1 = loop-tail bar
         self.lanes = {}

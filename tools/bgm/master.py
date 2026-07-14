@@ -35,11 +35,13 @@ def _median_rms_db(x2):
     return float(20.0 * np.log10(np.median(r)))
 
 
-def finalize(name, x2, song, wav_only=False, reverb_wet=0.08, room=0.45):
+def finalize(name, x2, song, wav_only=False, reverb_wet=0.08, room=0.45,
+             rms_offset_db=0.0):
     """Master -> loudness-normalize -> limit -> bake the loop seam -> write.
-    x2 is the raw (2, N) mix including the +1 loop-tail bar."""
+    x2 is the raw (2, N) mix including the +1 loop-tail bar. rms_offset_db
+    lets ambient tracks (menu) sit under the combat convention."""
     x = _chain(reverb_wet, room)(x2.astype(np.float32), E.SR).astype(np.float64)
-    gain_db = TARGET_RMS_DB - _median_rms_db(x)
+    gain_db = TARGET_RMS_DB + rms_offset_db - _median_rms_db(x)
     x *= 10.0 ** (gain_db / 20.0)
     x = Limiter(threshold_db=PEAK_DB, release_ms=120.0)(
         x.astype(np.float32), E.SR).astype(np.float64)
