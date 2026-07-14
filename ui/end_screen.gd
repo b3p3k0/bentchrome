@@ -116,6 +116,9 @@ func _show(win: bool) -> void:
 ## and the prize hint fades into the bottom-center cell after a beat. No
 ## panel, no freeze — the lap and the fireworks ARE the screen.
 func _show_rolling_win() -> void:
+	var music := get_node_or_null(^"/root/MusicDirector")
+	if music:  # the lap never pauses the tree, so the implicit duck can't fire
+		music.duck(&"end_screen", true)
 	visible = true
 	_dim.color.a = 0.15
 	_center.visible = false  # the classic panel waits behind the stub

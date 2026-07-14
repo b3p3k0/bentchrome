@@ -23,6 +23,7 @@ SceneFlow="*res://game/scene_flow.gd"
 Spawner="*res://game/spawner.gd"
 InputRouter="*res://game/input_router.gd"
 AudioDirector="*res://game/audio_director.gd"
+MusicDirector="*res://game/music_director.gd"
 Net="*res://game/net/net_session.gd"
 
 [display]

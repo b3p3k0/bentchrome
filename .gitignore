@@ -1,4 +1,6 @@
 docs/internal
+venv/
+venv312/
 .import/
 .godot/
 mono/
@@ -16,3 +18,4 @@ Thumbs.db
 
 # Future planning documents (not part of current game)
 docs/future_cars.txt
+__pycache__/

@@ -484,3 +484,21 @@ Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
 | sp_<special> events | 13 (9 assets live) | special_controller.gd special_sfx_event | per-car special voices: sp_ + def basename; taser/blaze loop with the effect, toe_jam voices the LANDED hit, red_glare repeats per rocket; PROJECTILE fallback = missile_fire via WeaponMount.sfx_override |
 | brake cue | one-shot on hard-brake start | drive_fx.gd _was_braking_hard | was a loop; Kevin redesigned to a single quick bite (2026-07-14) |
 | announcer_<car>_wins/_loses | 28 baked lines | end_screen._announce (win = rolling/finale-only; lose = any wipe) | espeak-ng dev-bake + PA chain in synth_sfx.py; loses pitched lower; pause-immune pool (lose screen freezes the tree); no runtime TTS; 0.8s after the sting |
+
+## BGM (background music knobs)
+
+Assets are procedural: `./venv312/bin/python tools/synth_bgm.py` regenerates
+`assets/bgm/*.ogg` (naming contract in `assets/bgm/README.md`, reference form
+in `assets/bgm/refs.md`; engine in `tools/bgm/`). `game/music_director.gd`
+(autoload) picks the track by scene, crossfades, and ducks; the dev-options
+SOUNDBOARD lists `bgm_*` rows with PLAY/STOP toggles.
+
+| Knob | Value | Where | What it does |
+|---|---|---|---|
+| TRACKS | scene path -> bgm_* | music_director.gd | which track a scene plays; UPCOMING = interstitial plays the next level's track; RESOLVE_CHILD = mp_match keys off its instanced arena; unknown scenes = bgm_menu |
+| CROSSFADE / PHASE_CROSSFADE | 1.6s / 0.9s | music_director.gd | scene-to-scene fade / in-level override fade (Goliath p1->p2 gear change) |
+| DUCK_DB / DUCK_RATE_DB | -10 dB / 40 dB/s | music_director.gd | music dim while tree-paused or a named duck holds (end_screen rolling win) |
+| same-event no-op | structural | music_director.gd _request | interstitial->level, pause-Restart, and respawn continuity |
+| loop stamp | code, not .import | music_director.gd _looped | every resolved stream loops; assets bake the seam (wrap-crossfaded tail bar) |
+| SEED / BPM / BARS | per track | tools/bgm/tracks/*.py | deterministic composition constants (arena: 0xD3B1 / 122 / 72) |
+| TARGET_RMS_DB / PEAK_DB | -18 / -1 | tools/bgm/master.py | one loudness convention across all tracks — no per-track trim in-game |

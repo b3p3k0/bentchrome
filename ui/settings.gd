@@ -401,9 +401,18 @@ func _sb_input(key: MenuKey) -> void:
 			_sb_index = wrapi(_sb_index + 1, 0, _sb_events.size())
 			UiSfx.move(self)
 		MenuKey.RIGHT:
+			var event: StringName = _sb_events[_sb_index]
+			if String(event).begins_with("bgm_"):
+				# Music rows TOGGLE (3-minute tracks) via the director's override
+				# — the preview rides the real crossfade players.
+				var music := get_node_or_null(^"/root/MusicDirector")
+				if music:
+					music.set_override(&"" if music.playing_event() == event else event)
+				_refresh_soundboard()
+				return
 			var audio := get_node_or_null(^"/root/AudioDirector")
 			if audio:
-				audio.play(_sb_events[_sb_index])
+				audio.play(event)
 			return
 		MenuKey.LEFT:
 			return
@@ -421,6 +430,10 @@ func _open_soundboard() -> void:
 		return
 	_sb_index = 0
 	_sb_events = audio.CATALOG.keys()
+	var music := get_node_or_null(^"/root/MusicDirector")
+	if music:  # music tracks audition after the SFX catalog
+		for event in music.TRACK_EVENTS:
+			_sb_events.append(event)
 	_sb_dialog = Control.new()
 	_sb_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_sb_dialog)
@@ -496,6 +509,9 @@ func _open_soundboard() -> void:
 func _close_soundboard() -> void:
 	if not _sb_dialog:
 		return
+	var music := get_node_or_null(^"/root/MusicDirector")
+	if music:  # leaving the bench stops any track preview
+		music.set_override(&"")
 	_sb_dialog.queue_free()
 	_sb_dialog = null
 	_sb_scroll = null
@@ -507,11 +523,22 @@ func _refresh_soundboard() -> void:
 	if not _sb_dialog:
 		return
 	var audio := get_node_or_null(^"/root/AudioDirector")
+	var music := get_node_or_null(^"/root/MusicDirector")
 	for i in _sb_events.size():
 		_sb_name_labels[i].modulate = AMBER if i == _sb_index else ALIVE_TEXT
-		var loaded: bool = audio != null and audio.has_asset(_sb_events[i])
-		_sb_value_labels[i].text = "PLAY ->" if loaded else "NO FILE"
-		_sb_value_labels[i].modulate = DIM_TEXT if loaded else WARN
+		var event: StringName = _sb_events[i]
+		var is_bgm := String(event).begins_with("bgm_")
+		var loaded: bool
+		if is_bgm:
+			loaded = music != null and music.has_asset(event)
+		else:
+			loaded = audio != null and audio.has_asset(event)
+		if is_bgm and loaded and music.playing_event() == event:
+			_sb_value_labels[i].text = "STOP"
+			_sb_value_labels[i].modulate = AMBER
+		else:
+			_sb_value_labels[i].text = "PLAY ->" if loaded else "NO FILE"
+			_sb_value_labels[i].modulate = DIM_TEXT if loaded else WARN
 	if _sb_scroll and _sb_index < _sb_name_labels.size():
 		var row := _sb_name_labels[_sb_index].get_parent() as Control
 		if row:
