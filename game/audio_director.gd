@@ -65,23 +65,38 @@ const CATALOG := {
 	&"sp_tornado_alley": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"sp_placeholder": {"volume_db": 0.0, "pitch_jitter": 0.04},  # "where's the
 		# beef?" — plays for any special that fires without its own sp_* asset
-	# PA announcer, campaign finale only: "<Carname> wins!" — baked speech
-	# (tools/synth_sfx.py announcer(), espeak-ng on the dev box; the game
-	# ships only these oggs). Keyed by roster id.
-	&"announcer_bumper": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_coldfront": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_cricket": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_cyclone": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_ghost": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_hammertoe": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_hornet": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_hubcap": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_kandykane": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_lovebug": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_mrghastly": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_razorback": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_smoky": {"volume_db": 0.0, "pitch_jitter": 0.0},
-	&"announcer_splatkat": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	# PA announcer: "<Carname> wins!" (campaign finale) / "<Carname> loses!"
+	# (any last-life wipe) — baked speech (tools/synth_sfx.py announcer(),
+	# espeak-ng on the dev box; the game ships only these oggs). Keyed by
+	# roster id + verdict; routed through the pause-immune pool in play().
+	&"announcer_bumper_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_bumper_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_coldfront_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_coldfront_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cricket_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cricket_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cyclone_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_cyclone_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_ghost_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_ghost_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hammertoe_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hammertoe_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hornet_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hornet_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hubcap_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_hubcap_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_kandykane_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_kandykane_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_lovebug_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_lovebug_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_mrghastly_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_mrghastly_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_razorback_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_razorback_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_smoky_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_smoky_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_splatkat_wins": {"volume_db": 0.0, "pitch_jitter": 0.0},
+	&"announcer_splatkat_loses": {"volume_db": 0.0, "pitch_jitter": 0.0},
 }
 
 var _streams: Dictionary = {}  # event -> AudioStream (absent = no asset yet)
@@ -144,7 +159,9 @@ func play(event: StringName) -> void:
 	if stream == null:
 		return
 	var p: AudioStreamPlayer
-	if UI_EVENTS.has(event):
+	# Announcer lines join the pause-immune pool: the lose screen freezes the
+	# tree, and the PA must still get its word in.
+	if UI_EVENTS.has(event) or String(event).begins_with("announcer_"):
 		if _pool_ui.is_empty():
 			return
 		p = _pool_ui[_next_ui]

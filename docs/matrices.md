@@ -483,4 +483,4 @@ Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
 | pit/water death sound | pit_fall / sink replace the death boom | vehicle.gd _on_died | `_falling` gates the generic explosion sound like it already gated the visual |
 | sp_<special> events | 13 (9 assets live) | special_controller.gd special_sfx_event | per-car special voices: sp_ + def basename; taser/blaze loop with the effect, toe_jam voices the LANDED hit, red_glare repeats per rocket; PROJECTILE fallback = missile_fire via WeaponMount.sfx_override |
 | brake cue | one-shot on hard-brake start | drive_fx.gd _was_braking_hard | was a loop; Kevin redesigned to a single quick bite (2026-07-14) |
-| announcer_<car> | 14 baked lines | end_screen._announce_winner (rolling win = finale-only) | "<Carname> wins!" — espeak-ng dev-bake + PA chain in synth_sfx.py; no runtime TTS; 0.8s after the sting |
+| announcer_<car>_wins/_loses | 28 baked lines | end_screen._announce (win = rolling/finale-only; lose = any wipe) | espeak-ng dev-bake + PA chain in synth_sfx.py; loses pitched lower; pause-immune pool (lose screen freezes the tree); no runtime TTS; 0.8s after the sting |

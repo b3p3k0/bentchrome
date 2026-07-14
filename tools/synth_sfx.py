@@ -1032,16 +1032,19 @@ def announcer():
     if espeak is None:
         print("  [announcer] espeak-ng not found — skipping (assets are committed)")
         return
-    for car_id, spoken in ANNOUNCER_NAMES.items():
-        tmp = f"/tmp/announcer_{car_id}.wav"
-        subprocess.run([espeak, "-v", "en-us+m2", "-p", "18", "-s", "135",
-            "-a", "190", "-w", tmp, "%s wins!" % spoken], check=True)
-        x = _load_audio(tmp)
-        # trim espeak's lead/tail silence to a tight cue
-        loud = np.where(np.abs(x) > 0.01)[0]
-        if loud.size:
-            x = x[max(0, loud[0] - int(SR * 0.02)):loud[-1] + int(SR * 0.05)]
-        write("announcer_" + car_id, _pa_chain(x), peak=0.95, fade_ms=6.0)
+    # wins ride a touch higher than the deflated loses (-p pitch)
+    for verdict, phrase, pitch in [("wins", "%s wins!", "18"), ("loses", "%s loses!", "14")]:
+        for car_id, spoken in ANNOUNCER_NAMES.items():
+            tmp = f"/tmp/announcer_{car_id}_{verdict}.wav"
+            subprocess.run([espeak, "-v", "en-us+m2", "-p", pitch, "-s", "135",
+                "-a", "190", "-w", tmp, phrase % spoken], check=True)
+            x = _load_audio(tmp)
+            # trim espeak's lead/tail silence to a tight cue
+            loud = np.where(np.abs(x) > 0.01)[0]
+            if loud.size:
+                x = x[max(0, loud[0] - int(SR * 0.02)):loud[-1] + int(SR * 0.05)]
+            write("announcer_%s_%s" % (car_id, verdict), _pa_chain(x),
+                peak=0.95, fade_ms=6.0)
 
 
 if __name__ == "__main__":

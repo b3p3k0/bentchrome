@@ -78,6 +78,11 @@ func _show(win: bool) -> void:
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio:  # stingers ride the pause-immune pool — the freeze below can't cut them
 		audio.play(&"win_sting" if win else &"lose_sting")
+	if not win:
+		# Last life gone: the PA rubs it in. Timer defaults process_always, and
+		# announcer events ride the pause-immune pool — the freeze can't mute it.
+		get_tree().create_timer(0.8, true).timeout.connect(
+			_announce.bind(false), CONNECT_ONE_SHOT)
 	if win and win_keeps_rolling:
 		_show_rolling_win()
 		return
@@ -132,15 +137,17 @@ func _show_rolling_win() -> void:
 	_rolling_hint.visible = false  # the short beat before the ask
 	add_child(_rolling_hint)
 	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_claim, CONNECT_ONE_SHOT)
-	# The PA calls it — finale-only by construction (only the stadium sets
-	# win_keeps_rolling). Baked speech; a beat after the sting so they don't mash.
-	get_tree().create_timer(0.8, true).timeout.connect(_announce_winner, CONNECT_ONE_SHOT)
+	# The PA calls it — win announce is finale-only by construction (only the
+	# stadium sets win_keeps_rolling). A beat after the sting so they don't mash.
+	get_tree().create_timer(0.8, true).timeout.connect(
+		_announce.bind(true), CONNECT_ONE_SHOT)
 
-func _announce_winner() -> void:
+func _announce(won: bool) -> void:
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	var gs := get_node_or_null(^"/root/GameState")
 	if audio and gs:
-		audio.play(StringName("announcer_" + String(gs.selected_vehicle_id)))
+		audio.play(StringName("announcer_%s_%s" % [String(gs.selected_vehicle_id),
+			"wins" if won else "loses"]))
 
 func _arm_claim() -> void:
 	_claim_armed = true
