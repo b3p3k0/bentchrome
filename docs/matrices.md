@@ -287,7 +287,26 @@ Source: `vehicles/drivers/enemy_driver.gd`. Every driver is a blend `mix = (aggr
 | Flees below HP | 10% | 22% | 35% |
 | Target scoring | nearest | nearest (flanks 35°) | weakest (0.3 near + 1.0 weak) |
 
-Global behavior: scan 1200 / fire range 1000 (LoS-gated) · HUNT map-wide when scan is empty · BREAK arc ~130° for 2.5s under the near band · weave ±0.2 steer on long approaches · RELENT vs player after 6s pressure or 30 HP dealt (3.5s no-fire disengage; `relentless` bosses run the boss valve instead: break off after 50 dmg dealt or 7s, breather dominance-scaled 2.0-5.5s, full-length BREAK arcs) · WADE out of water after 1.2s · revenge +0.5 target score, player priority +0.2 · dry hunters scavenge crates.
+Global behavior: scan 1200 / fire range 1000 (LoS-gated) · HUNT map-wide when scan is empty · target commitment 2s, rescore 0.5s, switch margin +0.20; invalid/dead/shunned targets replace immediately · revenge +0.5 for 6s, player priority +0.2 · predictive pursuit leads real target velocity up to 0.75s (240px/s denominator floor) · ordinary BREAK snapshots an endpoint 420px through + 140px beside the predicted target, arrives within 100px or times out at 2.5s, and must separate 1.5× near before rearming · weave ±0.2 steer on long approaches · low-HP EVADE 3s then 7s re-engagement · RELENT vs player after 6s pressure or 30 HP dealt (3.5s no-fire disengage; final duel uses 2s) · `relentless` bosses preserve the old live-bearing full-length BREAK and boss valve (50 dmg / 7s, dominance-scaled 2.0-5.5s) · WADE out after 1.2s · dry hunters scavenge crates.
+
+`AIFightDirector` is scene-local: refresh 0.25s · one 8s player-focus lease below 5 ordinary enemies, two at 5+ · multi-human arenas cover an uncovered player before doubling up · nonholders take a −0.35 player score while any lease is filled, unless that player is their fresh revenge target · dead holders hand off immediately. Exactly one living human + one eligible ordinary enemy forces the duel target, bars new EVADE episodes, and repeats attack run → short reposition → return; death/respawn clears/restores the assignment. SP/custom levels run it locally; Grand Melee runs it on the host with no protocol state. `relentless`, `fixed_loadout`, Goliath, and Buzzard drivers are excluded.
+
+| Main-event static | Value | Purpose |
+|---|---:|---|
+| `TARGET_COMMIT_TIME` / `TARGET_REEVAL_TIME` | 2.0s / 0.5s | readable ownership without stale invalid targets |
+| `TARGET_SWITCH_MARGIN` | +0.20 | challenger must materially beat the current score |
+| `REVENGE_WINDOW` / `REVENGE_BONUS` | 6.0s / +0.5 | retaliation without endless AI grudge cascades |
+| `PLAYER_PRIORITY` / `NON_FOCUS_PLAYER_PENALTY` | +0.2 / −0.35 | player thumb; free-for-all room outside the spotlight |
+| `FOCUS_REFRESH` / `FOCUS_LEASE_TIME` | 0.25s / 8.0s | scene-director cadence and rotation |
+| `FOCUS_TWO_AT` | 5 enemies | second simultaneous player-pressure slot |
+| `PURSUIT_MAX_LEAD` / `PURSUIT_SPEED_FLOOR` | 0.75s / 240px/s | bounded moving-target intercept |
+| `BREAK_TIME` / `BREAK_EXIT_DIST` | 2.5s / 420px | committed fly-through budget and depth |
+| `BREAK_LATERAL_OFFSET` / `BREAK_ARRIVE` | 140px / 100px | pass side and endpoint tolerance |
+| `BREAK_REARM_MULT` | 1.5× near | real separation before another drive-by |
+| `EVADE_TIME` / `EVADE_COOLDOWN` | 3.0s / 7.0s | episodic flee, mandatory re-engagement |
+| `DUEL_RELENT_TIME` | 2.0s | final-rival reposition beat |
+
+The mutable archetype `PURE` table and all statics above live in `enemy_driver.gd`, except the three `FOCUS_*` statics in `ai/fight_director.gd`. `assets/data/ai_profiles.json` remains unconsumed design notes. Range-aware weapon selection, repair/ammo planning, cover utility, and terrain preference are intentionally deferred until this movement/attention pass clears playtesting.
 
 Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGATE rides authored FloorConnectors (approach lead 220, exit lead 260, 6s timeout, boost on jump commits, grade commits never boost, commit leg ignores feelers) · ambusher/opportunist blends with an armed tracking secondary hold roof vantage up to 8s, raining missiles cross-floor (walls-only LoS), before descending · MG and non-tracking specials never fire cross-floor · hazard curbs (invisible, AI-feeler-only) rail every pit/deep-water rim — Snowy's cliffs included.
 
