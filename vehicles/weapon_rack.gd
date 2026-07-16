@@ -21,6 +21,11 @@ const JUMP_MINE_DEF := preload("res://data/weapons/mine_jump.tres")
 @export var start_homing := 1
 @export var start_power := 1
 
+## Non-special slots are uncapped — a driver can pack their whole bay with one
+## or two weapons if that's the loadout they want. Specials keep their authored
+## per-car cap + recharge; no_mines still locks the mine slots at 0.
+const UNCAPPED := 999
+
 var _slots: Array = []  # each: {def: WeaponDef, ammo: int, cap: int, recharge: float}
 var _selected := 0
 var _recharge_t := 0.0
@@ -34,12 +39,12 @@ func configure(special_def: WeaponDef, special_cap: int, special_recharge_second
 	_slots = [
 		{"def": special_def, "def_b": special_twin, "ammo": special_cap,
 			"cap": special_cap, "recharge": special_recharge_seconds},
-		{"def": STANDARD_DEF, "ammo": start_standard, "cap": 6, "recharge": 0.0},
-		{"def": HOMING_DEF, "ammo": start_homing, "cap": 3, "recharge": 0.0},
-		{"def": POWER_DEF, "ammo": start_power, "cap": 2, "recharge": 0.0},
-		{"def": REAR_DEF, "ammo": 0, "cap": 6, "recharge": 0.0},
-		{"def": MINE_DEF, "ammo": 0, "cap": 0 if no_mines else 4, "recharge": 0.0},
-		{"def": JUMP_MINE_DEF, "ammo": 0, "cap": 0 if no_mines else 3, "recharge": 0.0},
+		{"def": STANDARD_DEF, "ammo": start_standard, "cap": UNCAPPED, "recharge": 0.0},
+		{"def": HOMING_DEF, "ammo": start_homing, "cap": UNCAPPED, "recharge": 0.0},
+		{"def": POWER_DEF, "ammo": start_power, "cap": UNCAPPED, "recharge": 0.0},
+		{"def": REAR_DEF, "ammo": 0, "cap": UNCAPPED, "recharge": 0.0},
+		{"def": MINE_DEF, "ammo": 0, "cap": 0 if no_mines else UNCAPPED, "recharge": 0.0},
+		{"def": JUMP_MINE_DEF, "ammo": 0, "cap": 0 if no_mines else UNCAPPED, "recharge": 0.0},
 	]
 	_selected = Slot.SPECIAL
 	_recharge_t = 0.0

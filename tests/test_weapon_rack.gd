@@ -26,7 +26,9 @@ func test_configure_defaults() -> void:
 	t.check(r.ammo(RackScript.Slot.HOMING) == 1, "rack: 1 homing to start")
 	t.check(r.ammo(RackScript.Slot.POWER) == 1, "rack: 1 power to start")
 	t.check(r.ammo(RackScript.Slot.REAR) == 0, "rack: rear missiles start empty")
-	t.check(r.cap(RackScript.Slot.REAR) == 6, "rack: rear missile cap mirrors fire")
+	t.check(r.cap(RackScript.Slot.REAR) == RackScript.UNCAPPED
+		and r.cap(RackScript.Slot.STANDARD) == RackScript.UNCAPPED,
+		"rack: non-special slots are uncapped")
 	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mines start empty (pickup-fed)")
 	t.check(r.ammo(RackScript.Slot.JUMP_MINE) == 0, "rack: jump mines start empty")
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
@@ -158,12 +160,12 @@ func test_select_first_armed() -> void:
 	t.check(r.selected_index() == RackScript.Slot.POWER, "re-arm: all dry is a no-op")
 	r.free()
 
-func test_add_ammo_respects_cap() -> void:
+func test_add_ammo_uncapped_non_special() -> void:
 	var r = _rack()
 	var accepted = r.add_ammo(RackScript.Slot.STANDARD, 10)
-	t.check(accepted == 4, "add: accepts only up to cap (2 + 4 = 6)")
-	t.check(r.ammo(RackScript.Slot.STANDARD) == 6, "add: standard at cap")
-	t.check(r.add_ammo(RackScript.Slot.STANDARD, 1) == 0, "add: full slot accepts nothing")
+	t.check(accepted == 10, "add: non-special slot accepts the whole crate (uncapped)")
+	t.check(r.ammo(RackScript.Slot.STANDARD) == 12, "add: standard climbs past the old cap of 6")
+	t.check(r.add_ammo(RackScript.Slot.STANDARD, 50) == 50, "add: keeps stacking, no cap wall")
 	r.free()
 
 func test_special_recharges_to_cap() -> void:

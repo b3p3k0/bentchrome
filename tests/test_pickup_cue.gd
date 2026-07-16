@@ -96,7 +96,7 @@ func test_full_ammo_still_banks_the_larger_pickup() -> void:
 	var car = VehicleScene.instantiate()
 	t.root.add_child(car)
 	var rack: WeaponRack = car.get_rack()
-	rack.add_ammo(WeaponRack.Slot.STANDARD, 99)
+	rack.add_ammo(WeaponRack.Slot.STANDARD, WeaponRack.UNCAPPED)  # fill to the uncapped ceiling
 	pickup._on_body_entered(car)
 	t.check(pickup.visible and pickup.monitoring,
 		"pickup cue: larger surface does not consume a crate when its slot is full")
