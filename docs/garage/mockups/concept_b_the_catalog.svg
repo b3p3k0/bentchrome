@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" font-family="monospace">
+  <!-- Concept B: THE CATALOG — greasy parts-catalog spread; info-dense, cheap to build -->
+  <rect width="1280" height="720" fill="#08080c"/>
+  <ellipse cx="240" cy="660" rx="90" ry="14" fill="#0a0a0e"/>
+  <ellipse cx="1080" cy="640" rx="60" ry="10" fill="#0a0a0e"/>
+
+  <!-- header -->
+  <text x="28" y="40" fill="#ffd833" font-size="26" font-weight="bold">MOE'S PARTS CATALOG</text>
+  <text x="28" y="64" fill="#565664" font-size="15">"if it bolts on, it counts" — est. after the collapse</text>
+  <text x="1054" y="40" fill="#ffd833" font-size="24" font-weight="bold">⚙ 1,240</text>
+  <text x="1054" y="62" fill="#8c949e" font-size="14">NEXT: SUBURBAN SLAUGHTER</text>
+
+  <!-- the spread -->
+  <rect x="40" y="86" width="1200" height="560" fill="#16161c" stroke="#ffd833" stroke-width="4"/>
+  <line x1="500" y1="86" x2="500" y2="646" stroke="#26262f" stroke-width="4"/>
+
+  <!-- ===================== LEFT PAGE: categories + ride ===================== -->
+  <!-- tab: ENGINE -->
+  <g>
+    <rect x="64" y="110" width="404" height="54" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <rect x="76" y="124" width="30" height="26" fill="none" stroke="#8c949e" stroke-width="3"/>
+    <line x1="91" y1="124" x2="91" y2="112" stroke="#8c949e" stroke-width="4"/>
+    <circle cx="91" cy="158" r="5" fill="#8c949e"/>
+    <text x="124" y="144" fill="#ccd1d9" font-size="18">ENGINE</text>
+    <text x="380" y="144" fill="#565664" font-size="14">1/2 owned</text>
+  </g>
+  <!-- tab: SUSPENSION -->
+  <g>
+    <rect x="64" y="172" width="404" height="54" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <circle cx="91" cy="199" r="14" fill="none" stroke="#8c949e" stroke-width="4"/>
+    <circle cx="91" cy="199" r="5" fill="none" stroke="#8c949e" stroke-width="2"/>
+    <text x="124" y="206" fill="#ccd1d9" font-size="18">SUSPENSION &amp; TIRES</text>
+    <text x="380" y="206" fill="#565664" font-size="14">1/4 owned</text>
+  </g>
+  <!-- tab: WEAPONS (selected) -->
+  <g>
+    <rect x="64" y="234" width="404" height="54" fill="#241f08" stroke="#ffd833" stroke-width="4"/>
+    <circle cx="91" cy="261" r="13" fill="none" stroke="#ffd833" stroke-width="3"/>
+    <line x1="91" y1="242" x2="91" y2="280" stroke="#ffd833" stroke-width="3"/>
+    <line x1="72" y1="261" x2="110" y2="261" stroke="#ffd833" stroke-width="3"/>
+    <text x="124" y="268" fill="#ffd833" font-size="18" font-weight="bold">WEAPON SYSTEMS</text>
+    <text x="380" y="268" fill="#8a731a" font-size="14">0/3 owned</text>
+  </g>
+  <!-- tab: CPU -->
+  <g>
+    <rect x="64" y="296" width="404" height="54" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <rect x="78" y="310" width="26" height="26" fill="none" stroke="#8c949e" stroke-width="3"/>
+    <g stroke="#8c949e" stroke-width="2">
+      <line x1="72" y1="316" x2="78" y2="316"/><line x1="72" y1="330" x2="78" y2="330"/>
+      <line x1="104" y1="316" x2="110" y2="316"/><line x1="104" y1="330" x2="110" y2="330"/>
+    </g>
+    <text x="124" y="330" fill="#ccd1d9" font-size="18">CPU / ELECTRONICS</text>
+    <text x="380" y="330" fill="#565664" font-size="14">0/2 owned</text>
+  </g>
+  <!-- tab: ARMOR -->
+  <g>
+    <rect x="64" y="358" width="404" height="54" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <path d="M 91 368 L 105 374 L 105 390 L 91 400 L 77 390 L 77 374 Z" fill="none" stroke="#8c949e" stroke-width="3"/>
+    <text x="124" y="392" fill="#ccd1d9" font-size="18">ARMOR</text>
+    <text x="380" y="392" fill="#565664" font-size="14">0/1 owned</text>
+  </g>
+
+  <!-- YOUR RIDE panel with live delta preview -->
+  <rect x="64" y="432" width="404" height="192" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+  <text x="80" y="458" fill="#8c949e" font-size="15">YOUR RIDE — RAZORBACK</text>
+  <!-- top-down mini car -->
+  <g>
+    <rect x="96" y="480" width="56" height="104" fill="#1f6f3a" stroke="#0d4020" stroke-width="4"/>
+    <rect x="106" y="494" width="36" height="24" fill="#0d1a10"/>
+    <rect x="88" y="486" width="10" height="22" fill="#14141a"/><rect x="150" y="486" width="10" height="22" fill="#14141a"/>
+    <rect x="88" y="556" width="10" height="22" fill="#14141a"/><rect x="150" y="556" width="10" height="22" fill="#14141a"/>
+  </g>
+  <!-- stat bars: 10 blocks each; amber outline = preview delta -->
+  <g font-size="14">
+    <text x="188" y="496" fill="#8c949e">ACC</text>
+    <g>
+      <rect x="232" y="484" width="14" height="14" fill="#ccd1d9"/><rect x="250" y="484" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="268" y="484" width="14" height="14" fill="#ccd1d9"/><rect x="286" y="484" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="304" y="484" width="14" height="14" fill="#2a2a33"/><rect x="322" y="484" width="14" height="14" fill="#2a2a33"/>
+      <rect x="340" y="484" width="14" height="14" fill="#2a2a33"/><rect x="358" y="484" width="14" height="14" fill="#2a2a33"/>
+      <rect x="376" y="484" width="14" height="14" fill="#2a2a33"/><rect x="394" y="484" width="14" height="14" fill="#2a2a33"/>
+    </g>
+    <text x="418" y="496" fill="#8c949e">7</text>
+    <text x="188" y="524" fill="#8c949e">TOP</text>
+    <g>
+      <rect x="232" y="512" width="14" height="14" fill="#ccd1d9"/><rect x="250" y="512" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="268" y="512" width="14" height="14" fill="#ccd1d9"/><rect x="286" y="512" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="304" y="512" width="14" height="14" fill="#ccd1d9"/><rect x="322" y="512" width="14" height="14" fill="#2a2a33"/>
+      <rect x="340" y="512" width="14" height="14" fill="#2a2a33"/><rect x="358" y="512" width="14" height="14" fill="#2a2a33"/>
+      <rect x="376" y="512" width="14" height="14" fill="#2a2a33"/><rect x="394" y="512" width="14" height="14" fill="#2a2a33"/>
+    </g>
+    <text x="418" y="524" fill="#8c949e">11 <tspan fill="#ffd833">(77 mph)</tspan></text>
+    <text x="188" y="552" fill="#8c949e">MG°</text>
+    <g>
+      <rect x="232" y="540" width="14" height="14" fill="#ccd1d9"/><rect x="250" y="540" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="268" y="540" width="14" height="14" fill="#ccd1d9"/><rect x="286" y="540" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="304" y="540" width="14" height="14" fill="#ccd1d9"/><rect x="322" y="540" width="14" height="14" fill="#ccd1d9"/>
+      <rect x="340" y="540" width="14" height="14" fill="none" stroke="#ffd833" stroke-width="2"/>
+      <rect x="358" y="540" width="14" height="14" fill="none" stroke="#ffd833" stroke-width="2"/>
+      <rect x="376" y="540" width="14" height="14" fill="#2a2a33"/><rect x="394" y="540" width="14" height="14" fill="#2a2a33"/>
+    </g>
+    <text x="418" y="552" fill="#ffd833">+2</text>
+    <text x="188" y="592" fill="#565664" font-size="13">amber = if you buy the highlighted part</text>
+  </g>
+
+  <!-- ===================== RIGHT PAGE: item cards ===================== -->
+  <!-- card 1: selected -->
+  <g>
+    <rect x="532" y="110" width="676" height="200" fill="#1a1a22" stroke="#ffd833" stroke-width="4"/>
+    <text x="556" y="144" fill="#ffd833" font-size="20" font-weight="bold">MG COOLING</text>
+    <text x="1088" y="144" fill="#ffd833" font-size="20" font-weight="bold">400 ⚙</text>
+    <!-- illustration: finned barrel -->
+    <g>
+      <rect x="560" y="176" width="150" height="22" fill="#2e2e38" stroke="#565664" stroke-width="3"/>
+      <g stroke="#565664" stroke-width="4">
+        <line x1="580" y1="164" x2="580" y2="210"/><line x1="602" y1="164" x2="602" y2="210"/>
+        <line x1="624" y1="164" x2="624" y2="210"/><line x1="646" y1="164" x2="646" y2="210"/>
+      </g>
+      <rect x="710" y="180" width="44" height="14" fill="#14141a"/>
+      <text x="666" y="242" fill="#a6d1f2" font-size="15">❄ runs cold, shoots long</text>
+    </g>
+    <g font-size="15">
+      <rect x="806" y="168" width="176" height="28" fill="#0f2a14" stroke="#1f6f3a" stroke-width="2"/>
+      <text x="818" y="188" fill="#7fd696">+30% COOL RATE</text>
+      <rect x="806" y="204" width="176" height="28" fill="#0f2a14" stroke="#1f6f3a" stroke-width="2"/>
+      <text x="818" y="224" fill="#7fd696">−20% HEAT/SHOT</text>
+      <rect x="806" y="240" width="176" height="28" fill="#2a1212" stroke="#bf3333" stroke-width="2"/>
+      <text x="818" y="260" fill="#e08a8a">NO TRADEOFF? SUS.</text>
+    </g>
+    <text x="556" y="288" fill="#565664" font-size="14">SLOT: WEAPON SYSTEMS — replaces nothing (slot empty)</text>
+  </g>
+
+  <!-- card 2: affordable, unselected -->
+  <g>
+    <rect x="532" y="326" width="676" height="136" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <text x="556" y="358" fill="#ccd1d9" font-size="19">IMPROVED LOCK</text>
+    <text x="1088" y="358" fill="#ccd1d9" font-size="19">500 ⚙</text>
+    <circle cx="600" cy="410" r="24" fill="none" stroke="#565664" stroke-width="3"/>
+    <line x1="600" y1="380" x2="600" y2="440" stroke="#565664" stroke-width="3"/>
+    <line x1="570" y1="410" x2="630" y2="410" stroke="#565664" stroke-width="3"/>
+    <text x="656" y="404" fill="#7fd696" font-size="15">missiles track harder</text>
+    <text x="656" y="428" fill="#e08a8a" font-size="15">your lock signal is LOUD — enemies see you sooner</text>
+  </g>
+
+  <!-- card 3: can't afford -->
+  <g>
+    <rect x="532" y="478" width="676" height="136" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
+    <text x="556" y="510" fill="#52565e" font-size="19">BAY EXPANSION</text>
+    <text x="1074" y="510" fill="#bf3333" font-size="19">1,600 ⚙</text>
+    <rect x="572" y="530" width="56" height="40" fill="none" stroke="#52565e" stroke-width="3"/>
+    <line x1="600" y1="530" x2="600" y2="570" stroke="#52565e" stroke-width="3"/>
+    <text x="656" y="556" fill="#52565e" font-size="15">+2 every missile cap   −1 HND  −1 ARM</text>
+    <text x="656" y="580" fill="#bf3333" font-size="14">SHORT 360 ⚙ — smash something next level</text>
+  </g>
+
+  <!-- bottom bar -->
+  <text x="60" y="688" fill="#565664" font-size="14">W/S browse    A/D category    [ENTER] BUY    [ESC] KEEP ROLLIN' →</text>
+  <text x="1010" y="688" fill="#8c949e" font-size="14">page 3 / 5</text>
+</svg>
