@@ -13,8 +13,22 @@ application). Start here; each doc owns one concern.
 
 ## Status
 
-- **Phase: design.** Nothing implemented; economy NUMBERS are draft, core
-  RULES are decided.
+- **Phase: PLAYABLE (branch `feature/garage`).** The standalone in-engine
+  playable is live — launch it scene-direct, no live-flow wiring exists:
+
+      godot --path . res://ui/garage/garage_playable.tscn
+
+  Pieces: `game/economy.gd` (BOLTS leaf + difficulty knobs),
+  `assets/data/garage_catalog.json` + `ui/garage/garage_catalog.gd`
+  (validated catalog), `ui/garage/garage.tscn` (the Concept-B shop with
+  live compose-driven delta previews), `ui/garage/garage_playable.tscn`
+  (9-stop campaign sim: receipts, fork, force-toggles, economy knobs,
+  export to `user://econ_export.json`). Tests: `test_economy`,
+  `test_garage_catalog`. Numbers remain draft — tune by playing, export,
+  fold back into economy.md.
+- Branch flow: `feature/garage` → merge to `development` → promotion to
+  `main`. The plug-in phase (GameState funds, end-screen fork, prop
+  last_hitter, station billing, HUD wallet) is NOT started.
 - **Decided (Kevin, 2026-07-19):** currency = **BOLTS**, start at 0; earned
   by destroying enemies/destructibles/soft targets (size-proportionate,
   per-level salvage cap); lost as a PERCENTAGE of current funds (destroyed

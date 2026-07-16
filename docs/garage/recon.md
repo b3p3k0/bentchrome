@@ -1,7 +1,11 @@
 # Garage recon — the seams we hook (verified 2026-07-19)
 
-> A branch→main promotion is in flight; re-verify each seam before building.
-> Everything below is named by system, not line number, for that reason.
+> UPDATE: the promotion landed (`main` + `development` topology); work now
+> lives on `feature/garage`. The branch replaced the docs-corner isolation
+> constraint — the playable is real engine code, launched SCENE-DIRECT
+> (`godot --path . res://ui/garage/garage_playable.tscn`, the
+> custom_level.tscn precedent) so no `--garage` arg or live-flow edit was
+> ever needed. Seams below are for the PLUG-IN phase; re-verify then.
 
 ## The win-flow hook (garage entry)
 
