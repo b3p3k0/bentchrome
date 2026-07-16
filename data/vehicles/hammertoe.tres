@@ -57,5 +57,6 @@ launch = 17
 primary_color = Color(0.5411765, 0.25882354, 1, 1)
 accent_color = Color(0.32156864, 0.07058824, 0.6431373, 1)
 special = ExtResource("2_y6bj8")
-special_recharge_seconds = 8.0
+special_ammo_cap = 3
+special_recharge_seconds = 45.0
 terrain_modifiers = Array[ExtResource("3_vudkf")]([SubResource("Resource_qh8rw"), SubResource("Resource_hh203"), SubResource("Resource_unpel"), SubResource("Resource_c0liv"), SubResource("Resource_7p6n5")])

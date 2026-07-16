@@ -40,10 +40,10 @@ func test_lackey_loadout() -> void:
 func test_sustained_vehicle_charge_economy() -> void:
 	var bumper: VehicleStats = load("res://data/vehicles/bumper.tres")
 	var smoky: VehicleStats = load("res://data/vehicles/smoky.tres")
-	t.check(bumper.special_ammo_cap == 2 and is_equal_approx(bumper.special_recharge_seconds, 90.0),
-		"sustained economy: Bumper keeps 2 charges at 90s each")
-	t.check(smoky.special_ammo_cap == 3 and is_equal_approx(smoky.special_recharge_seconds, 90.0),
-		"sustained economy: Smoky keeps 3 charges at 90s each")
+	t.check(bumper.special_ammo_cap == 3 and is_equal_approx(bumper.special_recharge_seconds, 45.0),
+		"sustained economy: Bumper keeps 3 charges at 45s each")
+	t.check(smoky.special_ammo_cap == 3 and is_equal_approx(smoky.special_recharge_seconds, 45.0),
+		"sustained economy: Smoky keeps 3 charges at 45s each")
 	var file := FileAccess.open("res://assets/data/roster.json", FileAccess.READ)
 	var roster: Dictionary = JSON.parse_string(file.get_as_text())
 	file.close()
@@ -51,8 +51,8 @@ func test_sustained_vehicle_charge_economy() -> void:
 	for car in roster.characters:
 		if car.id in ["bumper", "smoky"]:
 			authored[car.id] = car
-	t.check(is_equal_approx(float(authored.bumper.special_recharge_seconds), 90.0)
-		and is_equal_approx(float(authored.smoky.special_recharge_seconds), 90.0),
+	t.check(is_equal_approx(float(authored.bumper.special_recharge_seconds), 45.0)
+		and is_equal_approx(float(authored.smoky.special_recharge_seconds), 45.0),
 		"sustained economy: roster source and generated resources agree")
 
 func test_twin_barrel_chooses_by_context() -> void:

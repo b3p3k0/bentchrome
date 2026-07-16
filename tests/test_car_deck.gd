@@ -19,9 +19,9 @@ func test_roster_rows_and_baselines() -> void:
 	t.check(deck.car_ids.size() >= 9 and not deck.car_ids.has("goliath")
 		and not deck.car_ids.has("lackey") and not deck.car_ids.has("buzz_bike"),
 		"car deck: rows are the roster only — bosses/buzzards excluded")
-	t.check(deck.baseline("razorback", "top_speed") == 11.0
+	t.check(deck.baseline("razorback", "top_speed") == 12.0
 		and deck.baseline("razorback", "launch") == 15.0
-		and deck.baseline("hornet", "launch") == 0.0,
+		and deck.baseline("hornet", "launch") == 3.0,
 		"car deck: baselines read roster truth incl. defaults")
 
 func test_set_value_mutates_singleton_and_clamps() -> void:
@@ -40,7 +40,7 @@ func test_set_value_mutates_singleton_and_clamps() -> void:
 		"car deck: recharge stays a float")
 	deck.reset_all()
 	t.check(stats.top_speed == base_top and stats.launch == 15
-		and is_equal_approx(stats.special_recharge_seconds, 12.0),
+		and is_equal_approx(stats.special_recharge_seconds, 45.0),
 		"car deck: reset_all restores roster truth")
 	DirAccess.remove_absolute(DeckScript.SAVE_PATH)
 
@@ -70,7 +70,7 @@ func test_export_shape() -> void:
 	t.check(typeof(data) == TYPE_DICTIONARY and int(data.get("schema_version", 0)) == 2,
 		"car deck: export carries schema_version 2")
 	t.check(int(data.cars.lovebug.armor) == 9, "car deck: export carries the edited value")
-	t.check(int(data.cars.razorback.top_speed) == 11, "car deck: export carries untouched cars too")
+	t.check(int(data.cars.razorback.top_speed) == 12, "car deck: export carries untouched cars too")
 	deck.reset_all()
 	DirAccess.remove_absolute(TMP_EXPORT)
 	DirAccess.remove_absolute(DeckScript.SAVE_PATH)

@@ -6,7 +6,9 @@ extends RefCounted
 ## deliberate re-pin of an intentional tuning change (docs/car_authoring.md).
 ## History: pinned at the 2026-07-14 feel-frozen 1-20 rebase (bit-exact to
 ## the legacy 1-10 ramp), re-pinned 2026-07-15 for the fleet balance pass
-## (launch axis debut; anchors cyclone/hornet + bosses/buzzards unmoved).
+## (launch axis debut; anchors cyclone/hornet + bosses/buzzards unmoved),
+## re-pinned 2026-07-16 for the car-tuner canonization (playtested stats
+## folded into roster truth; bosses/buzzards still unmoved).
 
 const CtrlScript := preload("res://vehicles/driving_controller.gd")
 const Curves := preload("res://resources/stat_curves.gd")
@@ -15,26 +17,26 @@ const Importer := preload("res://tools/import_roster.gd")
 ## file basename -> [acceleration, top_speed, handling, armor, mass, launch]
 ## (authored 1-20 ints; launch 0 = mass-derived sentinel).
 const GOLDEN := {
-	"bumper": [7, 11, 9, 13, 11, 11],
+	"bumper": [10, 11, 9, 13, 11, 11],
 	"buzz_bike": [17, 15, 15, 1, 1, 0],
 	"buzz_sedan": [9, 11, 7, 3, 7, 0],
 	"buzz_technical": [5, 3, 5, 5, 11, 0],
-	"coldfront": [7, 9, 5, 15, 13, 11],
-	"cricket": [13, 15, 7, 7, 3, 0],
-	"cyclone": [17, 19, 11, 3, 3, 0],
-	"ghost": [11, 17, 13, 5, 5, 11],
+	"coldfront": [9, 10, 6, 14, 13, 11],
+	"cricket": [13, 15, 6, 7, 4, 3],
+	"cyclone": [17, 19, 14, 4, 4, 3],
+	"ghost": [15, 17, 13, 5, 6, 11],
 	"goliath": [5, 7, 3, 19, 19, 0],
 	"goliath_ph2": [9, 11, 7, 7, 15, 0],
 	"hammertoe": [12, 9, 5, 13, 15, 17],
-	"hornet": [11, 11, 11, 11, 9, 0],
-	"hubcap": [15, 7, 17, 9, 5, 0],
-	"kandykane": [7, 11, 5, 15, 13, 5],
+	"hornet": [11, 11, 11, 11, 9, 3],
+	"hubcap": [15, 7, 17, 9, 6, 3],
+	"kandykane": [10, 11, 5, 14, 13, 5],
 	"lackey": [13, 11, 11, 19, 17, 0],
-	"lovebug": [4, 9, 11, 7, 7, 1],
-	"mrghastly": [9, 15, 13, 3, 1, 15],
-	"razorback": [7, 11, 7, 15, 13, 15],
-	"smoky": [11, 11, 7, 13, 11, 13],
-	"splatkat": [11, 13, 13, 9, 9, 0],
+	"lovebug": [10, 9, 11, 7, 7, 3],
+	"mrghastly": [14, 17, 13, 3, 2, 15],
+	"razorback": [9, 12, 8, 15, 13, 15],
+	"smoky": [11, 13, 9, 11, 12, 13],
+	"splatkat": [12, 15, 12, 9, 11, 3],
 }
 
 var t
