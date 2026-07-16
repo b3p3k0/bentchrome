@@ -67,6 +67,9 @@ static var BREAK_EXIT_DIST := 420.0
 static var BREAK_LATERAL_OFFSET := 140.0
 static var BREAK_ARRIVE := 100.0
 static var BREAK_REARM_MULT := 1.5
+static var EVADE_TIME := 3.0
+static var EVADE_COOLDOWN := 7.0
+static var DUEL_RELENT_TIME := 2.0
 
 # Weave on long approaches: breaks the beeline, dodges straight-line missiles,
 # and de-syncs the pack (per-driver phase).
@@ -155,6 +158,8 @@ var _engage_t := 0.0     # pressure meter vs the player
 var _engage_hp := -1.0   # player HP when this engagement began (-1 = none)
 var _relent_t := 0.0
 var _relent_side := 1.0
+var _evade_t := 0.0
+var _evade_cd := 0.0
 var _water_t := 0.0
 var _dry_pos := Vector2.INF  # last position on non-water ground
 var _shun_target: Node2D = null  # antler-lock opponent to avoid re-targeting
@@ -178,6 +183,7 @@ static var TARGET_SWITCH_MARGIN := 0.20
 static var NON_FOCUS_PLAYER_PENALTY := 0.35
 var _focus_target: Variant = null  # scene-local director lease; validate before typing
 var _focus_slots_filled := false
+var _duel_target: Variant = null   # final ordinary rival: attack/reposition cadence, never flee
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -219,6 +225,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			_shun_t = 0.0
 	if _hop_cd > 0.0:
 		_hop_cd -= delta
+	_evade_cd = maxf(_evade_cd - delta, 0.0)
 
 	var engaged := true
 	var target: Node2D = _select_target(vehicle, delta)
@@ -342,7 +349,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 				_enter_boss_break(vehicle, target)
 		elif _engage_t > ENGAGE_LIMIT or dealt >= RELENT_DAMAGE:
 			_mode = Mode.RELENT
-			_relent_t = RELENT_TIME
+			_relent_t = DUEL_RELENT_TIME if _duel_active(vehicle) else RELENT_TIME
 			_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 			_engage_t = 0.0
 			_engage_hp = -1.0
@@ -351,8 +358,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		if _engage_t == 0.0:
 			_engage_hp = -1.0
 
-	if vehicle.get_hp_fraction() < _flee:
-		_mode = Mode.EVADE
+	if _update_evade_mode(vehicle, delta):
+		pass  # intent branch below owns the active getaway
 	elif _mode == Mode.RELENT:
 		_relent_t -= delta
 		if _relent_t <= 0.0 or dist > SCAN:
@@ -485,6 +492,25 @@ func _enter_break(vehicle, target: Node2D) -> void:
 func _update_break_rearm(dist: float) -> void:
 	if not _break_rearmed and _mode != Mode.BREAK and dist >= _near * BREAK_REARM_MULT:
 		_break_rearmed = true
+
+## Low-health retreat is an episode, not a retirement plan. Duel assignment
+## cancels it immediately; otherwise a completed escape must spend real time
+## re-engaging before another one can begin.
+func _update_evade_mode(vehicle, delta: float) -> bool:
+	var duel := _duel_active(vehicle)
+	var low_hp: bool = vehicle.get_hp_fraction() < _flee
+	if _mode == Mode.EVADE:
+		_evade_t -= delta
+		# A duel lease can arrive while a corner escape is already committed.
+		# Finish that short episode (stuck recovery depends on it), then the duel
+		# gate below prevents every later flee.
+		if not low_hp or _evade_t <= 0.0:
+			_mode = Mode.PURSUE
+			_evade_cd = EVADE_COOLDOWN
+	elif low_hp and _evade_cd <= 0.0 and not duel:
+		_mode = Mode.EVADE
+		_evade_t = EVADE_TIME
+	return _mode == Mode.EVADE
 
 ## Dominance-scaled boss breather: +1 (player untouched, boss dying) = barely
 ## any mercy; -1 (player dying, boss healthy) = a real window to regroup.
@@ -791,6 +817,10 @@ func _select_target(vehicle, delta := -1.0) -> Node2D:
 	# supplies physics delta and therefore rides the commitment machinery.
 	if delta < 0.0:
 		return _best_target(vehicle)
+	if _target_is_live(vehicle, _duel_target):
+		if _target != _duel_target:
+			return _adopt_target(_duel_target as Node2D)
+		return _duel_target as Node2D
 	if _target_is_live(vehicle, _focus_target):
 		if _target != _focus_target:
 			return _adopt_target(_focus_target as Node2D)
@@ -886,3 +916,17 @@ func set_focus_assignment(target: Node2D, slots_filled: bool) -> void:
 
 func get_focus_target() -> Node2D:
 	return _focus_target as Node2D if _focus_target != null and is_instance_valid(_focus_target) else null
+
+func set_duel_assignment(target: Node2D) -> void:
+	_duel_target = target
+	if target != null:
+		if _mode == Mode.RELENT:
+			_relent_t = minf(_relent_t, DUEL_RELENT_TIME)
+		if _target != target:
+			_adopt_target(target)
+
+func get_duel_target() -> Node2D:
+	return _duel_target as Node2D if _duel_target != null and is_instance_valid(_duel_target) else null
+
+func _duel_active(vehicle) -> bool:
+	return _target_is_live(vehicle, _duel_target)

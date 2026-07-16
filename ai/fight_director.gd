@@ -14,6 +14,8 @@ var _clock := 0.0
 var _refresh_t := 0.0
 var _leases: Array[Dictionary] = []  # {car, driver, player, expires}
 var _last_focus: Dictionary = {}     # driver instance id -> coordinator time
+var _duel_car: Variant = null
+var _duel_player: Variant = null
 
 func setup(root: Node) -> void:
 	arena_root = root
@@ -34,6 +36,12 @@ func refresh_now() -> void:
 	_refresh_t = FOCUS_REFRESH
 	var players: Array[Node2D] = _players()
 	var cars: Array[Node2D] = _ordinary_cars()
+	if players.size() == 1 and cars.size() == 1:
+		_duel_car = cars[0]
+		_duel_player = players[0]
+	else:
+		_duel_car = null
+		_duel_player = null
 	_prune_leases(players, cars)
 	var wanted := mini(2 if cars.size() >= FOCUS_TWO_AT else 1, cars.size())
 	wanted = mini(wanted, players.size()) if players.size() > 1 else wanted
@@ -148,6 +156,7 @@ func _apply_assignments(_cars: Array[Node2D]) -> void:
 				target = lease.player
 				break
 		driver.set_focus_assignment(target, slots_filled)
+		driver.set_duel_assignment(_duel_player if car == _duel_car else null)
 
 func _in_arena(node: Node) -> bool:
 	return node == arena_root or arena_root.is_ancestor_of(node)
