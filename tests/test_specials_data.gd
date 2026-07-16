@@ -92,6 +92,8 @@ func test_rusty_poon_def() -> void:
 	t.check(fx != null and fx.kind == &"slow", "rusty 'poon: slow on hit")
 	t.check_approx(fx.magnitude, 0.5, "rusty 'poon: half speed")
 	t.check_approx(fx.duration, 3.0, "rusty 'poon: 3s")
+	t.check_approx(d.turn_rate_deg, 100.0, "rusty 'poon: launch lean, not quite homing")
+	t.check_approx(d.acquisition_radius, 1200.0, "rusty 'poon: standard acquisition reach")
 
 func test_chill_out_disarm_duration() -> void:
 	var d := _def("res://data/weapons/chill_out.tres")
@@ -99,6 +101,8 @@ func test_chill_out_disarm_duration() -> void:
 	t.check_approx(d.damage, 0.0, "chill out: peace sign deals no damage")
 	t.check(fx != null and fx.kind == &"disarm", "chill out: hit applies disarm")
 	t.check_approx(fx.duration, 5.0, "chill out: guns return after five seconds")
+	t.check_approx(d.turn_rate_deg, 100.0, "chill out: launch lean, not quite homing")
+	t.check_approx(d.acquisition_radius, 1200.0, "chill out: standard acquisition reach")
 
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
@@ -115,6 +119,14 @@ func test_molotov_def() -> void:
 	var fx := _first_effect(d)
 	t.check(fx != null and fx.kind == &"burn", "molotov: burn on hit")
 	t.check_approx(fx.duration, 15.0, "molotov: lore 15s burn")
+	t.check_approx(d.turn_rate_deg, 100.0, "molotov: launch lean, not quite homing (Hornet AND Kandy Kane)")
+	t.check_approx(d.acquisition_radius, 1200.0, "molotov: standard acquisition reach")
+
+func test_scythe_stays_straight() -> void:
+	# Mr. Ghastly is explicitly excluded from the lean pass — "no homing" is lore.
+	var d := _def("res://data/weapons/scythe.tres")
+	t.check_approx(d.turn_rate_deg, 0.0, "scythe: dead straight, no lean")
+	t.check_approx(d.acquisition_radius, 0.0, "scythe: never acquires a target")
 
 func test_red_glare_def() -> void:
 	var d := _def("res://data/weapons/red_glare.tres")
