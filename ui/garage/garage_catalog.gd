@@ -4,6 +4,8 @@ extends RefCounted
 ## deltas naming stats VehicleLoadout can't move all fail LOUDLY instead of
 ## becoming dead data. Pure static; the shop and tests are the consumers.
 
+const Economy := preload("res://game/economy.gd")
+
 const PATH := "res://assets/data/garage_catalog.json"
 const CATEGORIES := ["ENGINE", "SUSPENSION", "WEAPONS", "CPU", "ARMOR"]
 
@@ -63,6 +65,38 @@ static func catalog_errors(data: Variant) -> PackedStringArray:
 		if not req.is_empty() and not ids.has(req):
 			errors.append("%s: requires unknown item '%s'" % [item.get("id"), req])
 	return errors
+
+## Compose-ready mod list for a set of owned item ids (level-spawn helper).
+static func mods_for(owned_ids: Array, items: Array = []) -> Array:
+	if items.is_empty():
+		items = load_catalog()
+	var mods: Array = []
+	for item in items:
+		if String(item.id) in owned_ids:
+			mods.append(as_mod(item))
+	return mods
+
+## The field keeps pace: one compose-ready mod giving rivals a fraction
+## (Economy.RIVAL_KEEPUP) of the player's POSITIVE stat deltas — the player's
+## tradeoffs are theirs alone. {} when the player is stock (or the fraction
+## floors everything away).
+static func rival_mod(owned_ids: Array, items: Array = []) -> Dictionary:
+	if items.is_empty():
+		items = load_catalog()
+	var totals := {}
+	for item in items:
+		if String(item.id) not in owned_ids:
+			continue
+		for stat_v in item.get("stat_deltas", {}):
+			var d := int(item.stat_deltas[stat_v])
+			if d > 0:
+				totals[stat_v] = int(totals.get(stat_v, 0)) + d
+	var deltas := {}
+	for stat_v in totals:
+		var scaled := floori(int(totals[stat_v]) * Economy.RIVAL_KEEPUP)
+		if scaled > 0:
+			deltas[stat_v] = scaled
+	return {} if deltas.is_empty() else {"id": "rival_keepup", "stat_deltas": deltas}
 
 ## The mod dict VehicleLoadout.compose consumes, from a catalog item.
 static func as_mod(item: Dictionary) -> Dictionary:

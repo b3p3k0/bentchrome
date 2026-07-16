@@ -126,6 +126,10 @@ func spawn(kind: StringName) -> Node:
 		if host == null or not is_instance_valid(host):
 			return
 		host.kills += 1
+		# Buzzard bounty: chase kills pay the small rate (Economy's valve keeps
+		# non-campaign lanes free; attribution rides the tally — chase combat
+		# is player-vs-horde by construction).
+		preload("res://game/economy.gd").award_kill(&"chase")
 		if is_instance_valid(b):
 			_tumble(b))
 	host.add_child(b)

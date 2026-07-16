@@ -7,6 +7,8 @@ extends Node2D
 
 const Loader := preload("res://levels/level_loader.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+const Economy := preload("res://game/economy.gd")
+const GarageCatalog := preload("res://ui/garage/garage_catalog.gd")
 
 const RESPAWN_DELAY := 1.6
 const SHIELD_TIME := 2.0
@@ -32,11 +34,19 @@ func _ready() -> void:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
 	if mp_managed:
+		Economy.enabled = false  # BOLTS are a campaign thing; MP wallets stay shut
 		_collect_and_clear_for_mp()
 		print("[boot] level ready — WASD to drive, Space/LMB to fire")
 		set_process(false)
 		return
+	# The economy valve: only the SP campaign pays (tutorial/test-drive/custom
+	# lanes smash for free). DEVGOD comps penalties; salvage reopens per level.
+	var gs_econ := get_node_or_null(^"/root/GameState")
+	Economy.enabled = gs_econ != null and gs_econ.game_mode == &"campaign"
+	Economy.god = gs_econ != null and gs_econ.is_devgod_enabled()
+	Economy.reset_level()
 	_randomize_enemies()
+	_watch_enemy_bounties()
 	print("[boot] level ready — WASD to drive, Space/LMB to fire")
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	add_child(load("res://ui/end_screen.tscn").instantiate())
@@ -65,6 +75,7 @@ func _process(_delta: float) -> void:
 		_respawning = true
 		get_tree().create_timer(RESPAWN_DELAY).timeout.connect(_respawn, CONNECT_ONE_SHOT)
 		return
+	Economy.apply_penalty(&"destroyed")  # the wasteland bills every wreck
 	if gs == null or gs.lives <= 1:
 		if gs:
 			gs.lives = 0
@@ -118,6 +129,28 @@ func _randomize_enemies() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var picks: Array = Loader.pick_cars(enemies.size(), player_id, rng)
+	# The field keeps pace: rivals mirror a fraction of the player's garage
+	# build (positive deltas only) so late-run fights never read stock-vs-beast.
+	# Bosses never re-roll, so boss balance stays authored.
+	var rival := {}
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs and gs.game_mode == &"campaign" and not gs.owned_mods.is_empty():
+		rival = GarageCatalog.rival_mod(gs.owned_mods)
 	for i in picks.size():
-		enemies[i].set_stats(load("res://data/vehicles/%s.tres" % picks[i]))
+		var base: VehicleStats = load("res://data/vehicles/%s.tres" % picks[i])
+		enemies[i].set_stats(base if rival.is_empty() else VehicleLoadout.compose(base, [rival]))
 		enemies[i].get_node("Driver").mix = Loader.mix_for_car(picks[i])
+
+## Kill bounties: every baked enemy's death pays the player IF the player
+## authored it (last_attacker attribution — AI-on-AI scraps pay nobody).
+## fixed_loadout enemies are bosses (Lackey); Goliath's phase pools never
+## route through an enemy Health death, so the finale pays no bounty (v1).
+func _watch_enemy_bounties() -> void:
+	for child in get_children():
+		if child.is_in_group(&"enemies") and child.has_node("Health"):
+			(child.get_node("Health") as Health).died.connect(_on_enemy_died.bind(child))
+
+func _on_enemy_died(enemy: Node) -> void:
+	var attacker: Variant = enemy.get("last_attacker")
+	if attacker is Node2D and is_instance_valid(attacker) and attacker.is_in_group(&"player"):
+		Economy.award_kill(&"boss" if bool(enemy.get("fixed_loadout")) else &"mook")

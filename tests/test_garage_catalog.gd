@@ -39,6 +39,20 @@ func test_every_item_composes_on_a_real_car() -> void:
 				"catalog: %s delta '%s' lands through compose" % [item.id, stat_v])
 	t.check(base.armor == base_armor, "catalog: the base .tres is never mutated")
 
+func test_rival_mod_keeps_pace() -> void:
+	# player positives: acc 1+1=2 (engine chain), top +1; bay's NEGATIVES ignored
+	var rival := Catalog.rival_mod(["engine_stage1", "engine_stage2", "bay_expansion"])
+	t.check(int(rival.stat_deltas.get("acceleration", 0)) == 1,
+		"rival: half of the player's +2 acc")
+	t.check(not rival.stat_deltas.has("top_speed"),
+		"rival: floor(0.5 of +1 top) mirrors nothing")
+	t.check(not rival.stat_deltas.has("handling") and not rival.stat_deltas.has("armor"),
+		"rival: the player's tradeoffs are theirs alone")
+	t.check(Catalog.rival_mod([]).is_empty(), "rival: stock player = stock rivals")
+	t.check(Catalog.mods_for(["engine_stage1"]).size() == 1
+		and Catalog.mods_for(["engine_stage1"])[0].id == "engine_stage1",
+		"catalog: mods_for resolves owned ids to compose-ready mods")
+
 func test_validator_rejects_the_classics() -> void:
 	var bad := {"items": [
 		{"id": "a", "category": "SNACKS", "display_name": "?", "price": 100, "stat_deltas": {}},

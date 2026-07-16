@@ -46,6 +46,7 @@ var _roll_btn: Button
 func _ready() -> void:
 	_levels = _campaign_names()
 	_load_cars()
+	Economy.enabled = true  # the sim harness IS an economy consumer
 	Economy.reset_run()
 	_build_ui()
 	_refresh()
@@ -277,8 +278,8 @@ func _build_ui() -> void:
 		_toggles[entry[0]] = cb
 
 	_label(ctl, "ECONOMY KNOBS", AMBER, 16)
-	_knob(ctl, "mook", "mook kill ⚙", 10, 500, 5, Economy.KILL_REWARDS[&"mook"])
-	_knob(ctl, "cap", "salvage cap ⚙", 0, 1000, 25, Economy.SALVAGE_CAP)
+	_knob(ctl, "mook", "mook kill ⚙", 100, 5000, 50, Economy.KILL_REWARDS[&"mook"])
+	_knob(ctl, "cap", "salvage cap ⚙", 0, 10000, 250, Economy.SALVAGE_CAP)
 	_knob(ctl, "destroyed", "destroyed %", 0, 90, 1, Economy.PENALTY_DESTROYED * 100.0)
 	_knob(ctl, "fall", "fall/sink %", 0, 90, 1, Economy.PENALTY_FALL * 100.0)
 	_knob(ctl, "station", "station %", 0, 90, 1, Economy.PENALTY_STATION * 100.0)
@@ -298,6 +299,7 @@ func _build_ui() -> void:
 	_shop.visible = false
 	_shop.left.connect(_close_shop)
 	add_child(_shop)
+	_roll_btn.grab_focus()  # keyboard-only from the first frame
 
 func _btn(parent: Node, text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()

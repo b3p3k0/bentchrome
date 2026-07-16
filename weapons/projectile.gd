@@ -122,6 +122,11 @@ func _on_body_entered(body: Node) -> void:
 		# their plates at the owning cab through part_of; remain duck-typed here.
 		_stamp_attacker(body)
 		health.take_damage(hit)
+		# Salvage: the shooter broke a PROP (never a vehicle — kill bounties
+		# ride last_attacker instead) and gets paid by its size.
+		if health.hp <= 0.0 and not body.is_in_group(&"vehicles") \
+				and is_instance_valid(shooter) and shooter.is_in_group(&"player"):
+			preload("res://game/economy.gd").award_salvage(health.max_hp)
 		var status := _find_status(body)
 		if status:
 			for spec in on_hit_effects:
@@ -142,6 +147,8 @@ func _on_area_entered(area: Area2D) -> void:
 	var health := _find_health(area)
 	if health:
 		health.take_damage(1.0)
+		if health.hp <= 0.0 and is_instance_valid(shooter) and shooter.is_in_group(&"player"):
+			preload("res://game/economy.gd").award_salvage(health.max_hp)
 		_spawn_impact(ImpactStyle.SPATTER, false)
 
 func _spawn_impact(style: int, terminal: bool) -> void:

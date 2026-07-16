@@ -68,6 +68,9 @@ func try_begin_treatment(body: Node) -> bool:
 	_start_hp = health.hp
 	_treatment_t = 0.0
 	uses -= 1
+	# Nothing's free in the wasteland: billed at commitment (refill start),
+	# never refunded on a cancelled hold. Economy's valve keeps MP/tutorial free.
+	preload("res://game/economy.gd").apply_penalty(&"station")
 	get_tree().call_group(&"health_stations", "start_cooldown")  # reserve every bay now
 	_set_pad_tint(SPENT_TINT if uses <= 0 else COOLING_TINT)
 	if _fx:

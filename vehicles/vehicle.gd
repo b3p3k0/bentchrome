@@ -162,6 +162,13 @@ func _ready() -> void:
 		if id != &"":
 			path = "res://data/vehicles/%s.tres" % id
 		stats = load(path)
+		# Garage build: campaign runs compose the owned mods over the base .tres
+		# (a fresh instance — the shipped resource never mutates). Tutorial /
+		# test-drive / MP lanes stay stock.
+		var mods: Variant = gs.get("owned_mods") if gs else null
+		if gs and gs.game_mode == &"campaign" and mods is Array and not mods.is_empty():
+			var garage_catalog := preload("res://ui/garage/garage_catalog.gd")
+			stats = VehicleLoadout.compose(stats, garage_catalog.mods_for(mods))
 	if stats:
 		_apply_stats()
 	else:
@@ -767,6 +774,8 @@ func fall_into_pit() -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	if is_in_group(&"player"):  # the wasteland taxes clumsiness harder than combat
+		preload("res://game/economy.gd").apply_penalty(&"fall")
 	var audio_p := get_node_or_null(^"/root/AudioDirector")
 	if audio_p:
 		if is_in_group(&"player"):
@@ -794,6 +803,8 @@ func sink_into_water() -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	if is_in_group(&"player"):  # same fall tax as the pit — wetter, not cheaper
+		preload("res://game/economy.gd").apply_penalty(&"fall")
 	var audio_k := get_node_or_null(^"/root/AudioDirector")
 	if audio_k:
 		if is_in_group(&"player"):
@@ -1089,6 +1100,9 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 			if health and impact_speed > ram_min_speed:
 				health.take_damage((impact_speed - ram_min_speed) * ram_damage_scale)
 				if health.hp <= 0.0:
+					if is_in_group(&"player"):
+						# The rammer gets the salvage — size rides the prop's hp.
+						preload("res://game/economy.gd").award_salvage(health.max_hp)
 					# The prop broke: punch through with most of the entry
 					# momentum instead of eating the bounce — trash flies,
 					# heavier cover still takes a real bite out of the run.

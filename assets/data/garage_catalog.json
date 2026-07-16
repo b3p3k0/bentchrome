@@ -8,10 +8,12 @@
       "display_name": "Stage 1: Bolt-On Boost",
       "blurb": "NA to boosted — chop the intake, wake it up.",
       "tradeoff_text": "",
-      "price": 300,
+      "price": 3000,
       "requires": "",
       "exclusive_slot": "",
-      "stat_deltas": {"acceleration": 1},
+      "stat_deltas": {
+        "acceleration": 1
+      },
       "capabilities": {},
       "reserved": {}
     },
@@ -21,10 +23,13 @@
       "display_name": "Stage 2: Bigger Blower",
       "blurb": "More boost, more everything.",
       "tradeoff_text": "",
-      "price": 450,
+      "price": 4500,
       "requires": "engine_stage1",
       "exclusive_slot": "",
-      "stat_deltas": {"acceleration": 1, "top_speed": 1},
+      "stat_deltas": {
+        "acceleration": 1,
+        "top_speed": 1
+      },
       "capabilities": {},
       "reserved": {}
     },
@@ -34,10 +39,13 @@
       "display_name": "Stage 3: Bigger Injectors",
       "blurb": "Feed the beast. The beast is grateful.",
       "tradeoff_text": "",
-      "price": 600,
+      "price": 6000,
       "requires": "engine_stage2",
       "exclusive_slot": "",
-      "stat_deltas": {"acceleration": 1, "top_speed": 1},
+      "stat_deltas": {
+        "acceleration": 1,
+        "top_speed": 1
+      },
       "capabilities": {},
       "reserved": {}
     },
@@ -47,10 +55,12 @@
       "display_name": "Stage 1: New Springs",
       "blurb": "The wallow goes away.",
       "tradeoff_text": "",
-      "price": 250,
+      "price": 2500,
       "requires": "",
       "exclusive_slot": "",
-      "stat_deltas": {"handling": 1},
+      "stat_deltas": {
+        "handling": 1
+      },
       "capabilities": {},
       "reserved": {}
     },
@@ -60,10 +70,13 @@
       "display_name": "Stage 2: Reinforced Frame",
       "blurb": "Stiffer everywhere it counts.",
       "tradeoff_text": "",
-      "price": 450,
+      "price": 4500,
       "requires": "susp_stage1",
       "exclusive_slot": "",
-      "stat_deltas": {"handling": 1, "armor": 1},
+      "stat_deltas": {
+        "handling": 1,
+        "armor": 1
+      },
       "capabilities": {},
       "reserved": {}
     },
@@ -73,12 +86,14 @@
       "display_name": "Offroad Tires",
       "blurb": "Knobby rubber — dirt, mud, and grass stop arguing.",
       "tradeoff_text": "terrain swap wires in at the plug-in phase",
-      "price": 350,
+      "price": 3500,
       "requires": "",
       "exclusive_slot": "tires",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {"terrain_profile_name": "awd_utility"}
+      "reserved": {
+        "terrain_profile_name": "awd_utility"
+      }
     },
     {
       "id": "tires_lowering",
@@ -86,12 +101,16 @@
       "display_name": "Lowering Kit",
       "blurb": "Hugs the asphalt like it owes rent.",
       "tradeoff_text": "offroad grip suffers (terrain pass at plug-in)",
-      "price": 400,
+      "price": 4000,
       "requires": "",
       "exclusive_slot": "tires",
-      "stat_deltas": {"handling": 2},
+      "stat_deltas": {
+        "handling": 2
+      },
       "capabilities": {},
-      "reserved": {"terrain_profile_name": ""}
+      "reserved": {
+        "terrain_profile_name": ""
+      }
     },
     {
       "id": "mg_cooling",
@@ -99,12 +118,14 @@
       "display_name": "MG Cooling",
       "blurb": "Runs cold, shoots long.",
       "tradeoff_text": "no tradeoff? sus.",
-      "price": 400,
+      "price": 4000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {"mg_heat_scale": 0.7}
+      "reserved": {
+        "mg_heat_scale": 0.7
+      }
     },
     {
       "id": "bay_expansion",
@@ -112,12 +133,17 @@
       "display_name": "Bay Expansion",
       "blurb": "More racks, more rockets.",
       "tradeoff_text": "the extra weight costs handling and plating",
-      "price": 600,
+      "price": 6000,
       "requires": "",
       "exclusive_slot": "",
-      "stat_deltas": {"handling": -1, "armor": -1},
+      "stat_deltas": {
+        "handling": -1,
+        "armor": -1
+      },
       "capabilities": {},
-      "reserved": {"ammo_cap_bonus": 2}
+      "reserved": {
+        "ammo_cap_bonus": 2
+      }
     },
     {
       "id": "improved_lock",
@@ -125,12 +151,15 @@
       "display_name": "Improved Lock",
       "blurb": "Missiles track like they mean it.",
       "tradeoff_text": "your lock signal is LOUD — enemies see you sooner",
-      "price": 500,
+      "price": 5000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {"lock_time_scale": 0.7, "detectability": 1.5}
+      "reserved": {
+        "lock_time_scale": 0.7,
+        "detectability": 1.5
+      }
     },
     {
       "id": "radar_jammer",
@@ -138,12 +167,14 @@
       "display_name": "Radar Jammer",
       "blurb": "You're a rumor on their scopes.",
       "tradeoff_text": "wires in when base radar range lands",
-      "price": 450,
+      "price": 4500,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {"radar_range_scale": 0.8}
+      "reserved": {
+        "radar_range_scale": 0.8
+      }
     },
     {
       "id": "extended_radar",
@@ -151,12 +182,14 @@
       "display_name": "Extended Radar",
       "blurb": "See trouble before trouble sees you.",
       "tradeoff_text": "wires in when base radar range lands",
-      "price": 500,
+      "price": 5000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {"radar_range_scale_self": 1.5}
+      "reserved": {
+        "radar_range_scale_self": 1.5
+      }
     },
     {
       "id": "armor_plating",
@@ -164,10 +197,13 @@
       "display_name": "Plating",
       "blurb": "Bolt-on slabs. Subtlety sold separately.",
       "tradeoff_text": "the weight dulls your steering",
-      "price": 500,
+      "price": 5000,
       "requires": "",
       "exclusive_slot": "",
-      "stat_deltas": {"armor": 2, "handling": -1},
+      "stat_deltas": {
+        "armor": 2,
+        "handling": -1
+      },
       "capabilities": {},
       "reserved": {}
     }

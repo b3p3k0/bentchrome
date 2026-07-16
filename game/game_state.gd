@@ -6,10 +6,16 @@ extends Node
 signal vehicle_selected(vehicle_id: StringName)
 signal level_changed(level_index: int)
 
+const Economy := preload("res://game/economy.gd")
+
 var selected_vehicle_id: StringName = &""
 var level_index: int = 0
 var lives: int = 3  # campaign lives; reset at car select, spent by levels
 var score: int = 0
+# Garage build (item ids from assets/data/garage_catalog.json). Run state like
+# lives: bought at PIT STOPs, applied at level spawn via VehicleLoadout.compose,
+# never persisted.
+var owned_mods: Array = []
 # SP lane picked on the mode-select screen: &"campaign" (Road Trip),
 # &"tutorial" (Driver's Ed lessons), or &"test_drive" (same yard, free roam).
 # Run state, never persisted; mode select re-stamps it on every confirm.
@@ -18,6 +24,8 @@ var game_mode: StringName = &"campaign"
 func reset_campaign() -> void:
 	level_index = 0
 	lives = 3
+	owned_mods.clear()
+	Economy.reset_run()  # fresh run, empty wallet — BOLTS are the tournament's
 
 # Custom-level flow (levels/custom_level.tscn). The editor's playtest sets all
 # three; a plain "--level=" debug launch uses none.

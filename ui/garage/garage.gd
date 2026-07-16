@@ -41,6 +41,7 @@ var _item_index := 0
 var _wallet: Label
 var _tab_buttons: Array = []
 var _cards_box: VBoxContainer
+var _cards_scroll: ScrollContainer
 var _turntable: Node2D
 var _ride_name: Label
 var _bar_rows := {}   # stat -> Array[ColorRect]
@@ -202,8 +203,18 @@ func _paint_cards() -> void:
 	for c in _cards_box.get_children():
 		c.queue_free()
 	var pool := _cat_items()
+	var selected: Control = null
 	for i in pool.size():
-		_cards_box.add_child(_card(pool[i], i == _item_index, i))
+		var card := _card(pool[i], i == _item_index, i)
+		_cards_box.add_child(card)
+		if i == _item_index:
+			selected = card
+	if selected:  # cards land next frame; scroll once layout knows their rects
+		_scroll_to.call_deferred(selected)
+
+func _scroll_to(card: Control) -> void:
+	if is_instance_valid(card) and _cards_scroll:
+		_cards_scroll.ensure_control_visible(card)
 
 func _card(item: Dictionary, selected: bool, index: int) -> PanelContainer:
 	var state := item_state(item)
@@ -341,6 +352,10 @@ func _build_ui() -> void:
 		var b := Button.new()
 		UiStyle.theme_button(b)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		# Tabs never take GUI focus: focused Buttons eat arrows/Enter before
+		# _unhandled_input, which is why W/S "stopped working" — the shop's
+		# selection model owns the keyboard, buttons stay mouse-clickable.
+		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(func() -> void:
 			_cat_index = i
 			_item_index = 0
@@ -408,15 +423,16 @@ func _build_ui() -> void:
 	ride_box.add_child(_installed)
 
 	# right column: cards
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	main.add_child(scroll)
+	_cards_scroll = ScrollContainer.new()
+	_cards_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cards_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_cards_scroll.focus_mode = Control.FOCUS_NONE
+	main.add_child(_cards_scroll)
 	_cards_box = VBoxContainer.new()
 	_cards_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cards_box.add_theme_constant_override("separation", 8)
-	scroll.add_child(_cards_box)
+	_cards_scroll.add_child(_cards_box)
 
 	_status = Label.new()
 	_status.text = "W/S browse    A/D category    [ENTER] buy    [ESC] keep rollin' →"
