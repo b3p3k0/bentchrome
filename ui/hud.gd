@@ -235,7 +235,8 @@ LCTRL  handbrake
 wheel / /  weapon
 LMB  machine gun
 RMB  fire selected
-G  zoom
+G  toggle overview
+T  find car
 ESC  menu", 13)
 	guide.modulate = DIM_TEXT
 

@@ -35,6 +35,7 @@ const FLOOR_LIFT := 32.0  # px of visual lift per floor above the baseline (2) �
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf)
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
+const IR := preload("res://game/input_router.gd")  # input names only (leaf)
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 const TurretScript := preload("res://weapons/turret.gd")
@@ -58,6 +59,9 @@ signal combat_hit(attacker: Node2D)
 @export var mine_weakness := 1.0      # >1 amplifies land-mine damage — Goliath's
 									  # soft underbelly (all that armor had to be
 									  # paid for somewhere; mine.gd reads this)
+
+@export_group("Camera")
+@export var camera_look_ahead_enabled := true
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -98,6 +102,11 @@ var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never r
 			_visual.scale = Vector2.ONE * body_scale * v
 var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
+var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
+var _camera_base_cached := false
+var _zoom_was_pressed := false
+var _locator_left := 0.0
+var _locator_elapsed := 0.0
 var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
@@ -230,14 +239,21 @@ func _ready() -> void:
 		if _rack:
 			_rack.god = true
 			_rack.arm_all_once()
-	# Player camera boots straight at the persisted zoom (no pull-in from the
-	# scene's authored value on every level start).
+	# Driving cameras boot at the persisted combat/overview state. Cache the
+	# authored local position before look-ahead ever moves it; Route 666 disables
+	# look-ahead and keeps its hand-authored northward lead untouched.
 	var boot_cam := get_node_or_null(^"Camera2D") as Camera2D
 	var boot_gs := get_node_or_null(^"/root/GameState")
-	if boot_cam and boot_cam.enabled and boot_gs:
-		boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview if boot_gs.overview else boot_gs.zoom_combat)
+	if boot_cam:
+		_camera_base_position = boot_cam.position
+		_camera_base_cached = true
+		_zoom_was_pressed = Input.is_action_pressed(IR.ACTION_ZOOM)
+		if boot_gs:
+			boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview \
+				if boot_gs.overview else boot_gs.zoom_combat)
 
 func _exit_tree() -> void:
+	_reset_locator_pulse()
 	_set_net_repairing(false, global_position)
 	end_repair_hold(false)
 
@@ -266,21 +282,87 @@ func _process(delta: float) -> void:
 	var camera := get_node_or_null(^"Camera2D") as Camera2D
 	if camera == null or not camera.enabled:
 		return
+	if Input.is_action_just_pressed(IR.ACTION_LOCATE_PLAYER):
+		trigger_locator_pulse()
+	_update_locator_pulse(delta)
 	if _shake > 0.05:
 		_shake = maxf(_shake - 30.0 * delta, 0.0)
 		camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake))
 	elif camera.offset != Vector2.ZERO:
 		camera.offset = Vector2.ZERO
-	# Zoom toggle: combat close-up vs overview pull-back. State + values live on
-	# GameState (proto-settings; persists across levels/respawns); the lerp makes
-	# it read as a camera move. Vector art keeps both ends pixel-crisp.
+	# Low-attention tactical toggle: one press changes depth and the state follows
+	# the player across respawns, scenes, spectators, and future launches.
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs == null:
 		return
-	if Input.is_action_just_pressed(&"zoom_toggle"):
-		gs.overview = not gs.overview
-	var target: float = gs.zoom_overview if gs.overview else gs.zoom_combat
-	camera.zoom = camera.zoom.lerp(Vector2.ONE * target, minf(6.0 * delta, 1.0))
+	var zoom_pressed := Input.is_action_pressed(IR.ACTION_ZOOM)
+	if zoom_pressed and not _zoom_was_pressed:
+		gs.toggle_overview()
+	_zoom_was_pressed = zoom_pressed
+	var target_zoom: float = gs.zoom_overview if gs.overview else gs.zoom_combat
+	camera.zoom = camera.zoom.lerp(Vector2.ONE * target_zoom, minf(8.0 * delta, 1.0))
+	_update_camera_look_ahead(camera, delta, gs)
+
+## World-velocity lead: preserve object scale and spend some trailing view to
+## show the road the car is actually eating. The vehicle node never rotates, so
+## world and camera-local axes agree. Static for deterministic tuning tests.
+static func camera_look_ahead_for(world_velocity: Vector2, max_lead := 140.0) -> Vector2:
+	const DEAD_SPEED := 30.0
+	const FULL_SPEED := 400.0
+	var speed := world_velocity.length()
+	if speed <= DEAD_SPEED or max_lead <= 0.0:
+		return Vector2.ZERO
+	var strength := clampf((speed - DEAD_SPEED) / (FULL_SPEED - DEAD_SPEED), 0.0, 1.0)
+	return world_velocity.normalized() * max_lead * strength
+
+func _update_camera_look_ahead(camera: Camera2D, delta: float, gs: Node = null) -> void:
+	if not _camera_base_cached:
+		_camera_base_position = camera.position
+		_camera_base_cached = true
+	var target := _camera_base_position
+	var alive := _health == null or _health.hp > 0.0
+	if gs == null:
+		gs = get_node_or_null(^"/root/GameState")
+	var globally_enabled: bool = gs == null or bool(gs.camera_look_ahead_enabled)
+	var distance: float = 140.0 if gs == null else float(gs.camera_look_ahead_distance)
+	if camera_look_ahead_enabled and globally_enabled and visible and alive \
+			and not _repairing and not _falling:
+		target += camera_look_ahead_for(velocity, distance)
+	camera.position = camera.position.lerp(target, minf(5.0 * delta, 1.0))
+
+## On-demand local locator: the paint alone strobes, so its self-modulate
+## composes with damage/status tint on Visual and respawn opacity above it.
+## No state leaves this client and no collision/gameplay property changes.
+func trigger_locator_pulse() -> bool:
+	if not _is_local_viewer() or _paint == null:
+		return false
+	_locator_left = 0.6
+	_locator_elapsed = 0.0
+	_paint.self_modulate = Color(2.4, 2.4, 2.4, 1.0)
+	return true
+
+func _update_locator_pulse(delta: float) -> void:
+	if _locator_left <= 0.0 or _paint == null:
+		return
+	_locator_left = maxf(_locator_left - delta, 0.0)
+	_locator_elapsed += delta
+	if _locator_left <= 0.0:
+		_reset_locator_pulse()
+		return
+	var bright := int(floor(_locator_elapsed / 0.075)) % 2 == 0
+	_paint.self_modulate = Color(2.4, 2.4, 2.4, 1.0) if bright else Color.WHITE
+
+func _reset_locator_pulse() -> void:
+	_locator_left = 0.0
+	_locator_elapsed = 0.0
+	if _paint:
+		_paint.self_modulate = Color.WHITE
+
+func _is_local_viewer() -> bool:
+	var marked := get_tree().get_first_node_in_group(&"local_player")
+	if marked:
+		return marked == self
+	return get_tree().get_first_node_in_group(&"player") == self
 
 ## Applies the current stats to the controller/health/visuals. Re-callable live
 ## (the dev dashboard's car switcher uses set_stats()).

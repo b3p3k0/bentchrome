@@ -50,7 +50,7 @@ the suite goes red and names it.
 ## Conventions
 
 - **Radius is gameplay.** Hitbox stays 1:1 while the body renders at
-  `FLEET_SCALE` 1.25 — deliberate near-miss forgiveness, don't "fix" it.
+  `FLEET_SCALE` 1.50 — deliberate near-miss forgiveness, don't "fix" it.
   Corner-escape AI budgets couple to radius (kandykane pinned at 22).
   Taken radii: 12, 13.5, 14, 15, 16, 17, 18, 19, 20, 21, 21.5, 22, 23, 26.
 - **Stat budget (advisory)**: the fleet totals 49-65 points across the five

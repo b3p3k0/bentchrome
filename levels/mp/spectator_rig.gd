@@ -2,7 +2,7 @@ class_name SpectatorRig
 extends Node2D
 ## The observer's eyes: FOLLOW cycles live cars with the weapon prev/next
 ## keys; touching WASD breaks into FREE ROAM from wherever the camera sits;
-## cycling snaps back to FOLLOW. G rides the same overview zoom as driving.
+## cycling snaps back to FOLLOW. G toggles the same overview as driving.
 ## Autoloads by path only — this script rides the shell's preload chain.
 
 const IR := preload("res://game/input_router.gd")  # consts, not the autoload
@@ -17,6 +17,7 @@ var _follow := 0
 var _free := false
 var _cam: Camera2D
 var _hint: Label
+var _zoom_was_pressed := false
 
 func _ready() -> void:
 	_cam = Camera2D.new()
@@ -24,6 +25,7 @@ func _ready() -> void:
 	add_child(_cam)
 	_cam.make_current()
 	var gs := get_node_or_null(^"/root/GameState")
+	_zoom_was_pressed = Input.is_action_pressed(IR.ACTION_ZOOM)
 	if gs:
 		_cam.zoom = Vector2.ONE * (gs.zoom_overview if gs.overview else gs.zoom_combat)
 	var layer := CanvasLayer.new()
@@ -39,13 +41,15 @@ func _ready() -> void:
 	cycle(0)
 
 func _process(delta: float) -> void:
-	# Zoom: same toggle, same persisted depths as driving.
+	# Zoom: same persistent toggle and depths as driving.
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs:
-		if Input.is_action_just_pressed(&"zoom_toggle"):
-			gs.overview = not gs.overview
+		var zoom_pressed := Input.is_action_pressed(IR.ACTION_ZOOM)
+		if zoom_pressed and not _zoom_was_pressed:
+			gs.toggle_overview()
+		_zoom_was_pressed = zoom_pressed
 		var target_zoom: float = gs.zoom_overview if gs.overview else gs.zoom_combat
-		_cam.zoom = _cam.zoom.lerp(Vector2.ONE * target_zoom, minf(6.0 * delta, 1.0))
+		_cam.zoom = _cam.zoom.lerp(Vector2.ONE * target_zoom, minf(8.0 * delta, 1.0))
 	# Cycle keys snap back to FOLLOW.
 	if Input.is_action_just_pressed(IR.ACTION_WEAPON_NEXT):
 		cycle(1)
@@ -95,10 +99,10 @@ func _current() -> Node2D:
 
 func _update_hint() -> void:
 	if _free:
-		_hint.text = "FREE ROAM — WASD pan (hold boost to sprint), %s/%s follow, G zoom" \
+		_hint.text = "FREE ROAM — WASD pan (hold boost to sprint), %s/%s follow, G toggles overview" \
 			% ["wheel", "keys"]
 	else:
 		var name := "?"
 		if _follow < actor_names.size():
 			name = String(actor_names[_follow])
-		_hint.text = "OBSERVING %s — cycle to switch, WASD to roam, G zoom" % name
+		_hint.text = "OBSERVING %s — cycle to switch, WASD to roam, G toggles overview" % name

@@ -13,7 +13,7 @@ extends Node2D
 
 const Parts := preload("res://vehicles/paint/parts.gd")
 
-const FLEET_SCALE := 1.25  # visual size of every car; collision radii stay 1:1
+const FLEET_SCALE := 1.50  # visual size of every car; collision radii stay 1:1
 
 const BRAKE_OFF := Color(0.32, 0.03, 0.04)
 const BRAKE_ON := Color(1.0, 0.08, 0.04)

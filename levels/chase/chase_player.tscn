@@ -5,6 +5,7 @@
 
 [node name="Vehicle" instance=ExtResource("1_veh")]
 rotation = -1.5708
+camera_look_ahead_enabled = false
 
 [node name="Driver" parent="."]
 script = ExtResource("2_drv")
