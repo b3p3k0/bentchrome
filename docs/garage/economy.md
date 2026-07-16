@@ -1,4 +1,8 @@
-# Garage economy — DRAFT v0.2 (numbers are proposals; rules are DECIDED)
+# Garage economy — v1 LIVE (wired into the campaign 2026-07-19; ×10 inflation applied)
+
+RIVAL SCALING: rivals mirror `Economy.RIVAL_KEEPUP` (0.5) of the player's
+POSITIVE stat deltas at enemy re-roll — the field keeps pace; bosses stay
+authored. Tune in the sim harness or live play.
 
 Currency of the tournament: **BOLTS** (decided 2026-07-19; HUD/garage glyph
 TBD — a hex-nut/bolt mark; ⚙ is the mockup placeholder). Players start at
@@ -8,16 +12,16 @@ TBD — a hex-nut/bolt mark; ⚙ is the mockup placeholder). Players start at
 
 | event | reward (HARD baseline) | notes |
 |---|---|---|
-| enemy kill (mook) | 100 | attribution: victim's `last_attacker` is the player |
-| enemy kill (mini_boss archetype) | 250 | kandykane-class |
-| boss kill (Lackey / Goliath) | 500 | finale money is mostly ceremonial |
-| chase-mode kill (buzzards) | 25 | 180s clock self-caps farming |
-| destructible smashed | `clamp(round(max_hp × 0.2), 1, 30)` | fence 15→3, barrel ~8, derelict 50→10, container 140→28, generator 220→30 |
+| enemy kill (mook) | 1000 | attribution: victim's `last_attacker` is the player |
+| enemy kill (mini_boss archetype) | 2500 | kandykane-class |
+| boss kill (Lackey — Goliath pays no bounty v1, finale) | 5000 | finale money is mostly ceremonial |
+| chase-mode kill (buzzards) | 250 | 180s clock self-caps farming |
+| destructible smashed | `clamp(round(max_hp × 2.0), 1, 300)` | fence 15→30, barrel ~80, derelict 50→100, container 140→280, generator 220→300 |
 | soft target / clutter (1 HP) | 1 | ambient folk & street furniture |
-| **per-level SALVAGE CAP** | **300** | applies to destructibles + soft targets ONLY; kills never capped. HUD shows a subtle "salvage tapped" once hit |
+| **per-level SALVAGE CAP** | **3000** | applies to destructibles + soft targets ONLY; kills never capped. HUD shows a subtle "salvage tapped" once hit |
 
 Income envelope (sanity): a MED arena ≈ 4-7 kills (400–700) + salvage ≤300
-→ ~600–1,000/level gross; 8 combat levels ≈ **5–7k per campaign run** before
+→ ~6–10k/level gross; 8 combat levels ≈ **50–70k per campaign run** before
 penalties. Prices below assume that envelope.
 
 ## Losing (percentages of CURRENT funds — always hurts the same, rich or poor)
@@ -54,22 +58,22 @@ reinforced frame. Standalone swaps (tires, kits) coexist beside chains.
 
 | category | item | price | effect sketch (garage_seams.md shapes) |
 |---|---|---|---|
-| ENGINE ch.1 | Stage 1: Bolt-On Boost (NA→boosted) | 300 | +1 accel |
-| ENGINE ch.2 | Stage 2: Bigger Blower | 450 | +1 accel +1 top (req S1) |
-| ENGINE ch.3 | Stage 3: Bigger Injectors | 600 | +1 accel +1 top (req S2) |
-| SUSP ch.1 | Stage 1: New Springs | 250 | +1 handling |
-| SUSP ch.2 | Stage 2: Reinforced Frame | 450 | +1 handling +1 armor (req S1) |
-| SUSP swap | Offroad Tires | 350 | terrain profile swap (awd_utility-style) |
-| SUSP swap | Lowering Kit | 400 | pavement/handling up, offroad down |
-| WEAPONS | MG Cooling | 400 | `mg_heat_scale` (reserved axis) |
-| WEAPONS | Bay Expansion | 600 | +ammo caps, −handling −armor |
-| WEAPONS | Improved Lock | 500 | `lock_time_scale` + `detectability` tradeoff |
-| CPU | Radar Jammer | 450 | `radar_range_scale` vs enemies (reserved) |
-| CPU | Extended Radar | 500 | reserved until base radar range lands |
-| ARMOR | Plating | 500 | +2 armor, −1 handling |
+| ENGINE ch.1 | Stage 1: Bolt-On Boost (NA→boosted) | 3000 | +1 accel |
+| ENGINE ch.2 | Stage 2: Bigger Blower | 4500 | +1 accel +1 top (req S1) |
+| ENGINE ch.3 | Stage 3: Bigger Injectors | 6000 | +1 accel +1 top (req S2) |
+| SUSP ch.1 | Stage 1: New Springs | 2500 | +1 handling |
+| SUSP ch.2 | Stage 2: Reinforced Frame | 4500 | +1 handling +1 armor (req S1) |
+| SUSP swap | Offroad Tires | 3500 | terrain profile swap (awd_utility-style) |
+| SUSP swap | Lowering Kit | 4000 | pavement/handling up, offroad down |
+| WEAPONS | MG Cooling | 4000 | `mg_heat_scale` (reserved axis) |
+| WEAPONS | Bay Expansion | 6000 | +ammo caps, −handling −armor |
+| WEAPONS | Improved Lock | 5000 | `lock_time_scale` + `detectability` tradeoff |
+| CPU | Radar Jammer | 4500 | `radar_range_scale` vs enemies (reserved) |
+| CPU | Extended Radar | 5000 | reserved until base radar range lands |
+| ARMOR | Plating | 5000 | +2 armor, −1 handling |
 
-Envelope check: full campaign income ~5–7k; the full engine chain runs
-1,350, a themed build ~2.5–3.5k — real choices every pit stop, a
+Envelope check: full campaign income ~50–70k; the full engine chain runs
+13,500, a themed build ~25–35k — real choices every pit stop, a
 death-heavy run visibly shops lighter. Tune in playtest.
 
 ## Purchase model (DECIDED except where flagged)

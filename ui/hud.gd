@@ -26,6 +26,7 @@ var _hp_label: Label
 var _god_label: Label
 var _life_pips: Array = []
 var _speed_label: Label
+var _wallet_label: Label  # BOLTS (campaign economy) — hidden when the valve is shut
 var _floor_label: Label  # multi-floor levels only; hidden on legacy (floor -1)
 var _heat_bar: ProgressBar
 var _heat_label: Label
@@ -65,6 +66,11 @@ func _process(_delta: float) -> void:
 	if gs:
 		for i in _life_pips.size():
 			_life_pips[i].color = SELECTED if i < gs.lives else Color(0.2, 0.2, 0.24)
+	if _wallet_label:
+		var econ := preload("res://game/economy.gd")
+		_wallet_label.visible = econ.enabled
+		if econ.enabled:
+			_wallet_label.text = "⚙ %d" % econ.funds
 	if _rack:
 		for i in _slot_labels.size():
 			var lbl: Label = _slot_labels[i]
@@ -188,6 +194,9 @@ func _build_dash() -> void:
 	_hp_bar = _bar(vbox, Color(0.75, 0.2, 0.2))
 	_hp_bar.value = 100.0
 	_speed_label = _label(vbox, "SPEED", 20)
+	_wallet_label = _label(vbox, "⚙ 0", 16)
+	_wallet_label.modulate = Color(1.0, 0.85, 0.2)  # BOLTS ride HUD amber
+	_wallet_label.visible = false
 	_floor_label = _label(vbox, "FLOOR", 14)
 	_floor_label.modulate = DIM_TEXT
 	_floor_label.visible = false  # legacy levels stay pixel-identical

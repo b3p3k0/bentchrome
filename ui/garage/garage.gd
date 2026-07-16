@@ -229,8 +229,22 @@ func _card(item: Dictionary, selected: bool, index: int) -> PanelContainer:
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 10)
 	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+	# Illustration slot: placeholder PNGs today (assets/img/garage/items/),
+	# real art drops in by filename with zero code changes. Missing = skipped.
+	var art_path := "res://assets/img/garage/items/%s.png" % String(item.id)
+	if ResourceLoader.exists(art_path):
+		var art := TextureRect.new()
+		art.texture = load(art_path)
+		art.custom_minimum_size = Vector2(128, 96)
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.modulate = Color(0.45, 0.45, 0.5) if state in [&"locked", &"owned"] else Color.WHITE
+		row.add_child(art)
 	var vbox := VBoxContainer.new()
-	margin.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(vbox)
 
 	var head := HBoxContainer.new()
 	var name_lbl := Label.new()
@@ -313,6 +327,15 @@ func _build_ui() -> void:
 	bg.color = Color(0.03, 0.03, 0.05)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# Garage interior placeholder (assets/img/garage/bg.png) — real art drops
+	# in by filename; the ColorRect beneath stays as the no-file fallback.
+	if ResourceLoader.exists("res://assets/img/garage/bg.png"):
+		var bg_art := TextureRect.new()
+		bg_art.texture = load("res://assets/img/garage/bg.png")
+		bg_art.stretch_mode = TextureRect.STRETCH_SCALE
+		bg_art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg_art.modulate = Color(1, 1, 1, 0.5)  # keep the cards readable over it
+		add_child(bg_art)
 
 	var root := MarginContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)

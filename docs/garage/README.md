@@ -26,9 +26,16 @@ application). Start here; each doc owns one concern.
   export to `user://econ_export.json`). Tests: `test_economy`,
   `test_garage_catalog`. Numbers remain draft — tune by playing, export,
   fold back into economy.md.
-- Branch flow: `feature/garage` → merge to `development` → promotion to
-  `main`. The plug-in phase (GameState funds, end-screen fork, prop
-  last_hitter, station billing, HUD wallet) is NOT started.
+- **PLUGGED IN (2026-07-19):** the live campaign now runs the economy —
+  kill bounties (last_attacker), salvage paid at the damager's kill
+  (projectile/ram/soft-target; prop `last_hitter` plumbing turned out
+  unnecessary), fall/sink tax, station billing, destroyed penalty, chase
+  kills, HUD wallet, and the end-screen KEEP ROLLIN'/PIT STOP fork into
+  the real shop. Player mods compose at spawn (campaign lane only);
+  rivals mirror `RIVAL_KEEPUP` (0.5) of the player's positive deltas.
+  Placeholder art: `assets/img/garage/bg.png` + `items/<id>.png` (drop-in
+  replaceable by filename). Economy numbers ×10 (economy.md is current).
+- Branch flow: `feature/garage` → merge to `development` → promotion to `main`.
 - **Decided (Kevin, 2026-07-19):** currency = **BOLTS**, start at 0; earned
   by destroying enemies/destructibles/soft targets (size-proportionate,
   per-level salvage cap); lost as a PERCENTAGE of current funds (destroyed

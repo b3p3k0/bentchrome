@@ -7,6 +7,7 @@ extends CanvasLayer
 ## keeps the buttons alive. Instanced per-level next to the pause menu.
 
 const UiStyle := preload("res://ui/ui_style.gd")
+const Economy := preload("res://game/economy.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
@@ -36,9 +37,11 @@ var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
 var _restart_btn: Button
 var _buttons: Array = []
-var _hint: Label            # mid-campaign: "press any key to continue"
+var _hint: Label            # mid-campaign: wallet line above the fork
 var _campaign_next := -1    # armed continue target (next level index)
 var _continue_armed := false
+var _fork_buttons: Array = []  # mid-campaign: KEEP ROLLIN' / PIT STOP
+var _garage: Control = null    # the PIT STOP shop overlay while open
 
 func _ready() -> void:
 	layer = 70  # above the pause menu's 60
@@ -101,12 +104,17 @@ func _show(win: bool) -> void:
 	get_tree().paused = true
 	visible = true
 	if next >= 0:
-		# Mid-campaign win: a beat of glory instead of a hard cut — any key
-		# (after the anti-spam lock) rolls the loading card, then the level.
+		# Mid-campaign win: a beat of glory, then the fork — KEEP ROLLIN'
+		# straight to the next level, or PIT STOP into the garage first.
 		_campaign_next = next
 		for b in _buttons:
 			b.visible = false
 		_hint.visible = true
+		_hint.text = "⚙ %d banked" % Economy.funds if Economy.enabled else "..."
+		_hint.modulate = AMBER
+		for b in _fork_buttons:
+			b.visible = true
+			b.disabled = true
 		get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_continue, CONNECT_ONE_SHOT)
 		return
 	# Players are still hammering fire when the last car dies — held SPACE is
@@ -181,9 +189,44 @@ func _arm_buttons() -> void:
 		_restart_btn.grab_focus()
 
 func _arm_continue() -> void:
-	_continue_armed = true
-	_hint.text = "press any key to continue"
-	_hint.modulate = AMBER
+	# The fork buttons arm together (same anti-spam lock as the classic panel);
+	# focus lands on KEEP ROLLIN' so ENTER alone still means "next level".
+	for b in _fork_buttons:
+		b.disabled = false
+	if _fork_buttons.size() > 0:
+		_fork_buttons[0].grab_focus()
+
+## The one exit every mid-campaign path funnels through (KEEP ROLLIN' and
+## leaving the garage both land here): unpause, advance, loading card.
+func _continue_campaign() -> void:
+	_continue_armed = false
+	get_tree().paused = false
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs and flow:
+		gs.level_index = _campaign_next
+		flow.to_interstitial()
+
+func _open_garage() -> void:
+	if _garage != null:
+		return
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs == null or flow == null:
+		_continue_campaign()
+		return
+	_center.visible = false  # the shop takes the screen; tree stays frozen
+	var base_path := "res://data/vehicles/ghost.tres"
+	if gs.selected_vehicle_id != &"":
+		base_path = "res://data/vehicles/%s.tres" % gs.selected_vehicle_id
+	_garage = load("res://ui/garage/garage.tscn").instantiate()
+	add_child(_garage)  # inherits PROCESS_MODE_ALWAYS — alive under the pause
+	_garage.setup(load(base_path), gs.owned_mods,
+		"NEXT: %s" % String(flow.CAMPAIGN[_campaign_next].name).to_upper())
+	_garage.left.connect(func() -> void:  # rolling out of the shop IS continuing
+		_garage.queue_free()
+		_garage = null
+		_continue_campaign())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _continue_armed and not _claim_armed:
@@ -197,15 +240,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_claim_armed = false
 		_claim_prize()
-		return
-	get_viewport().set_input_as_handled()
-	_continue_armed = false
-	get_tree().paused = false
-	var gs := get_node_or_null(^"/root/GameState")
-	var flow := get_node_or_null(^"/root/SceneFlow")
-	if gs and flow:
-		gs.level_index = _campaign_next
-		flow.to_interstitial()
 
 func _leave(action: Callable) -> void:
 	get_tree().paused = false  # paused survives scene changes — always release
@@ -264,6 +298,18 @@ func _build_ui() -> void:
 	_hint.modulate = Color(0.55, 0.58, 0.62)
 	_hint.visible = false
 	vbox.add_child(_hint)
+
+	# Mid-campaign fork (separate from _buttons — the campaign path hides
+	# those): KEEP ROLLIN' = the classic continue, PIT STOP = the garage.
+	for entry in [["KEEP ROLLIN'", _continue_campaign], ["PIT STOP", _open_garage]]:
+		var fb := Button.new()
+		fb.text = entry[0]
+		fb.custom_minimum_size = Vector2(220, 0)
+		UiStyle.theme_button(fb)
+		fb.pressed.connect(entry[1])
+		fb.visible = false
+		vbox.add_child(fb)
+		_fork_buttons.append(fb)
 
 	_restart_btn = _button(vbox, "Restart", func() -> void:
 		_leave(func() -> void:
