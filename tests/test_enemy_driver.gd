@@ -10,6 +10,7 @@ var t
 class FakeCar extends Node2D:
 	var hpf := 1.0
 	var last_attacker: Node2D = null
+	var last_attacker_ms := 0
 	var heading := 0.0
 	var hops: Array = []  # escape_hop directions received
 	func get_hp_fraction() -> float:
@@ -62,6 +63,16 @@ func test_blend_zero_mix_falls_back_to_aggressor() -> void:
 	var p: Dictionary = DriverScript.blend_params(Vector3.ZERO)
 	t.check_approx(p["near"], 110.0, "blend: zero mix = pure aggressor")
 
+func test_runtime_mix_refreshes_cached_traits() -> void:
+	var d = DriverScript.new()
+	d.mix = Vector3(0, 0, 1)
+	t.check_approx(d._near, 260.0, "runtime mix: opportunist near refreshes after assignment")
+	t.check_approx(d._flee, 0.35, "runtime mix: opportunist flee refreshes after assignment")
+	t.check_approx(d._w_weak, 1.0, "runtime mix: opportunist targeting refreshes after assignment")
+	d.mix = Vector3(0, 1, 0)
+	t.check_approx(d._flank, 1.0, "runtime mix: a second assignment refreshes flank")
+	d.free()
+
 func test_stuck_trips_after_sustained_stall() -> void:
 	var d = DriverScript.new()
 	t.check(not d._update_stuck(10.0, true, 0.3), "stuck: not yet at 0.3s")
@@ -111,6 +122,49 @@ func test_player_priority_breaks_near_ties() -> void:
 	var _ai := _car(rig[0], Vector2(500, 0), 1.0)
 	var player := _car(rig[0], Vector2(650, 0), 1.0, true)
 	t.check(driver._select_target(rig[1]) == player, "priority: player wins over a slightly nearer AI")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_target_commitment_and_switch_margin() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var first := _car(rig[0], Vector2(500, 0), 1.0)
+	var challenger := _car(rig[0], Vector2(900, 0), 1.0)
+	t.check(driver._select_target(rig[1], 0.0) == first, "commit: nearest target adopted")
+	challenger.global_position = Vector2(450, 0)  # a tiny lead, below the switch margin
+	t.check(driver._select_target(rig[1], DriverScript.TARGET_COMMIT_TIME) == first,
+		"commit: near-tie challenger cannot turn the car")
+	challenger.global_position = Vector2(100, 0)  # a meaningful score win
+	t.check(driver._select_target(rig[1], DriverScript.TARGET_REEVAL_TIME) == challenger,
+		"commit: meaningful challenger wins after reevaluation")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_revenge_expires() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var near := _car(rig[0], Vector2(300, 0), 1.0)
+	var attacker := _car(rig[0], Vector2(700, 0), 1.0)
+	rig[1].last_attacker = attacker
+	rig[1].last_attacker_ms = Time.get_ticks_msec()
+	t.check(driver._best_target(rig[1]) == attacker, "revenge: fresh attacker wins the score")
+	rig[1].last_attacker_ms = Time.get_ticks_msec() - int((DriverScript.REVENGE_WINDOW + 1.0) * 1000.0)
+	t.check(driver._best_target(rig[1]) == near, "revenge: expired attacker loses to the nearer fight")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_invalid_committed_target_replaced_immediately() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var first := _car(rig[0], Vector2(100, 0), 1.0)
+	var live := _car(rig[0], Vector2(800, 0), 1.0)
+	t.check(driver._select_target(rig[1], 0.0) == first, "invalid target: first rival committed")
+	first.hpf = 0.0
+	t.check(driver._select_target(rig[1], 0.01) == live,
+		"invalid target: dead rival bypasses commitment immediately")
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()

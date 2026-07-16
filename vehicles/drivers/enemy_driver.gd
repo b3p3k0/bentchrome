@@ -13,7 +13,10 @@ extends Driver
 
 const Difficulty := preload("res://game/difficulty.gd")  # boss-valve tier knobs
 
-@export var mix := Vector3(1, 0, 0)  # weights: x=aggressor, y=ambusher, z=opportunist
+@export var mix := Vector3(1, 0, 0):  # weights: x=aggressor, y=ambusher, z=opportunist
+	set(value):
+		mix = value
+		_apply_mix()
 @export var relentless := false      # bosses: skip mook RELENT, run the boss valve
 
 # Named blends (assign to `mix`). 3 pure + 3 pairs + 1 triple.
@@ -26,7 +29,7 @@ const PRESET_PHANTOM := Vector3(0, 1, 1)    # sneaky flanking jackal
 const PRESET_WILDCARD := Vector3(1, 1, 1)   # all-rounder
 
 # Pure trait sets, blended by `mix`. [near, far, flee_hp, w_near, w_weak, flank]
-const PURE := {
+static var PURE := {
 	"agg": {"near": 110.0, "far": 300.0, "flee": 0.10, "w_near": 1.0, "w_weak": 0.0, "flank": 0.0},
 	"amb": {"near": 160.0, "far": 420.0, "flee": 0.22, "w_near": 1.0, "w_weak": 0.0, "flank": 1.0},
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
@@ -154,6 +157,16 @@ var _nav_connector: Node2D = null  # committed route (duck-typed FloorConnector)
 var _nav_phase := 0                # 0 = approach the entry, 1 = commit the exit
 var _nav_t := 0.0
 var _snipe_t := 0.0                # vantage-hold meter (tracking-armed, above)
+var _target: Variant = null        # Node2D or a freed ref; validate before typing/using
+var _target_commit_t := 0.0
+var _target_reeval_t := 0.0
+
+# Target momentum: a rival commits long enough to form a readable fight, then
+# re-scores on a slower cadence and only changes course for a meaningful win.
+# Invalid/dead/shunned/out-of-scan targets bypass every timer immediately.
+static var TARGET_COMMIT_TIME := 2.0
+static var TARGET_REEVAL_TIME := 0.5
+static var TARGET_SWITCH_MARGIN := 0.20
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -170,13 +183,18 @@ static func blend_params(m: Vector3) -> Dictionary:
 
 func _ready() -> void:
 	_weave_phase = float(get_instance_id() % 628) / 100.0  # 0..2pi, stable per driver
-	var p := blend_params(mix)
-	_near = p["near"]
-	_far = p["far"]
-	_flee = p["flee"]
-	_w_near = p["w_near"]
-	_w_weak = p["w_weak"]
-	_flank = p["flank"]
+	_apply_mix()
+
+## Runtime car rerolls assign the roster mix after the instanced driver has
+## readied. The setter must refresh these cached traits in that same moment.
+func _apply_mix() -> void:
+	var p: Dictionary = blend_params(mix)
+	_near = float(p["near"])
+	_far = float(p["far"])
+	_flee = float(p["flee"])
+	_w_near = float(p["w_near"])
+	_w_weak = float(p["w_weak"])
+	_flank = float(p["flank"])
 
 func get_intent(vehicle, delta: float) -> Dictionary:
 	# Engagement target inside SCAN; beyond that, HUNT the nearest combatant
@@ -192,7 +210,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_hop_cd -= delta
 
 	var engaged := true
-	var target := _select_target(vehicle)
+	var target: Node2D = _select_target(vehicle, delta)
 	if target == null:
 		engaged = false
 		target = _nearest_any(vehicle)
@@ -644,7 +662,7 @@ func _nearest_any(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_d := INF
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		if not _target_is_live(vehicle, v):
 			continue
 		if v == _shun_target and _shun_t > 0.0:
 			continue
@@ -706,35 +724,90 @@ func _all_car_rids(vehicle) -> Array:
 ## scale. AI target each other freely at ANY hp — but Vehicle.combat_scale
 ## makes a nearly-dead AI immune to fellow AI, so the theatrics continue
 ## while the finishing blow stays the player's.
-const REVENGE_BONUS := 0.5
-const PLAYER_PRIORITY := 0.2
+static var REVENGE_BONUS := 0.5
+static var REVENGE_WINDOW := 6.0
+static var PLAYER_PRIORITY := 0.2
 
-func _select_target(vehicle) -> Node2D:
+## Stable target ownership over the per-candidate score. Commitment prevents
+## U-turns while a maneuver forms; the margin prevents near-tie oscillation.
+func _select_target(vehicle, delta := -1.0) -> Node2D:
+	# Pure score probe for focused unit tests/debug callers. Runtime always
+	# supplies physics delta and therefore rides the commitment machinery.
+	if delta < 0.0:
+		return _best_target(vehicle)
+	_target_commit_t = maxf(_target_commit_t - delta, 0.0)
+	_target_reeval_t = maxf(_target_reeval_t - delta, 0.0)
+	if not _target_is_valid(vehicle, _target):
+		return _adopt_target(_best_target(vehicle))
+	if _target_commit_t > 0.0 or _target_reeval_t > 0.0:
+		return _target as Node2D
+	_target_reeval_t = TARGET_REEVAL_TIME
+	var candidate: Node2D = _best_target(vehicle)
+	if candidate == null or candidate == _target:
+		return _target as Node2D
+	var current: Node2D = _target as Node2D
+	var current_score: float = _target_score(vehicle, current)
+	var candidate_score: float = _target_score(vehicle, candidate)
+	if candidate_score >= current_score + TARGET_SWITCH_MARGIN:
+		return _adopt_target(candidate)
+	return _target as Node2D
+
+func _adopt_target(next: Node2D) -> Node2D:
+	_target = next
+	_target_commit_t = TARGET_COMMIT_TIME if next != null else 0.0
+	_target_reeval_t = TARGET_REEVAL_TIME if next != null else 0.0
+	return _target
+
+func _best_target(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_score := -INF
-	# Untyped on purpose: a killed attacker is a freed instance, and assigning
-	# one to a typed Node2D local is itself a script error — validate first.
-	var grudge: Variant = vehicle.get("last_attacker")
-	if grudge == null or not is_instance_valid(grudge):
-		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		var score: float = _target_score(vehicle, v)
+		if score == -INF:
 			continue
-		if v == _shun_target and _shun_t > 0.0:
-			continue
-		var d: float = vehicle.global_position.distance_to(v.global_position)
-		if d > SCAN:
-			continue
-		var near_term := 1.0 - d / SCAN
-		var hpf: float = v.get_hp_fraction() if v.has_method(&"get_hp_fraction") else 1.0
-		var score := _w_near * near_term + _w_weak * (1.0 - hpf)
-		if v == grudge:
-			score += REVENGE_BONUS
-		if v.is_in_group(&"player"):
-			score += PLAYER_PRIORITY
-		if not Floors.same_floor(vehicle, v):
-			score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
 		if score > best_score:
 			best_score = score
 			best = v
 	return best
+
+func _target_score(vehicle, candidate: Node2D) -> float:
+	if not _target_is_valid(vehicle, candidate):
+		return -INF
+	var d: float = vehicle.global_position.distance_to(candidate.global_position)
+	var near_term := 1.0 - d / SCAN
+	var hpf: float = candidate.get_hp_fraction() if candidate.has_method(&"get_hp_fraction") else 1.0
+	var score: float = _w_near * near_term + _w_weak * (1.0 - hpf)
+	if candidate == _recent_grudge(vehicle):
+		score += REVENGE_BONUS
+	if candidate.is_in_group(&"player"):
+		score += PLAYER_PRIORITY
+	if not Floors.same_floor(vehicle, candidate):
+		score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
+	return score
+
+## Untyped until validated: a killed attacker can leave a freed instance in
+## last_attacker, and assigning that directly to Node2D is a script error.
+func _recent_grudge(vehicle) -> Variant:
+	var grudge: Variant = vehicle.get("last_attacker")
+	if grudge == null or not is_instance_valid(grudge):
+		return null
+	var stamp: int = int(vehicle.get("last_attacker_ms"))
+	if stamp <= 0 or Time.get_ticks_msec() - stamp > int(REVENGE_WINDOW * 1000.0):
+		return null
+	return grudge
+
+func _target_is_valid(vehicle, candidate: Variant) -> bool:
+	if not _target_is_live(vehicle, candidate):
+		return false
+	if candidate == _shun_target and _shun_t > 0.0:
+		return false
+	return vehicle.global_position.distance_to(candidate.global_position) <= SCAN
+
+func _target_is_live(vehicle, candidate: Variant) -> bool:
+	if candidate == null or not is_instance_valid(candidate) or candidate == vehicle:
+		return false
+	if not candidate.is_in_group(&"vehicles"):
+		return false
+	if candidate.has_method(&"get_hp") and candidate.get_hp() <= 0.0:
+		return false
+	return true
