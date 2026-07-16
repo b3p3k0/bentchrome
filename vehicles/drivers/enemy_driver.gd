@@ -13,7 +13,10 @@ extends Driver
 
 const Difficulty := preload("res://game/difficulty.gd")  # boss-valve tier knobs
 
-@export var mix := Vector3(1, 0, 0)  # weights: x=aggressor, y=ambusher, z=opportunist
+@export var mix := Vector3(1, 0, 0):  # weights: x=aggressor, y=ambusher, z=opportunist
+	set(value):
+		mix = value
+		_apply_mix()
 @export var relentless := false      # bosses: skip mook RELENT, run the boss valve
 
 # Named blends (assign to `mix`). 3 pure + 3 pairs + 1 triple.
@@ -26,7 +29,7 @@ const PRESET_PHANTOM := Vector3(0, 1, 1)    # sneaky flanking jackal
 const PRESET_WILDCARD := Vector3(1, 1, 1)   # all-rounder
 
 # Pure trait sets, blended by `mix`. [near, far, flee_hp, w_near, w_weak, flank]
-const PURE := {
+static var PURE := {
 	"agg": {"near": 110.0, "far": 300.0, "flee": 0.10, "w_near": 1.0, "w_weak": 0.0, "flank": 0.0},
 	"amb": {"near": 160.0, "far": 420.0, "flee": 0.22, "w_near": 1.0, "w_weak": 0.0, "flank": 1.0},
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
@@ -56,8 +59,17 @@ const CROSS_FLOOR_PENALTY := 0.1
 # BREAK: the spacing move. Closing under _near veers off at a committed angle
 # instead of retreating — an arcing strafing run that keeps momentum and
 # produces drive-by shots as the nose sweeps past. Low-HP flee stays EVADE.
-const BREAK_TIME := 2.5
+static var BREAK_TIME := 2.5
 const BREAK_ANGLE := 2.27  # ~130° off the target bearing
+static var PURSUIT_MAX_LEAD := 0.75
+static var PURSUIT_SPEED_FLOOR := 240.0
+static var BREAK_EXIT_DIST := 420.0
+static var BREAK_LATERAL_OFFSET := 140.0
+static var BREAK_ARRIVE := 100.0
+static var BREAK_REARM_MULT := 1.5
+static var EVADE_TIME := 3.0
+static var EVADE_COOLDOWN := 7.0
+static var DUEL_RELENT_TIME := 2.0
 
 # Weave on long approaches: breaks the beeline, dodges straight-line missiles,
 # and de-syncs the pack (per-driver phase).
@@ -138,12 +150,16 @@ var _last_pin := Vector2.INF   # where this escape episode started
 var _escape_dir := Vector2.RIGHT  # committed world-space CLEAR direction
 var _break_t := 0.0
 var _break_side := 1.0   # committed at BREAK entry so the arc can't flip sides
+var _break_exit := Vector2.INF  # ordinary drive-by endpoint; bosses keep live-bearing BREAK
+var _break_rearmed := true      # pass must establish separation before another BREAK
 var _weave_t := 0.0
 var _weave_phase := 0.0
 var _engage_t := 0.0     # pressure meter vs the player
 var _engage_hp := -1.0   # player HP when this engagement began (-1 = none)
 var _relent_t := 0.0
 var _relent_side := 1.0
+var _evade_t := 0.0
+var _evade_cd := 0.0
 var _water_t := 0.0
 var _dry_pos := Vector2.INF  # last position on non-water ground
 var _shun_target: Node2D = null  # antler-lock opponent to avoid re-targeting
@@ -154,6 +170,20 @@ var _nav_connector: Node2D = null  # committed route (duck-typed FloorConnector)
 var _nav_phase := 0                # 0 = approach the entry, 1 = commit the exit
 var _nav_t := 0.0
 var _snipe_t := 0.0                # vantage-hold meter (tracking-armed, above)
+var _target: Variant = null        # Node2D or a freed ref; validate before typing/using
+var _target_commit_t := 0.0
+var _target_reeval_t := 0.0
+
+# Target momentum: a rival commits long enough to form a readable fight, then
+# re-scores on a slower cadence and only changes course for a meaningful win.
+# Invalid/dead/shunned/out-of-scan targets bypass every timer immediately.
+static var TARGET_COMMIT_TIME := 2.0
+static var TARGET_REEVAL_TIME := 0.5
+static var TARGET_SWITCH_MARGIN := 0.20
+static var NON_FOCUS_PLAYER_PENALTY := 0.35
+var _focus_target: Variant = null  # scene-local director lease; validate before typing
+var _focus_slots_filled := false
+var _duel_target: Variant = null   # final ordinary rival: attack/reposition cadence, never flee
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -170,13 +200,18 @@ static func blend_params(m: Vector3) -> Dictionary:
 
 func _ready() -> void:
 	_weave_phase = float(get_instance_id() % 628) / 100.0  # 0..2pi, stable per driver
-	var p := blend_params(mix)
-	_near = p["near"]
-	_far = p["far"]
-	_flee = p["flee"]
-	_w_near = p["w_near"]
-	_w_weak = p["w_weak"]
-	_flank = p["flank"]
+	_apply_mix()
+
+## Runtime car rerolls assign the roster mix after the instanced driver has
+## readied. The setter must refresh these cached traits in that same moment.
+func _apply_mix() -> void:
+	var p: Dictionary = blend_params(mix)
+	_near = float(p["near"])
+	_far = float(p["far"])
+	_flee = float(p["flee"])
+	_w_near = float(p["w_near"])
+	_w_weak = float(p["w_weak"])
+	_flank = float(p["flank"])
 
 func get_intent(vehicle, delta: float) -> Dictionary:
 	# Engagement target inside SCAN; beyond that, HUNT the nearest combatant
@@ -190,9 +225,10 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			_shun_t = 0.0
 	if _hop_cd > 0.0:
 		_hop_cd -= delta
+	_evade_cd = maxf(_evade_cd - delta, 0.0)
 
 	var engaged := true
-	var target := _select_target(vehicle)
+	var target: Node2D = _select_target(vehicle, delta)
 	if target == null:
 		engaged = false
 		target = _nearest_any(vehicle)
@@ -218,6 +254,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
 	var bearing := to_target.angle()
+	_update_break_rearm(dist)
 
 	_update_feelers(vehicle)
 
@@ -312,7 +349,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 				_enter_boss_break(vehicle, target)
 		elif _engage_t > ENGAGE_LIMIT or dealt >= RELENT_DAMAGE:
 			_mode = Mode.RELENT
-			_relent_t = RELENT_TIME
+			_relent_t = DUEL_RELENT_TIME if _duel_active(vehicle) else RELENT_TIME
 			_relent_side = 1.0 if _avoid_bias <= 0.0 else -1.0
 			_engage_t = 0.0
 			_engage_hp = -1.0
@@ -321,25 +358,27 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		if _engage_t == 0.0:
 			_engage_hp = -1.0
 
-	if vehicle.get_hp_fraction() < _flee:
-		_mode = Mode.EVADE
+	if _update_evade_mode(vehicle, delta):
+		pass  # intent branch below owns the active getaway
 	elif _mode == Mode.RELENT:
 		_relent_t -= delta
 		if _relent_t <= 0.0 or dist > SCAN:
 			_mode = Mode.PURSUE
 	elif _mode == Mode.BREAK:
 		_break_t -= delta
-		if _break_t <= 0.0 or dist > _far:
+		var pass_done: bool = _break_t <= 0.0
+		if relentless:
+			pass_done = pass_done or dist > _far
+		else:
+			pass_done = pass_done or vehicle.global_position.distance_to(_break_exit) <= BREAK_ARRIVE
+		if pass_done:
 			_mode = Mode.PURSUE
-	elif dist < _near and not scavenging:
+	elif dist < _near and not scavenging and _break_rearmed:
 		# (A crate isn't a threat — drive straight over it, no spacing arc.)
 		# Bosses used to take HALF-length arcs here — that was the close-combat
 		# suffocation Kevin's playtest flagged. Everyone arcs full-length now;
 		# boss pressure comes from the turret, not the bumper.
-		_mode = Mode.BREAK
-		_break_t = BREAK_TIME
-		# Veer toward the clearer side (feelers), committed for the whole arc.
-		_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+		_enter_break(vehicle, target)
 
 	var intent: Dictionary
 	if _mode == Mode.EVADE:
@@ -370,7 +409,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		# The arc: veer off the (live) bearing at the committed angle — full
 		# throttle, guns free if the nose happens to sweep across the target
 		# (and the target shares our terrace — MG lead can't climb).
-		var veer := wrapf(bearing + BREAK_ANGLE * _break_side - vehicle.heading, -PI, PI)
+		var break_bearing: float = bearing + BREAK_ANGLE * _break_side if relentless \
+			else (_break_exit - vehicle.global_position).angle()
+		var veer := wrapf(break_bearing - vehicle.heading, -PI, PI)
 		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
 		var los := Floors.same_floor(vehicle, target) and _los_clear(vehicle, target)
 		intent = {
@@ -381,7 +422,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"boost": false,
 		}
 	else:
-		var approach := bearing
+		var approach := bearing if relentless else _pursuit_bearing(vehicle, target, bearing)
 		if _flank > 0.0 and dist > _near * 1.5:
 			approach += deg_to_rad(35.0 * _flank)
 		var diff := wrapf(approach - vehicle.heading, -PI, PI)
@@ -411,6 +452,65 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_classify_car_pin(target, dist)
 		return _on_stuck(vehicle, target, bearing)
 	return intent
+
+## Lightweight intercept: lead grows with range, caps quickly, and uses the
+## target's real post-collision velocity. A slow pursuer still plans with the
+## denominator floor so heavy cars do not aim several seconds into fantasy.
+func _predicted_target_position(vehicle, target: Node2D) -> Vector2:
+	var target_velocity := Vector2.ZERO
+	if target.has_method(&"get_real_velocity"):
+		target_velocity = target.get_real_velocity()
+	var pursuer_speed := PURSUIT_SPEED_FLOOR
+	if vehicle.has_method(&"get_speed"):
+		pursuer_speed = maxf(float(vehicle.get_speed()), PURSUIT_SPEED_FLOOR)
+	var distance: float = vehicle.global_position.distance_to(target.global_position)
+	var lead := minf(distance / pursuer_speed, PURSUIT_MAX_LEAD)
+	return target.global_position + target_velocity * lead
+
+func _pursuit_bearing(vehicle, target: Node2D, live_bearing: float) -> float:
+	if relentless:
+		return live_bearing  # Lackey keeps the authored live-bearing movement contract
+	return (_predicted_target_position(vehicle, target) - vehicle.global_position).angle()
+
+## Snapshot a fly-through line once. The target can turn after this and the
+## rival still finishes the readable pass instead of curling into an orbit.
+func _enter_break(vehicle, target: Node2D) -> void:
+	_mode = Mode.BREAK
+	_break_t = BREAK_TIME
+	_break_rearmed = false
+	_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+	if relentless:
+		_break_exit = Vector2.INF
+		return
+	var predicted: Vector2 = _predicted_target_position(vehicle, target)
+	var through: Vector2 = (predicted - vehicle.global_position).normalized()
+	if through == Vector2.ZERO:
+		through = Vector2.RIGHT.rotated(vehicle.heading)
+	_break_exit = predicted + through * BREAK_EXIT_DIST \
+		+ through.orthogonal() * _break_side * BREAK_LATERAL_OFFSET
+
+func _update_break_rearm(dist: float) -> void:
+	if not _break_rearmed and _mode != Mode.BREAK and dist >= _near * BREAK_REARM_MULT:
+		_break_rearmed = true
+
+## Low-health retreat is an episode, not a retirement plan. Duel assignment
+## cancels it immediately; otherwise a completed escape must spend real time
+## re-engaging before another one can begin.
+func _update_evade_mode(vehicle, delta: float) -> bool:
+	var duel := _duel_active(vehicle)
+	var low_hp: bool = vehicle.get_hp_fraction() < _flee
+	if _mode == Mode.EVADE:
+		_evade_t -= delta
+		# A duel lease can arrive while a corner escape is already committed.
+		# Finish that short episode (stuck recovery depends on it), then the duel
+		# gate below prevents every later flee.
+		if not low_hp or _evade_t <= 0.0:
+			_mode = Mode.PURSUE
+			_evade_cd = EVADE_COOLDOWN
+	elif low_hp and _evade_cd <= 0.0 and not duel:
+		_mode = Mode.EVADE
+		_evade_t = EVADE_TIME
+	return _mode == Mode.EVADE
 
 ## Dominance-scaled boss breather: +1 (player untouched, boss dying) = barely
 ## any mercy; -1 (player dying, boss healthy) = a real window to regroup.
@@ -644,7 +744,7 @@ func _nearest_any(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_d := INF
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		if not _target_is_live(vehicle, v):
 			continue
 		if v == _shun_target and _shun_t > 0.0:
 			continue
@@ -706,35 +806,127 @@ func _all_car_rids(vehicle) -> Array:
 ## scale. AI target each other freely at ANY hp — but Vehicle.combat_scale
 ## makes a nearly-dead AI immune to fellow AI, so the theatrics continue
 ## while the finishing blow stays the player's.
-const REVENGE_BONUS := 0.5
-const PLAYER_PRIORITY := 0.2
+static var REVENGE_BONUS := 0.5
+static var REVENGE_WINDOW := 6.0
+static var PLAYER_PRIORITY := 0.2
 
-func _select_target(vehicle) -> Node2D:
+## Stable target ownership over the per-candidate score. Commitment prevents
+## U-turns while a maneuver forms; the margin prevents near-tie oscillation.
+func _select_target(vehicle, delta := -1.0) -> Node2D:
+	# Pure score probe for focused unit tests/debug callers. Runtime always
+	# supplies physics delta and therefore rides the commitment machinery.
+	if delta < 0.0:
+		return _best_target(vehicle)
+	if _target_is_live(vehicle, _duel_target):
+		if _target != _duel_target:
+			return _adopt_target(_duel_target as Node2D)
+		return _duel_target as Node2D
+	if _target_is_live(vehicle, _focus_target):
+		if _target != _focus_target:
+			return _adopt_target(_focus_target as Node2D)
+		return _focus_target as Node2D
+	_target_commit_t = maxf(_target_commit_t - delta, 0.0)
+	_target_reeval_t = maxf(_target_reeval_t - delta, 0.0)
+	if not _target_is_valid(vehicle, _target):
+		return _adopt_target(_best_target(vehicle))
+	if _target_commit_t > 0.0 or _target_reeval_t > 0.0:
+		return _target as Node2D
+	_target_reeval_t = TARGET_REEVAL_TIME
+	var candidate: Node2D = _best_target(vehicle)
+	if candidate == null or candidate == _target:
+		return _target as Node2D
+	var current: Node2D = _target as Node2D
+	var current_score: float = _target_score(vehicle, current)
+	var candidate_score: float = _target_score(vehicle, candidate)
+	if candidate_score >= current_score + TARGET_SWITCH_MARGIN:
+		return _adopt_target(candidate)
+	return _target as Node2D
+
+func _adopt_target(next: Node2D) -> Node2D:
+	_target = next
+	_target_commit_t = TARGET_COMMIT_TIME if next != null else 0.0
+	_target_reeval_t = TARGET_REEVAL_TIME if next != null else 0.0
+	return _target
+
+func _best_target(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_score := -INF
-	# Untyped on purpose: a killed attacker is a freed instance, and assigning
-	# one to a typed Node2D local is itself a script error — validate first.
-	var grudge: Variant = vehicle.get("last_attacker")
-	if grudge == null or not is_instance_valid(grudge):
-		grudge = null
 	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
-		if v == vehicle:
+		var score: float = _target_score(vehicle, v)
+		if score == -INF:
 			continue
-		if v == _shun_target and _shun_t > 0.0:
-			continue
-		var d: float = vehicle.global_position.distance_to(v.global_position)
-		if d > SCAN:
-			continue
-		var near_term := 1.0 - d / SCAN
-		var hpf: float = v.get_hp_fraction() if v.has_method(&"get_hp_fraction") else 1.0
-		var score := _w_near * near_term + _w_weak * (1.0 - hpf)
-		if v == grudge:
-			score += REVENGE_BONUS
-		if v.is_in_group(&"player"):
-			score += PLAYER_PRIORITY
-		if not Floors.same_floor(vehicle, v):
-			score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
 		if score > best_score:
 			best_score = score
 			best = v
 	return best
+
+func _target_score(vehicle, candidate: Node2D) -> float:
+	if not _target_is_valid(vehicle, candidate):
+		return -INF
+	var d: float = vehicle.global_position.distance_to(candidate.global_position)
+	var near_term := 1.0 - d / SCAN
+	var hpf: float = candidate.get_hp_fraction() if candidate.has_method(&"get_hp_fraction") else 1.0
+	var score: float = _w_near * near_term + _w_weak * (1.0 - hpf)
+	var grudge: Variant = _recent_grudge(vehicle)
+	if candidate == grudge:
+		score += REVENGE_BONUS
+	if candidate.is_in_group(&"player"):
+		score += PLAYER_PRIORITY
+		if _focus_slots_filled and _focus_target == null and candidate != grudge:
+			score -= NON_FOCUS_PLAYER_PENALTY
+	if not Floors.same_floor(vehicle, candidate):
+		score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
+	return score
+
+## Untyped until validated: a killed attacker can leave a freed instance in
+## last_attacker, and assigning that directly to Node2D is a script error.
+func _recent_grudge(vehicle) -> Variant:
+	var grudge: Variant = vehicle.get("last_attacker")
+	if grudge == null or not is_instance_valid(grudge):
+		return null
+	var stamp: int = int(vehicle.get("last_attacker_ms"))
+	if stamp <= 0 or Time.get_ticks_msec() - stamp > int(REVENGE_WINDOW * 1000.0):
+		return null
+	return grudge
+
+func _target_is_valid(vehicle, candidate: Variant) -> bool:
+	if not _target_is_live(vehicle, candidate):
+		return false
+	if candidate == _shun_target and _shun_t > 0.0:
+		return false
+	return vehicle.global_position.distance_to(candidate.global_position) <= SCAN
+
+func _target_is_live(vehicle, candidate: Variant) -> bool:
+	if candidate == null or not is_instance_valid(candidate) or candidate == vehicle:
+		return false
+	if not candidate.is_in_group(&"vehicles"):
+		return false
+	if candidate.has_method(&"get_hp") and candidate.get_hp() <= 0.0:
+		return false
+	return true
+
+## AIFightDirector's only write seam. Null means this rival keeps its free-for-
+## all target scoring; slots_filled applies the soft player penalty only while
+## somebody else is visibly carrying the main event.
+func set_focus_assignment(target: Node2D, slots_filled: bool) -> void:
+	_focus_target = target
+	_focus_slots_filled = slots_filled
+	if target != null and _target != target:
+		_adopt_target(target)
+
+func get_focus_target() -> Node2D:
+	return _focus_target as Node2D if _focus_target != null and is_instance_valid(_focus_target) else null
+
+func set_duel_assignment(target: Node2D) -> void:
+	_duel_target = target
+	if target != null:
+		if _mode == Mode.RELENT:
+			_relent_t = minf(_relent_t, DUEL_RELENT_TIME)
+		if _target != target:
+			_adopt_target(target)
+
+func get_duel_target() -> Node2D:
+	return _duel_target as Node2D if _duel_target != null and is_instance_valid(_duel_target) else null
+
+func _duel_active(vehicle) -> bool:
+	return _target_is_live(vehicle, _duel_target)

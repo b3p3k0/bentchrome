@@ -10,7 +10,10 @@ var t
 class FakeCar extends Node2D:
 	var hpf := 1.0
 	var last_attacker: Node2D = null
+	var last_attacker_ms := 0
 	var heading := 0.0
+	var real_velocity := Vector2.ZERO
+	var speed := 240.0
 	var hops: Array = []  # escape_hop directions received
 	func get_hp_fraction() -> float:
 		return hpf
@@ -18,6 +21,10 @@ class FakeCar extends Node2D:
 		return hpf * 100.0
 	func escape_hop(dir: Vector2) -> void:
 		hops.append(dir)
+	func get_real_velocity() -> Vector2:
+		return real_velocity
+	func get_speed() -> float:
+		return speed
 
 func _init(runner) -> void:
 	t = runner
@@ -61,6 +68,16 @@ func test_blend_hybrid_interpolates() -> void:
 func test_blend_zero_mix_falls_back_to_aggressor() -> void:
 	var p: Dictionary = DriverScript.blend_params(Vector3.ZERO)
 	t.check_approx(p["near"], 110.0, "blend: zero mix = pure aggressor")
+
+func test_runtime_mix_refreshes_cached_traits() -> void:
+	var d = DriverScript.new()
+	d.mix = Vector3(0, 0, 1)
+	t.check_approx(d._near, 260.0, "runtime mix: opportunist near refreshes after assignment")
+	t.check_approx(d._flee, 0.35, "runtime mix: opportunist flee refreshes after assignment")
+	t.check_approx(d._w_weak, 1.0, "runtime mix: opportunist targeting refreshes after assignment")
+	d.mix = Vector3(0, 1, 0)
+	t.check_approx(d._flank, 1.0, "runtime mix: a second assignment refreshes flank")
+	d.free()
 
 func test_stuck_trips_after_sustained_stall() -> void:
 	var d = DriverScript.new()
@@ -114,6 +131,95 @@ func test_player_priority_breaks_near_ties() -> void:
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
+
+func test_target_commitment_and_switch_margin() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var first := _car(rig[0], Vector2(500, 0), 1.0)
+	var challenger := _car(rig[0], Vector2(900, 0), 1.0)
+	t.check(driver._select_target(rig[1], 0.0) == first, "commit: nearest target adopted")
+	challenger.global_position = Vector2(450, 0)  # a tiny lead, below the switch margin
+	t.check(driver._select_target(rig[1], DriverScript.TARGET_COMMIT_TIME) == first,
+		"commit: near-tie challenger cannot turn the car")
+	challenger.global_position = Vector2(100, 0)  # a meaningful score win
+	t.check(driver._select_target(rig[1], DriverScript.TARGET_REEVAL_TIME) == challenger,
+		"commit: meaningful challenger wins after reevaluation")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_revenge_expires() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var near := _car(rig[0], Vector2(300, 0), 1.0)
+	var attacker := _car(rig[0], Vector2(700, 0), 1.0)
+	rig[1].last_attacker = attacker
+	rig[1].last_attacker_ms = Time.get_ticks_msec()
+	t.check(driver._best_target(rig[1]) == attacker, "revenge: fresh attacker wins the score")
+	rig[1].last_attacker_ms = Time.get_ticks_msec() - int((DriverScript.REVENGE_WINDOW + 1.0) * 1000.0)
+	t.check(driver._best_target(rig[1]) == near, "revenge: expired attacker loses to the nearer fight")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_invalid_committed_target_replaced_immediately() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var first := _car(rig[0], Vector2(100, 0), 1.0)
+	var live := _car(rig[0], Vector2(800, 0), 1.0)
+	t.check(driver._select_target(rig[1], 0.0) == first, "invalid target: first rival committed")
+	first.hpf = 0.0
+	t.check(driver._select_target(rig[1], 0.01) == live,
+		"invalid target: dead rival bypasses commitment immediately")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+func test_predictive_pursuit_leads_real_target_velocity() -> void:
+	var driver = DriverScript.new()
+	var hunter := FakeCar.new()
+	var target := FakeCar.new()
+	target.global_position = Vector2(480, 0)
+	target.real_velocity = Vector2(0, 120)
+	var predicted: Vector2 = driver._predicted_target_position(hunter, target)
+	t.check_approx(predicted.x, 480.0, "pursuit: keeps the target's current range axis")
+	t.check_approx(predicted.y, 90.0, "pursuit: lead caps at 0.75s of real velocity")
+	t.check(driver._pursuit_bearing(hunter, target, 0.0) > 0.0,
+		"pursuit: ordinary rival aims ahead of a crossing target")
+	driver.relentless = true
+	t.check_approx(driver._pursuit_bearing(hunter, target, 0.0), 0.0,
+		"pursuit: relentless Lackey branch keeps the live bearing")
+	hunter.free()
+	target.free()
+	driver.free()
+
+func test_break_snapshots_fixed_drive_by_exit() -> void:
+	var driver = DriverScript.new()
+	var hunter := FakeCar.new()
+	var target := FakeCar.new()
+	target.global_position = Vector2(200, 0)
+	driver._avoid_bias = 0.0
+	driver._enter_break(hunter, target)
+	var exit: Vector2 = driver._break_exit
+	t.check(exit.x >= target.global_position.x + DriverScript.BREAK_EXIT_DIST,
+		"break: endpoint lands through and beyond the target")
+	t.check_approx(absf(exit.y), DriverScript.BREAK_LATERAL_OFFSET,
+		"break: endpoint carries the committed lateral pass")
+	target.global_position = Vector2(-500, 300)
+	t.check(driver._break_exit == exit, "break: moving target cannot curl a committed pass into orbit")
+	hunter.free()
+	target.free()
+	driver.free()
+
+func test_break_requires_separation_to_rearm() -> void:
+	var driver = DriverScript.new()
+	driver._break_rearmed = false
+	driver._mode = DriverScript.Mode.PURSUE
+	driver._update_break_rearm(driver._near * DriverScript.BREAK_REARM_MULT - 1.0)
+	t.check(not driver._break_rearmed, "break: close spacing cannot chain another pass")
+	driver._update_break_rearm(driver._near * DriverScript.BREAK_REARM_MULT)
+	t.check(driver._break_rearmed, "break: real separation rearms the next drive-by")
+	driver.free()
 
 func test_carpin_classification_sets_shun() -> void:
 	var rig := _targeting_rig()

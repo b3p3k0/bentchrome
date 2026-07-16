@@ -9,6 +9,7 @@ const Loader := preload("res://levels/level_loader.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const Economy := preload("res://game/economy.gd")
 const GarageCatalog := preload("res://ui/garage/garage_catalog.gd")
+const FightDirectorScript := preload("res://ai/fight_director.gd")
 
 const RESPAWN_DELAY := 1.6
 const SHIELD_TIME := 2.0
@@ -47,6 +48,7 @@ func _ready() -> void:
 	Economy.reset_level()
 	_randomize_enemies()
 	_watch_enemy_bounties()
+	_attach_ai_fight_director()
 	print("[boot] level ready — WASD to drive, Space/LMB to fire")
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	add_child(load("res://ui/end_screen.tscn").instantiate())
@@ -154,3 +156,9 @@ func _on_enemy_died(enemy: Node) -> void:
 	var attacker: Variant = enemy.get("last_attacker")
 	if attacker is Node2D and is_instance_valid(attacker) and attacker.is_in_group(&"player"):
 		Economy.award_kill(&"boss" if bool(enemy.get("fixed_loadout")) else &"mook")
+
+func _attach_ai_fight_director() -> void:
+	var director = FightDirectorScript.new()
+	director.name = "AIFightDirector"
+	director.setup(self)
+	add_child(director)
