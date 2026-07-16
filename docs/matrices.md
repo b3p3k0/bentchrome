@@ -82,7 +82,7 @@ Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons
 
 Crates: default `amount` 2, `respawn` 20s (per-instance in scenes). Rear missiles and mines are pickup-fed only. One former M crate per arena is now R, preserving authored pickup density. Ammo crates, chase medkits, and nitro share a 36px collection surface plus the contrast pink `pickup_cue` ring, contracting 36→0→36px at 18 pulses/minute; full resources leave the pickup banked. Airborne cars sail over mines and pits alike.
 
-**Floor gating (multi-floor levels only):** tracking weapons can cross floors. Fire, Homing, and Rear include cover on the shooter's floor and locked target's floor while arcing over intermediate terraces; Phantom Phire's explicit `pierces_cover` remains boundary-only. Everything else (MG, Power, Scythe, Molotov, Red Glare, Splat, Breach Turret) is physically same-floor — a cross-floor car is never even signaled. Mines only trigger on the floor they were dropped on.
+**Floor gating (multi-floor levels only):** tracking weapons can cross floors. Fire, Homing, and Rear — plus the tracking specials (Chilblain, Molotov, Chill Out, Man, Rusty 'Poon) — include cover on the shooter's floor and locked target's floor while arcing over intermediate terraces; Phantom Phire's explicit `pierces_cover` remains boundary-only. Everything else (MG, Power, Scythe, Red Glare, Breach Turret) is physically same-floor — a cross-floor car is never even signaled. Mines only trigger on the floor they were dropped on.
 
 | Projectile impact style | Presentation | Terminal? |
 |---|---|---|
@@ -107,18 +107,18 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 | Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 5s (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
 | Toe Jam (Hammertoe) | TRIGGER | 60 flat | — | per arm | — | Armed charge replaces next ram's damage; expires unspent after 5s; bumper glows |
-| Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | none | On hit: burn 3 dps / 15s (range 1360); one recipe, two families |
-| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | none | On hit: disarm 5s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100) |
+| Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | 100°/s, lock 1200 | On hit: burn 3 dps / 15s (range 1360); one recipe, two families; gentle launch lean, not quite homing |
+| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | 100°/s, lock 1200 | On hit: disarm 5s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100); gentle launch lean |
 | Tornado Alley (Cyclone) | TORNADO | 20 dps | — | per use | — | 3s self-centered spin, AoE 2.2× visual footprint (the wind-swirl ring draws exactly at the boundary), same-floor; caught cars: land-mine spin-out + 220 shove once each (launch_immune exempt); steer ×0.3 while spinning; random exit heading; AI holds to 250px |
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
 | Red Glare (Razorback) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
 | Taser (Smoky) | BEAM | 18 dps | instant | 2s bay lock | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; lockout starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
-| Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | none | On hit: slow ×0.5 / 3s (range 1804) |
+| Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | 100°/s, lock 1200 | On hit: slow ×0.5 / 3s (range 1804); gentle launch lean |
 | **Breach Turret (Lackey)** | TURRET | 45 | 1400 | 2.8s | auto-aim, 120°/s traverse | LIVE turret on the hull: tracks the player inside ~1100px independent of heading, LoS-gated, fires through break-offs. Aim lag is the dodge. |
 | **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire (boss exception — keeps the def gate); pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
 
-Contact specials (Taser, Blunt Blaze, Leap, Toe Jam, mines, barrel blasts) are all same-floor only; Phantom Phire is the sole special that crosses floors. Lackey's turret shots are straight (same-floor on terrace levels).
+Contact specials (Taser, Blunt Blaze, Leap, Toe Jam, mines, barrel blasts) are all same-floor only. Cross-floor specials come in two flavors: the tracking class (Chilblain, Molotov, Chill Out, Man, Rusty 'Poon) arcs between the shooter's and locked target's floors, while Phantom Phire crosses via explicit `pierces_cover` (boundary-only). Lackey's turret shots are straight (same-floor on terrace levels).
 
 ---
 
