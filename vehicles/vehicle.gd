@@ -102,6 +102,14 @@ var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
+## Universal non-MG refire lockout: firing ANY non-MG weapon (missile, mine,
+## special) blocks every non-MG weapon for WEAPON_LOCK seconds — one clock for
+## the whole bay, players and AI alike. The MG (its own overheat) is untouched.
+## Bosses (fixed_loadout) run their own valve; weapon_lock_exempt opts a level
+## out (the Route 666 chase self-limits in its drivers).
+static var WEAPON_LOCK := 2.0
+var _weapon_lock_t := 0.0
+var weapon_lock_exempt := false
 var _mg_alt := 0          # staggered multi-barrel MG: which barrel fires next
 var _repairing := false
 var _repair_anchor := Vector2.ZERO
@@ -181,14 +189,22 @@ func _ready() -> void:
 	if start_floor >= 1:
 		_adopt_floor(start_floor)  # deferred masks land before the first physics tick
 	if faction != &"player":
-		# Same loadout as the player, a third of the trigger speed — slower
-		# still on the easier tiers (difficulty knob is 1.0 on hard).
+		# The MG keeps the AI trigger discipline (a third of the player rate,
+		# slower still on easier tiers — the knob is 1.0 on hard).
 		var trigger_scale := ai_cooldown_scale * Difficulty.knob(&"ai_fire_cooldown")
 		if _mg_mount:
 			_mg_mount.cooldown_scale = trigger_scale
+		if fixed_loadout:
+			# Bosses run their own cadence on the secondary too.
+			var boss_secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
+			if boss_secondary:
+				boss_secondary.cooldown_scale = trigger_scale
+	if not fixed_loadout:
+		# Ordinary cars (player AND AI): the unified WEAPON_LOCK is the ONLY
+		# non-MG cadence, so the secondary mount must never self-gate.
 		var secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
 		if secondary:
-			secondary.cooldown_scale = trigger_scale
+			secondary.cooldown_scale = 0.0
 	if _rack and _special:
 		# Selection drives what the special/secondary path fires next. The lock
 		# forces a trigger release before the newly selected slot can fire.
@@ -431,6 +447,8 @@ func _physics_process(delta: float) -> void:
 			_rack.select_prev()
 		if intent.get("weapon_next", false):
 			_rack.select_next()
+	if _weapon_lock_t > 0.0:
+		_weapon_lock_t = maxf(_weapon_lock_t - delta, 0.0)
 	if _special and _muzzle:
 		var pressed: bool = intent.get("fire_selected", false)
 		if not pressed:
@@ -438,11 +456,16 @@ func _physics_process(delta: float) -> void:
 		var wants_fire := pressed and not _fire_lock
 		if _rack:
 			wants_fire = wants_fire and _rack.can_consume()
+		# Universal non-MG lockout — one recently-fired weapon holds the whole
+		# bay for WEAPON_LOCK seconds (bosses and chase levels opt out).
+		if _weapon_lock_t > 0.0 and not fixed_loadout and not weapon_lock_exempt:
+			wants_fire = false
 		# Def captured BEFORE the shot: consume() can auto-cycle the selection.
 		var firing_def: WeaponDef = _rack.selected_def() if _rack else null
 		var launch: Dictionary = secondary_launch(firing_def)
 		if _special.activate(wants_fire, launch.origin, launch.direction, self) and _rack:
 			_rack.consume()
+			_weapon_lock_t = WEAPON_LOCK
 			# Mines announce the drop; projectile fire is voiced by the mount.
 			if is_in_group(&"player") and firing_def and firing_def.kind == WeaponDef.Kind.DROP:
 				var audio_m := get_node_or_null(^"/root/AudioDirector")

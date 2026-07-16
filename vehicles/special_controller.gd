@@ -15,6 +15,10 @@ const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-hones
 const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
 
 const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
+## Post-burst gate on a sustained special (Taser/Blunt Blaze) for ordinary cars.
+## Matches Vehicle.WEAPON_LOCK — the whole non-MG bay refires on one 2s clock.
+## Bosses keep the def's authored (long) cooldown instead; see _sustained_lock().
+const SUSTAINED_LOCK := 2.0
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
 
@@ -327,6 +331,20 @@ func _beam_tick(delta: float) -> void:
 	if _beam_t <= 0.0:
 		_end_beam()
 
+## Sustained post-burst lockout: ordinary cars refire on the shared 2s clock;
+## bosses keep the def's own (long) cooldown — their pressure valve is authored.
+func _sustained_lock(def_cooldown: float) -> float:
+	if _is_boss():
+		return maxf(def_cooldown, 0.0)
+	return SUSTAINED_LOCK
+
+func _is_boss() -> bool:
+	var p := get_parent()
+	if p == null:
+		return false
+	var flag: Variant = p.get(&"fixed_loadout")
+	return flag is bool and flag
+
 func _end_beam(arm_cooldown := true) -> void:
 	var cooldown := _beam_def.cooldown if _beam_def else 0.0
 	var was_active := _beam_def != null
@@ -334,7 +352,7 @@ func _end_beam(arm_cooldown := true) -> void:
 	_beam_def = null
 	_beam_t = 0.0
 	if arm_cooldown and was_active:
-		_sustained_cooldown_t = maxf(cooldown, 0.0)
+		_sustained_cooldown_t = _sustained_lock(cooldown)
 	if _beam_fx:
 		_beam_fx.queue_free()
 		_beam_fx = null
@@ -547,7 +565,7 @@ func _end_flame(arm_cooldown := true) -> void:
 	_flame_t = 0.0
 	_flame_def = null
 	if arm_cooldown and was_active:
-		_sustained_cooldown_t = maxf(cooldown, 0.0)
+		_sustained_cooldown_t = _sustained_lock(cooldown)
 	if _flame_vis:
 		_flame_vis.queue_free()
 		_flame_vis = null

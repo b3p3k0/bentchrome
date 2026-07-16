@@ -28,6 +28,8 @@ var _won := false
 func _ready() -> void:
 	super()
 	add_to_group(&"chase_host")
+	if _player:
+		_player.weapon_lock_exempt = true  # Route 666 self-limits fire in its drivers
 	var seed_val := randi() & 0x7FFFFFFF
 	course = CourseScript.new()
 	course.pre_roll(seed_val)

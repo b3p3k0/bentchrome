@@ -194,6 +194,7 @@ func test_dry_slot_does_not_chain_fire_next_weapon() -> void:
 
 	stub.intent = {}  # release...
 	await t.physics_frame
+	car._weapon_lock_t = 0.0  # isolate the fire-lock check from the 2s bay lockout
 	stub.intent = {"fire_selected": true}  # ...and a fresh press fires it
 	for i in 3:
 		await t.physics_frame

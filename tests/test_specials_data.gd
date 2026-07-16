@@ -18,6 +18,11 @@ class SustainedShooter extends CharacterBody2D:
 	func body_metrics() -> Dictionary:
 		return {"half_len": 26.0}
 
+## A boss shooter keeps the def's authored (long) sustained lockout — the 2s
+## bay collapse is for ordinary cars only.
+class BossShooter extends SustainedShooter:
+	var fixed_loadout := true
+
 func _init(runner) -> void:
 	t = runner
 
@@ -138,16 +143,16 @@ func test_sustained_cooldown_starts_after_flame_finishes() -> void:
 	t.check_approx(sc.sustained_cooldown_remaining(), 0.0,
 		"sustained cooldown: firing duration pays none of the lockout")
 	sc._physics_process(0.21)
-	t.check_approx(sc.sustained_cooldown_remaining(), 15.0,
-		"sustained cooldown: full clock arms when flame ends")
+	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+		"sustained cooldown: ordinary car arms the 2s bay clock when flame ends")
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
 		"sustained cooldown: immediate repeat is rejected")
-	sc._physics_process(14.9)
+	sc._physics_process(1.9)
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat stays locked before fifteen seconds")
+		"sustained cooldown: repeat stays locked before two seconds")
 	sc._physics_process(0.1)
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat opens exactly after fifteen seconds")
+		"sustained cooldown: repeat opens exactly after two seconds")
 	t.root.remove_child(shooter)
 	shooter.free()
 
@@ -155,7 +160,7 @@ func test_twin_sustained_barrels_share_early_end_lockout() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
 	t.current_scene = container
-	var shooter := CharacterBody2D.new()
+	var shooter := BossShooter.new()  # Lackey: bosses keep the 15s twin lockout
 	container.add_child(shooter)
 	var sc = ControllerScript.new()
 	shooter.add_child(sc)
