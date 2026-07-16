@@ -167,6 +167,9 @@ var _target_reeval_t := 0.0
 static var TARGET_COMMIT_TIME := 2.0
 static var TARGET_REEVAL_TIME := 0.5
 static var TARGET_SWITCH_MARGIN := 0.20
+static var NON_FOCUS_PLAYER_PENALTY := 0.35
+var _focus_target: Variant = null  # scene-local director lease; validate before typing
+var _focus_slots_filled := false
 
 ## Normalizes a mix and blends the pure trait sets (zero mix = pure aggressor).
 static func blend_params(m: Vector3) -> Dictionary:
@@ -735,6 +738,10 @@ func _select_target(vehicle, delta := -1.0) -> Node2D:
 	# supplies physics delta and therefore rides the commitment machinery.
 	if delta < 0.0:
 		return _best_target(vehicle)
+	if _target_is_live(vehicle, _focus_target):
+		if _target != _focus_target:
+			return _adopt_target(_focus_target as Node2D)
+		return _focus_target as Node2D
 	_target_commit_t = maxf(_target_commit_t - delta, 0.0)
 	_target_reeval_t = maxf(_target_reeval_t - delta, 0.0)
 	if not _target_is_valid(vehicle, _target):
@@ -777,10 +784,13 @@ func _target_score(vehicle, candidate: Node2D) -> float:
 	var near_term := 1.0 - d / SCAN
 	var hpf: float = candidate.get_hp_fraction() if candidate.has_method(&"get_hp_fraction") else 1.0
 	var score: float = _w_near * near_term + _w_weak * (1.0 - hpf)
-	if candidate == _recent_grudge(vehicle):
+	var grudge: Variant = _recent_grudge(vehicle)
+	if candidate == grudge:
 		score += REVENGE_BONUS
 	if candidate.is_in_group(&"player"):
 		score += PLAYER_PRIORITY
+		if _focus_slots_filled and _focus_target == null and candidate != grudge:
+			score -= NON_FOCUS_PLAYER_PENALTY
 	if not Floors.same_floor(vehicle, candidate):
 		score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
 	return score
@@ -811,3 +821,15 @@ func _target_is_live(vehicle, candidate: Variant) -> bool:
 	if candidate.has_method(&"get_hp") and candidate.get_hp() <= 0.0:
 		return false
 	return true
+
+## AIFightDirector's only write seam. Null means this rival keeps its free-for-
+## all target scoring; slots_filled applies the soft player penalty only while
+## somebody else is visibly carrying the main event.
+func set_focus_assignment(target: Node2D, slots_filled: bool) -> void:
+	_focus_target = target
+	_focus_slots_filled = slots_filled
+	if target != null and _target != target:
+		_adopt_target(target)
+
+func get_focus_target() -> Node2D:
+	return _focus_target as Node2D if _focus_target != null and is_instance_valid(_focus_target) else null

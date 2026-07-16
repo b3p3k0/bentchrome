@@ -7,6 +7,7 @@ extends Node2D
 
 const Loader := preload("res://levels/level_loader.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+const FightDirectorScript := preload("res://ai/fight_director.gd")
 
 const RESPAWN_DELAY := 1.6
 const SHIELD_TIME := 2.0
@@ -37,6 +38,7 @@ func _ready() -> void:
 		set_process(false)
 		return
 	_randomize_enemies()
+	_attach_ai_fight_director()
 	print("[boot] level ready — WASD to drive, Space/LMB to fire")
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	add_child(load("res://ui/end_screen.tscn").instantiate())
@@ -121,3 +123,9 @@ func _randomize_enemies() -> void:
 	for i in picks.size():
 		enemies[i].set_stats(load("res://data/vehicles/%s.tres" % picks[i]))
 		enemies[i].get_node("Driver").mix = Loader.mix_for_car(picks[i])
+
+func _attach_ai_fight_director() -> void:
+	var director = FightDirectorScript.new()
+	director.name = "AIFightDirector"
+	director.setup(self)
+	add_child(director)

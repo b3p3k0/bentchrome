@@ -25,6 +25,7 @@ const ImpactScene := preload("res://weapons/impact_fx.tscn")
 const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
 const PulseRingScript := preload("res://vehicles/pulse_ring.gd")
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const FightDirectorScript := preload("res://ai/fight_director.gd")
 
 const FEED_LINES := 4
 const FEED_TTL := 4.0
@@ -170,6 +171,10 @@ func _spawn_host_side() -> void:
 			var ai := _spawn_car(EnemyScene, spawns[i], car_id)
 			ai.get_node("Driver").mix = Loader.mix_for_car(car_id)
 			_actor_cars.append(ai)
+	var fight_director = FightDirectorScript.new()
+	fight_director.name = "AIFightDirector"
+	fight_director.setup(_arena)
+	_arena.add_child(fight_director)
 	# The director gets SHARED references — swaps and tallies write through.
 	_director = DirectorScript.new()
 	_director.name = "MatchDirector"

@@ -7,6 +7,7 @@ extends Node2D
 
 const Schema := preload("res://levels/level_schema.gd")
 const Loader := preload("res://levels/level_loader.gd")
+const FightDirectorScript := preload("res://ai/fight_director.gd")
 
 func _ready() -> void:
 	var path := _resolve_path()
@@ -25,6 +26,10 @@ func _ready() -> void:
 		_bail("custom_level: %d validation error(s) in %s" % [errors.size(), path])
 		return
 	Loader.build(level, self)
+	var fight_director = FightDirectorScript.new()
+	fight_director.name = "AIFightDirector"
+	fight_director.setup(self)
+	add_child(fight_director)
 	add_child(load("res://ui/hud.tscn").instantiate())
 	add_child(load("res://ui/pause_menu.tscn").instantiate())
 	add_child(load("res://ui/end_screen.tscn").instantiate())
