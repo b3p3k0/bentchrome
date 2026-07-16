@@ -61,6 +61,10 @@ func _physics_process(delta: float) -> void:
 
 func _trigger(body: CharacterBody2D) -> void:
 	var Combat := preload("res://game/combat.gd")
+	# Mines can outlive the vehicle that laid them. A freed dropper cannot cross
+	# Combat.scale()'s typed Node boundary, so treat an orphaned mine as an
+	# environmental hit (the same contract as a mine with no recorded dropper).
+	var attacker: Node = dropper if is_instance_valid(dropper) else null
 	if body.is_in_group(&"player"):
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		if audio:
@@ -87,9 +91,9 @@ func _trigger(body: CharacterBody2D) -> void:
 		var belly: float = float(soft) if soft is float else 1.0
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body and is_instance_valid(dropper) and dropper is Node2D:
-					body.last_attacker = dropper
-				child.take_damage(damage * belly * Combat.scale(dropper, body))
+				if "last_attacker" in body and attacker is Node2D:
+					body.last_attacker = attacker
+				child.take_damage(damage * belly * Combat.scale(attacker, body))
 				break
 	var scene := get_tree().current_scene
 	if scene:
