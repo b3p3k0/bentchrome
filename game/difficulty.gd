@@ -34,6 +34,9 @@ static var TIERS := {
 		&"boss_break_time": 1.6,        # longer breathers, dominance shape intact
 		&"goliath_hp": 0.7,             # trims BOTH phase pools
 		&"goliath_ram_cooldown": 1.5,   # rarer phase-2 charges
+		&"reward_scale": 1.0,           # economy: earning is identical on every tier
+		&"penalty_scale": 0.5,          # ...but easy tiers lose less on death/falls
+		&"price_scale": 0.75,           # ...and shop cheaper (docs/garage/economy.md)
 	},
 	Tier.MEDIUM: {
 		&"player_damage_taken": 0.75,
@@ -44,6 +47,9 @@ static var TIERS := {
 		&"boss_break_time": 1.25,
 		&"goliath_hp": 0.85,
 		&"goliath_ram_cooldown": 1.2,
+		&"reward_scale": 1.0,
+		&"penalty_scale": 0.75,
+		&"price_scale": 0.9,
 	},
 	Tier.HARD: {
 		&"player_damage_taken": 1.0,
@@ -54,6 +60,9 @@ static var TIERS := {
 		&"boss_break_time": 1.0,
 		&"goliath_hp": 1.0,
 		&"goliath_ram_cooldown": 1.0,
+		&"reward_scale": 1.0,
+		&"penalty_scale": 1.0,
+		&"price_scale": 1.0,
 	},
 }
 
