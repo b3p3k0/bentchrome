@@ -59,8 +59,14 @@ const CROSS_FLOOR_PENALTY := 0.1
 # BREAK: the spacing move. Closing under _near veers off at a committed angle
 # instead of retreating — an arcing strafing run that keeps momentum and
 # produces drive-by shots as the nose sweeps past. Low-HP flee stays EVADE.
-const BREAK_TIME := 2.5
+static var BREAK_TIME := 2.5
 const BREAK_ANGLE := 2.27  # ~130° off the target bearing
+static var PURSUIT_MAX_LEAD := 0.75
+static var PURSUIT_SPEED_FLOOR := 240.0
+static var BREAK_EXIT_DIST := 420.0
+static var BREAK_LATERAL_OFFSET := 140.0
+static var BREAK_ARRIVE := 100.0
+static var BREAK_REARM_MULT := 1.5
 
 # Weave on long approaches: breaks the beeline, dodges straight-line missiles,
 # and de-syncs the pack (per-driver phase).
@@ -141,6 +147,8 @@ var _last_pin := Vector2.INF   # where this escape episode started
 var _escape_dir := Vector2.RIGHT  # committed world-space CLEAR direction
 var _break_t := 0.0
 var _break_side := 1.0   # committed at BREAK entry so the arc can't flip sides
+var _break_exit := Vector2.INF  # ordinary drive-by endpoint; bosses keep live-bearing BREAK
+var _break_rearmed := true      # pass must establish separation before another BREAK
 var _weave_t := 0.0
 var _weave_phase := 0.0
 var _engage_t := 0.0     # pressure meter vs the player
@@ -239,6 +247,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	var to_target: Vector2 = target.global_position - vehicle.global_position
 	var dist := to_target.length()
 	var bearing := to_target.angle()
+	_update_break_rearm(dist)
 
 	_update_feelers(vehicle)
 
@@ -350,17 +359,19 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			_mode = Mode.PURSUE
 	elif _mode == Mode.BREAK:
 		_break_t -= delta
-		if _break_t <= 0.0 or dist > _far:
+		var pass_done: bool = _break_t <= 0.0
+		if relentless:
+			pass_done = pass_done or dist > _far
+		else:
+			pass_done = pass_done or vehicle.global_position.distance_to(_break_exit) <= BREAK_ARRIVE
+		if pass_done:
 			_mode = Mode.PURSUE
-	elif dist < _near and not scavenging:
+	elif dist < _near and not scavenging and _break_rearmed:
 		# (A crate isn't a threat — drive straight over it, no spacing arc.)
 		# Bosses used to take HALF-length arcs here — that was the close-combat
 		# suffocation Kevin's playtest flagged. Everyone arcs full-length now;
 		# boss pressure comes from the turret, not the bumper.
-		_mode = Mode.BREAK
-		_break_t = BREAK_TIME
-		# Veer toward the clearer side (feelers), committed for the whole arc.
-		_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+		_enter_break(vehicle, target)
 
 	var intent: Dictionary
 	if _mode == Mode.EVADE:
@@ -391,7 +402,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		# The arc: veer off the (live) bearing at the committed angle — full
 		# throttle, guns free if the nose happens to sweep across the target
 		# (and the target shares our terrace — MG lead can't climb).
-		var veer := wrapf(bearing + BREAK_ANGLE * _break_side - vehicle.heading, -PI, PI)
+		var break_bearing: float = bearing + BREAK_ANGLE * _break_side if relentless \
+			else (_break_exit - vehicle.global_position).angle()
+		var veer := wrapf(break_bearing - vehicle.heading, -PI, PI)
 		var aim := wrapf(bearing - vehicle.heading, -PI, PI)
 		var los := Floors.same_floor(vehicle, target) and _los_clear(vehicle, target)
 		intent = {
@@ -402,7 +415,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 			"boost": false,
 		}
 	else:
-		var approach := bearing
+		var approach := bearing if relentless else _pursuit_bearing(vehicle, target, bearing)
 		if _flank > 0.0 and dist > _near * 1.5:
 			approach += deg_to_rad(35.0 * _flank)
 		var diff := wrapf(approach - vehicle.heading, -PI, PI)
@@ -432,6 +445,46 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_classify_car_pin(target, dist)
 		return _on_stuck(vehicle, target, bearing)
 	return intent
+
+## Lightweight intercept: lead grows with range, caps quickly, and uses the
+## target's real post-collision velocity. A slow pursuer still plans with the
+## denominator floor so heavy cars do not aim several seconds into fantasy.
+func _predicted_target_position(vehicle, target: Node2D) -> Vector2:
+	var target_velocity := Vector2.ZERO
+	if target.has_method(&"get_real_velocity"):
+		target_velocity = target.get_real_velocity()
+	var pursuer_speed := PURSUIT_SPEED_FLOOR
+	if vehicle.has_method(&"get_speed"):
+		pursuer_speed = maxf(float(vehicle.get_speed()), PURSUIT_SPEED_FLOOR)
+	var distance: float = vehicle.global_position.distance_to(target.global_position)
+	var lead := minf(distance / pursuer_speed, PURSUIT_MAX_LEAD)
+	return target.global_position + target_velocity * lead
+
+func _pursuit_bearing(vehicle, target: Node2D, live_bearing: float) -> float:
+	if relentless:
+		return live_bearing  # Lackey keeps the authored live-bearing movement contract
+	return (_predicted_target_position(vehicle, target) - vehicle.global_position).angle()
+
+## Snapshot a fly-through line once. The target can turn after this and the
+## rival still finishes the readable pass instead of curling into an orbit.
+func _enter_break(vehicle, target: Node2D) -> void:
+	_mode = Mode.BREAK
+	_break_t = BREAK_TIME
+	_break_rearmed = false
+	_break_side = 1.0 if _avoid_bias <= 0.0 else -1.0
+	if relentless:
+		_break_exit = Vector2.INF
+		return
+	var predicted: Vector2 = _predicted_target_position(vehicle, target)
+	var through: Vector2 = (predicted - vehicle.global_position).normalized()
+	if through == Vector2.ZERO:
+		through = Vector2.RIGHT.rotated(vehicle.heading)
+	_break_exit = predicted + through * BREAK_EXIT_DIST \
+		+ through.orthogonal() * _break_side * BREAK_LATERAL_OFFSET
+
+func _update_break_rearm(dist: float) -> void:
+	if not _break_rearmed and _mode != Mode.BREAK and dist >= _near * BREAK_REARM_MULT:
+		_break_rearmed = true
 
 ## Dominance-scaled boss breather: +1 (player untouched, boss dying) = barely
 ## any mercy; -1 (player dying, boss healthy) = a real window to regroup.

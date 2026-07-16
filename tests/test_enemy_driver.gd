@@ -12,6 +12,8 @@ class FakeCar extends Node2D:
 	var last_attacker: Node2D = null
 	var last_attacker_ms := 0
 	var heading := 0.0
+	var real_velocity := Vector2.ZERO
+	var speed := 240.0
 	var hops: Array = []  # escape_hop directions received
 	func get_hp_fraction() -> float:
 		return hpf
@@ -19,6 +21,10 @@ class FakeCar extends Node2D:
 		return hpf * 100.0
 	func escape_hop(dir: Vector2) -> void:
 		hops.append(dir)
+	func get_real_velocity() -> Vector2:
+		return real_velocity
+	func get_speed() -> float:
+		return speed
 
 func _init(runner) -> void:
 	t = runner
@@ -168,6 +174,52 @@ func test_invalid_committed_target_replaced_immediately() -> void:
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
+
+func test_predictive_pursuit_leads_real_target_velocity() -> void:
+	var driver = DriverScript.new()
+	var hunter := FakeCar.new()
+	var target := FakeCar.new()
+	target.global_position = Vector2(480, 0)
+	target.real_velocity = Vector2(0, 120)
+	var predicted: Vector2 = driver._predicted_target_position(hunter, target)
+	t.check_approx(predicted.x, 480.0, "pursuit: keeps the target's current range axis")
+	t.check_approx(predicted.y, 90.0, "pursuit: lead caps at 0.75s of real velocity")
+	t.check(driver._pursuit_bearing(hunter, target, 0.0) > 0.0,
+		"pursuit: ordinary rival aims ahead of a crossing target")
+	driver.relentless = true
+	t.check_approx(driver._pursuit_bearing(hunter, target, 0.0), 0.0,
+		"pursuit: relentless Lackey branch keeps the live bearing")
+	hunter.free()
+	target.free()
+	driver.free()
+
+func test_break_snapshots_fixed_drive_by_exit() -> void:
+	var driver = DriverScript.new()
+	var hunter := FakeCar.new()
+	var target := FakeCar.new()
+	target.global_position = Vector2(200, 0)
+	driver._avoid_bias = 0.0
+	driver._enter_break(hunter, target)
+	var exit: Vector2 = driver._break_exit
+	t.check(exit.x >= target.global_position.x + DriverScript.BREAK_EXIT_DIST,
+		"break: endpoint lands through and beyond the target")
+	t.check_approx(absf(exit.y), DriverScript.BREAK_LATERAL_OFFSET,
+		"break: endpoint carries the committed lateral pass")
+	target.global_position = Vector2(-500, 300)
+	t.check(driver._break_exit == exit, "break: moving target cannot curl a committed pass into orbit")
+	hunter.free()
+	target.free()
+	driver.free()
+
+func test_break_requires_separation_to_rearm() -> void:
+	var driver = DriverScript.new()
+	driver._break_rearmed = false
+	driver._mode = DriverScript.Mode.PURSUE
+	driver._update_break_rearm(driver._near * DriverScript.BREAK_REARM_MULT - 1.0)
+	t.check(not driver._break_rearmed, "break: close spacing cannot chain another pass")
+	driver._update_break_rearm(driver._near * DriverScript.BREAK_REARM_MULT)
+	t.check(driver._break_rearmed, "break: real separation rearms the next drive-by")
+	driver.free()
 
 func test_carpin_classification_sets_shun() -> void:
 	var rig := _targeting_rig()
