@@ -14,7 +14,9 @@ update the matching row here.
 
 Source: `assets/data/roster.json` (importer → `data/vehicles/*.tres`) + `data/vehicles/lackey.tres` (hand-authored, roster-external).
 The roster also binds each car's special (`special_def` → `data/weapons/*.tres`) and AI temperament (`ai_archetype`); the importer validates the whole contract and `tests/test_roster_contract.gd` enforces it. Add-a-car checklist: `docs/car_authoring.md`.
-Stats are design-scale 1-10; HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge default to 1 / 12s where the roster doesn't override.
+> ⚠️ The numeric columns below (Accel/Top/Handling/Armor/Sp.Pwr/Mass/HP **and Cap/Recharge**) predate the 1-20 stat rebase and the 2026-07 car-tuner canonization — **`assets/data/roster.json` is the sole truth** (the golden-lock lives in `tests/test_stat_rebase.gd`). Treat this table as a lore/archetype map, not live stats, until it is refreshed.
+
+HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge default to 1 / 12s where the roster doesn't override.
 
 | Car | Driver | Accel | Top | Handling | Armor | Sp.Pwr | Mass | HP | Special | Cap | Recharge | Archetype |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -66,7 +68,7 @@ Source: `resources/stat_curves.gd` — linear lerp across 1-10.
 
 ## Pickup Weapons (shared by every car)
 
-Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons/missile_*.tres`, `data/weapons/mine_*.tres`, `vehicles/weapon_rack.gd` (ammo), `environment/mine.gd` (mine behavior). Max range = speed × lifetime. AI fires all mounts at 3× cooldown (`ai_cooldown_scale`).
+Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons/missile_*.tres`, `data/weapons/mine_*.tres`, `vehicles/weapon_rack.gd` (ammo), `environment/mine.gd` (mine behavior). Max range = speed × lifetime. AI fires the MG at 3× cooldown (`ai_cooldown_scale`); every non-MG weapon runs on the same flat 2s bay lock the player has (`Vehicle.WEAPON_LOCK`). Non-special ammo slots are uncapped.
 
 | Weapon | Dmg | Speed | Rate/Cooldown | Tracking | Max Range | Start/Cap | Notes |
 |---|---|---|---|---|---|---|---|
@@ -96,11 +98,11 @@ Off-screen personal hit confirmation is separate from world impacts: meaningful 
 
 ## Specials (one per car)
 
-Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind legend — PROJECTILE fires from the SecondaryMount; BEAM/DASH/TRIGGER/FLAME/DROP/TORNADO/PULSE have handlers in SpecialController. Cap/Recharge in the Vehicles table. Hubcap also runs the fleet's only staggered dual MG (`mg_points`: one mount, standard 12/s and heat, origin alternates barrels).
+Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind legend — PROJECTILE fires from the SecondaryMount; BEAM/DASH/TRIGGER/FLAME/DROP/TORNADO/PULSE have handlers in SpecialController. Cap/Recharge in the Vehicles table. **Lockout column** = the unified **2s non-MG bay lock** (`Vehicle.WEAPON_LOCK`): firing ANY non-MG weapon (missile/mine/special) holds the whole bay 2s, players and AI alike; bosses (`fixed_loadout`) instead keep the def's authored long lockout (Lackey's 15s twin) and the Route 666 chase opts out (`weapon_lock_exempt`). Non-special ammo slots are uncapped (`WeaponRack.UNCAPPED`). Hubcap also runs the fleet's only staggered dual MG (`mg_points`: one mount, standard 12/s and heat, origin alternates barrels).
 
 | Special (Car) | Kind | Dmg | Speed | Cooldown | Tracking | The rest of the story |
 |---|---|---|---|---|---|---|
-| Blunt Blaze (Bumper) | FLAME | 34 dps | — | 15s post-fire | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
+| Blunt Blaze (Bumper) | FLAME | 34 dps | — | 2s bay lock | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
 | Leap (Cricket) | DASH | ram @1400 | 1400 | per use | lock ≤700 | 0.4s body-check (~560px), sails over obstacles; dirt activation snapshots ×1.15 ram damage through surface crossings; hit: victim slow ×0.5/2s, caster invuln 2s |
 | Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 5s (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
@@ -111,10 +113,10 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
 | Red Glare (Razorback) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
-| Taser (Smoky) | BEAM | 18 dps | instant | 15s post-fire | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; cooldown starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
+| Taser (Smoky) | BEAM | 18 dps | instant | 2s bay lock | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; lockout starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
 | Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | none | On hit: slow ×0.5 / 3s (range 1804) |
 | **Breach Turret (Lackey)** | TURRET | 45 | 1400 | 2.8s | auto-aim, 120°/s traverse | LIVE turret on the hull: tracks the player inside ~1100px independent of heading, LoS-gated, fires through break-offs. Aim lag is the dodge. |
-| **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire; pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
+| **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire (boss exception — keeps the def gate); pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
 
 Contact specials (Taser, Blunt Blaze, Leap, Toe Jam, mines, barrel blasts) are all same-floor only; Phantom Phire is the sole special that crosses floors. Lackey's turret shots are straight (same-floor on terrace levels).
 
@@ -237,7 +239,7 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | AI-vs-AI damage | ×0.35 | the governor: their brawls are theater |
 | AI mercy | victim < 10% HP → AI damage ×0 | player damage ×1 both directions on hard; easier tiers soften incoming only (see Difficulty) |
 | Rear weak spot | ×1.5 (Lackey) | projectiles whose travel direction ≈ victim facing |
-| AI fire rate | ×3 cooldown (Lackey ×1.5) | all mounts; heat self-scales; × `ai_fire_cooldown` difficulty knob (turrets too) |
+| AI fire rate | ×3 cooldown (Lackey ×1.5) | **MG only** (heat self-scales; × `ai_fire_cooldown` difficulty knob; turrets too). Non-MG weapons run the flat 2s `Vehicle.WEAPON_LOCK` for player and AI alike; bosses (`fixed_loadout`) exempt, Route 666 chase opts out |
 | Boost | 100 tank, −5/s held | ×2.0 accel, ×1.5 top; extinguishes burn; no refill — except chase nitro bottles (+35, `boost_pickup.tscn`) |
 | Handbrake | grip ×0.15, decel 400 | the drift tool |
 | Jump-pad launch | vz 760, gravity 1300 | needs ≥120 px/s; airborne = wall-collisions only; pads are square 224 omnidirectional caution pyramids, floor-locked on terrace levels (`floor_index`) |
