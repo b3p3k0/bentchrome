@@ -97,8 +97,14 @@ func test_grounded_car_pulls_in_and_shrinks_visuals_only() -> void:
 	var f := _fixture(Vector2(400, 200), Vector2(120, 50))
 	var car: Vehicle = f.car
 	var body_scale_before: Vector2 = car.scale
+	var camera := car.get_node(^"Camera2D") as Camera2D
+	camera.make_current()
+	camera.reset_smoothing()
+	camera.force_update_scroll()
+	var camera_anchor: Vector2 = camera.get_screen_center_position()
 	for i in 20:
 		await t.physics_frame
+	camera.force_update_scroll()
 	var visual := car.get_node(^"Visual") as Node2D
 	var shadow := car.get_node(^"Shadow") as Node2D
 	t.check(car.global_position.x > 119.0 and car.global_position.y < 48.0
@@ -110,6 +116,51 @@ func test_grounded_car_pulls_in_and_shrinks_visuals_only() -> void:
 		"pit fall: shadow fades and tightens while the car drops")
 	t.check(car.scale == body_scale_before,
 		"pit fall: physics body node scale never changes")
+	t.check(camera.top_level
+			and camera.get_screen_center_position().is_equal_approx(camera_anchor),
+		"pit fall: moving physics body cannot drag the player's world view")
+	_done(f)
+
+func test_camera_hold_survives_death_delay_and_releases_at_respawn() -> void:
+	var f := _fixture(Vector2(400, 200), Vector2(120, 50))
+	var car: Vehicle = f.car
+	var health: Health = f.health
+	# Enemy fixtures normally free themselves on death. Keep this one alive so
+	# the test can exercise the campaign-sized dead interval and respawn seam.
+	var death_callback := Callable(car, "_on_died")
+	if health.died.is_connected(death_callback):
+		health.died.disconnect(death_callback)
+	var camera := car.get_node(^"Camera2D") as Camera2D
+	camera.make_current()
+	camera.reset_smoothing()
+	camera.force_update_scroll()
+	var camera_anchor: Vector2 = camera.get_screen_center_position()
+	for i in 55:  # fall, impact, and lethal finish
+		await t.physics_frame
+	for i in 100:  # the campaign's normal 1.6-second post-death delay
+		await t.physics_frame
+	camera.force_update_scroll()
+	t.check(bool(f.died[0]) and health.hp <= 0.0,
+		"pit camera: fixture reaches the real lethal finish before respawn")
+	t.check(camera.get_screen_center_position().is_equal_approx(camera_anchor),
+		"pit camera: dead interval cannot consume a delayed pitward camera chase")
+	var spawn_point := Vector2(-600, -350)
+	car.respawn(spawn_point, 0.0, 0.0)
+	camera.force_update_scroll()
+	t.check(not camera.top_level
+			and camera.get_screen_center_position().is_equal_approx(spawn_point),
+		"pit camera: respawn releases the hold directly onto the spawn point")
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var keep_enabled: bool = gs.camera_look_ahead_enabled
+	var keep_distance: float = gs.camera_look_ahead_distance
+	gs.camera_look_ahead_enabled = true
+	gs.camera_look_ahead_distance = 140.0
+	car.velocity = Vector2(400, 0)
+	car._process(0.25)
+	t.check(camera.position.x > 100.0,
+		"pit camera: normal driving look-ahead resumes after the hold releases")
+	gs.camera_look_ahead_enabled = keep_enabled
+	gs.camera_look_ahead_distance = keep_distance
 	_done(f)
 
 func test_repeated_trigger_does_not_retarget_or_restart() -> void:

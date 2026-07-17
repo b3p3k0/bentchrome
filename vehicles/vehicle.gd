@@ -115,6 +115,8 @@ var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
 var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
 var _camera_base_cached := false
+var _pit_camera_held := false  # latches past lethal impact until respawn/teardown
+var _pit_camera_world_position := Vector2.ZERO
 var _zoom_was_pressed := false
 var _locator_left := 0.0
 var _locator_elapsed := 0.0
@@ -312,7 +314,12 @@ func _process(delta: float) -> void:
 	_zoom_was_pressed = zoom_pressed
 	var target_zoom: float = gs.zoom_overview if gs.overview else gs.zoom_combat
 	camera.zoom = camera.zoom.lerp(Vector2.ONE * target_zoom, minf(8.0 * delta, 1.0))
-	_update_camera_look_ahead(camera, delta, gs)
+	if _pit_camera_held:
+		# Top-level mode keeps the body tween out of this transform entirely; the
+		# assignment also makes the held contract explicit for every process frame.
+		camera.global_position = _pit_camera_world_position
+	else:
+		_update_camera_look_ahead(camera, delta, gs)
 
 ## World-velocity lead: preserve object scale and spend some trailing view to
 ## show the road the car is actually eating. The vehicle node never rotates, so
@@ -340,6 +347,21 @@ func _update_camera_look_ahead(camera: Camera2D, delta: float, gs: Node = null) 
 			and not _repairing and not _falling:
 		target += camera_look_ahead_for(velocity, distance)
 	camera.position = camera.position.lerp(target, minf(5.0 * delta, 1.0))
+
+func _hold_camera_for_pit() -> void:
+	var camera := get_node_or_null(^"Camera2D") as Camera2D
+	if camera == null or not camera.enabled:
+		return
+	# Capture what the player actually sees, not the camera node's smoothed
+	# destination. The hold survives _falling clearing after Health.kill(), so
+	# smoothing has no pitward history to consume during the respawn delay.
+	_pit_camera_world_position = camera.get_screen_center_position()
+	_pit_camera_held = true
+	_shake = 0.0
+	camera.offset = Vector2.ZERO
+	camera.top_level = true
+	camera.global_position = _pit_camera_world_position
+	camera.reset_smoothing()
 
 ## On-demand local locator: the paint alone strobes, so its self-modulate
 ## composes with damage/status tint on Visual and respawn opacity above it.
@@ -893,6 +915,7 @@ func fall_into_pit(target: Vector2) -> void:
 		return
 	_falling = true
 	_pit_fall_scale = 1.0
+	_hold_camera_for_pit()
 	if is_in_group(&"player"):  # the wasteland taxes clumsiness harder than combat
 		preload("res://game/economy.gd").apply_penalty(&"fall")
 	var audio_p := get_node_or_null(^"/root/AudioDirector")
@@ -1171,8 +1194,10 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 	# that center far from spawn, so a bare vehicle teleport makes the view snap,
 	# chase the old pit position, then catch up again. Reset the authored local
 	# lead and smoothing history in the same frame as the respawn teleport.
+	_pit_camera_held = false
 	var camera := get_node_or_null(^"Camera2D") as Camera2D
 	if camera:
+		camera.top_level = false
 		if _camera_base_cached:
 			camera.position = _camera_base_position
 		camera.offset = Vector2.ZERO
