@@ -1,8 +1,8 @@
 extends StaticBody2D
 ## Roadside clutter — trash piles, dry scrub, suburb bushes, snow drifts.
-## Block semantics (layer 4) so shots connect, but 1 HP: any hit or ram pops
-## it with a quiet scatter puff (no ring, no shake — this is set dressing,
-## not an explosion). Too small for the radar (ui/radar.gd size-gates it).
+## Block semantics (layer 4) so shots connect; ordinary kinds are 1 HP, while
+## Mountainside's old pines take a few missiles before the same quiet scatter pop
+## (no ring, no shake). Too small for the radar (ui/radar.gd size-gates it).
 ## Paint is a seeded lumpy blob cluster; kind picks the palette.
 
 const KINDS := {
@@ -10,7 +10,7 @@ const KINDS := {
 	&"brush": {"base": Color(0.45, 0.42, 0.22), "dark": Color(0.3, 0.28, 0.14), "fleck": Color(0.6, 0.54, 0.3)},
 	&"bush": {"base": Color(0.22, 0.38, 0.18), "dark": Color(0.13, 0.24, 0.1), "fleck": Color(0.34, 0.52, 0.26)},
 	&"drift": {"base": Color(0.82, 0.85, 0.92), "dark": Color(0.62, 0.68, 0.8), "fleck": Color(0.95, 0.97, 1.0)},
-	&"pine": {"base": Color(0.09, 0.27, 0.16), "dark": Color(0.055, 0.17, 0.11), "fleck": Color(0.82, 0.87, 0.94)},
+	&"pine": {"base": Color(0.035, 0.36, 0.12), "dark": Color(0.025, 0.19, 0.075), "fleck": Color(0.9, 0.96, 1.0)},
 	# Street furniture (bespoke draw funcs; palette base tints the pop puff):
 	&"mailbox": {"base": Color(0.25, 0.3, 0.4), "dark": Color(0.16, 0.19, 0.26), "fleck": Color(0.8, 0.2, 0.15)},
 	&"sign": {"base": Color(0.55, 0.56, 0.6), "dark": Color(0.35, 0.36, 0.4), "fleck": Color(0.8, 0.15, 0.1)},
@@ -25,6 +25,8 @@ const KINDS := {
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
 const PinePaint := preload("res://environment/pine_paint.gd")
 
+static var PINE_HP := 40.0  # old growth: 1 power / 2 fire or rear / 3 homing missiles
+
 @export var kind: StringName = &"trash"
 @export var footprint := 40.0  # collision square; paint spills a little past it
 @export var floor_index := -1  # ≥1 joins that terrace's collision world
@@ -37,9 +39,12 @@ func _ready() -> void:
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(footprint, footprint)
 	($Col as CollisionShape2D).shape = shape
-	# Health (child) readies before this node — set hp along with max_hp.
-	_health.max_hp = 1.0
-	_health.hp = 1.0
+	# Health (child) readies before this node — set hp along with max_hp. Pines
+	# alone have enough trunk to be an opening obstacle; every other kind keeps
+	# the classic one-hit pop-through contract.
+	var durability: float = PINE_HP if kind == &"pine" else 1.0
+	_health.max_hp = durability
+	_health.hp = durability
 	_health.died.connect(_pop)
 	queue_redraw()
 

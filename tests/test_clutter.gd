@@ -4,11 +4,21 @@ extends RefCounted
 ## the radar min-size gate math. Driven by tests/run_tests.gd.
 
 const ClutterScene := preload("res://environment/clutter.tscn")
+const FireMissile: WeaponDef = preload("res://data/weapons/missile_standard.tres")
+const HomingMissile: WeaponDef = preload("res://data/weapons/missile_homing.tres")
+const PowerMissile: WeaponDef = preload("res://data/weapons/missile_power.tres")
+const RearMissile: WeaponDef = preload("res://data/weapons/missile_rear.tres")
+const PinePaintScript := preload("res://environment/pine_paint.gd")
 
 var t
 
 func _init(runner) -> void:
 	t = runner
+
+func _saturation(color: Color) -> float:
+	var hi: float = maxf(color.r, maxf(color.g, color.b))
+	var lo: float = minf(color.r, minf(color.g, color.b))
+	return 0.0 if hi <= 0.0 else (hi - lo) / hi
 
 func test_clutter_layer_and_footprint() -> void:
 	var c = ClutterScene.instantiate()
@@ -74,10 +84,17 @@ func test_pine_is_pop_through_snow_clutter() -> void:
 	var health := pine.get_node(^"Health") as Health
 	t.check(shape.size == Vector2(36, 36) and pine.collision_layer == (4 | 16),
 		"pine: small floor-2 hitbox stays below the radar and off other terraces")
-	t.check(is_equal_approx(health.hp, 1.0),
-		"pine: one-hit clutter health keeps dense groves momentum-light")
-	health.take_damage(1.0)
-	t.check(pine.is_queued_for_deletion(), "pine: one committed hit clears the lane")
+	t.check(is_equal_approx(health.hp, pine.PINE_HP)
+			and ceili(health.hp / PowerMissile.damage) == 1
+			and ceili(health.hp / FireMissile.damage) == 2
+			and ceili(health.hp / RearMissile.damage) == 2
+			and ceili(health.hp / HomingMissile.damage) == 3,
+		"pine: 40 HP takes 1 power, 2 fire/rear, or 3 homing missiles")
+	health.take_damage(FireMissile.damage)
+	t.check(not pine.is_queued_for_deletion() and is_equal_approx(health.hp, 14.0),
+		"pine: first fire missile bites but does not clear the obstacle")
+	health.take_damage(FireMissile.damage)
+	t.check(pine.is_queued_for_deletion(), "pine: second fire missile clears the lane")
 	var puff_found := false
 	for child in container.get_children():
 		if child is CPUParticles2D:
@@ -86,6 +103,18 @@ func test_pine_is_pop_through_snow_clutter() -> void:
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
+
+func test_pine_palette_owns_the_wooded_level() -> void:
+	var palette: Dictionary = load("res://environment/clutter.gd").KINDS[&"pine"]
+	t.check(_saturation(PinePaintScript.PINE_MID) > 0.85
+			and _saturation(PinePaintScript.PINE_LIGHT) > 0.7,
+		"pine palette: drive-level boughs keep the saturated evergreen read")
+	t.check(_saturation(PinePaintScript.FAR_MID) > 0.7,
+		"pine palette: miniature pit trees retain the same green identity at depth")
+	t.check(palette.base == PinePaintScript.PINE_MID
+			and palette.dark == PinePaintScript.PINE_DARK
+			and palette.fleck == PinePaintScript.SNOW,
+		"pine palette: destruction puff and shared painter use one Mountainside palette")
 
 func test_floor_index_folds_layer_bit() -> void:
 	var c = ClutterScene.instantiate()

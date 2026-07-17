@@ -4,14 +4,14 @@ extends RefCounted
 
 const TRUNK := Color(0.25, 0.18, 0.12)
 const SHADOW := Color(0.01, 0.02, 0.025, 0.32)
-const PINE_DARK := Color(0.055, 0.17, 0.11)
-const PINE_MID := Color(0.09, 0.27, 0.16)
-const PINE_LIGHT := Color(0.15, 0.36, 0.21)
-const SNOW := Color(0.82, 0.87, 0.94)
-const FAR_DARK := Color(0.055, 0.105, 0.105)
-const FAR_MID := Color(0.075, 0.16, 0.14)
-const FAR_LIGHT := Color(0.12, 0.21, 0.18)
-const FAR_SNOW := Color(0.48, 0.55, 0.63)
+const PINE_DARK := Color(0.025, 0.19, 0.075)
+const PINE_MID := Color(0.035, 0.36, 0.12)
+const PINE_LIGHT := Color(0.12, 0.5, 0.19)
+const SNOW := Color(0.9, 0.96, 1.0)
+const FAR_DARK := Color(0.035, 0.12, 0.08)
+const FAR_MID := Color(0.045, 0.21, 0.1)
+const FAR_LIGHT := Color(0.09, 0.28, 0.12)
+const FAR_SNOW := Color(0.52, 0.62, 0.72)
 
 static func paint(canvas: CanvasItem, center: Vector2, radius: float, seed: int,
 		distant := false) -> void:
