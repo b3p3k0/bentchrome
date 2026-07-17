@@ -163,6 +163,30 @@ func test_camera_hold_survives_death_delay_and_releases_at_respawn() -> void:
 	gs.camera_look_ahead_distance = keep_distance
 	_done(f)
 
+func test_respawn_transform_beats_stale_area_overlap() -> void:
+	var f := _fixture(Vector2(256, 704), Vector2(70, 245))
+	var pit: Area2D = f.pit
+	var car: Vehicle = f.car
+	car.height = 500.0  # establish the overlap without beginning a fall
+	for i in 2:
+		await t.physics_frame
+	t.check(pit.get_overlapping_bodies().has(car),
+		"pit respawn: fixture begins with a live cached overlap")
+	var spawn_point := Vector2(900, -600)
+	car.respawn(spawn_point, 0.0, 0.0)
+	# Exercise the exact bad frame: transform is at spawn, overlap cache still
+	# names the old pit body, and restored HP would otherwise arm a second fall.
+	pit._physics_process(0.0)
+	for i in 8:
+		await t.physics_frame
+	var health: Health = f.health
+	var visual := car.get_node(^"Visual") as Node2D
+	t.check(car.global_position.is_equal_approx(spawn_point)
+			and is_equal_approx(health.hp, health.max_hp)
+			and visual.scale.is_equal_approx(Vector2.ONE * car.body_scale),
+		"pit respawn: stale overlap cannot pull or shrink the restored car")
+	_done(f)
+
 func test_repeated_trigger_does_not_retarget_or_restart() -> void:
 	var f := _fixture(Vector2(400, 200), Vector2(120, 40))
 	var car: Vehicle = f.car

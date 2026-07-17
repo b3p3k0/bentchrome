@@ -45,9 +45,18 @@ func _physics_process(_delta: float) -> void:
 	for body in get_overlapping_bodies():
 		if body.has_method(&"fall_into_pit") and body.get("height") == 0.0:
 			var body_2d := body as Node2D
-			if body_2d:
+			# Area2D's overlap cache can retain a body for one physics frame after
+			# respawn teleports it away. Trust the shape for normal entry, but reject
+			# a cached result whose current transform is already outside the pit.
+			if body_2d and _contains_current_position(body_2d.global_position):
 				var target: Vector2 = fall_target_for(body_2d.global_position)
 				body.call(&"fall_into_pit", target)
+
+func _contains_current_position(world_position: Vector2) -> bool:
+	var local_position: Vector2 = to_local(world_position)
+	var outer_half: Vector2 = size * 0.5
+	return absf(local_position.x) <= outer_half.x \
+		and absf(local_position.y) <= outer_half.y
 
 ## The long cliff should swallow a car across its short axis, never vacuum it
 ## hundreds of pixels along the drop. A square chooses the dominant normalized
