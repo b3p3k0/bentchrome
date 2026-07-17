@@ -43,7 +43,7 @@ func test_clutter_pops_on_one_hit() -> void:
 
 func test_street_kinds_and_hydrant_spout() -> void:
 	var kinds: Dictionary = load("res://environment/clutter.gd").KINDS
-	for k in [&"mailbox", &"sign", &"cone", &"bike", &"hydrant", &"bollard", &"pallet"]:
+	for k in [&"pine", &"mailbox", &"sign", &"cone", &"bike", &"hydrant", &"bollard", &"pallet"]:
 		t.check(kinds.has(k), "clutter: %s kind exists" % k)
 	var container := Node2D.new()
 	t.root.add_child(container)
@@ -57,6 +57,32 @@ func test_street_kinds_and_hydrant_spout() -> void:
 		if c is CPUParticles2D:
 			emitters += 1
 	t.check(emitters == 2, "hydrant: pop leaves puff + water spout (got %d)" % emitters)
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_pine_is_pop_through_snow_clutter() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var pine = ClutterScene.instantiate()
+	pine.kind = &"pine"
+	pine.footprint = 36.0
+	pine.floor_index = 2
+	container.add_child(pine)
+	var shape := pine.get_node(^"Col").shape as RectangleShape2D
+	var health := pine.get_node(^"Health") as Health
+	t.check(shape.size == Vector2(36, 36) and pine.collision_layer == (4 | 16),
+		"pine: small floor-2 hitbox stays below the radar and off other terraces")
+	t.check(is_equal_approx(health.hp, 1.0),
+		"pine: one-hit clutter health keeps dense groves momentum-light")
+	health.take_damage(1.0)
+	t.check(pine.is_queued_for_deletion(), "pine: one committed hit clears the lane")
+	var puff_found := false
+	for child in container.get_children():
+		if child is CPUParticles2D:
+			puff_found = true
+	t.check(puff_found, "pine: destruction leaves the shared quiet scatter puff")
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()

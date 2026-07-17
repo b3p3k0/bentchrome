@@ -64,6 +64,35 @@ func test_square_target_uses_dominant_entry_axis() -> void:
 		"pit target: square centers dominant Y displacement")
 	_done(f)
 
+func test_bottom_snow_carries_miniature_pine_scale_cues() -> void:
+	var vertical := _fixture(Vector2(256, 704))
+	var vertical_pit = vertical.pit
+	var vertical_pines: PackedVector2Array = vertical_pit.bottom_pine_positions()
+	var corridor: float = vertical_pit.BOTTOM_PINE_MAX_RADIUS * 1.8
+	t.check(vertical_pines.size() >= 10,
+		"pit floor: long cliff carries a readable miniature forest")
+	for pine in vertical_pines:
+		t.check(absf(pine.x - vertical_pit.OCCLUSION_OFFSET.x) >= corridor,
+			"pit floor: vertical fall centerline stays open for the car and impact")
+	t.check(vertical_pit.BOTTOM_SNOW_COLOR.get_luminance()
+			< vertical_pit.SNOW_CAP.get_luminance(),
+		"pit floor: bottom snow is familiar but shaded well below surface snow")
+	_done(vertical)
+
+	var horizontal := _fixture(Vector2(384, 256))
+	var horizontal_pit = horizontal.pit
+	var horizontal_pines: PackedVector2Array = horizontal_pit.bottom_pine_positions()
+	t.check(horizontal_pines.size() >= 5,
+		"pit floor: wide chasm carries miniature pines too")
+	for pine in horizontal_pines:
+		t.check(absf(pine.y - horizontal_pit.OCCLUSION_OFFSET.y) >= corridor,
+			"pit floor: horizontal fall centerline stays open for the car and impact")
+	var pit_script = load("res://environment/pit_zone.gd")
+	var clutter_script = load("res://environment/clutter.gd")
+	t.check(pit_script.PinePaint == clutter_script.PinePaint,
+		"pit floor: miniature and drive-level pines share one silhouette painter")
+	_done(horizontal)
+
 func test_grounded_car_pulls_in_and_shrinks_visuals_only() -> void:
 	var f := _fixture(Vector2(400, 200), Vector2(120, 50))
 	var car: Vehicle = f.car

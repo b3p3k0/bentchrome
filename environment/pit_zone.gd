@@ -5,7 +5,6 @@ extends Area2D
 ## the painted edge so clipping the rim doesn't instantly doom you. Exported
 ## size, like the destructible block, so one scene serves any cliff.
 
-const VOID := Color(0.015, 0.018, 0.03)
 const RIM := Color(0.55, 0.5, 0.2, 0.8)  # hazard-yellow lip
 const SNOW_CAP := Color(0.78, 0.82, 0.9)
 const SNOW_GLINT := Color(0.94, 0.96, 1.0, 0.85)
@@ -14,6 +13,7 @@ const CLIFF_STRIPE := Color(0.43, 0.44, 0.49, 0.65)
 const OCCLUSION := Color(0.055, 0.055, 0.075)
 const CRACK := Color(0.14, 0.15, 0.19)
 const KILL_INSET := 48.0
+const PinePaint := preload("res://environment/pine_paint.gd")
 
 # Presentation knobs: a tight cap over one compressed face reads as a sheer
 # snow cut from above. These never touch the collision or kill inset.
@@ -21,6 +21,10 @@ static var SNOW_CAP_WIDTH := 12.0
 static var CLIFF_FACE_WIDTH := 52.0
 static var STRIATION_GAP := 9.0
 static var OCCLUSION_OFFSET := Vector2(0.0, 12.0)
+static var BOTTOM_SNOW_COLOR := Color(0.29, 0.34, 0.43)
+static var BOTTOM_PINE_SPACING := 28.0
+static var BOTTOM_PINE_MIN_RADIUS := 4.0
+static var BOTTOM_PINE_MAX_RADIUS := 6.5
 
 @export var size := Vector2(256, 256)
 
@@ -64,6 +68,38 @@ func fall_target_for(world_position: Vector2) -> Vector2:
 			local_position.y = 0.0
 	return to_global(local_position)
 
+## Stable paint landmarks, public for geometry tests. Miniatures avoid the deep
+## centerline where the falling car and its distant impact need a clean read.
+func bottom_pine_positions() -> PackedVector2Array:
+	var void_half: Vector2 = _void_half()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0)) + 733
+	var spacing: float = maxf(BOTTOM_PINE_SPACING, 8.0)
+	var want: int = clampi(int(round((void_half.x + void_half.y) / spacing)), 5, 14)
+	var inset: float = minf(10.0, minf(void_half.x, void_half.y) * 0.35)
+	var corridor: float = maxf(BOTTOM_PINE_MAX_RADIUS * 1.8, 10.0)
+	var points := PackedVector2Array()
+	var attempts := 0
+	while points.size() < want and attempts < want * 16:
+		attempts += 1
+		var at := Vector2(
+			rng.randf_range(-void_half.x + inset, void_half.x - inset),
+			rng.randf_range(-void_half.y + inset, void_half.y - inset))
+		if size.x < size.y and absf(at.x) < corridor:
+			continue
+		if size.y < size.x and absf(at.y) < corridor:
+			continue
+		if is_equal_approx(size.x, size.y) and at.length() < corridor * 1.5:
+			continue
+		var separated := true
+		for other in points:
+			if at.distance_to(other) < BOTTOM_PINE_MAX_RADIUS * 2.2:
+				separated = false
+				break
+		if separated:
+			points.append(at + OCCLUSION_OFFSET)
+	return points
+
 func _draw() -> void:
 	# One steep face, not a terraced excavation: snow overhang, compressed rock
 	# grain, then a hard occlusion break into black. The southward void offset
@@ -74,7 +110,7 @@ func _draw() -> void:
 	var face_width: float = minf(CLIFF_FACE_WIDTH,
 		minf(face_half.x, face_half.y) - 12.0)
 	face_width = maxf(face_width, 8.0)
-	var void_half: Vector2 = (face_half - Vector2.ONE * face_width).max(Vector2(12.0, 12.0))
+	var void_half: Vector2 = _void_half()
 	var outer: PackedVector2Array = _rounded_rect(outer_half, 32.0)
 	var face: PackedVector2Array = _rounded_rect(face_half, 27.0)
 	var void_shape: PackedVector2Array = _rounded_rect(void_half,
@@ -107,7 +143,24 @@ func _draw() -> void:
 	var shadow_shape: PackedVector2Array = _rounded_rect(void_half + Vector2.ONE * 7.0,
 		maxf(30.0 - face_width * 0.3, 8.0))
 	draw_colored_polygon(_offset_polygon(shadow_shape, OCCLUSION_OFFSET * 0.35), OCCLUSION)
-	draw_colored_polygon(_offset_polygon(void_shape, OCCLUSION_OFFSET), VOID)
+	draw_colored_polygon(_offset_polygon(void_shape, OCCLUSION_OFFSET), BOTTOM_SNOW_COLOR)
+	# Fine, dim snow grain is deliberately much tighter than the surface texture:
+	# this is the same mountain floor, only a long way below the camera.
+	var bottom_specks: int = clampi(int(round(void_half.x * void_half.y * 4.0 / 420.0)),
+		16, 120)
+	for i in bottom_specks:
+		var speck := Vector2(rng.randf_range(-void_half.x, void_half.x),
+			rng.randf_range(-void_half.y, void_half.y)) + OCCLUSION_OFFSET
+		var speck_color := BOTTOM_SNOW_COLOR.lightened(0.1) if i % 3 else \
+			BOTTOM_SNOW_COLOR.darkened(0.08)
+		draw_circle(speck, rng.randf_range(0.45, 0.9), speck_color)
+	var pine_rng := RandomNumberGenerator.new()
+	pine_rng.seed = rng.seed + 419
+	var bottom_pines: PackedVector2Array = bottom_pine_positions()
+	for i in bottom_pines.size():
+		var pine_radius: float = pine_rng.randf_range(BOTTOM_PINE_MIN_RADIUS,
+			BOTTOM_PINE_MAX_RADIUS)
+		PinePaint.paint(self, bottom_pines[i], pine_radius, int(pine_rng.randi()), true)
 
 	# Dense little snow glints keep the cap texture finer than the broad driving
 	# surface; a few dark splits stop the overhang from reading manufactured.
@@ -144,6 +197,15 @@ func _offset_polygon(points: PackedVector2Array, offset: Vector2) -> PackedVecto
 	for point in points:
 		moved.append(point + offset)
 	return moved
+
+func _void_half() -> Vector2:
+	var outer_half: Vector2 = size * 0.5
+	var cap_width: float = minf(SNOW_CAP_WIDTH, minf(outer_half.x, outer_half.y) * 0.2)
+	var face_half: Vector2 = (outer_half - Vector2.ONE * cap_width).max(Vector2(24.0, 24.0))
+	var face_width: float = minf(CLIFF_FACE_WIDTH,
+		minf(face_half.x, face_half.y) - 12.0)
+	face_width = maxf(face_width, 8.0)
+	return (face_half - Vector2.ONE * face_width).max(Vector2(12.0, 12.0))
 
 ## Soft-cornered rect: chamfer points + an inward shoulder per corner, matching
 ## the terrain-zone treatment so hazards sit in the same visual language.

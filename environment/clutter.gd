@@ -10,6 +10,7 @@ const KINDS := {
 	&"brush": {"base": Color(0.45, 0.42, 0.22), "dark": Color(0.3, 0.28, 0.14), "fleck": Color(0.6, 0.54, 0.3)},
 	&"bush": {"base": Color(0.22, 0.38, 0.18), "dark": Color(0.13, 0.24, 0.1), "fleck": Color(0.34, 0.52, 0.26)},
 	&"drift": {"base": Color(0.82, 0.85, 0.92), "dark": Color(0.62, 0.68, 0.8), "fleck": Color(0.95, 0.97, 1.0)},
+	&"pine": {"base": Color(0.09, 0.27, 0.16), "dark": Color(0.055, 0.17, 0.11), "fleck": Color(0.82, 0.87, 0.94)},
 	# Street furniture (bespoke draw funcs; palette base tints the pop puff):
 	&"mailbox": {"base": Color(0.25, 0.3, 0.4), "dark": Color(0.16, 0.19, 0.26), "fleck": Color(0.8, 0.2, 0.15)},
 	&"sign": {"base": Color(0.55, 0.56, 0.6), "dark": Color(0.35, 0.36, 0.4), "fleck": Color(0.8, 0.15, 0.1)},
@@ -22,6 +23,7 @@ const KINDS := {
 }
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
+const PinePaint := preload("res://environment/pine_paint.gd")
 
 @export var kind: StringName = &"trash"
 @export var footprint := 40.0  # collision square; paint spills a little past it
@@ -89,6 +91,8 @@ func _spout(scene: Node) -> void:
 
 func _draw() -> void:
 	match kind:
+		&"pine":
+			_draw_pine()
 		&"mailbox":
 			_draw_mailbox()
 		&"sign":
@@ -105,6 +109,10 @@ func _draw() -> void:
 			_draw_pallet()
 		_:
 			_draw_blob()
+
+func _draw_pine() -> void:
+	var seed := int(absf(position.x * 7.0 + position.y * 13.0)) + 211
+	PinePaint.paint(self, Vector2.ZERO, footprint * 0.92, seed)
 
 ## The organic pile (trash/brush/bush/drift): seeded lump cluster.
 func _draw_blob() -> void:
