@@ -96,6 +96,23 @@ func test_velocity_look_ahead_curve_and_recenter() -> void:
 	gs.camera_look_ahead_enabled = keep_enabled
 	gs.camera_look_ahead_distance = keep_distance
 
+func test_respawn_discards_pit_camera_smoothing_history() -> void:
+	var car := _vehicle()
+	var camera := car.get_node(^"Camera2D") as Camera2D
+	camera.make_current()
+	var pit_center := Vector2(1200, 700)
+	var spawn_point := Vector2(-600, -350)
+	car.global_position = pit_center
+	camera.reset_smoothing()
+	camera.force_update_scroll()
+	t.check(camera.get_screen_center_position().is_equal_approx(pit_center),
+		"camera respawn: fixture begins with the smoothed view down in the pit")
+	car.respawn(spawn_point, 0.0, 0.0)
+	camera.force_update_scroll()
+	t.check(camera.get_screen_center_position().is_equal_approx(spawn_point),
+		"camera respawn: pit history cannot whip the view away from the spawn point")
+	_done(car)
+
 func test_chase_exception_and_lan_puppet_lead() -> void:
 	var gs: Node = t.root.get_node(^"/root/GameState")
 	var keep_enabled: bool = gs.camera_look_ahead_enabled

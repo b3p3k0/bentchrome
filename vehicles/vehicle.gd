@@ -1167,6 +1167,17 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 	global_position = at
 	heading = new_heading
 	velocity = Vector2.ZERO
+	# Camera2D smoothing remembers its last world-space center. A pit fall moves
+	# that center far from spawn, so a bare vehicle teleport makes the view snap,
+	# chase the old pit position, then catch up again. Reset the authored local
+	# lead and smoothing history in the same frame as the respawn teleport.
+	var camera := get_node_or_null(^"Camera2D") as Camera2D
+	if camera:
+		if _camera_base_cached:
+			camera.position = _camera_base_position
+		camera.offset = Vector2.ZERO
+		camera.reset_smoothing()
+	_shake = 0.0
 	height = 0.0
 	vz = 0.0
 	_falling = false
