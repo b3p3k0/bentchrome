@@ -18,6 +18,9 @@ Thumbs.db
 *.log
 *.tmp
 
+# botlab telemetry output (tools/botlab.sh) — data stays local
+tools/botlab/out/
+
 # Future planning documents (not part of current game)
 docs/future_cars.txt
 __pycache__/

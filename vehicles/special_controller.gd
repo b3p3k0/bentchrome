@@ -524,6 +524,7 @@ func _flame_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body.has_method("apply_effect"):
@@ -634,6 +635,7 @@ func _tornado_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_tornado_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body is CharacterBody2D and body.has_method("apply_effect") \
@@ -797,6 +799,7 @@ func _pulse_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_pulse_def.damage * falloff * Combat.scale(vehicle, body))
 				break
 		if body is CharacterBody2D and not bool(body.get("launch_immune")):

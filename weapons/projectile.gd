@@ -71,7 +71,7 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_speed: float, p_damage: float, p_li
 		# paints and stacks exactly like this shot.
 		net_shot_id = NetEvents.projectile_spawned(String(get_meta(&"pool_key", scene_file_path)),
 			p_pos, p_dir, p_speed, p_lifetime, p_turn_rate, p_target,
-			modulate, z_index)
+			modulate, z_index, p_shooter)
 
 func _physics_process(delta: float) -> void:
 	if _spent:
@@ -142,7 +142,9 @@ func _on_area_entered(area: Area2D) -> void:
 			or area.collision_layer & SOFT_TARGET_LAYER == 0:
 		return
 	var Floors := preload("res://game/floors.gd")
-	if not Floors.same_floor(shooter, area):
+	# A freed shooter fails same_floor's typed args — an orphaned round just
+	# pops the soft target wherever it lands.
+	if is_instance_valid(shooter) and not Floors.same_floor(shooter, area):
 		return
 	var health := _find_health(area)
 	if health:
@@ -212,6 +214,9 @@ func _stamp_attacker(body: Node) -> void:
 			victim = owner
 	if "last_attacker" in victim:
 		victim.last_attacker = shooter
+	# Damage-kind breadcrumb for the botlab recorder — hit_sfx already splits
+	# MG fire from everything else; nothing in the game reads this meta.
+	victim.set_meta(&"bc_hit_kind", hit_sfx)
 
 func _find_status(body: Node) -> StatusReceiver:
 	for child in body.get_children():

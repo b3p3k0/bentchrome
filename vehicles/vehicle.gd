@@ -1205,6 +1205,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 func take_ram_damage(amount: float, source: Node2D = null) -> void:
 	if source:
 		last_attacker = source
+	set_meta(&"bc_hit_kind", &"ram")  # telemetry breadcrumb (botlab recorder)
 	if _health:
 		_health.take_damage(amount)
 
@@ -1284,6 +1285,8 @@ func _apply_bounce(pre_vel: Vector2) -> void:
 ## floor) — the mercy governor checks HP before the hit, so rams just above
 ## its line were still finishing cars. Obstacle crashes damage nobody anyway.
 static func ram_clamp(hit: float, attacker: Node, victim: Node) -> float:
+	if Combat.AI_MERCY_HP <= 0.0:
+		return hit  # mercy floor off (botlab lethal mode) — rams kill too
 	if attacker.is_in_group(&"player") or victim.is_in_group(&"player"):
 		return hit
 	if victim.has_method(&"get_hp"):

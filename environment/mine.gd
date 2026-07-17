@@ -91,8 +91,9 @@ func _trigger(body: CharacterBody2D) -> void:
 		var belly: float = float(soft) if soft is float else 1.0
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body and attacker is Node2D:
+				if "last_attacker" in body and is_instance_valid(attacker) and attacker is Node2D:
 					body.last_attacker = attacker
+				body.set_meta(&"bc_hit_kind", &"mine")  # botlab telemetry breadcrumb
 				child.take_damage(damage * belly * Combat.scale(attacker, body))
 				break
 	var scene := get_tree().current_scene

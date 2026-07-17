@@ -15,7 +15,7 @@ static var _next_mine_id := 1
 
 static func projectile_spawned(scene_path: String, pos: Vector2, dir: Vector2,
 		speed: float, lifetime: float, turn_rate: float, target: Node2D,
-		tint := Color.WHITE, z := 0) -> int:
+		tint := Color.WHITE, z := 0, shooter: Node = null) -> int:
 	if not armed:
 		return 0
 	var shot_id := _next_shot_id
@@ -34,6 +34,8 @@ static func projectile_spawned(scene_path: String, pos: Vector2, dir: Vector2,
 		"target": target,  # resolved to an actor index at drain time
 		"tint": tint,      # the mount stamped modulate before setup — protocol 9
 		"z": z,            # shooter draw order (floor-3 shots over deck paint)
+		"shooter": shooter,  # shots-fired attribution; MP drain reads named keys
+							 # only, so this rides along unseen (botlab reads it)
 	})
 	return shot_id
 

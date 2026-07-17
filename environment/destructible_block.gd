@@ -185,6 +185,9 @@ func _barrel_blast() -> void:
 			continue  # a dock-level fireball doesn't cook the roof
 		for child in body.get_children():
 			if child is Health:
+				# Kind breadcrumb only — barrel kills stay deliberately creditless
+				# (no last_attacker, no Combat.scale): shoot a barrel, walk away.
+				body.set_meta(&"bc_hit_kind", &"environment")
 				child.take_damage(BLAST_DAMAGE)
 				break
 
