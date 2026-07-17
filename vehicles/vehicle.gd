@@ -37,9 +37,15 @@ const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const IR := preload("res://game/input_router.gd")  # input names only (leaf)
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const PitFallFXScript := preload("res://environment/pit_fall_fx.gd")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 const TurretScript := preload("res://weapons/turret.gd")
 const NetEvents := preload("res://game/net/net_events.gd")
+
+# Pit presentation only — collision, damage, and the physics body never scale.
+static var PIT_FALL_SECONDS := 0.70
+static var PIT_IMPACT_SECONDS := 0.60
+static var PIT_MIN_VISUAL_SCALE := 0.05
 
 signal combat_hit(attacker: Node2D)
 
@@ -99,7 +105,12 @@ var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never r
 	set(v):
 		_floor_vis = v
 		if _visual:
-			_visual.scale = Vector2.ONE * body_scale * v
+			_visual.scale = Vector2.ONE * body_scale * v * _pit_fall_scale
+var _pit_fall_scale := 1.0:
+	set(v):
+		_pit_fall_scale = v
+		if _visual and is_inside_tree():
+			_paint_depth()
 var _ram_cd := 0.0        # cooldown between ram hits
 var _shake := 0.0         # camera shake energy (player only)
 var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
@@ -575,14 +586,15 @@ func _paint_depth() -> void:
 		grounded_lift = FLOOR_LIFT * maxf(0.0, grade_floor - 2.0)
 		grounded_scale = _visual_scale_at_floor(grade_floor)
 	_visual.position.y = -(height + grounded_lift)
-	_visual.scale = Vector2.ONE * body_scale * grounded_scale
+	_visual.scale = Vector2.ONE * body_scale * grounded_scale * _pit_fall_scale
 	if _shadow:
 		# The shadow RIDES the terrace lift (tight under a driving car) and only
 		# detaches/shrinks with real airtime — floating is for jumps, not roofs.
 		_shadow.position.y = -grounded_lift
 		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * grounded_scale
-		_shadow.scale = Vector2(s, s)
-		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
+		_shadow.scale = Vector2(s, s) * _pit_fall_scale
+		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0) \
+			* _pit_fall_scale
 
 func _cache_grade_visuals() -> void:
 	_grade_visuals.clear()
@@ -873,12 +885,14 @@ func launch_from_jump() -> void:
 			audio_j.play_at(&"jump_pad", global_position)
 	_set_airborne(true)
 
-## Over the edge: kill physics and collisions, shrink into the void, then die
-## for real. The fall suppresses the explosion — you fell, you didn't pop.
-func fall_into_pit() -> void:
+## Over the edge: kill physics and collisions, pull across the pit's short axis,
+## shrink into the void, then die for real. The fall suppresses the ordinary
+## explosion — the tiny distant impact is timed to pit_fall's muted thud.
+func fall_into_pit(target: Vector2) -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	_pit_fall_scale = 1.0
 	if is_in_group(&"player"):  # the wasteland taxes clumsiness harder than combat
 		preload("res://game/economy.gd").apply_penalty(&"fall")
 	var audio_p := get_node_or_null(^"/root/AudioDirector")
@@ -892,14 +906,26 @@ func fall_into_pit() -> void:
 	set_deferred("collision_layer", 0)
 	set_deferred("collision_mask", 0)
 	var tween := create_tween()
-	if _visual:
-		tween.tween_property(_visual, "scale", Vector2(0.05, 0.05), 0.7)
-	if _shadow:
-		tween.parallel().tween_property(_shadow, "scale", Vector2(0.05, 0.05), 0.7)
-	tween.tween_callback(func() -> void:
+	tween.set_parallel(true)
+	tween.tween_property(self, "global_position", target, PIT_FALL_SECONDS) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(self, "_pit_fall_scale", PIT_MIN_VISUAL_SCALE,
+		PIT_FALL_SECONDS).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	var impact_tween := create_tween()
+	impact_tween.tween_interval(clampf(PIT_IMPACT_SECONDS, 0.0, PIT_FALL_SECONDS))
+	impact_tween.tween_callback(_spawn_pit_impact)
+	tween.chain().tween_callback(func() -> void:
 		if _health:
 			_health.kill()
 		_falling = false)
+
+func _spawn_pit_impact() -> void:
+	var world_parent: Node = get_parent()
+	if world_parent == null or not is_inside_tree():
+		return
+	var fx: Node2D = PitFallFXScript.new()
+	world_parent.add_child(fx)
+	fx.global_position = global_position
 
 ## Into the drink: the pit's diminishing-car exit, but wetter — a splash ring
 ## at entry, a slightly slower shrink darkening toward the water, and rising
@@ -1150,6 +1176,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 		_floor_tween.kill()
 	_floor_vis = 1.0
 	_floor_lift = 0.0
+	_pit_fall_scale = 1.0
 	_apply_ground_collision()
 	_update_draw_order(false)
 	if _health:
