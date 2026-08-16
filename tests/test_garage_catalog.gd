@@ -39,6 +39,18 @@ func test_every_item_composes_on_a_real_car() -> void:
 				"catalog: %s delta '%s' lands through compose" % [item.id, stat_v])
 	t.check(base.armor == base_armor, "catalog: the base .tres is never mutated")
 
+func test_as_mod_forwards_everything_compose_reads() -> void:
+	var item := {"id": "x", "stat_deltas": {"armor": 1},
+		"terrain_overlay": {"dirt": {"grip": 1.2}},
+		"controller_overrides": {"boost_top_factor": 1.5},
+		"capabilities": {"burn_taken": 0.8}, "reserved": {"dead": 1}}
+	var mod := Catalog.as_mod(item)
+	t.check(mod.has("terrain_overlay") and mod.has("controller_overrides"),
+		"as_mod: terrain_overlay and controller_overrides pass through")
+	t.check(not mod.has("reserved"), "as_mod: the retired reserved bag never rides along")
+	t.check(not Catalog.as_mod({"id": "y"}).has("stat_deltas"),
+		"as_mod: absent fields stay absent, not empty stubs")
+
 func test_rival_mod_keeps_pace() -> void:
 	# player positives: acc 1+1=2 (engine chain), top +1; bay's NEGATIVES ignored
 	var rival := Catalog.rival_mod(["engine_stage1", "engine_stage2", "bay_expansion"])

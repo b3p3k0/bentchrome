@@ -193,6 +193,39 @@ func test_loadout_compose() -> void:
 		and base.handling_overrides.is_empty() and is_equal_approx(base.burn_taken, 1.0),
 		"loadout: the base resource is never mutated")
 
+## The garage plug-in verbs: terrain_overlay per-property patching, SCALE_FIELDS
+## multiplicative stacking, and the additive special-cap bonus.
+func test_loadout_overlay_and_scales() -> void:
+	var Loadout := preload("res://resources/vehicle_loadout.gd")
+	var base = load("res://data/vehicles/cricket.tres")  # authored dirt identity
+	var base_dirt_grip: float = base.terrain_factor(&"dirt", &"grip")
+	var modded = Loadout.compose(base, [
+		{"id": "slicks", "terrain_overlay": {"dirt": {"grip": 0.8}, "water": {"top": 0.9}}},
+	])
+	t.check(is_equal_approx(modded.terrain_factor(&"dirt", &"grip"), 0.8),
+		"overlay: spoken property patched")
+	t.check(is_equal_approx(modded.terrain_factor(&"dirt", &"dash_damage"), 1.15),
+		"overlay: silent property keeps the car's authored identity")
+	t.check(is_equal_approx(modded.terrain_factor(&"water", &"top"), 0.9),
+		"overlay: overlay-only surface joins the table")
+	t.check(is_equal_approx(base.terrain_factor(&"dirt", &"grip"), base_dirt_grip),
+		"overlay: the base .tres modifier element is never mutated")
+	# Scale knobs multiply, order-free.
+	var ab = Loadout.compose(base, [
+		{"capabilities": {"detectability": 1.5}}, {"capabilities": {"detectability": 0.8}}])
+	var ba = Loadout.compose(base, [
+		{"capabilities": {"detectability": 0.8}}, {"capabilities": {"detectability": 1.5}}])
+	t.check(is_equal_approx(ab.detectability, 1.2) and is_equal_approx(ba.detectability, 1.2),
+		"scales: multiplicative stacking is order-free (1.5 x 0.8 = 1.2)")
+	t.check(is_equal_approx(ab.tracking_scale, 1.0) and is_equal_approx(ab.mg_heat_scale, 1.0),
+		"scales: untouched knobs stay stock 1.0")
+	# Additive special cap bonus, floored at 1.
+	var cap_base: int = base.special_ammo_cap
+	var bigger = Loadout.compose(base, [{"capabilities": {"special_ammo_cap_bonus": 2}}])
+	t.check(bigger.special_ammo_cap == cap_base + 2, "cap bonus: adds on the authored cap")
+	var gutted = Loadout.compose(base, [{"capabilities": {"special_ammo_cap_bonus": -99}}])
+	t.check(gutted.special_ammo_cap == 1, "cap bonus: floors at one round")
+
 ## --- Terrain profile extraction (rebase step 3) ---------------------------
 
 func test_terrain_profile_merge() -> void:

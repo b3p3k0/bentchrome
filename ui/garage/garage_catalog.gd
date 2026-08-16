@@ -98,11 +98,13 @@ static func rival_mod(owned_ids: Array, items: Array = []) -> Dictionary:
 			deltas[stat_v] = scaled
 	return {} if deltas.is_empty() else {"id": "rival_keepup", "stat_deltas": deltas}
 
-## The mod dict VehicleLoadout.compose consumes, from a catalog item.
+## The mod dict VehicleLoadout.compose consumes, from a catalog item — a dumb
+## pass-through of every field compose reads. (An earlier hand-built version
+## silently dropped terrain fields; enumerate compose's inputs, nothing else.)
 static func as_mod(item: Dictionary) -> Dictionary:
-	return {
-		"id": item.get("id", ""),
-		"stat_deltas": item.get("stat_deltas", {}),
-		"capabilities": item.get("capabilities", {}),
-		"reserved": item.get("reserved", {}),
-	}
+	var mod := {"id": item.get("id", "")}
+	for key in ["stat_deltas", "capabilities", "terrain_overlay",
+			"terrain_profile", "controller_overrides"]:
+		if item.has(key):
+			mod[key] = item[key]
+	return mod
