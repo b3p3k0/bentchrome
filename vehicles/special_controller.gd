@@ -9,6 +9,10 @@ extends Node
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
+# Garage Improved Lock: tracking_scale widens every lock reach in this file
+# (twin pick, taser latch + hold, dash) — boss Turret excluded (bosses never
+# mod), weapon defs untouched.
 const NetEvents := preload("res://game/net/net_events.gd")  # host-armed FX tap (leaf)
 const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
 const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-honest blast ring
@@ -168,7 +172,8 @@ func _active_def(origin: Vector2, shooter: Node) -> WeaponDef:
 	if beam_def == null:
 		return _def
 	var other: WeaponDef = _def if beam_def == _twin else _twin
-	var tgt := Targeting.nearest_other(origin, shooter, beam_def.acquisition_radius, shooter)
+	var tgt := Targeting.nearest_other(origin, shooter,
+		beam_def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt and _los_clear(origin, tgt, shooter):
 		return beam_def
 	return other
@@ -261,7 +266,8 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, def: WeaponDef) -> bool:
 	if not pressed or _beam_t > 0.0 or def == null:
 		return false
-	var tgt := Targeting.nearest_other(origin, shooter, def.acquisition_radius, shooter)
+	var tgt := Targeting.nearest_other(origin, shooter,
+		def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
 	var fx_scene := get_tree().current_scene
@@ -311,7 +317,8 @@ func _beam_tick(delta: float) -> void:
 	var origin: Vector2 = muzzle.global_position if muzzle else vehicle.global_position
 	var dist := origin.distance_to(_beam_target.global_position)
 	if _beam_def == null \
-			or dist > _beam_def.acquisition_radius * BEAM_HOLD_FACTOR \
+			or dist > _beam_def.acquisition_radius \
+				* VehiclesHelper.stat_scale(vehicle, &"tracking_scale") * BEAM_HOLD_FACTOR \
 			or not Floors.same_floor(vehicle, _beam_target) \
 			or not _los_clear(origin, _beam_target, vehicle):
 		_end_beam()  # a roof-drop snaps the taser, same as breaking LoS
@@ -387,7 +394,8 @@ func _exit_tree() -> void:
 func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if not pressed or _dash_t > 0.0:
 		return false
-	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE, shooter)
+	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter,
+		DASH_LOCK_RANGE * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	_dash_dir = direction
 	_dash_t = DASH_DURATION
 	_dash_damage_mult = 1.0

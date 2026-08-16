@@ -7,6 +7,7 @@ extends Node
 ## on_hit_effects (from the WeaponDef) ride along on each projectile.
 
 const Floors := preload("res://game/floors.gd")  # floor-mask stamping (dependency-free)
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
 const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
 @export var weapon: WeaponDef           # if set, overrides the fields below
@@ -182,8 +183,11 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node, wp: Dictiona
 	flash.setup(origin, direction, not hot)
 	var pellet_count: int = wp["pellets"]
 	var spread: float = wp["spread_deg"]
-	var turn: float = wp["turn_rate_deg"]
-	var acq: float = wp["acquisition_radius"]
+	# Garage Improved Lock: the SHOOTER's tracking_scale sharpens lock reach and
+	# homing turn per wave (wp froze the weapon's identity, not the shooter's).
+	var tscale := VehiclesHelper.stat_scale(shooter, &"tracking_scale")
+	var turn: float = wp["turn_rate_deg"] * tscale
+	var acq: float = wp["acquisition_radius"] * tscale
 	var tracking := turn > 0.0 and acq > 0.0
 	var shooter_floor := Floors.floor_of(shooter)
 	var tgt: Node2D = null
