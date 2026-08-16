@@ -35,6 +35,16 @@ application). Start here; each doc owns one concern.
   rivals mirror `RIVAL_KEEPUP` (0.5) of the player's positive deltas.
   Placeholder art: `assets/img/garage/bg.png` + `items/<id>.png` (drop-in
   replaceable by filename). Economy numbers ×10 (economy.md is current).
+- **AXES WIRED (2026-08-16):** the reserved bag is retired — every catalog
+  item now moves a real system. Tires = `terrain_overlay` per-property
+  patches (both-ways tables authored in the catalog, independent of roster
+  identity profiles); `mg_heat_scale` scales mount heat gain;
+  `tracking_scale` scales shooter-side lock reach + homing turn;
+  `radar_range_scale`/`detectability` ride the new 2200px bounded sensor
+  range (radar + edge arrows) and the AI's scored perception gate;
+  `special_ammo_cap_bonus` adds to the special cap. Scale axes stack
+  multiplicatively; the validator rejects unknown keys and do-nothing items.
+  Mechanism contract: docs/garage_seams.md.
 - Branch flow: `feature/garage` → merge to `development` → promotion to `main`.
 - **Decided (Kevin, 2026-07-19):** currency = **BOLTS**, start at 0; earned
   by destroying enemies/destructibles/soft targets (size-proportionate,

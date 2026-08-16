@@ -87,7 +87,7 @@ application via `Vehicle.set_stats(compose(...))` at level spawn — the
 between-levels garage means the repaint/HP-reset semantics of set_stats are
 FINE (fresh level = fresh HP anyway). Contract: ../garage_seams.md.
 Catalog data shape (`stat_deltas` / `capabilities` / `terrain_profile` /
-`controller_overrides` / `reserved`) is already defined there.
+`controller_overrides` / `terrain_overlay`) is already defined there.
 
 ## Interstitial
 
