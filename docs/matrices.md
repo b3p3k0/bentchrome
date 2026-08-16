@@ -104,11 +104,11 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 |---|---|---|---|---|---|---|
 | Blunt Blaze (Bumper) | FLAME | 34 dps | — | 2s bay lock | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
 | Leap (Cricket) | DASH | ram @1400 | 1400 | per use | lock ≤700 | 0.4s body-check (~560px), sails over obstacles; dirt activation snapshots ×1.15 ram damage through surface crossings; hit: victim slow ×0.5/2s, caster invuln 2s |
-| Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 5s (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
+| Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 3s, re-hits while frozen don't extend (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
 | Toe Jam (Hammertoe) | TRIGGER | 60 flat | — | per arm | — | Armed charge replaces next ram's damage; expires unspent after 5s; bumper glows |
 | Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | 100°/s, lock 1200 | On hit: burn 3 dps / 15s (range 1360); one recipe, two families; gentle launch lean, not quite homing |
-| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | 100°/s, lock 1200 | On hit: disarm 5s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100); gentle launch lean |
+| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | 100°/s, lock 1200 | On hit: disarm 3s, re-hits while disarmed don't extend (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100); gentle launch lean |
 | Tornado Alley (Cyclone) | TORNADO | 20 dps | — | per use | — | 3s self-centered spin, AoE 2.2× visual footprint (the wind-swirl ring draws exactly at the boundary), same-floor; caught cars: land-mine spin-out + 220 shove once each (launch_immune exempt); steer ×0.3 while spinning; random exit heading; AI holds to 250px |
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
@@ -220,8 +220,8 @@ Source: `vehicles/status_receiver.gd` + effect specs in weapon `.tres` files. Sa
 | Burn | Molotov / Blunt Blaze | 3 dps / 4 dps | 15s / 10s | Visible hull fire; **boost extinguishes it**; DoT bypasses the AI-vs-AI governor |
 | Slow | Splat / Taser / Leap hit | ×0.5 speed | 3s / while latched / 2s | Multiplies accel + top |
 | Invuln | Spawn shield / Leap connect | full immunity | 2s | Blink FX; does NOT survive pits |
-| Disarm | Chill Out, Man | — | 5s | MG + weapons offline, driving fine; purple peace marker + dimmed rack; fixed_loadout immune |
-| Freeze | Chilblain | — | 5s | All intent stripped; velocity damps to zero at `Vehicle.FREEZE_DECEL` 900 px/s²; snowflake marker + dimmed rack; fixed_loadout immune; flags2 bit over LAN |
+| Disarm | Chill Out, Man | — | 3s | Re-application while active ignored; MG + weapons offline, driving fine; purple peace marker + dimmed rack; fixed_loadout immune |
+| Freeze | Chilblain | — | 3s | Re-application while active ignored; all intent stripped; velocity damps to zero at `Vehicle.FREEZE_DECEL` 900 px/s²; snowflake marker + dimmed rack; fixed_loadout immune; flags2 bit over LAN |
 
 ---
 

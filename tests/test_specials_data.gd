@@ -100,7 +100,8 @@ func test_chill_out_disarm_duration() -> void:
 	var fx := _first_effect(d)
 	t.check_approx(d.damage, 0.0, "chill out: peace sign deals no damage")
 	t.check(fx != null and fx.kind == &"disarm", "chill out: hit applies disarm")
-	t.check_approx(fx.duration, 5.0, "chill out: guns return after five seconds")
+	t.check_approx(fx.duration, 3.0, "chill out: guns return after three seconds")
+	t.check(fx.refresh == false, "chill out: re-hits while disarmed never extend")
 	t.check_approx(d.turn_rate_deg, 100.0, "chill out: launch lean, not quite homing")
 	t.check_approx(d.acquisition_radius, 1200.0, "chill out: standard acquisition reach")
 

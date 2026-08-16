@@ -106,12 +106,29 @@ func test_coldfront_contract() -> void:
 	for fx in def.on_hit_effects:
 		if fx.kind == &"freeze":
 			found = true
-			t.check(is_equal_approx(fx.duration, 5.0), "chilblain: 5s in the ice")
+			t.check(is_equal_approx(fx.duration, 3.0), "chilblain: 3s in the ice")
+			t.check(fx.refresh == false, "chilblain: re-hits while frozen never extend")
 	t.check(found, "chilblain: carries the freeze status")
 	t.check(is_equal_approx(stats.terrain_factor(&"snow", &"grip"), 2.2222222222),
 		"coldfront: snow grip factored back to asphalt")
 	t.check(is_equal_approx(stats.terrain_factor(&"ice", &"grip"), 12.5),
 		"coldfront: ice grip factored back to asphalt")
+
+## The anti-chaining rule, end to end with the REAL authored effect: a second
+## Chilblain hit mid-freeze changes nothing, but a hit after the thaw lands.
+func test_freeze_reapply_ignored_while_active() -> void:
+	var car = _car()
+	var def := (load("res://data/vehicles/coldfront.tres") as VehicleStats).special
+	var fx: StatusEffectSpec = def.on_hit_effects[0]
+	var status = car.get_node("Status")
+	car.apply_effect(fx)
+	status.tick(2.9)  # almost thawed...
+	car.apply_effect(fx)  # ...re-hit is IGNORED, no fresh 3s
+	status.tick(0.2)
+	t.check(not car.is_frozen(), "freeze: mid-effect re-hit never extends the ice")
+	car.apply_effect(fx)
+	t.check(car.is_frozen(), "freeze: a hit after the thaw lands normally")
+	_done(car)
 
 func test_ice_style_exists_both_ends() -> void:
 	t.check(int(ProjectileScript.ImpactStyle.ICE) == ImpactScript.ICE,

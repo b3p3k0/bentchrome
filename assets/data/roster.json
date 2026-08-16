@@ -156,7 +156,7 @@
       "car_name": "Coldfront",
       "driver_name": "Marta Laviini",
       "flavor": "A crimson '80s pickup wearing a yellow county snowplow like a permanent scowl. Marta plowed mountain passes for twenty winters and never once got thanked. Snow, ice, whiteout — the truck doesn't notice; asphalt manners on the worst surfaces in the game. The plow makes her wide, the payload makes her stubborn, and the handling is strictly no-hurry. Cross her lane and she'll leave you parked in a block of ice.",
-      "special_weapon": "Chilblain: a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 5 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow.",
+      "special_weapon": "Chilblain: a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 3 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow.",
       "special_def": "chilblain",
       "stats": {
         "acceleration": 9,
@@ -360,7 +360,7 @@
       "car_name": "Lovebug",
       "driver_name": "Moonbeam",
       "flavor": "A sunshine-yellow Beetle wearing flowers, peace signs, and thirty years of good vibes. Moonbeam doesn't believe in violence; she believes in consequences. The bug needs a running start — she winds up slow, then dances through corners, and famously floats across shallow water like the commercials promised. Thin panels and an air-cooled engine mean fire is her worst enemy. She'd rather disarm you than dent you.",
-      "special_weapon": "Chill Out, Man: a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 5 seconds. Evaporates into glitter on impact.",
+      "special_weapon": "Chill Out, Man: a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 3 seconds. Evaporates into glitter on impact.",
       "special_def": "chill_out",
       "stats": {
         "acceleration": 10,
