@@ -8,6 +8,7 @@ var t
 
 ## Minimal stand-in for targeting tests: position + hp fraction + groups.
 class FakeCar extends Node2D:
+	var stats = null  # optionally a VehicleStats (detectability reads off it)
 	var hpf := 1.0
 	var last_attacker: Node2D = null
 	var last_attacker_ms := 0
@@ -128,6 +129,31 @@ func test_player_priority_breaks_near_ties() -> void:
 	var _ai := _car(rig[0], Vector2(500, 0), 1.0)
 	var player := _car(rig[0], Vector2(650, 0), 1.0, true)
 	t.check(driver._select_target(rig[1]) == player, "priority: player wins over a slightly nearer AI")
+	driver.free()
+	t.root.remove_child(rig[0])
+	rig[0].free()
+
+## Garage jammer: a low-detectability car shrinks the SCORED gate only — the
+## hunter still finds someone (a plain car further out wins the pick), the
+## jammed car is targetable again once close enough, and the unbounded HUNT
+## fallback still sees it (no-camping contract).
+func test_low_detectability_shrinks_the_scored_gate() -> void:
+	var rig := _targeting_rig()
+	var driver = DriverScript.new()
+	var sneaky := _car(rig[0], Vector2(700, 0), 1.0)
+	var jam := VehicleStats.new()
+	jam.detectability = 0.5  # scored gate 1200 -> 600
+	sneaky.stats = jam
+	var plain := _car(rig[0], Vector2(1000, 0), 1.0)
+	t.check(driver._select_target(rig[1]) == plain,
+		"detectability: the jammed car at 700 loses to a plain car at 1000")
+	sneaky.global_position = Vector2(400, 0)  # near_term 0.33 vs plain's 0.17 — no tie
+	t.check(driver._select_target(rig[1]) == sneaky,
+		"detectability: inside the shrunken gate the jammed car is fair game")
+	sneaky.global_position = Vector2(700, 0)
+	plain.global_position = Vector2(5000, 0)
+	t.check(driver._nearest_any(rig[1]) == sneaky,
+		"detectability: HUNT stays unfiltered — the jammer never grants invisibility")
 	driver.free()
 	t.root.remove_child(rig[0])
 	rig[0].free()
