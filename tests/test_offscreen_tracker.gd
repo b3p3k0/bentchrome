@@ -44,13 +44,17 @@ func test_canvas_transform_and_contrast() -> void:
 	t.check(TrackerScript.contrast_outline(Color(1.0, 0.9, 0.2)).r < 0.1,
 		"tracker: bright paint gets a dark outline")
 
-func test_radar_roster_is_mapwide_live_and_paint_matched() -> void:
+func test_radar_roster_is_sensor_bounded_live_and_paint_matched() -> void:
 	var viewer := StubCar.new()
 	viewer.add_to_group(&"local_player")
 	viewer.add_to_group(&"vehicles")
+	var near_human := StubCar.new()
+	near_human.position = Vector2(1500.0, 0.0)  # inside BASE_SENSOR_RANGE
+	near_human.body_color = Color(0.05, 0.12, 0.2)
+	near_human.add_to_group(&"player")
+	near_human.add_to_group(&"vehicles")
 	var far_human := StubCar.new()
 	far_human.position = Vector2(50000.0, -50000.0)
-	far_human.body_color = Color(0.05, 0.12, 0.2)
 	far_human.add_to_group(&"player")
 	far_human.add_to_group(&"vehicles")
 	var dead_ai := StubCar.new()
@@ -58,24 +62,24 @@ func test_radar_roster_is_mapwide_live_and_paint_matched() -> void:
 	dead_ai.add_to_group(&"enemies")
 	dead_ai.add_to_group(&"vehicles")
 	t.root.add_child(viewer)
+	t.root.add_child(near_human)
 	t.root.add_child(far_human)
 	t.root.add_child(dead_ai)
 	var opponents: Array = RadarScript.opponents(t.root.get_tree(), viewer)
-	t.check(far_human in opponents,
-		"radar: far human combatant stays visible without faction or range gate")
+	t.check(near_human in opponents,
+		"radar: near combatant paints regardless of faction")
+	t.check(far_human not in opponents,
+		"radar: combatants beyond sensor reach stay off the scope")
 	t.check(viewer not in opponents and dead_ai not in opponents,
 		"radar: viewer and destroyed combatants stay off the opponent layer")
-	t.check(RadarScript.blip_color(far_human) == TrackerScript.marker_color(far_human),
+	t.check(RadarScript.blip_color(near_human) == TrackerScript.marker_color(near_human),
 		"radar: blip and offscreen marker share the exact vehicle paint")
-	t.check(RadarScript.blip_outline(far_human)
-		== TrackerScript.contrast_outline(far_human.body_color),
+	t.check(RadarScript.blip_outline(near_human)
+		== TrackerScript.contrast_outline(near_human.body_color),
 		"radar: dark paint shares the offscreen contrast outline")
-	t.root.remove_child(dead_ai)
-	t.root.remove_child(far_human)
-	t.root.remove_child(viewer)
-	dead_ai.free()
-	far_human.free()
-	viewer.free()
+	for car in [dead_ai, far_human, near_human, viewer]:
+		t.root.remove_child(car)
+		car.free()
 
 func test_overlap_spread_keeps_edge_and_order() -> void:
 	var rect := TrackerScript.PLAY_RECT.grow(-TrackerScript.EDGE_INSET)

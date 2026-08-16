@@ -1,10 +1,12 @@
 extends Control
 ## North-up minimap: the whole arena at a glance — walls, buildings
 ## (destructibles vanish when smashed), terrain patches, the repair pad — plus
-## live blips. Every other live combatant paints map-wide in its vehicle color.
-## Geometry is duck-typed off collision layers and
-## script properties (no class references), snapshotted once the level's
-## Boundary exists; the static rects are trivial to redraw every frame.
+## live blips. Combatants paint in their vehicle color INSIDE sensor reach
+## (Vehicles.BASE_SENSOR_RANGE x viewer radar_range_scale x target
+## detectability — the garage's Extended Radar / Radar Jammer axes); the
+## arena geometry always draws fully. Geometry is duck-typed off collision
+## layers and script properties (no class references), snapshotted once the
+## level's Boundary exists; the static rects are trivial to redraw every frame.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
@@ -188,7 +190,7 @@ func _floor_of(node: Node) -> int:
 	return int(f) if f is int else -1
 
 static func opponents(tree: SceneTree, viewer: Node) -> Array:
-	return VehiclesHelper.live_others(tree, viewer)
+	return VehiclesHelper.sensed_others(tree, viewer)
 
 static func blip_color(car: Node) -> Color:
 	return VehiclesHelper.paint_color(car)

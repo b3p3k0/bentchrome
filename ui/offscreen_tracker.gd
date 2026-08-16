@@ -2,8 +2,10 @@ class_name OffscreenTracker
 extends Node2D
 ## Viewer-relative edge awareness. World positions are projected through the
 ## active camera canvas; only combatants outside the centered 720px play square
-## earn a paint-colored arrow. One node owns/reuses all marker state and draw
-## calls — no per-frame Control churn as opponents cross the boundary.
+## earn a paint-colored arrow. Arrows share the radar's sensor bound
+## (Vehicles.sensed_others) — off the scope means off the rim too. One node
+## owns/reuses all marker state and draw calls — no per-frame Control churn as
+## opponents cross the boundary.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const ExplosionScene := preload("res://environment/explosion.tscn")
@@ -38,7 +40,7 @@ func _process(_delta: float) -> void:
 		viewer_screen = PLAY_RECT.get_center()
 	var seen: Dictionary = {}
 	_draw_records.clear()
-	for car_v in VehiclesHelper.live_others(tree, viewer):
+	for car_v in VehiclesHelper.sensed_others(tree, viewer):
 		var car := car_v as Node2D
 		if car == null:
 			continue
