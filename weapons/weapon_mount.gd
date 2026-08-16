@@ -30,6 +30,8 @@ const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 @export var heat_max := 100.0
 @export var cool_per_sec := 28.0
 @export var resume_frac := 0.35    # locked until heat cools below this fraction
+@export var heat_scale := 1.0      # scales GAIN only (garage MG Cooling); the
+								   # 0-sentinel and cooling stay untouched
 
 var heat := 0.0
 var _locked := false
@@ -97,7 +99,7 @@ func try_fire(origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 		return false
 	_cooldown = cooldown_scale / fire_rate
 	if heat_per_shot > 0.0:
-		heat = minf(heat + heat_per_shot, heat_max)
+		heat = minf(heat + heat_per_shot * heat_scale, heat_max)
 		if heat >= heat_max:
 			_locked = true
 			if shooter is Node and shooter.is_in_group(&"player"):

@@ -411,6 +411,10 @@ func _apply_stats() -> void:
 	body_color = stats.primary_color
 	_paint.apply(stats.id, stats.primary_color, stats.accent_color)
 	_sync_body_metrics()
+	if _mg_mount:
+		# Garage MG Cooling: assignment (never *=) — set_stats is re-callable
+		# live (dev car switcher, enemy re-roll) and must not compound.
+		_mg_mount.heat_scale = stats.mg_heat_scale
 	_configure_rack()
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
