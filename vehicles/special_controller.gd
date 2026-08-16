@@ -448,10 +448,18 @@ func _dash_tick(delta: float) -> void:
 			slow.duration = DASH_SLOW_T
 			slow.magnitude = DASH_SLOW
 			other.apply_effect(slow)
-			var invuln := StatusEffectSpec.new()
-			invuln.kind = &"invuln"
-			invuln.duration = DASH_INVULN_T
-			if vehicle.has_method("apply_effect"):
+			# Same-frame bridge: a bare invuln status only reaches Health on the
+			# NEXT Status tick, leaving one frame where the victim's own ram
+			# loop can bill the caster back. grant_spawn_shield sets
+			# Health.invulnerable directly (and blinks — matrices.md already
+			# lists Leap connect under Blink FX). Duck-typed; spec fallback for
+			# bare fixtures.
+			if vehicle.has_method(&"grant_spawn_shield"):
+				vehicle.grant_spawn_shield(DASH_INVULN_T)
+			elif vehicle.has_method(&"apply_effect"):
+				var invuln := StatusEffectSpec.new()
+				invuln.kind = &"invuln"
+				invuln.duration = DASH_INVULN_T
 				vehicle.apply_effect(invuln)
 			_end_dash(vehicle)
 			return

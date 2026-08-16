@@ -529,7 +529,7 @@ func _physics_process(delta: float) -> void:
 	if _special and _special.is_spinning() and intent.has("steer"):
 		# Tornado Alley: rear wheels are off the ground — mostly a passenger.
 		intent["steer"] = float(intent["steer"]) * SpecialController.TORNADO_STEER
-	if _controller and not (_special and _special.is_dashing()) \
+	if _controller and not is_dashing() \
 			and not (_driver and _driver.has_method(&"is_forcing") and _driver.is_forcing()):
 		# Normal driving; skipped mid-Leap (and mid-charge for drivers that
 		# force velocity, duck-typed) so the controller's top-speed clamp
@@ -1151,9 +1151,16 @@ func is_tornado_active() -> bool:
 func is_trigger_armed() -> bool:
 	return _special != null and _special.trigger_armed()
 
-## Shared respawn/repair protection. Re-applying StatusReceiver's same-kind
-## effect refreshes it to at least the full requested duration; one owned tween
-## keeps the blink cadence from stacking when a shield is refreshed.
+## Mid-Leap. Other cars' ram loops check this: the dash bills its victim, never
+## the other way around.
+func is_dashing() -> bool:
+	return _special != null and _special.is_dashing()
+
+## Shared respawn/repair/Leap-connect protection. Re-applying StatusReceiver's
+## same-kind effect refreshes it to at least the full requested duration; one
+## owned tween keeps the blink cadence from stacking when a shield is
+## refreshed. Sets Health.invulnerable directly so callers releasing another
+## hold (or landing a dash) in the same call get no one-frame damage window.
 func grant_spawn_shield(seconds := DEFAULT_SHIELD_SECONDS) -> void:
 	if seconds <= 0.0 or _status == null:
 		return
@@ -1253,6 +1260,11 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 		if other == self:
 			continue
 		if other is Vehicle:
+			if other.is_dashing():
+				# Leap: the ram bill is the CASTER's alone — the victim's own
+				# loop must never price the body-check back onto the dasher.
+				# (Two mid-dash cars billing nothing is symmetric and accepted.)
+				continue
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
 				# An armed Toe Jam charge replaces the speed-scaled hit.

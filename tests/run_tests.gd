@@ -41,6 +41,7 @@ const SUITES := [
 	preload("res://tests/test_settings_persist.gd"),
 	preload("res://tests/test_tuning_deck.gd"),
 	preload("res://tests/test_ram_destructible.gd"),
+	preload("res://tests/test_dash_ram.gd"),
 	preload("res://tests/test_health_station.gd"),
 	preload("res://tests/test_pit_zone.gd"),
 	preload("res://tests/test_floors.gd"),
