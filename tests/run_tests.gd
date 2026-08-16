@@ -88,6 +88,7 @@ const SUITES := [
 	preload("res://tests/test_match_director.gd"),
 	preload("res://tests/test_spectator_rig.gd"),
 	preload("res://tests/test_unique_rides.gd"),
+	preload("res://tests/test_doppelganger.gd"),
 	preload("res://tests/test_mp_maps.gd"),
 	preload("res://tests/test_tutorial_level.gd"),
 	preload("res://tests/test_mode_select.gd"),

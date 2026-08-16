@@ -125,9 +125,8 @@ func _randomize_enemies() -> void:
 			enemies.append(child)  # bosses keep their authored car
 	if enemies.is_empty():
 		return
-	var player_id := ""
-	if _player.stats:
-		player_id = _player.stats.resource_path.get_file().get_basename()
+	var gs := get_node_or_null(^"/root/GameState")
+	var player_id := player_car_id(_player.stats, gs.selected_vehicle_id if gs else &"")
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var picks: Array = Loader.pick_cars(enemies.size(), player_id, rng)
@@ -135,13 +134,27 @@ func _randomize_enemies() -> void:
 	# build (positive deltas only) so late-run fights never read stock-vs-beast.
 	# Bosses never re-roll, so boss balance stays authored.
 	var rival := {}
-	var gs := get_node_or_null(^"/root/GameState")
 	if gs and gs.game_mode == &"campaign" and not gs.owned_mods.is_empty():
 		rival = GarageCatalog.rival_mod(gs.owned_mods)
 	for i in picks.size():
 		var base: VehicleStats = load("res://data/vehicles/%s.tres" % picks[i])
 		enemies[i].set_stats(base if rival.is_empty() else VehicleLoadout.compose(base, [rival]))
 		enemies[i].get_node("Driver").mix = Loader.mix_for_car(picks[i])
+
+## The player's roster id, garage-proof: VehicleLoadout.compose() hands the
+## car a duplicate() whose resource_path is EMPTY, so exclusion must ride the
+## authored id (importer-stamped, == the .tres basename, locked by
+## test_roster_contract). Fallbacks: the picker's selection (the
+## level_loader pattern), then the path basename for hand-authored dev stats
+## that carry no id.
+static func player_car_id(stats: VehicleStats, selected_id: StringName) -> String:
+	if stats and stats.id != &"":
+		return String(stats.id)
+	if selected_id != &"":
+		return String(selected_id)
+	if stats:
+		return stats.resource_path.get_file().get_basename()
+	return ""
 
 ## Kill bounties: every baked enemy's death pays the player IF the player
 ## authored it (last_attacker attribution — AI-on-AI scraps pay nobody).
