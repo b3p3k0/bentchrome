@@ -142,6 +142,14 @@ func arm_all_once() -> void:
 		_slots[i].ammo = 1
 		ammo_changed.emit(i, 1)
 
+## Wholesale ammo restore (campaign carry). Clamps to caps (per-car special
+## cap; no_mines zero-caps hold) and emits ammo_changed so the HUD tracks.
+## Selection and recharge untouched — a stock adjustment, not a re-rig.
+func restore_ammo(counts: Array) -> void:
+	for i in mini(counts.size(), _slots.size()):
+		_slots[i].ammo = clampi(int(counts[i]), 0, _slots[i].cap)
+		ammo_changed.emit(i, _slots[i].ammo)
+
 ## Adds ammo to a slot (pickups). Returns how much was actually accepted.
 func add_ammo(index: int, amount: int) -> int:
 	if _slots.is_empty() or index >= _slots.size():

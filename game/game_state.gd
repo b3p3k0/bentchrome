@@ -16,6 +16,11 @@ var score: int = 0
 # lives: bought at PIT STOPs, applied at level spawn via VehicleLoadout.compose,
 # never persisted.
 var owned_mods: Array = []
+# Campaign rack carry (WeaponRack.Slot order, 7 ints; empty = no carry).
+# Captured at the end screen's continue funnel, applied at the next level's
+# first player spawn (death respawns reset to the defined load instead).
+# Run state like lives: overwritten at each win, never persisted.
+var carry_ammo: Array = []
 # SP lane picked on the mode-select screen: &"campaign" (Road Trip),
 # &"tutorial" (Driver's Ed lessons), or &"test_drive" (same yard, free roam).
 # Run state, never persisted; mode select re-stamps it on every confirm.
@@ -25,6 +30,7 @@ func reset_campaign() -> void:
 	level_index = 0
 	lives = 3
 	owned_mods.clear()
+	carry_ammo.clear()
 	Economy.reset_run()  # fresh run, empty wallet — BOLTS are the tournament's
 
 # Custom-level flow (levels/custom_level.tscn). The editor's playtest sets all

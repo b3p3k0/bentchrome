@@ -51,6 +51,28 @@ func test_twin_special_shares_one_pool() -> void:
 	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mine slot stays empty")
 	r.free()
 
+func test_restore_ammo_clamps_and_signals() -> void:
+	var r = _rack(2, 10.0)
+	var events: Array = []
+	r.ammo_changed.connect(func(i: int, a: int) -> void: events.append([i, a]))
+	r.restore_ammo([9, 5, 0, 1, 3, 2, 1])
+	t.check(r.ammo(RackScript.Slot.SPECIAL) == 2, "restore: special clamped to its cap")
+	t.check(r.ammo(RackScript.Slot.STANDARD) == 5, "restore: uncapped counts land verbatim")
+	t.check(r.ammo(RackScript.Slot.HOMING) == 0, "restore: zero is a real count, not a skip")
+	t.check(r.ammo(RackScript.Slot.MINE) == 2 and r.ammo(RackScript.Slot.JUMP_MINE) == 1,
+		"restore: mine slots restore on an ordinary car")
+	t.check(events.size() == 7, "restore: every slot signals the HUD (%d)" % events.size())
+	t.check(r.selected_index() == RackScript.Slot.SPECIAL, "restore: selection untouched")
+	r.free()
+	# no_mines rack: the zero caps hold against a carried mine count.
+	var nm = RackScript.new()
+	var special = DefScript.new()
+	nm.configure(special, 1, 10.0, null, true)
+	nm.restore_ammo([1, 2, 1, 1, 0, 4, 4])
+	t.check(nm.ammo(RackScript.Slot.MINE) == 0 and nm.ammo(RackScript.Slot.JUMP_MINE) == 0,
+		"restore: no_mines pins the mine slots at 0")
+	nm.free()
+
 func test_single_special_has_no_twin() -> void:
 	var r = _rack()
 	t.check(r.special_twin() == null, "rack: ordinary cars carry no twin")

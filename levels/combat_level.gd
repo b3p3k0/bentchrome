@@ -62,7 +62,9 @@ func _ready() -> void:
 	_spawn_point = _player.global_position
 	_spawn_heading = _player.heading
 	# Level-start gets the same blink shield as a respawn — no spawn ambushes.
-	_player.respawn(_spawn_point, _spawn_heading, SHIELD_TIME)
+	# reset_rack = false: the campaign carry landed in Vehicle._ready and this
+	# call must not stomp it back to the defined load.
+	_player.respawn(_spawn_point, _spawn_heading, SHIELD_TIME, false)
 
 ## The lives loop. Dead + lives to spare = respawn after a beat; dead on the
 ## last life = zero the tank and let the end screen call it.

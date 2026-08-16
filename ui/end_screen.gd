@@ -8,6 +8,7 @@ extends CanvasLayer
 
 const UiStyle := preload("res://ui/ui_style.gd")
 const Economy := preload("res://game/economy.gd")
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
@@ -204,8 +205,25 @@ func _continue_campaign() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	var flow := get_node_or_null(^"/root/SceneFlow")
 	if gs and flow:
+		_capture_ammo_carry(gs)
 		gs.level_index = _campaign_next
 		flow.to_interstitial()
+
+## The winner's bay rides into the next level: snapshot all seven rack
+## counters off the (still-alive, tree-frozen) player before the scene swap
+## frees the car. Anything unreadable leaves the previous carry untouched.
+func _capture_ammo_carry(gs: Node) -> void:
+	var player := VehiclesHelper.local(get_tree())
+	if player == null or not is_instance_valid(player) \
+			or not player.has_method(&"get_rack"):
+		return
+	var rack: Variant = player.get_rack()
+	if rack == null:
+		return
+	var counts: Array = []
+	for i in WeaponRack.Slot.size():
+		counts.append(rack.ammo(i))
+	gs.carry_ammo = counts
 
 func _open_garage() -> void:
 	if _garage != null:

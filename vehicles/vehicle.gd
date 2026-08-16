@@ -204,6 +204,8 @@ func _ready() -> void:
 	else:
 		_paint.apply(&"", body_color, Color(1, 0.85, 0.2))
 		_sync_body_metrics()
+	if faction == &"player":
+		_apply_campaign_carry()
 	if body_scale != 1.0:
 		_visual.scale = Vector2.ONE * body_scale
 	add_to_group(faction)        # "player" or "enemies" — identity
@@ -409,9 +411,7 @@ func _apply_stats() -> void:
 	body_color = stats.primary_color
 	_paint.apply(stats.id, stats.primary_color, stats.accent_color)
 	_sync_body_metrics()
-	if _rack:
-		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds,
-			stats.special_b, stats.no_mines)
+	_configure_rack()
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
 	if _special:
@@ -431,6 +431,44 @@ func set_stats(new_stats: VehicleStats) -> void:
 		return
 	stats = new_stats
 	_apply_stats()
+
+## The car's defined load: authored special at cap, 2 fire / 1 homing /
+## 1 power, empty rear + mines. Shared by stat application and the
+## death-respawn reset; a god rack re-arms its one-of-everything so the
+## DEVGOD bench survives resets and car switches.
+func _configure_rack() -> void:
+	if _rack == null or stats == null:
+		return
+	_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds,
+		stats.special_b, stats.no_mines)
+	if _rack.god:
+		_rack.arm_all_once()
+
+## Campaign carry: last level's rack lands verbatim, except the special —
+## never start a level with a dead special slot (floor 1; restore clamps caps).
+func apply_ammo_carry(counts: Array) -> void:
+	if _rack == null or counts.is_empty():
+		return
+	var adjusted := counts.duplicate()
+	adjusted[WeaponRack.Slot.SPECIAL] = maxi(int(adjusted[WeaponRack.Slot.SPECIAL]), 1)
+	_rack.restore_ammo(adjusted)
+
+## The previous level's bay lands on this level's FIRST spawn only (death
+## respawns reset to the defined load). Campaign SP only: tutorial/test-drive
+## lanes, custom-level launches, and live LAN sessions never inherit a bay —
+## MP entry doesn't re-stamp game_mode, so the Net gate is load-bearing.
+func _apply_campaign_carry() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null or gs.game_mode != &"campaign":
+		return
+	if String(gs.get("pending_level_path")) != "":
+		return
+	var net := get_node_or_null(^"/root/Net")
+	if net != null and int(net.get("mode")) != 0:
+		return
+	var carry: Variant = gs.get("carry_ammo")
+	if carry is Array and not carry.is_empty():
+		apply_ammo_carry(carry)
 
 ## Pushes the paint style's footprint into everything that must agree with it:
 ## shadow silhouette, muzzle nose, collision radius. Radius is set absolutely
@@ -1182,8 +1220,12 @@ func grant_spawn_shield(seconds := DEFAULT_SHIELD_SECONDS) -> void:
 		_shield_tween.tween_property(_visual, "modulate:a", 1.0, 0.1)
 
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
-## invuln blink-shield so spawn-camping hunters can't chain-kill.
-func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_SECONDS) -> void:
+## invuln blink-shield so spawn-camping hunters can't chain-kill. A new life
+## also restarts on the defined weapon load (all modes — SP, chase, MP);
+## reset_rack = false is the level-START blink-shield call, which must not
+## stomp a just-applied campaign carry.
+func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_SECONDS,
+		reset_rack := true) -> void:
 	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
@@ -1226,6 +1268,8 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 		_health.hp = _health.max_hp
 	if _status:
 		_status.clear()  # death doesn't carry its fire into the next life
+	if reset_rack:
+		_configure_rack()  # nor its scavenged bay — the defined load returns
 	set_physics_process(true)
 	if _visual:
 		_visual.scale = Vector2.ONE * body_scale  # pit falls shrink it
