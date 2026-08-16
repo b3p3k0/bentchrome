@@ -273,6 +273,15 @@ func _card(item: Dictionary, selected: bool, index: int) -> PanelContainer:
 	blurb.add_theme_font_size_override("font_size", 13)
 	blurb.modulate = DIM if state != &"locked" else LOCKED
 	vbox.add_child(blurb)
+	# The systems line: what the part actually does when the stat bars can't
+	# show it (terrain overlays, sensor/heat/tracking scales, cap bonus).
+	var effect := String(item.get("effect_text", ""))
+	if not effect.is_empty():
+		var fx_lbl := Label.new()
+		fx_lbl.text = effect
+		fx_lbl.add_theme_font_size_override("font_size", 13)
+		fx_lbl.modulate = AMBER if state != &"locked" else LOCKED
+		vbox.add_child(fx_lbl)
 	var tradeoff := String(item.get("tradeoff_text", ""))
 	if not tradeoff.is_empty():
 		var trade_lbl := Label.new()

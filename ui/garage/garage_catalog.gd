@@ -5,9 +5,18 @@ extends RefCounted
 ## becoming dead data. Pure static; the shop and tests are the consumers.
 
 const Economy := preload("res://game/economy.gd")
+const TerrainTables := preload("res://resources/terrain_tables.gd")
 
 const PATH := "res://assets/data/garage_catalog.json"
 const CATEGORIES := ["ENGINE", "SUSPENSION", "WEAPONS", "CPU", "ARMOR"]
+
+## Every key an item may carry — anything else errors, which is what killed
+## the old free-form `reserved` bag (typo'd axis names were invisible).
+const ITEM_KEYS := ["id", "category", "display_name", "blurb", "tradeoff_text",
+	"effect_text", "price", "requires", "exclusive_slot", "stat_deltas",
+	"capabilities", "terrain_overlay", "controller_overrides"]
+const SCALE_CAP_MIN := 0.1
+const SCALE_CAP_MAX := 5.0
 
 ## Ordered category list drives the shop's tab order.
 static func categories() -> Array:
@@ -48,6 +57,13 @@ static func catalog_errors(data: Variant) -> PackedStringArray:
 		if typeof(price) not in [TYPE_INT, TYPE_FLOAT] or int(price) <= 0 \
 				or float(price) != floorf(float(price)):
 			errors.append("%s: price must be a positive integer" % id)
+		for key_v in item:
+			if String(key_v) not in ITEM_KEYS:
+				errors.append("%s: unknown key '%s' (the reserved bag is retired — wire it or drop it)"
+					% [id, key_v])
+		for copy_key in ["blurb", "tradeoff_text", "effect_text"]:
+			if item.has(copy_key) and typeof(item[copy_key]) != TYPE_STRING:
+				errors.append("%s: %s must be a string" % [id, copy_key])
 		var deltas: Variant = item.get("stat_deltas", {})
 		if typeof(deltas) != TYPE_DICTIONARY:
 			errors.append("%s: stat_deltas must be an object" % id)
@@ -57,6 +73,23 @@ static func catalog_errors(data: Variant) -> PackedStringArray:
 					errors.append("%s: stat_deltas names unknown stat '%s'" % [id, stat_v])
 				elif float(deltas[stat_v]) != floorf(float(deltas[stat_v])):
 					errors.append("%s: stat delta '%s' must be an integer" % [id, stat_v])
+		errors.append_array(_capability_errors(id, item.get("capabilities", {})))
+		if item.has("terrain_overlay"):
+			for issue in TerrainTables.terrain_profile_errors(item["terrain_overlay"]):
+				errors.append("%s: %s" % [id, issue])
+		var knobs: Variant = item.get("controller_overrides", {})
+		if typeof(knobs) != TYPE_DICTIONARY:
+			errors.append("%s: controller_overrides must be an object" % id)
+		else:
+			for knob_v in knobs:
+				if typeof(knobs[knob_v]) not in [TYPE_INT, TYPE_FLOAT]:
+					errors.append("%s: controller override '%s' must be a number" % [id, knob_v])
+		# The meaningfulness rule: dead data can never ship again.
+		if typeof(deltas) == TYPE_DICTIONARY and (deltas as Dictionary).is_empty() \
+				and typeof(item.get("capabilities", {})) == TYPE_DICTIONARY \
+				and (item.get("capabilities", {}) as Dictionary).is_empty() \
+				and not item.has("terrain_overlay") and not item.has("controller_overrides"):
+			errors.append("%s: item changes nothing (dead data)" % id)
 	# prerequisite ids resolve (second pass — forward references are fine)
 	for item in data["items"]:
 		if typeof(item) != TYPE_DICTIONARY:
@@ -64,6 +97,38 @@ static func catalog_errors(data: Variant) -> PackedStringArray:
 		var req := String(item.get("requires", ""))
 		if not req.is_empty() and not ids.has(req):
 			errors.append("%s: requires unknown item '%s'" % [item.get("id"), req])
+	return errors
+
+## Typed/ranged capability vocabulary (JSON numbers arrive as floats). special/
+## special_b are Resource-valued — reachable from code-authored mods only, so
+## the JSON catalog legally can't name them.
+static func _capability_errors(id: String, caps: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if typeof(caps) != TYPE_DICTIONARY:
+		errors.append("%s: capabilities must be an object" % id)
+		return errors
+	for key_v in caps:
+		var key := String(key_v)
+		var value: Variant = caps[key_v]
+		var numeric := typeof(value) in [TYPE_INT, TYPE_FLOAT]
+		if key in VehicleLoadout.SCALE_FIELDS:
+			if not numeric or float(value) < SCALE_CAP_MIN or float(value) > SCALE_CAP_MAX:
+				errors.append("%s: capability '%s' must be a number in [%s, %s]"
+					% [id, key, SCALE_CAP_MIN, SCALE_CAP_MAX])
+		elif key == "special_ammo_cap_bonus":
+			if not numeric or float(value) != floorf(float(value)) or int(value) == 0:
+				errors.append("%s: capability '%s' must be a nonzero integer" % [id, key])
+		elif key == "special_ammo_cap":
+			if not numeric or float(value) != floorf(float(value)) or int(value) < 1:
+				errors.append("%s: capability '%s' must be an integer >= 1" % [id, key])
+		elif key in ["burn_taken", "special_recharge_seconds"]:
+			if not numeric or float(value) <= 0.0:
+				errors.append("%s: capability '%s' must be a positive number" % [id, key])
+		elif key == "no_mines":
+			if typeof(value) != TYPE_BOOL:
+				errors.append("%s: capability '%s' must be a bool" % [id, key])
+		else:
+			errors.append("%s: unknown capability '%s'" % [id, key])
 	return errors
 
 ## Compose-ready mod list for a set of owned item ids (level-spawn helper).

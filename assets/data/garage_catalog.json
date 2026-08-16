@@ -1,5 +1,5 @@
 {
-  "_readme": "Mods-garage catalog (docs/garage/economy.md is design truth). Item shape follows docs/garage_seams.md: stat_deltas ride the 1-20 design scale through VehicleLoadout.compose; capabilities set VehicleStats fields; reserved names unwired axes (mg_heat_scale, lock_time_scale, detectability, radar_range_scale, ammo_cap_bonus). requires = prerequisite item id (stage chains, each price is that step's increment). exclusive_slot: items sharing a slot replace each other; empty = stacks.",
+  "_readme": "Mods-garage catalog (docs/garage/economy.md is design truth). Item shape follows docs/garage_seams.md: stat_deltas ride the 1-20 design scale through VehicleLoadout.compose; capabilities set VehicleStats fields (scale axes mg_heat_scale / tracking_scale / radar_range_scale / detectability compose MULTIPLICATIVELY; special_ammo_cap_bonus ADDS to the authored cap); terrain_overlay patches the car's terrain table per surface/property (silent properties keep the car's authored identity). effect_text is the card's amber systems line. requires = prerequisite item id (stage chains, each price is that step's increment). exclusive_slot: items sharing a slot replace each other; empty = stacks. Every item must change something real — the validator rejects dead data.",
   "schema_version": 1,
   "items": [
     {
@@ -14,8 +14,7 @@
       "stat_deltas": {
         "acceleration": 1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     },
     {
       "id": "engine_stage2",
@@ -30,8 +29,7 @@
         "acceleration": 1,
         "top_speed": 1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     },
     {
       "id": "engine_stage3",
@@ -46,8 +44,7 @@
         "acceleration": 1,
         "top_speed": 1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     },
     {
       "id": "susp_stage1",
@@ -61,8 +58,7 @@
       "stat_deltas": {
         "handling": 1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     },
     {
       "id": "susp_stage2",
@@ -77,22 +73,27 @@
         "handling": 1,
         "armor": 1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     },
     {
       "id": "tires_offroad",
       "category": "SUSPENSION",
       "display_name": "Offroad Tires",
       "blurb": "Knobby rubber — dirt, mud, and grass stop arguing.",
-      "tradeoff_text": "terrain swap wires in at the plug-in phase",
+      "effect_text": "digs in off the pavement — grip and pull climb on grass, dirt, mud, and snow",
+      "tradeoff_text": "street rubber it ain't — asphalt goes a little greasy",
       "price": 3500,
       "requires": "",
       "exclusive_slot": "tires",
       "stat_deltas": {},
       "capabilities": {},
-      "reserved": {
-        "terrain_profile_name": "awd_utility"
+      "terrain_overlay": {
+        "road": { "accel": 0.95, "top": 0.97, "grip": 0.93 },
+        "grass": { "accel": 1.15, "grip": 1.2 },
+        "dirt": { "accel": 1.2, "top": 1.08, "grip": 1.25 },
+        "mud": { "accel": 1.25, "top": 1.12, "grip": 1.3 },
+        "snow": { "accel": 1.1, "grip": 1.2 },
+        "ice": { "grip": 1.1 }
       }
     },
     {
@@ -100,7 +101,8 @@
       "category": "SUSPENSION",
       "display_name": "Lowering Kit",
       "blurb": "Hugs the asphalt like it owes rent.",
-      "tradeoff_text": "offroad grip suffers (terrain pass at plug-in)",
+      "effect_text": "+2 handling; asphalt grip, pull, and steering sharpen",
+      "tradeoff_text": "skirts scrape — grass, dirt, and mud eat the low ride",
       "price": 4000,
       "requires": "",
       "exclusive_slot": "tires",
@@ -108,8 +110,12 @@
         "handling": 2
       },
       "capabilities": {},
-      "reserved": {
-        "terrain_profile_name": ""
+      "terrain_overlay": {
+        "road": { "accel": 1.1, "grip": 1.12, "steer": 1.08 },
+        "grass": { "accel": 0.85, "grip": 0.85 },
+        "dirt": { "accel": 0.8, "grip": 0.8 },
+        "mud": { "accel": 0.8, "grip": 0.85 },
+        "snow": { "grip": 0.85 }
       }
     },
     {
@@ -117,13 +123,13 @@
       "category": "WEAPONS",
       "display_name": "MG Cooling",
       "blurb": "Runs cold, shoots long.",
+      "effect_text": "MG heat builds 30% slower",
       "tradeoff_text": "no tradeoff? sus.",
       "price": 4000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
-      "capabilities": {},
-      "reserved": {
+      "capabilities": {
         "mg_heat_scale": 0.7
       }
     },
@@ -132,6 +138,7 @@
       "category": "WEAPONS",
       "display_name": "Bay Expansion",
       "blurb": "More racks, more rockets.",
+      "effect_text": "+2 special ammo in the bay",
       "tradeoff_text": "the extra weight costs handling and plating",
       "price": 6000,
       "requires": "",
@@ -140,9 +147,8 @@
         "handling": -1,
         "armor": -1
       },
-      "capabilities": {},
-      "reserved": {
-        "ammo_cap_bonus": 2
+      "capabilities": {
+        "special_ammo_cap_bonus": 2
       }
     },
     {
@@ -150,14 +156,14 @@
       "category": "WEAPONS",
       "display_name": "Improved Lock",
       "blurb": "Missiles track like they mean it.",
-      "tradeoff_text": "your lock signal is LOUD — enemies see you sooner",
+      "effect_text": "locks reach 30% farther and steer 30% harder — missiles, taser, leap",
+      "tradeoff_text": "your lock signal is LOUD — you paint on every scope half again as far",
       "price": 5000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
-      "capabilities": {},
-      "reserved": {
-        "lock_time_scale": 0.7,
+      "capabilities": {
+        "tracking_scale": 1.3,
         "detectability": 1.5
       }
     },
@@ -166,14 +172,14 @@
       "category": "CPU",
       "display_name": "Radar Jammer",
       "blurb": "You're a rumor on their scopes.",
-      "tradeoff_text": "wires in when base radar range lands",
+      "effect_text": "enemy radar and AI eyes find you at 0.8x the distance",
+      "tradeoff_text": "",
       "price": 4500,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
-      "capabilities": {},
-      "reserved": {
-        "radar_range_scale": 0.8
+      "capabilities": {
+        "detectability": 0.8
       }
     },
     {
@@ -181,14 +187,14 @@
       "category": "CPU",
       "display_name": "Extended Radar",
       "blurb": "See trouble before trouble sees you.",
-      "tradeoff_text": "wires in when base radar range lands",
+      "effect_text": "your radar and edge arrows reach half again as far",
+      "tradeoff_text": "",
       "price": 5000,
       "requires": "",
       "exclusive_slot": "",
       "stat_deltas": {},
-      "capabilities": {},
-      "reserved": {
-        "radar_range_scale_self": 1.5
+      "capabilities": {
+        "radar_range_scale": 1.5
       }
     },
     {
@@ -204,8 +210,7 @@
         "armor": 2,
         "handling": -1
       },
-      "capabilities": {},
-      "reserved": {}
+      "capabilities": {}
     }
   ]
 }
