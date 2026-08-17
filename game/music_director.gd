@@ -227,3 +227,11 @@ func _update(delta: float) -> void:
 				p.stop()  # never leave a muted looping decode alive
 			continue
 		p.volume_db = linear_to_db(maxf(_gain[i], 0.0001)) + _duck_db
+
+## Quit etiquette: ogg playbacks release on the AudioServer's NEXT mix pass,
+## so a same-frame quit reads as "leaked instances" at exit. SceneFlow's
+## graceful quit calls this, waits one frame, then leaves.
+func stop_all() -> void:
+	for p in _players:
+		if p is AudioStreamPlayer and p.playing:
+			p.stop()

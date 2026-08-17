@@ -363,7 +363,7 @@ func _build_ui() -> void:
 			var flow := get_node_or_null(^"/root/SceneFlow")
 			if flow:
 				flow.to_title()))
-	_button(vbox, "Quit Desktop", func() -> void: get_tree().quit())
+	_button(vbox, "Quit Desktop", _quit_desktop)
 
 func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
@@ -374,3 +374,13 @@ func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	parent.add_child(b)
 	_buttons.append(b)
 	return b
+
+## Menu quits route through SceneFlow's graceful exit (stops audio, waits one
+## mix frame) so terminations leave a clean console; bare quit is the fallback
+## for stripped fixtures.
+func _quit_desktop() -> void:
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow and flow.has_method(&"quit_gracefully"):
+		flow.quit_gracefully()
+	else:
+		get_tree().quit()

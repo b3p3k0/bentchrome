@@ -112,6 +112,22 @@ func to_custom_level(path: String) -> void:
 	GameState.pending_level_path = path
 	goto_scene(CUSTOM)
 
+## The one process-exit for menus (title QUIT GAME, pause/end-screen Quit
+## Desktop). Ogg playbacks release on the AudioServer's next MIX pass — a
+## wall-clock interval, not a frame — so a same-frame quit prints "leaked
+## instances" at exit. Stop every player, give the mixer a 0.1s real-time
+## beat (pause-immune; imperceptible on a quit), then leave. Closing the
+## window directly still quits same-frame and may print the cosmetic lines.
+func quit_gracefully() -> void:
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio and audio.has_method(&"stop_all"):
+		audio.stop_all()
+	var music := get_node_or_null(^"/root/MusicDirector")
+	if music and music.has_method(&"stop_all"):
+		music.stop_all()
+	await get_tree().create_timer(0.1).timeout
+	get_tree().quit()
+
 func goto_scene(path: String) -> void:
 	# Every screen change funnels here — the single reset that undoes gameplay's
 	# hidden cursor. Combat/MP levels re-hide it in their own _ready.

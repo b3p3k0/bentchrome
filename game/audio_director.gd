@@ -238,3 +238,15 @@ func _bus(bus_name: StringName) -> StringName:
 func _jitter(event: StringName) -> float:
 	var j: float = CATALOG[event]["pitch_jitter"]
 	return 1.0 + randf_range(-j, j) if j > 0.0 else 1.0
+
+## Quit etiquette (same contract as MusicDirector.stop_all): stop every pooled
+## one-shot and dedicated looper so mid-playback ogg decodes don't read as
+## exit leaks once the graceful quit gives the mix thread its frame.
+func stop_all() -> void:
+	for pool in [_pool, _pool_2d, _pool_ui]:
+		for p in pool:
+			if p.playing:
+				p.stop()
+	for p in _loopers.values():
+		if p is AudioStreamPlayer and p.playing:
+			p.stop()

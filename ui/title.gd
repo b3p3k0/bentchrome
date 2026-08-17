@@ -116,7 +116,7 @@ func _quit_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		UiSfx.select(self)
 		if _quit_index == 0:
-			get_tree().quit()
+			_quit_desktop()
 		else:
 			_close_quit()
 
@@ -224,3 +224,13 @@ func _open_story() -> void:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
+
+## Menu quits route through SceneFlow's graceful exit (stops audio, waits one
+## mix frame) so terminations leave a clean console; bare quit is the fallback
+## for stripped fixtures.
+func _quit_desktop() -> void:
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow and flow.has_method(&"quit_gracefully"):
+		flow.quit_gracefully()
+	else:
+		get_tree().quit()
