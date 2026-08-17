@@ -20,6 +20,8 @@ const KINDS := {
 	# Dockyard furniture:
 	&"bollard": {"base": Color(0.16, 0.17, 0.2), "dark": Color(0.09, 0.1, 0.12), "fleck": Color(0.85, 0.7, 0.2)},
 	&"pallet": {"base": Color(0.52, 0.42, 0.27), "dark": Color(0.34, 0.27, 0.17), "fleck": Color(0.65, 0.55, 0.38)},
+	# Capital grounds:
+	&"headstone": {"base": Color(0.88, 0.88, 0.85), "dark": Color(0.6, 0.6, 0.58), "fleck": Color(0.97, 0.97, 0.95)},
 }
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
@@ -128,6 +130,8 @@ func _draw() -> void:
 			_draw_bollard()
 		&"pallet":
 			_draw_pallet()
+		&"headstone":
+			_draw_headstone()
 		_:
 			_draw_blob()
 
@@ -224,3 +228,14 @@ func _draw_pallet() -> void:
 	draw_rect(Rect2(-h, -h, 4, footprint), p.dark)             # stringers
 	draw_rect(Rect2(h - 4, -h, 4, footprint), p.dark)
 	draw_rect(Rect2(-2, -h, 4, footprint), p.dark)
+
+func _draw_headstone() -> void:
+	var p: Dictionary = KINDS[&"headstone"]
+	draw_rect(Rect2(-5, -1, 12, 10), Color(0, 0, 0, 0.22))     # cast shadow
+	draw_rect(Rect2(-6, -8, 12, 15), p.base)                   # marble tablet
+	draw_circle(Vector2(0, -8), 6.0, p.base)                   # rounded crown
+	draw_rect(Rect2(-6, 5, 12, 2), p.dark)                     # ground seam
+	draw_line(Vector2(-3, -5), Vector2(3, -5), p.dark, 1.2)    # inscription hints
+	draw_line(Vector2(-4, -2), Vector2(4, -2), p.dark, 1.0)
+	draw_line(Vector2(-3, 1), Vector2(3, 1), p.dark, 1.0)
+	draw_arc(Vector2(0, -8), 6.0, PI, TAU, 10, p.fleck, 1.2)   # crown highlight

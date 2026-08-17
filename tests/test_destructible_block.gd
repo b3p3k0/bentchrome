@@ -76,6 +76,41 @@ func test_opt_in_network_block_persists_as_tombstone() -> void:
 	t.root.remove_child(block)
 	block.free()
 
+func test_capital_styles_have_full_language() -> void:
+	var block_src = load("res://environment/destructible_block.gd")
+	var remains: Dictionary = block_src.REMAINS
+	t.check(remains.has(&"iron_fence") and remains.has(&"food_truck"),
+		"capital styles: iron_fence and food_truck speak the remains language")
+	t.check(remains[&"iron_fence"][0] == &"crumple",
+		"capital styles: black iron crumples (metal, never splinters)")
+	var trucks: Array = block_src.TRUCK_PALETTES
+	t.check(trucks.size() == 4, "capital styles: food trucks carry a four-color livery fleet")
+	var gate = BlockScene.instantiate()
+	gate.deco = &"iron_fence"
+	gate.size = Vector2(160, 12)
+	gate.max_hp = 30.0
+	t.root.add_child(gate)
+	t.check_approx(gate.get_node("Health").hp, 30.0,
+		"iron fence: containment HP class, twice the picket")
+	gate.get_node("Health").take_damage(30.0)
+	t.check(not gate.is_queued_for_deletion() and gate.collision_layer == 0,
+		"iron fence: crumples into flattened remains, never freed")
+	t.root.remove_child(gate)
+	gate.free()
+	var truck = BlockScene.instantiate()
+	truck.deco = &"food_truck"
+	truck.size = Vector2(180, 84)
+	truck.max_hp = 90.0
+	truck.livery = 1
+	t.root.add_child(truck)
+	t.check(truck.livery >= 0 and truck.livery < trucks.size(),
+		"food truck: livery override in range")
+	truck.get_node("Health").take_damage(90.0)
+	t.check(not truck.is_queued_for_deletion() and truck.collision_layer == 0,
+		"food truck: dies into remains like every block")
+	t.root.remove_child(truck)
+	truck.free()
+
 func test_chainlink_crumples_and_livery_overrides() -> void:
 	var fence = BlockScene.instantiate()
 	fence.deco = &"chainlink"

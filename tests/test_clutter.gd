@@ -55,7 +55,8 @@ func test_clutter_pops_on_one_hit() -> void:
 
 func test_street_kinds_and_hydrant_spout() -> void:
 	var kinds: Dictionary = load("res://environment/clutter.gd").KINDS
-	for k in [&"pine", &"mailbox", &"sign", &"cone", &"bike", &"hydrant", &"bollard", &"pallet"]:
+	for k in [&"pine", &"mailbox", &"sign", &"cone", &"bike", &"hydrant", &"bollard", &"pallet",
+			&"headstone"]:
 		t.check(kinds.has(k), "clutter: %s kind exists" % k)
 	var container := Node2D.new()
 	t.root.add_child(container)
