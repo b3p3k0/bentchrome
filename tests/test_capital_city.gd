@@ -60,10 +60,8 @@ func test_scene_structure() -> void:
 		t.check(arena.get_node_or_null(NodePath("CrashSite")) != null
 				and marine.get_node_or_null(marine.crash_site_path) != null,
 			"capital: the crash site resolves from the bird")
-	t.check(arena.get_node_or_null("LincolnSteps") != null
-			and arena.get_node_or_null("CapitolSteps") != null
-			and arena.get_node_or_null("MonumentKnoll") != null,
-		"capital: both terrace grades and the knoll are authored")
+	t.check(arena.get_node_or_null("MonumentKnoll") != null,
+		"capital: the Monument knoll holds the high ground (the flat-city rule)")
 	t.check(arena.get_node_or_null("Storm") != null and arena.get_node_or_null("Rain") != null,
 		"capital: the thunderstorm rig is mounted")
 	arena.free()
@@ -82,6 +80,6 @@ func test_arena_net_ids_are_unique() -> void:
 			dupes += 1
 		seen[int(id_v)] = true
 	t.check(dupes == 0, "capital: every arena_net_id is unique")
-	t.check(count == 37,
-		"capital: net ledger holds 37 synced props (got %d)" % count)
+	t.check(count == 43,
+		"capital: net ledger holds 43 synced props (got %d)" % count)
 	arena.free()

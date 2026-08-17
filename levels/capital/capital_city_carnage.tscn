@@ -1,4 +1,4 @@
-[gd_scene load_steps=61 format=3]
+[gd_scene load_steps=53 format=3]
 
 [ext_resource type="Script" path="res://levels/capital/capital_city_carnage.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -10,9 +10,7 @@
 [ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="8_curb"]
 [ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="9_heal"]
 [ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="10_speck"]
-[ext_resource type="Script" path="res://environment/ramp.gd" id="11_ramp"]
 [ext_resource type="PackedScene" path="res://environment/driveable_hill.tscn" id="12_hill"]
-[ext_resource type="Script" path="res://environment/floor_connector.gd" id="13_conn"]
 [ext_resource type="Script" path="res://environment/road_ribbon.gd" id="14_ribbon"]
 [ext_resource type="Script" path="res://environment/road_marks.gd" id="15_marks"]
 [ext_resource type="Script" path="res://environment/jump_pad.gd" id="16_jump"]
@@ -101,24 +99,6 @@ size = Vector2(128, 800)
 [sub_resource type="RectangleShape2D" id="R_shal_s"]
 size = Vector2(128, 512)
 
-[sub_resource type="RectangleShape2D" id="R_ret384"]
-size = Vector2(384, 24)
-
-[sub_resource type="RectangleShape2D" id="R_ret432v"]
-size = Vector2(24, 432)
-
-[sub_resource type="RectangleShape2D" id="R_ret96v"]
-size = Vector2(24, 96)
-
-[sub_resource type="RectangleShape2D" id="R_ret448"]
-size = Vector2(448, 24)
-
-[sub_resource type="RectangleShape2D" id="R_ret688v"]
-size = Vector2(24, 688)
-
-[sub_resource type="RectangleShape2D" id="R_ret224v"]
-size = Vector2(24, 224)
-
 [sub_resource type="RectangleShape2D" id="R_jump"]
 size = Vector2(224, 224)
 
@@ -181,16 +161,6 @@ extent = Vector2(2816, 1792)
 [node name="Floor1" parent="." instance=ExtResource("6_floor")]
 floor_index = 1
 size = Vector2(5632, 3584)
-
-[node name="FZLincolnTerrace" parent="." instance=ExtResource("6_floor")]
-position = Vector2(-1536, 0)
-floor_index = 2
-size = Vector2(384, 384)
-
-[node name="FZCapitolTerrace" parent="." instance=ExtResource("6_floor")]
-position = Vector2(2432, 0)
-floor_index = 2
-size = Vector2(448, 640)
 
 [node name="ArlingtonGrass" type="Area2D" parent="."]
 position = Vector2(-2624, -576)
@@ -499,7 +469,7 @@ width = 176.0
 [node name="RibbonMemorialBridge" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-2464, 48, -1760, -48)
+points = PackedVector2Array(-2464, 0, -1760, 0)
 width = 224.0
 
 [node name="Ribbon14thBridge" type="Node2D" parent="."]
@@ -558,7 +528,7 @@ style = &"dashed_yellow"
 
 [node name="MarkMemorial" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-2464, 48, -1760, -48)
+points = PackedVector2Array(-2464, 0, -1760, 0)
 style = &"dashed_white"
 
 [node name="Mark14th" type="Node2D" parent="RoadMarks"]
@@ -596,158 +566,12 @@ script = ExtResource("15_marks")
 points = PackedVector2Array(320, -1688, 320, -1512)
 style = &"crosswalk"
 
-[node name="LincolnSteps" type="Node2D" parent="."]
-position = Vector2(-1216, 0)
-rotation = -1.570796
-script = ExtResource("11_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(192, 256)
-surface_color = Color(0.72, 0.71, 0.67, 1)
-terrain_type = "road"
-downhill_pull = 120.0
-
-[node name="CapitolSteps" type="Node2D" parent="."]
-position = Vector2(2080, 0)
-rotation = 1.570796
-script = ExtResource("11_ramp")
-low_floor = 1
-high_floor = 2
-size = Vector2(192, 256)
-surface_color = Color(0.72, 0.71, 0.67, 1)
-terrain_type = "road"
-downhill_pull = 120.0
-
 [node name="MonumentKnoll" parent="." instance=ExtResource("12_hill")]
 summit_size = Vector2(384, 384)
 grade_length = 192.0
 low_floor = 1
 high_floor = 2
 terrain_type = "grass"
-
-[node name="LincolnWalls" type="StaticBody2D" parent="."]
-collision_layer = 8
-collision_mask = 0
-
-[node name="North" type="CollisionShape2D" parent="LincolnWalls"]
-position = Vector2(-1536, -204)
-shape = SubResource("R_ret384")
-
-[node name="West" type="CollisionShape2D" parent="LincolnWalls"]
-position = Vector2(-1740, 0)
-shape = SubResource("R_ret432v")
-
-[node name="EastFlankN" type="CollisionShape2D" parent="LincolnWalls"]
-position = Vector2(-1332, -144)
-shape = SubResource("R_ret96v")
-
-[node name="EastFlankS" type="CollisionShape2D" parent="LincolnWalls"]
-position = Vector2(-1332, 144)
-shape = SubResource("R_ret96v")
-
-[node name="CapitolWalls" type="StaticBody2D" parent="."]
-collision_layer = 8
-collision_mask = 0
-
-[node name="North" type="CollisionShape2D" parent="CapitolWalls"]
-position = Vector2(2432, -332)
-shape = SubResource("R_ret448")
-
-[node name="East" type="CollisionShape2D" parent="CapitolWalls"]
-position = Vector2(2668, 0)
-shape = SubResource("R_ret688v")
-
-[node name="WestFlankN" type="CollisionShape2D" parent="CapitolWalls"]
-position = Vector2(2196, -208)
-shape = SubResource("R_ret224v")
-
-[node name="WestFlankS" type="CollisionShape2D" parent="CapitolWalls"]
-position = Vector2(2196, 208)
-shape = SubResource("R_ret224v")
-
-[node name="TerraceCurbs" type="Node2D" parent="."]
-
-[node name="LincolnN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-1536, -180)
-size = Vector2(384, 24)
-
-[node name="LincolnW" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-1716, 0)
-size = Vector2(24, 384)
-
-[node name="LincolnEN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-1356, -144)
-size = Vector2(24, 96)
-
-[node name="LincolnES" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-1356, 144)
-size = Vector2(24, 96)
-
-[node name="CapitolN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(2432, -308)
-size = Vector2(448, 24)
-
-[node name="CapitolE" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(2644, 0)
-size = Vector2(24, 640)
-
-[node name="CapitolWN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(2220, -208)
-size = Vector2(24, 224)
-
-[node name="CapitolWS" parent="TerraceCurbs" instance=ExtResource("8_curb")]
-position = Vector2(2220, 208)
-size = Vector2(24, 224)
-
-[node name="FloorConnectors" type="Node2D" parent="."]
-
-[node name="LincolnUp" type="Node2D" parent="FloorConnectors"]
-position = Vector2(-960, 0)
-script = ExtResource("13_conn")
-from_floor = 1
-to_floor = 2
-approach_dir = Vector2(-1, 0)
-kind = &"grade"
-
-[node name="LincolnDown" type="Node2D" parent="FloorConnectors"]
-position = Vector2(-1408, 0)
-script = ExtResource("13_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(1, 0)
-kind = &"grade"
-
-[node name="LincolnEdge" type="Node2D" parent="FloorConnectors"]
-position = Vector2(-1536, 160)
-script = ExtResource("13_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(0, 1)
-kind = &"edge"
-
-[node name="CapitolUp" type="Node2D" parent="FloorConnectors"]
-position = Vector2(1824, 0)
-script = ExtResource("13_conn")
-from_floor = 1
-to_floor = 2
-approach_dir = Vector2(1, 0)
-kind = &"grade"
-
-[node name="CapitolDown" type="Node2D" parent="FloorConnectors"]
-position = Vector2(2304, 0)
-script = ExtResource("13_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(-1, 0)
-kind = &"grade"
-
-[node name="CapitolEdge" type="Node2D" parent="FloorConnectors"]
-position = Vector2(2432, 280)
-script = ExtResource("13_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(0, 1)
-kind = &"edge"
 
 [node name="HealthStation1" parent="." instance=ExtResource("9_heal")]
 position = Vector2(-2624, -896)
@@ -777,7 +601,7 @@ shape = SubResource("R_jump")
 
 [node name="LincolnTemple" type="StaticBody2D" parent="."]
 position = Vector2(-1600, 0)
-collision_layer = 20
+collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
 furniture = false
@@ -816,7 +640,7 @@ size = Vector2(64, 64)
 
 [node name="CapitolBuilding" type="StaticBody2D" parent="."]
 position = Vector2(2688, 0)
-collision_layer = 28
+collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
 furniture = false
@@ -948,7 +772,6 @@ size = Vector2(48, 48)
 
 [node name="DecoBridgeMemorial" type="Node2D" parent="."]
 position = Vector2(-2112, 0)
-rotation = -0.1356
 script = ExtResource("20_cdeco")
 kind = &"bridge_deck"
 size = Vector2(704, 224)
@@ -961,7 +784,6 @@ size = Vector2(704, 224)
 
 [node name="RailMemorialN" parent="." instance=ExtResource("22_block")]
 position = Vector2(-2112, -100)
-rotation = -0.1356
 size = Vector2(640, 12)
 max_hp = 20.0
 deco = &"rail"
@@ -970,12 +792,59 @@ arena_net_id = 20
 
 [node name="RailMemorialS" parent="." instance=ExtResource("22_block")]
 position = Vector2(-2112, 100)
-rotation = -0.1356
 size = Vector2(640, 12)
 max_hp = 20.0
 deco = &"rail"
 floor_index = 1
 arena_net_id = 21
+
+[node name="GuardEastN" parent="." instance=ExtResource("22_block")]
+position = Vector2(-1914, -976)
+size = Vector2(12, 1632)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 60
+
+[node name="GuardEastM" parent="." instance=ExtResource("22_block")]
+position = Vector2(-1914, 560)
+size = Vector2(12, 800)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 61
+
+[node name="GuardEastS" parent="." instance=ExtResource("22_block")]
+position = Vector2(-1914, 1536)
+size = Vector2(12, 512)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 62
+
+[node name="GuardWestN" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2310, -976)
+size = Vector2(12, 1632)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 63
+
+[node name="GuardWestM" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2310, 560)
+size = Vector2(12, 800)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 64
+
+[node name="GuardWestS" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2310, 1536)
+size = Vector2(12, 512)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 65
 
 [node name="Rail14thN" parent="." instance=ExtResource("22_block")]
 position = Vector2(-2112, 1014)
@@ -1103,7 +972,7 @@ amount = 2
 position = Vector2(64, -1136)
 script = ExtResource("23_marine")
 exit_point = Vector2(2600, 1560)
-door_point = Vector2(0, -1344)
+door_point = Vector2(0, -1280)
 crash_site_path = NodePath("../CrashSite")
 floor_index = 1
 arena_net_id = 1
@@ -1306,7 +1175,7 @@ shape = SubResource("R_wall_v")
 
 [node name="FoodTruck1" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(-448, -560)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 0
@@ -1315,7 +1184,7 @@ arena_net_id = 30
 
 [node name="FoodTruck2" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(-192, -336)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 1
@@ -1324,7 +1193,7 @@ arena_net_id = 31
 
 [node name="FoodTruck3" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(704, -560)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 2
@@ -1333,7 +1202,7 @@ arena_net_id = 32
 
 [node name="FoodTruck4" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(960, -336)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 3
@@ -1342,7 +1211,7 @@ arena_net_id = 33
 
 [node name="FoodTruck5" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(1856, -560)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 0
@@ -1351,7 +1220,7 @@ arena_net_id = 34
 
 [node name="FoodTruck6" parent="FoodTrucks" instance=ExtResource("22_block")]
 position = Vector2(2368, -336)
-size = Vector2(176, 80)
+size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
 livery = 1

@@ -63,7 +63,7 @@ func test_fence_breach_starts_the_evacuation() -> void:
 	for child in (rig.container as Node).get_children():
 		if child is Area2D and child.get("kind") != null:
 			figures += 1
-	t.check(figures == 1, "marine one: a figure sprints from the residence")
+	t.check(figures == 4, "marine one: POTUS and a three-guard detail break for the bird")
 	marine.tick(MarineScript.SPOOL_SECONDS + 0.1)
 	t.check(marine.phase == MarineScript.Phase.CLIMBING,
 		"marine one: the spool window closes into the climb")
@@ -112,14 +112,10 @@ func test_climb_rides_the_floor_bit_ladder() -> void:
 	marine.tick(0.1)
 	t.check((marine.collision_layer & FloorsScript.floor_bit(1)) != 0,
 		"marine one: low climb carries the floor-1 bit — anyone can hit it")
-	marine.phase_elapsed = MarineScript.CLIMB_SECONDS * 0.5
+	marine.phase_elapsed = MarineScript.CLIMB_SECONDS * 0.7
 	marine.tick(0.01)
 	t.check((marine.collision_layer & FloorsScript.floor_bit(2)) != 0,
-		"marine one: mid climb needs terrace height")
-	marine.phase_elapsed = MarineScript.CLIMB_SECONDS * 0.9
-	marine.tick(0.01)
-	t.check((marine.collision_layer & FloorsScript.floor_bit(3)) != 0,
-		"marine one: high climb is rooftop reach")
+		"marine one: high climb needs knoll height")
 	marine.phase_elapsed = MarineScript.CLIMB_SECONDS
 	marine.tick(0.01)
 	t.check(marine.phase == MarineScript.Phase.ESCAPED and marine.collision_layer == 0

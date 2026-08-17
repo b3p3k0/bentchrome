@@ -60,7 +60,7 @@ var _start_pos := Vector2.ZERO
 var _death_pos := Vector2.ZERO
 var _death_lift := 0.0
 var _rotor_angle := 0.0
-var _figure: Node2D = null
+var _figures: Array = []  # POTUS + the detail; freed on boarding
 var _light: PointLight2D = null
 var _crash_restore: Array = []  # [node, layer, monitoring] rows
 var _net_initialized := false
@@ -150,9 +150,11 @@ func _fence_breached() -> bool:
 func flight_progress() -> float:
 	return clampf(phase_elapsed / CLIMB_SECONDS, 0.0, 1.0)
 
-## Altitude stage 1..3 across the climb — each stage swaps the floor bit.
+## Altitude stage 1..2 across the climb — each stage swaps the floor bit.
+## Two stages since the capital flattened: low (anyone hits it) then
+## knoll-height (floor-2 shooters keep the shot), then the sky.
 func climb_stage() -> int:
-	return clampi(1 + int(flight_progress() * 3.0), 1, 3)
+	return clampi(1 + int(flight_progress() * 2.0), 1, 2)
 
 func current_lift() -> float:
 	match phase:
@@ -204,9 +206,10 @@ func _enter_phase(p: Phase, initial_state: bool) -> void:
 			if not initial_state:
 				_spawn_figure()
 		Phase.CLIMBING:
-			if _figure and is_instance_valid(_figure):
-				_figure.queue_free()  # boarded
-			_figure = null
+			for figure in _figures:  # the whole detail boards
+				if figure is Node2D and is_instance_valid(figure):
+					figure.queue_free()
+			_figures.clear()
 		Phase.ESCAPED:
 			collision_layer = 0
 			collision_mask = 0
@@ -229,26 +232,31 @@ func _enter_phase(p: Phase, initial_state: bool) -> void:
 				_death_visual()
 			queue_redraw()
 
-## The residence empties: a one-shot suited runner breaks for the bird
-## (porta-potty escape template — deterministic seed, pure presentation).
+## The residence empties: POTUS breaks for the bird with a three-guard
+## Secret Service detail flanking from staggered door offsets (porta-potty
+## escape template — deterministic seeds, pure presentation on both sides).
 func _spawn_figure() -> void:
 	var host := get_tree().current_scene
 	if host == null:
 		host = get_parent()
 	if host == null:
 		return
-	var actor: Node2D = ActorScene.instantiate()
-	actor.kind = &"business_suit"
-	actor.movement = 0  # WANDER — panic supplies the sprint
-	actor.move_speed = 96.0
-	actor.actor_seed = int(absf(_start_pos.x * 7.0 + _start_pos.y * 13.0)) + 77
-	actor.floor_index = floor_index
-	var from := door_point if door_point != Vector2.ZERO else _start_pos + Vector2(0, -160)
-	host.add_child(actor)
-	actor.global_position = from
-	# Panic away from the mirror point = a dead sprint TOWARD the chopper.
-	actor.panic_from(from * 2.0 - _start_pos, SPOOL_SECONDS)
-	_figure = actor
+	var door := door_point if door_point != Vector2.ZERO else _start_pos + Vector2(0, -160)
+	var offsets: Array = [Vector2.ZERO, Vector2(-42, 10), Vector2(44, 14), Vector2(-6, 34)]
+	for i in offsets.size():
+		var actor: Node2D = ActorScene.instantiate()
+		actor.kind = &"business_suit"
+		actor.palette_index = i % 3
+		actor.movement = 0  # WANDER — panic supplies the sprint
+		actor.move_speed = 120.0 if i == 0 else 112.0 + float(i) * 4.0
+		actor.actor_seed = int(absf(_start_pos.x * 7.0 + _start_pos.y * 13.0)) + 77 + i * 13
+		actor.floor_index = floor_index
+		var from: Vector2 = door + offsets[i]
+		host.add_child(actor)
+		actor.global_position = from
+		# Panic away from the mirror point = a dead sprint TOWARD the chopper.
+		actor.panic_from(from * 2.0 - _start_pos, SPOOL_SECONDS)
+		_figures.append(actor)
 
 func _on_died() -> void:
 	if phase == Phase.DEAD or phase == Phase.DYING:
