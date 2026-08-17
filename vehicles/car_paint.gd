@@ -12,6 +12,7 @@ extends Node2D
 ## is duck-typed where needed.
 
 const Parts := preload("res://vehicles/paint/parts.gd")
+const Wear := preload("res://vehicles/paint/wear.gd")
 
 const FLEET_SCALE := 1.50  # visual size of every car; collision radii stay 1:1
 
@@ -77,6 +78,18 @@ var _steer := 0.0        # smoothed front-wheel pivot
 var _prev_heading := 0.0
 var _service_braking := false
 
+## Visual damage tier (Wear.FRESH/BANGED/BUSTED). PUSHED from outside —
+## DriveFX polls hp; CarPaint never reads Vehicle. Turntables stay 0/fresh.
+var wear := 0
+var _wear_marks_cache := {}  # tier -> Array; steering cars redraw near-every-frame
+
+func set_wear(tier: int) -> void:
+	var t := clampi(tier, Wear.FRESH, Wear.BUSTED)
+	if t == wear:
+		return
+	wear = t
+	queue_redraw()
+
 func _ready() -> void:
 	scale = Vector2.ONE * FLEET_SCALE  # visual child only — never the physics body
 
@@ -85,6 +98,7 @@ func apply(id: StringName, primary_color: Color, accent_color: Color) -> void:
 	primary = primary_color
 	accent = accent_color
 	scale = Vector2.ONE * FLEET_SCALE  # standalone uses (turntable) may apply pre-ready
+	_wear_marks_cache.clear()  # new style/palette = new wear seed
 	set_process(_animated())
 	queue_redraw()
 
@@ -176,6 +190,12 @@ func _draw() -> void:
 		STYLE_SCRIPTS[style_id].paint(self, primary, accent, _steer, _bar_phase)
 	else:
 		_draw_box()
+	# Wear rides over the paint but UNDER the taillights (lamps stay readable).
+	if wear > Wear.FRESH:
+		if not _wear_marks_cache.has(wear):
+			_wear_marks_cache[wear] = Wear.wear_marks(
+				STYLES[style_id], wear, Wear.wear_seed(style_id, primary, accent))
+		Wear.draw_marks(self, _wear_marks_cache[wear])
 	_taillights()
 
 ## The placeholder square — dummies and unknown ids keep the classic look.
