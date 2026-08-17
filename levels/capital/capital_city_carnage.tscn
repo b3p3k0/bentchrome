@@ -1,4 +1,4 @@
-[gd_scene load_steps=60 format=3]
+[gd_scene load_steps=61 format=3]
 
 [ext_resource type="Script" path="res://levels/capital/capital_city_carnage.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -27,6 +27,7 @@
 [ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="25_clutter"]
 [ext_resource type="Script" path="res://environment/street_deco.gd" id="26_sdeco"]
 [ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="27_wreck"]
+[ext_resource type="Script" path="res://environment/ambient_population.gd" id="28_ambient"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("10_speck")
@@ -1751,6 +1752,116 @@ amount = 2
 position = Vector2(832, -128)
 kind = "jump"
 amount = 1
+
+[node name="AmbientLife" type="Node2D" parent="."]
+
+[node name="VendorC1" type="Node2D" parent="AmbientLife"]
+position = Vector2(-448, -500)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 41
+
+[node name="VendorC2" type="Node2D" parent="AmbientLife"]
+position = Vector2(-192, -396)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 42
+
+[node name="VendorC3" type="Node2D" parent="AmbientLife"]
+position = Vector2(704, -500)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 43
+
+[node name="VendorC4" type="Node2D" parent="AmbientLife"]
+position = Vector2(960, -396)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 44
+
+[node name="VendorC5" type="Node2D" parent="AmbientLife"]
+position = Vector2(1856, -500)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 45
+
+[node name="VendorC6" type="Node2D" parent="AmbientLife"]
+position = Vector2(2368, -396)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vendor"])
+movement = 2
+bounds = Vector2(0, 0)
+seed_offset = 46
+
+[node name="MallCrowdW" type="Node2D" parent="AmbientLife"]
+position = Vector2(-700, 150)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"business_suit", &"business_dress"])
+count = 3
+bounds = Vector2(500, 260)
+seed_offset = 47
+
+[node name="MallCrowdE" type="Node2D" parent="AmbientLife"]
+position = Vector2(1100, 0)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"business_suit", &"business_dress"])
+count = 3
+bounds = Vector2(800, 300)
+seed_offset = 48
+
+[node name="MuseumSteps" type="Node2D" parent="AmbientLife"]
+position = Vector2(1280, 640)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"business_dress", &"business_suit"])
+count = 2
+bounds = Vector2(900, 120)
+seed_offset = 49
+
+[node name="PoliceMall" type="Node2D" parent="AmbientLife"]
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"police"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(-1400, -448, 2200, -448, 2200, 448, -1400, 448, -1400, -448)
+speed = 46.0
+seed_offset = 50
+
+[node name="VagrantsK" type="Node2D" parent="AmbientLife"]
+position = Vector2(-500, -1690)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"vagrant"])
+count = 2
+bounds = Vector2(500, 100)
+speed = 32.0
+seed_offset = 51
+
+[node name="JoggersMall" type="Node2D" parent="AmbientLife"]
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"jogger"])
+count = 2
+movement = 1
+route_points = PackedVector2Array(-1300, -260, 1900, -260, 1900, 260, -1300, 260, -1300, -260)
+speed = 70.0
+seed_offset = 52
+
+[node name="DogEllipse" type="Node2D" parent="AmbientLife"]
+position = Vector2(0, -560)
+script = ExtResource("28_ambient")
+kinds = Array[StringName]([&"dog"])
+count = 1
+bounds = Vector2(400, 160)
+speed = 62.0
+seed_offset = 53
 
 [node name="Vehicle" parent="." instance=ExtResource("17_veh")]
 position = Vector2(0, 896)
