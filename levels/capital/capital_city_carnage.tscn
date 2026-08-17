@@ -790,7 +790,7 @@ shape = SubResource("R_b192x320")
 position = Vector2(-1856, 0)
 script = ExtResource("20_cdeco")
 kind = &"lincoln"
-size = Vector2(256, 352)
+size = Vector2(320, 416)
 
 [node name="ObeliskCore" type="StaticBody2D" parent="."]
 collision_layer = 20
@@ -809,7 +809,7 @@ shape = SubResource("R_b48")
 [node name="DecoObelisk" type="Node2D" parent="."]
 script = ExtResource("20_cdeco")
 kind = &"obelisk"
-size = Vector2(64, 64)
+size = Vector2(96, 96)
 
 [node name="CapitolBuilding" type="StaticBody2D" parent="."]
 position = Vector2(2944, 0)
@@ -873,7 +873,7 @@ shape = SubResource("R_b320x320")
 position = Vector2(-2816, 1536)
 script = ExtResource("20_cdeco")
 kind = &"pentagon"
-size = Vector2(340, 340)
+size = Vector2(420, 420)
 
 [node name="FountainCore" type="StaticBody2D" parent="."]
 position = Vector2(1408, -704)
@@ -899,19 +899,25 @@ size = Vector2(200, 200)
 position = Vector2(-496, 0)
 script = ExtResource("20_cdeco")
 kind = &"ww2_ring"
-size = Vector2(192, 120)
+size = Vector2(344, 216)
 
 [node name="DecoVietnam" type="Node2D" parent="."]
 position = Vector2(-1280, -260)
 script = ExtResource("20_cdeco")
 kind = &"vietnam_wall"
-size = Vector2(256, 96)
+size = Vector2(460, 172)
 
 [node name="DecoKorean" type="Node2D" parent="."]
 position = Vector2(-1280, 260)
 script = ExtResource("20_cdeco")
 kind = &"korean_patrol"
-size = Vector2(200, 140)
+size = Vector2(360, 252)
+
+[node name="DecoPool" type="Node2D" parent="."]
+position = Vector2(-1120, 0)
+script = ExtResource("20_cdeco")
+kind = &"pool_surround"
+size = Vector2(1024, 160)
 
 [node name="DecoHeadstonesW1" type="Node2D" parent="."]
 position = Vector2(-2948, -1024)
@@ -1683,6 +1689,21 @@ floor_index = 1
 [node name="BushParkSW" parent="LooseClutter" instance=ExtResource("25_clutter")]
 position = Vector2(-960, 1488)
 kind = &"bush"
+floor_index = 1
+
+[node name="BollardVietnamW" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1516, -320)
+kind = &"bollard"
+floor_index = 1
+
+[node name="BollardVietnamE" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1044, -320)
+kind = &"bollard"
+floor_index = 1
+
+[node name="BollardKorean" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1470, 392)
+kind = &"bollard"
 floor_index = 1
 
 [node name="StreetDeco" type="Node2D" parent="."]
