@@ -1,10 +1,12 @@
 extends StaticBody2D
 ## A destructible obstacle: block semantics (layer 4 — airborne cars and
 ## cover-piercing shots ignore it) plus Health, so weapons fire and ramming
-## can break it open. Frees itself on death. Size and HP are per-instance
-## exports; `deco` picks a paint style (house roof, crate, kiosk, barrier,
-## guardrail, junk pile, gas pump, fuel barrel) — empty keeps the plain slab.
-## Barrels are the fun ones: they detonate with a real blast.
+## can break it open. Death FLATTENS it in place: the node stays as visible,
+## collisionless remains (seeded debris/scorch via remains_paint.gd) that cars
+## drive over and shots pass through. Size and HP are per-instance exports;
+## `deco` picks a paint style (house roof, crate, kiosk, barrier, guardrail,
+## junk pile, gas pump, fuel barrel) — empty keeps the plain slab. Barrels are
+## the fun ones: they detonate with a real blast.
 
 const BASE_COLOR := Color(0.45, 0.38, 0.28)     # crate-brown vs the cold gray of solid blocks
 const WRECKED_COLOR := Color(0.22, 0.18, 0.14)  # battered toward rubble as HP falls
@@ -52,6 +54,32 @@ const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, y
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 const ArenaState := preload("res://game/net/arena_state.gd")
+const RemainsPaint := preload("res://environment/remains_paint.gd")
+
+## Remains language per deco: [flavor, base, dark]. Colors authored drab
+## directly — never through _shade (a dead block's _wreck is 1.0, which would
+## collapse every palette into one mud color). Containers resolve their base
+## from the livery at draw time.
+const REMAINS := {
+	&"": [&"debris", WRECKED_COLOR, Color(0.13, 0.11, 0.09)],
+	&"house": [&"debris", ROOF_DARK, ROOF_RIDGE],
+	&"crate": [&"splinter", PLANK, PLANK_SEAM],
+	&"kiosk": [&"crumple", AWNING_RED, PLANK_SEAM],
+	&"barrier": [&"crumple", METAL, METAL_DARK],
+	&"rail": [&"crumple", METAL, METAL_DARK],
+	&"fan_rail": [&"crumple", FAN_BLUE, FAN_BLUE_DARK],
+	&"log": [&"splinter", Color(0.4, 0.28, 0.17), Color(0.28, 0.19, 0.11)],
+	&"junk": [&"debris", RUST, RUST_DARK],
+	&"pump": [&"scorch", PUMP_RED, HAZARD_DARK],
+	&"barrel": [&"scorch", BARREL_RED, BARREL_RIM],
+	&"fence": [&"splinter", Color(0.92, 0.9, 0.85), Color(0.68, 0.66, 0.6)],
+	&"container": [&"crumple", Color.WHITE, METAL_DARK],  # base = livery, darkened
+	&"chainlink": [&"crumple", LINK, LINK_DARK],
+	&"forms": [&"splinter", Color(0.45, 0.34, 0.20), Color(0.30, 0.22, 0.13)],
+	&"spool": [&"splinter", Color(0.48, 0.34, 0.19), Color(0.28, 0.20, 0.12)],
+	&"pipes": [&"debris", Color(0.42, 0.45, 0.46), Color(0.14, 0.16, 0.17)],
+	&"rebar": [&"debris", Color(0.42, 0.25, 0.16), Color(0.35, 0.21, 0.14)],
+}
 
 @export var size := Vector2(96, 96)
 @export var max_hp := 80.0
@@ -106,18 +134,25 @@ func _on_damaged(_amount: float, hp: float) -> void:
 func _explode_and_free() -> void:
 	if _dead:
 		return
-	_dead = true
 	_spawn_death_visual()
 	if deco == &"barrel":
 		# Deferred: death often lands mid-physics-flush (projectile Area2D
 		# signal), and shape queries need the space unlocked.
 		call_deferred("_barrel_blast")
-	if arena_net_id > 0:
-		collision_layer = 0
-		collision_mask = 0
-		visible = false
-	else:
-		queue_free()
+	_present_remains()
+
+## The flatten-in-place death state: the node STAYS — visible, collisionless
+## debris cars drive over and shots pass through. One path for legacy and
+## arena-synced blocks alike (the tombstone contract keeps the node anyway;
+## it just stops hiding it).
+func _present_remains() -> void:
+	_dead = true
+	collision_layer = 0
+	collision_mask = 0
+	_vis.visible = false  # the plain slab's polygon would keep painting the box
+	if is_in_group(&"tutorial_smash"):
+		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
+	queue_redraw()
 
 func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
@@ -143,14 +178,12 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 		_dead = false
 		visible = true
 		collision_layer = _base_collision_layer
+		_vis.visible = deco == &""  # resurrect the plain slab's polygon too
 		queue_redraw()
 	elif not _dead:
-		_dead = true
 		if not initial_state:
-			_spawn_death_visual()
-		visible = false
-		collision_layer = 0
-		collision_mask = 0
+			_spawn_death_visual()  # late joiners get silent remains, no boom
+		_present_remains()
 	_net_initialized = true
 
 func _boom_tint() -> Color:
@@ -199,7 +232,21 @@ func _seed_rng() -> RandomNumberGenerator:
 	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0))
 	return rng
 
+## The livery pick, shared by the live paint and the remains (both consume the
+## seeded rng's FIRST roll, so a crumpled container keeps its harbor color).
+func _container_livery(rng: RandomNumberGenerator) -> Color:
+	if livery >= 0 and livery < CONTAINER_PALETTES.size():
+		return CONTAINER_PALETTES[livery]
+	return CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+
 func _draw() -> void:
+	if _dead:
+		var spec: Array = REMAINS.get(deco, REMAINS[&""])
+		var base: Color = _container_livery(_seed_rng()).darkened(0.55) \
+			if deco == &"container" else spec[1]
+		RemainsPaint.draw_marks(self, RemainsPaint.generate(size * 0.5, spec[0],
+			base, spec[2], RemainsPaint.remains_seed(position)))
+		return
 	match deco:
 		&"house":
 			_draw_house()
@@ -461,8 +508,7 @@ func _draw_fence() -> void:
 func _draw_container() -> void:
 	var half := size * 0.5
 	var rng := _seed_rng()
-	var base: Color = CONTAINER_PALETTES[livery] if livery >= 0 and livery < CONTAINER_PALETTES.size() \
-		else CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+	var base := _container_livery(rng)
 	var dark := base.darkened(0.4)
 	draw_rect(Rect2(-half + Vector2(6, 9), size), SHADOW)  # stacked-steel height
 	draw_rect(Rect2(-half, size), _shade(base))

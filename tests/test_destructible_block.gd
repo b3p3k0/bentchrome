@@ -35,11 +35,17 @@ func test_block_hp_override_and_tint() -> void:
 	t.root.remove_child(block)
 	block.free()
 
-func test_block_dies_and_frees() -> void:
+func test_block_dies_into_remains() -> void:
 	var block = BlockScene.instantiate()
 	t.root.add_child(block)
 	block.get_node("Health").take_damage(999.0)
-	t.check(block.is_queued_for_deletion(), "lethal damage frees the block")
+	t.check(not block.is_queued_for_deletion() and block.is_inside_tree(),
+		"remains: lethal damage flattens in place, never frees")
+	t.check(block.visible, "remains: the rubble stays visible")
+	t.check(block.collision_layer == 0 and block.collision_mask == 0,
+		"remains: drive over it, shoot through it")
+	t.check(not block.get_node("Vis").visible,
+		"remains: the intact slab polygon stands down")
 	t.root.remove_child(block)
 	block.free()
 
@@ -51,7 +57,8 @@ func test_container_deco_and_floor_bit() -> void:
 	t.root.add_child(block)
 	t.check(block.collision_layer == (4 | 32), "container: terrace bit joins the obstacle bit")
 	block.get_node("Health").take_damage(999.0)
-	t.check(block.is_queued_for_deletion(), "container: breaks open like any block")
+	t.check(not block.is_queued_for_deletion() and block.collision_layer == 0,
+		"container: crumples into drive-over remains like any block")
 	t.root.remove_child(block)
 	block.free()
 
@@ -60,9 +67,9 @@ func test_opt_in_network_block_persists_as_tombstone() -> void:
 	block.arena_net_id = 77
 	t.root.add_child(block)
 	block.get_node("Health").take_damage(999.0)
-	t.check(not block.is_queued_for_deletion() and not block.visible
+	t.check(not block.is_queued_for_deletion() and block.visible
 		and block.collision_layer == 0,
-		"arena block: networked death persists hidden and noncolliding")
+		"arena block: networked death persists as visible noncolliding remains")
 	var row: Dictionary = block.capture_arena_state([])
 	t.check(int(row.flags) == 0 and float(row.hp) == 0.0,
 		"arena block: tombstone repeats terminal state")
@@ -77,7 +84,8 @@ func test_chainlink_crumples_and_livery_overrides() -> void:
 	t.root.add_child(fence)
 	t.check_approx(fence.get_node("Health").hp, 12.0, "chainlink: fender-tap HP class")
 	fence.get_node("Health").take_damage(12.0)
-	t.check(fence.is_queued_for_deletion(), "chainlink: crumples like any block")
+	t.check(not fence.is_queued_for_deletion() and fence.collision_layer == 0,
+		"chainlink: crumples into flattened mesh remains")
 	t.root.remove_child(fence)
 	fence.free()
 	var block_src = load("res://environment/destructible_block.gd")

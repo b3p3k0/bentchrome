@@ -53,7 +53,7 @@ func _draw() -> void:
 	for fh in _floor_high:
 		draw_rect(_map_rect(fh), FLOOR_HIGH)
 	for b in _breakables:
-		if is_instance_valid(b.ref):
+		if breakable_alive(b.ref):
 			draw_rect(_map_rect(b.rect), BREAKABLE)
 	for st in _stations:
 		var p := _map(st)
@@ -188,6 +188,13 @@ func _has_health(node: Node) -> bool:
 func _floor_of(node: Node) -> int:
 	var f: Variant = node.get("floor_index")
 	return int(f) if f is int else -1
+
+## Remains contract: dead breakables flatten in place with collision_layer 0 —
+## the map paints only geometry that still blocks. (Also covers the old bug
+## where hidden arena tombstones painted as live cover forever.) Duck-typed.
+static func breakable_alive(ref) -> bool:
+	return is_instance_valid(ref) and ref is StaticBody2D \
+		and (int(ref.collision_layer) & 4) != 0
 
 static func opponents(tree: SceneTree, viewer: Node) -> Array:
 	return VehiclesHelper.sensed_others(tree, viewer)
