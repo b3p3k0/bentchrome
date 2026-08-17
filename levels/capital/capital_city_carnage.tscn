@@ -1,0 +1,791 @@
+[gd_scene load_steps=40 format=3]
+
+[ext_resource type="Script" path="res://levels/capital/capital_city_carnage.gd" id="1_lvl"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
+[ext_resource type="Script" path="res://levels/capital/storm_director.gd" id="4_storm"]
+[ext_resource type="Script" path="res://environment/rain_squall.gd" id="5_rain"]
+[ext_resource type="PackedScene" path="res://environment/floor_zone.tscn" id="6_floor"]
+[ext_resource type="PackedScene" path="res://environment/deep_water_zone.tscn" id="7_dwater"]
+[ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="8_curb"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="9_heal"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="10_speck"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="11_ramp"]
+[ext_resource type="PackedScene" path="res://environment/driveable_hill.tscn" id="12_hill"]
+[ext_resource type="Script" path="res://environment/floor_connector.gd" id="13_conn"]
+[ext_resource type="Script" path="res://environment/road_ribbon.gd" id="14_ribbon"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="15_marks"]
+[ext_resource type="Script" path="res://environment/jump_pad.gd" id="16_jump"]
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="17_veh"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="18_enemy"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="19_hud"]
+
+[sub_resource type="ShaderMaterial" id="SM_asphalt"]
+shader = ExtResource("10_speck")
+shader_parameter/base_color = Color(0.11, 0.11, 0.13, 1)
+shader_parameter/speckle_color = Color(0.06, 0.06, 0.08, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_worn"]
+shader = ExtResource("10_speck")
+shader_parameter/base_color = Color(0.2, 0.2, 0.225, 1)
+shader_parameter/speckle_color = Color(0.12, 0.12, 0.14, 1)
+shader_parameter/density = 0.45
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 9.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_grass"]
+shader = ExtResource("10_speck")
+shader_parameter/base_color = Color(0.25, 0.5, 0.22, 0.5)
+shader_parameter/speckle_color = Color(0.14, 0.36, 0.11, 1)
+shader_parameter/density = 0.35
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 10.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_water"]
+shader = ExtResource("10_speck")
+shader_parameter/base_color = Color(0.15, 0.3, 0.55, 0.6)
+shader_parameter/speckle_color = Color(0.45, 0.65, 0.9, 1)
+shader_parameter/density = 0.22
+shader_parameter/intensity = 0.55
+shader_parameter/scale = 14.0
+shader_parameter/shimmer = 1.6
+
+[sub_resource type="RectangleShape2D" id="R_wall_h"]
+size = Vector2(5712, 40)
+
+[sub_resource type="RectangleShape2D" id="R_wall_v"]
+size = Vector2(40, 3664)
+
+[sub_resource type="RectangleShape2D" id="R_arl"]
+size = Vector2(384, 2432)
+
+[sub_resource type="RectangleShape2D" id="R_mallw"]
+size = Vector2(704, 160)
+
+[sub_resource type="RectangleShape2D" id="R_pool"]
+size = Vector2(640, 160)
+
+[sub_resource type="RectangleShape2D" id="R_panel"]
+size = Vector2(1472, 256)
+
+[sub_resource type="RectangleShape2D" id="R_ellipse"]
+size = Vector2(768, 320)
+
+[sub_resource type="RectangleShape2D" id="R_whlawn"]
+size = Vector2(640, 384)
+
+[sub_resource type="RectangleShape2D" id="R_island"]
+size = Vector2(256, 256)
+
+[sub_resource type="RectangleShape2D" id="R_shal_n"]
+size = Vector2(128, 1632)
+
+[sub_resource type="RectangleShape2D" id="R_shal_m"]
+size = Vector2(128, 800)
+
+[sub_resource type="RectangleShape2D" id="R_shal_s"]
+size = Vector2(128, 512)
+
+[sub_resource type="RectangleShape2D" id="R_ret384"]
+size = Vector2(384, 24)
+
+[sub_resource type="RectangleShape2D" id="R_ret432v"]
+size = Vector2(24, 432)
+
+[sub_resource type="RectangleShape2D" id="R_ret96v"]
+size = Vector2(24, 96)
+
+[sub_resource type="RectangleShape2D" id="R_ret448"]
+size = Vector2(448, 24)
+
+[sub_resource type="RectangleShape2D" id="R_ret688v"]
+size = Vector2(24, 688)
+
+[sub_resource type="RectangleShape2D" id="R_ret224v"]
+size = Vector2(24, 224)
+
+[sub_resource type="RectangleShape2D" id="R_jump"]
+size = Vector2(224, 224)
+
+[node name="CapitalCityCarnage" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Storm" type="Node2D" parent="."]
+script = ExtResource("4_storm")
+
+[node name="Rain" type="Node2D" parent="."]
+script = ExtResource("5_rain")
+bounds = Vector2(5632, 3584)
+intensity = 1.3
+wind = Vector2(190, 820)
+
+[node name="Asphalt" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-2816, -1792, 2816, -1792, 2816, 1792, -2816, 1792)
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("2_grid")
+extent = Vector2(2816, 1792)
+
+[node name="Floor1" parent="." instance=ExtResource("6_floor")]
+floor_index = 1
+size = Vector2(5632, 3584)
+
+[node name="FZLincolnTerrace" parent="." instance=ExtResource("6_floor")]
+position = Vector2(-1536, 0)
+floor_index = 2
+size = Vector2(384, 384)
+
+[node name="FZCapitolTerrace" parent="." instance=ExtResource("6_floor")]
+position = Vector2(2432, 0)
+floor_index = 2
+size = Vector2(448, 640)
+
+[node name="ArlingtonGrass" type="Area2D" parent="."]
+position = Vector2(-2624, -576)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="ArlingtonGrass"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-192, -1216, 192, -1216, 192, 1216, -192, 1216)
+
+[node name="Col" type="CollisionShape2D" parent="ArlingtonGrass"]
+shape = SubResource("R_arl")
+
+[node name="MallWestN" type="Area2D" parent="."]
+position = Vector2(-960, -240)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="MallWestN"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-352, -80, 352, -80, 352, 80, -352, 80)
+
+[node name="Col" type="CollisionShape2D" parent="MallWestN"]
+shape = SubResource("R_mallw")
+
+[node name="MallWestS" type="Area2D" parent="."]
+position = Vector2(-960, 240)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="MallWestS"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-352, -80, 352, -80, 352, 80, -352, 80)
+
+[node name="Col" type="CollisionShape2D" parent="MallWestS"]
+shape = SubResource("R_mallw")
+
+[node name="ReflectingPool" type="Area2D" parent="."]
+position = Vector2(-960, 0)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ReflectingPool"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-320, -80, 320, -80, 320, 80, -320, 80)
+
+[node name="Col" type="CollisionShape2D" parent="ReflectingPool"]
+shape = SubResource("R_pool")
+
+[node name="MallPanelN" type="Area2D" parent="."]
+position = Vector2(1184, -192)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="MallPanelN"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-736, -128, 736, -128, 736, 128, -736, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MallPanelN"]
+shape = SubResource("R_panel")
+
+[node name="MallPanelS" type="Area2D" parent="."]
+position = Vector2(1184, 192)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="MallPanelS"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-736, -128, 736, -128, 736, 128, -736, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MallPanelS"]
+shape = SubResource("R_panel")
+
+[node name="EllipseLawn" type="Area2D" parent="."]
+position = Vector2(0, -640)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="EllipseLawn"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-384, -160, 384, -160, 384, 160, -384, 160)
+
+[node name="Col" type="CollisionShape2D" parent="EllipseLawn"]
+shape = SubResource("R_ellipse")
+
+[node name="WHLawn" type="Area2D" parent="."]
+position = Vector2(0, -1216)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="WHLawn"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-320, -192, 320, -192, 320, 192, -320, 192)
+
+[node name="Col" type="CollisionShape2D" parent="WHLawn"]
+shape = SubResource("R_whlawn")
+
+[node name="CircleIsland" type="Area2D" parent="."]
+position = Vector2(1280, -640)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="CircleIsland"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+
+[node name="Col" type="CollisionShape2D" parent="CircleIsland"]
+shape = SubResource("R_island")
+
+[node name="ShallowWestN" type="Area2D" parent="."]
+position = Vector2(-2368, -976)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowWestN"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -816, 64, -816, 64, 816, -64, 816)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowWestN"]
+shape = SubResource("R_shal_n")
+
+[node name="ShallowWestM" type="Area2D" parent="."]
+position = Vector2(-2368, 560)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowWestM"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -400, 64, -400, 64, 400, -64, 400)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowWestM"]
+shape = SubResource("R_shal_m")
+
+[node name="ShallowWestS" type="Area2D" parent="."]
+position = Vector2(-2368, 1536)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowWestS"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -256, 64, -256, 64, 256, -64, 256)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowWestS"]
+shape = SubResource("R_shal_s")
+
+[node name="ShallowEastN" type="Area2D" parent="."]
+position = Vector2(-1856, -976)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowEastN"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -816, 64, -816, 64, 816, -64, 816)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowEastN"]
+shape = SubResource("R_shal_n")
+
+[node name="ShallowEastM" type="Area2D" parent="."]
+position = Vector2(-1856, 560)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowEastM"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -400, 64, -400, 64, 400, -64, 400)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowEastM"]
+shape = SubResource("R_shal_m")
+
+[node name="ShallowEastS" type="Area2D" parent="."]
+position = Vector2(-1856, 1536)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"water"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="ShallowEastS"]
+material = SubResource("SM_water")
+color = Color(0.15, 0.3, 0.55, 0.6)
+polygon = PackedVector2Array(-64, -256, 64, -256, 64, 256, -64, 256)
+
+[node name="Col" type="CollisionShape2D" parent="ShallowEastS"]
+shape = SubResource("R_shal_s")
+
+[node name="DWNorth" parent="." instance=ExtResource("7_dwater")]
+position = Vector2(-2112, -976)
+size = Vector2(384, 1632)
+
+[node name="DWMid" parent="." instance=ExtResource("7_dwater")]
+position = Vector2(-2112, 560)
+size = Vector2(384, 800)
+
+[node name="DWSouth" parent="." instance=ExtResource("7_dwater")]
+position = Vector2(-2112, 1536)
+size = Vector2(384, 512)
+
+[node name="RiverCurbs" type="Node2D" parent="."]
+
+[node name="CurbEastN" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1908, -976)
+size = Vector2(24, 1632)
+
+[node name="CurbEastM" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1908, 560)
+size = Vector2(24, 800)
+
+[node name="CurbEastS" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1908, 1536)
+size = Vector2(24, 512)
+
+[node name="CurbWestN" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2316, -976)
+size = Vector2(24, 1632)
+
+[node name="CurbWestM" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2316, 560)
+size = Vector2(24, 800)
+
+[node name="CurbWestS" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2316, 1536)
+size = Vector2(24, 512)
+
+[node name="CurbMemorialN" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2112, -148)
+size = Vector2(640, 24)
+
+[node name="CurbMemorialS" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2112, 148)
+size = Vector2(640, 24)
+
+[node name="Curb14thN" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2112, 1016)
+size = Vector2(640, 24)
+
+[node name="Curb14thS" parent="RiverCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-2112, 1224)
+size = Vector2(640, 24)
+
+[node name="RibbonConstitution" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1792, -448, 2816, -448)
+width = 192.0
+
+[node name="RibbonIndependence" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1792, 448, 2816, 448)
+width = 192.0
+
+[node name="RibbonKStreet" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1792, -1600, 2816, -1600)
+width = 176.0
+
+[node name="RibbonMemorialBridge" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-2464, 48, -1760, -48)
+width = 224.0
+
+[node name="Ribbon14thBridge" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-2464, 1120, -1760, 1120)
+width = 224.0
+
+[node name="RibbonPennAve" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(352, -1120, 1280, -640, 2304, -192)
+width = 192.0
+
+[node name="RibbonCircle" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(1568, -640, 1484, -436, 1280, -352, 1076, -436, 992, -640, 1076, -844, 1280, -928, 1484, -844)
+width = 160.0
+closed = true
+
+[node name="RibbonMaryland" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1760, 1120, -704, 640, 96, 512)
+width = 176.0
+
+[node name="RibbonArlingtonDrive" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-2624, -1664, -2624, 1696)
+width = 144.0
+
+[node name="RoadMarks" type="Node2D" parent="."]
+
+[node name="MarkConstitution" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-1792, -448, 2816, -448)
+style = &"dashed_yellow"
+
+[node name="MarkIndependence" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-1792, 448, 2816, 448)
+style = &"dashed_yellow"
+
+[node name="MarkKStreet" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-1792, -1600, 2816, -1600)
+style = &"dashed_yellow"
+
+[node name="MarkMemorial" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-2464, 48, -1760, -48)
+style = &"dashed_white"
+
+[node name="Mark14th" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-2464, 1120, -1760, 1120)
+style = &"dashed_white"
+
+[node name="MarkPennNW" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(352, -1120, 978, -796)
+style = &"dashed_yellow"
+
+[node name="MarkPennSE" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(1592, -503, 2304, -192)
+style = &"dashed_yellow"
+
+[node name="MarkCircle" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(1568, -640, 1484, -436, 1280, -352, 1076, -436, 992, -640, 1076, -844, 1280, -928, 1484, -844, 1568, -640)
+style = &"dashed_white"
+
+[node name="MarkMaryland" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-1760, 1120, -704, 640, 96, 512)
+style = &"dashed_yellow"
+
+[node name="CrossConstitutionMall" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(0, -544, 0, -352)
+style = &"crosswalk"
+
+[node name="CrossKStation" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(320, -1688, 320, -1512)
+style = &"crosswalk"
+
+[node name="LincolnSteps" type="Node2D" parent="."]
+position = Vector2(-1216, 0)
+rotation = -1.570796
+script = ExtResource("11_ramp")
+low_floor = 1
+high_floor = 2
+size = Vector2(192, 256)
+surface_color = Color(0.72, 0.71, 0.67, 1)
+terrain_type = "road"
+downhill_pull = 120.0
+
+[node name="CapitolSteps" type="Node2D" parent="."]
+position = Vector2(2080, 0)
+rotation = 1.570796
+script = ExtResource("11_ramp")
+low_floor = 1
+high_floor = 2
+size = Vector2(192, 256)
+surface_color = Color(0.72, 0.71, 0.67, 1)
+terrain_type = "road"
+downhill_pull = 120.0
+
+[node name="MonumentKnoll" parent="." instance=ExtResource("12_hill")]
+summit_size = Vector2(384, 384)
+grade_length = 192.0
+low_floor = 1
+high_floor = 2
+terrain_type = "grass"
+
+[node name="LincolnWalls" type="StaticBody2D" parent="."]
+collision_layer = 8
+collision_mask = 0
+
+[node name="North" type="CollisionShape2D" parent="LincolnWalls"]
+position = Vector2(-1536, -204)
+shape = SubResource("R_ret384")
+
+[node name="West" type="CollisionShape2D" parent="LincolnWalls"]
+position = Vector2(-1740, 0)
+shape = SubResource("R_ret432v")
+
+[node name="EastFlankN" type="CollisionShape2D" parent="LincolnWalls"]
+position = Vector2(-1332, -144)
+shape = SubResource("R_ret96v")
+
+[node name="EastFlankS" type="CollisionShape2D" parent="LincolnWalls"]
+position = Vector2(-1332, 144)
+shape = SubResource("R_ret96v")
+
+[node name="CapitolWalls" type="StaticBody2D" parent="."]
+collision_layer = 8
+collision_mask = 0
+
+[node name="North" type="CollisionShape2D" parent="CapitolWalls"]
+position = Vector2(2432, -332)
+shape = SubResource("R_ret448")
+
+[node name="East" type="CollisionShape2D" parent="CapitolWalls"]
+position = Vector2(2668, 0)
+shape = SubResource("R_ret688v")
+
+[node name="WestFlankN" type="CollisionShape2D" parent="CapitolWalls"]
+position = Vector2(2196, -208)
+shape = SubResource("R_ret224v")
+
+[node name="WestFlankS" type="CollisionShape2D" parent="CapitolWalls"]
+position = Vector2(2196, 208)
+shape = SubResource("R_ret224v")
+
+[node name="TerraceCurbs" type="Node2D" parent="."]
+
+[node name="LincolnN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1536, -180)
+size = Vector2(384, 24)
+
+[node name="LincolnW" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1716, 0)
+size = Vector2(24, 384)
+
+[node name="LincolnEN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1356, -144)
+size = Vector2(24, 96)
+
+[node name="LincolnES" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(-1356, 144)
+size = Vector2(24, 96)
+
+[node name="CapitolN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(2432, -308)
+size = Vector2(448, 24)
+
+[node name="CapitolE" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(2644, 0)
+size = Vector2(24, 640)
+
+[node name="CapitolWN" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(2220, -208)
+size = Vector2(24, 224)
+
+[node name="CapitolWS" parent="TerraceCurbs" instance=ExtResource("8_curb")]
+position = Vector2(2220, 208)
+size = Vector2(24, 224)
+
+[node name="FloorConnectors" type="Node2D" parent="."]
+
+[node name="LincolnUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-960, 0)
+script = ExtResource("13_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="LincolnDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-1408, 0)
+script = ExtResource("13_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="LincolnEdge" type="Node2D" parent="FloorConnectors"]
+position = Vector2(-1536, 160)
+script = ExtResource("13_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(0, 1)
+kind = &"edge"
+
+[node name="CapitolUp" type="Node2D" parent="FloorConnectors"]
+position = Vector2(1824, 0)
+script = ExtResource("13_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="CapitolDown" type="Node2D" parent="FloorConnectors"]
+position = Vector2(2304, 0)
+script = ExtResource("13_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="CapitolEdge" type="Node2D" parent="FloorConnectors"]
+position = Vector2(2432, 280)
+script = ExtResource("13_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(0, 1)
+kind = &"edge"
+
+[node name="HealthStation1" parent="." instance=ExtResource("9_heal")]
+position = Vector2(-2624, -896)
+floor_index = 1
+
+[node name="HealthStation2" parent="." instance=ExtResource("9_heal")]
+position = Vector2(320, -1600)
+floor_index = 1
+
+[node name="HealthStation3" parent="." instance=ExtResource("9_heal")]
+position = Vector2(2240, 1216)
+floor_index = 1
+
+[node name="Jump" type="Area2D" parent="."]
+position = Vector2(768, 0)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("16_jump")
+floor_index = 1
+
+[node name="Vis" type="Polygon2D" parent="Jump"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
+
+[node name="Col" type="CollisionShape2D" parent="Jump"]
+shape = SubResource("R_jump")
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="TopVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, -1812)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-2856, -20, 2856, -20, 2856, 20, -2856, 20)
+
+[node name="TopCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -1812)
+shape = SubResource("R_wall_h")
+
+[node name="BottomVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, 1812)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-2856, -20, 2856, -20, 2856, 20, -2856, 20)
+
+[node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 1812)
+shape = SubResource("R_wall_h")
+
+[node name="LeftVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-2836, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+
+[node name="LeftCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-2836, 0)
+shape = SubResource("R_wall_v")
+
+[node name="RightVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(2836, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+
+[node name="RightCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(2836, 0)
+shape = SubResource("R_wall_v")
+
+[node name="Vehicle" parent="." instance=ExtResource("17_veh")]
+position = Vector2(0, 896)
+
+[node name="Enemy1" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(-2624, -320)
+
+[node name="Enemy2" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(-896, -1600)
+
+[node name="Enemy3" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(1664, -1600)
+
+[node name="Enemy4" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(2432, 768)
+
+[node name="Enemy5" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(1408, 1408)
+
+[node name="Enemy6" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(-960, 1216)
+
+[node name="Enemy7" parent="." instance=ExtResource("18_enemy")]
+position = Vector2(-960, 224)
+
+[node name="HUD" parent="." instance=ExtResource("19_hud")]
