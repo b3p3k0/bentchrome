@@ -34,6 +34,13 @@ func _ready() -> void:
 	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
+	# Before the MP harvest AND before the SP spawn capture: every seat's spawn
+	# data inherits the inward-facing heading either way.
+	var baked_cars: Array = []
+	for child in get_children():
+		if child is Vehicle:
+			baked_cars.append(child)
+	face_spawns_inward(baked_cars)
 	if mp_managed:
 		Economy.enabled = false  # BOLTS are a campaign thing; MP wallets stay shut
 		_collect_and_clear_for_mp()
@@ -115,6 +122,29 @@ func _collect_and_clear_for_mp() -> void:
 		remove_child(car)
 		car.free()
 	_player = null
+
+## Every combatant boots aimed at the fight — heading onto the shared spawn
+## centroid — reluctantly crouched at the starting line, nobody staring at a
+## wall with a rival parked in their rear quarter. Baked .tscn rotations stop
+## mattering for ordinary cars; bosses (fixed_loadout) keep their authored
+## entrance theatrics (they still count toward the centroid, so a duel's
+## challenger aims square at them). Fewer than two cars (Driver's Ed, the
+## chase) = authored headings stand.
+static func face_spawns_inward(cars: Array) -> void:
+	if cars.size() < 2:
+		return
+	var center := Vector2.ZERO
+	for car_v in cars:
+		center += (car_v as Node2D).global_position
+	center /= cars.size()
+	for car_v in cars:
+		var car := car_v as Node2D
+		if bool(car.get("fixed_loadout")):
+			continue
+		var to_center := center - car.global_position
+		if to_center.length_squared() < 1.0:
+			continue  # parked ON the centroid — no meaningful aim, keep authored
+		car.set("heading", to_center.angle())
 
 ## Reassigns the scene's baked enemy cars at runtime: random, all distinct,
 ## never the player's car. Children ready before the parent, so _player.stats
