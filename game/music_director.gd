@@ -43,6 +43,8 @@ const TRACKS := {
 	"res://levels/chase/buzzard_run.tscn": &"bgm_buzzard_run",
 	"res://levels/dock/dock.tscn": &"bgm_dock",
 	"res://levels/construction/ground_floor_gore.tscn": &"bgm_ground_floor_gore",
+	"res://levels/capital/capital_city_carnage.tscn": &"bgm_arena",  # city track
+		# for now — a bespoke storm track is a welcome follow-up
 	"res://levels/stadium/stadium.tscn": &"bgm_stadium_p1",  # p2 via set_override
 	"res://levels/mp/mp_match.tscn": RESOLVE_CHILD,
 	"res://levels/custom_level.tscn": &"bgm_arena",  # fan levels: house combat track

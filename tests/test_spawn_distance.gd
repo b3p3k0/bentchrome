@@ -15,6 +15,7 @@ const CAMPAIGN := [
 	"res://levels/dock/dock.tscn",
 	"res://levels/chase/buzzard_run.tscn",
 	"res://levels/construction/ground_floor_gore.tscn",
+	"res://levels/capital/capital_city_carnage.tscn",
 	"res://levels/stadium/stadium.tscn",
 	"res://levels/tutorial/drivers_ed.tscn",  # zero enemies — instantiate coverage
 ]

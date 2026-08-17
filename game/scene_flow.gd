@@ -26,6 +26,7 @@ const MP_MAPS := [
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Mountainside Mayhem", "cars": 7},
 	{"scene": "res://levels/dock/dock.tscn", "name": "Piers of Pain", "cars": 8},
 	{"scene": "res://levels/construction/ground_floor_gore.tscn", "name": "Ground Floor Gore", "cars": 8},
+	{"scene": "res://levels/capital/capital_city_carnage.tscn", "name": "Capital City Carnage", "cars": 8},
 ]
 
 ## The campaign, in order — thirteen pinned slots. Four are `placeholder`
@@ -72,9 +73,10 @@ const CAMPAIGN := [
 	{"scene": "res://levels/construction/ground_floor_gore.tscn", "name": "Ground Floor Gore",
 		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
 		"arena_size": Vector2(4608, 3840), "target_cars": 8, "stations": 2, "mp_ready": true},
-	{"scene": "", "name": "Capital City Carnage",
-		"mode": &"placeholder", "size_class": &"", "encounter": &"",
-		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false},
+	{"scene": "res://levels/capital/capital_city_carnage.tscn", "name": "Capital City Carnage",
+		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
+		"arena_size": Vector2(5632, 3584), "target_cars": 8, "stations": 3,
+		"mp_ready": true, "optional": true},
 	{"scene": "res://levels/stadium/stadium.tscn", "name": "Goliath's Arena",
 		"mode": &"arena", "size_class": &"large", "encounter": &"boss",
 		"arena_size": Vector2(4608, 3584), "target_cars": 4, "stations": 1, "mp_ready": false,

@@ -166,7 +166,7 @@ func test_campaign_order_thirteen_slots() -> void:
 		"arena_assault.tscn", "dock.tscn", "downtown.tscn", "freeway.tscn",
 		"depot.tscn", "suburbs.tscn", "Terminal Terror",
 		"Slaughter on the Strip", "buzzard_run.tscn", "snowy.tscn",
-		"ground_floor_gore.tscn", "Capital City Carnage", "stadium.tscn",
+		"ground_floor_gore.tscn", "capital_city_carnage.tscn", "stadium.tscn",
 	]
 	t.check(flow.CAMPAIGN.size() == expected.size(),
 		"campaign order: exactly %d slots" % expected.size())

@@ -33,10 +33,10 @@ func test_fight_card_filter() -> void:
 		else:
 			locked_names.append(String(row.name))
 	t.check(enabled_tails == ["arena_assault.tscn", "dock.tscn", "downtown.tscn",
-			"freeway.tscn", "suburbs.tscn", "snowy.tscn", "ground_floor_gore.tscn"],
+			"freeway.tscn", "suburbs.tscn", "snowy.tscn", "ground_floor_gore.tscn",
+			"capital_city_carnage.tscn"],
 		"fight card: every melee/duel arena is selectable, in tour order")
-	t.check(locked_names == ["Terminal Terror",
-			"Slaughter on the Strip", "Capital City Carnage"],
+	t.check(locked_names == ["Terminal Terror", "Slaughter on the Strip"],
 		"fight card: unbuilt slots hang greyed as coming attractions")
 	for row_v in rows:
 		var row: Dictionary = row_v
