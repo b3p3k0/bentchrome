@@ -25,7 +25,7 @@ const ARCHETYPES := ["aggressor", "ambusher", "opportunist", "defender", "mini_b
 const REQUIRED_KEYS := ["id", "car_name", "driver_name", "flavor", "special_weapon",
 	"special_def", "ai_archetype", "stats", "colors", "portrait", "mass"]
 const OPTIONAL_KEYS := ["special_ammo_cap", "special_recharge_seconds", "terrain_modifiers",
-	"burn_taken", "terrain_profile"]
+	"burn_taken", "terrain_profile", "whip_scale", "side_slam_bonus"]
 const STAT_KEYS := ["acceleration", "top_speed", "handling", "armor", "special_power"]
 
 func _init() -> void:
@@ -75,6 +75,8 @@ func _init() -> void:
 		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
 		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
 		vs.burn_taken = float(c.get("burn_taken", 1.0))
+		vs.whip_scale = float(c.get("whip_scale", 1.0))
+		vs.side_slam_bonus = float(c.get("side_slam_bonus", 1.5))
 		vs.mass = int(c["mass"])
 		vs.terrain_modifiers = build_terrain_modifiers(
 			merged_terrain(c, data.get("terrain_profiles", {})))
@@ -208,6 +210,12 @@ static func character_errors(c: Variant) -> PackedStringArray:
 	if c.has("burn_taken") and (typeof(c["burn_taken"]) not in [TYPE_INT, TYPE_FLOAT]
 			or float(c["burn_taken"]) <= 0.0):
 		errors.append("burn_taken must be a positive number")
+	if c.has("whip_scale") and (typeof(c["whip_scale"]) not in [TYPE_INT, TYPE_FLOAT]
+			or float(c["whip_scale"]) < 0.5 or float(c["whip_scale"]) > 2.0):
+		errors.append("whip_scale must be a number in [0.5, 2.0]")
+	if c.has("side_slam_bonus") and (typeof(c["side_slam_bonus"]) not in [TYPE_INT, TYPE_FLOAT]
+			or float(c["side_slam_bonus"]) < 1.0 or float(c["side_slam_bonus"]) > 3.0):
+		errors.append("side_slam_bonus must be a number in [1.0, 3.0]")
 
 	if c.has("terrain_profile") and typeof(c["terrain_profile"]) != TYPE_STRING:
 		errors.append("terrain_profile must be a profile-name string")

@@ -15,7 +15,7 @@ const ROSTER_PATH := "res://assets/data/roster.json"
 
 # prop -> [min, max, step]; order = the tuner grid's column order. All ints on
 # the 1-20 design scale except launch (0 = mass-derived sentinel) and the
-# specials economy pair (recharge is the lone float).
+# floats (fractional step = float prop: recharge + the slide-move pair).
 const COLUMNS := {
 	"acceleration": [1, 20, 1],
 	"top_speed": [1, 20, 1],
@@ -26,7 +26,13 @@ const COLUMNS := {
 	"launch": [0, 20, 1],
 	"special_ammo_cap": [1, 9, 1],
 	"special_recharge_seconds": [1.0, 300.0, 0.5],
+	"whip_scale": [0.5, 2.0, 0.05],
+	"side_slam_bonus": [1.0, 3.0, 0.05],
 }
+
+## Fractional step = the prop stays a float end to end (set/export).
+static func _is_float(prop: String) -> bool:
+	return float(COLUMNS[prop][2]) < 1.0
 
 var car_ids: Array[String] = []            # roster order = grid row order
 var overrides := {}                        # id -> {prop: value}
@@ -56,6 +62,8 @@ func _init() -> void:
 			"launch": int(st.get("launch", 0)),
 			"special_ammo_cap": int(c.get("special_ammo_cap", 1)),
 			"special_recharge_seconds": float(c.get("special_recharge_seconds", 12.0)),
+			"whip_scale": float(c.get("whip_scale", 1.0)),
+			"side_slam_bonus": float(c.get("side_slam_bonus", 1.5)),
 		}
 
 static func tres_path(id: String) -> String:
@@ -81,7 +89,7 @@ func set_value(id: String, prop: String, value: float) -> void:
 		return
 	var r: Array = COLUMNS[prop]
 	var clamped: Variant
-	if prop == "special_recharge_seconds":
+	if _is_float(prop):
 		clamped = clampf(value, float(r[0]), float(r[1]))
 	else:
 		clamped = clampi(int(round(value)), int(r[0]), int(r[1]))
@@ -137,7 +145,7 @@ func export_file(path := EXPORT_PATH) -> String:
 		var row := {}
 		for prop in COLUMNS:
 			var v := get_value(id, prop)
-			row[prop] = v if prop == "special_recharge_seconds" else int(v)
+			row[prop] = v if _is_float(prop) else int(v)
 		cars[id] = row
 	var out := {
 		"_readme": "Bent Chrome car-tuner export — fold into game truth with: python3 tools/migrate_roster_v2.py --fold <this file>",

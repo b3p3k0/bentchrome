@@ -34,6 +34,10 @@ extends Resource
 @export var no_mines := false  # this car never arms mines, crates included
 @export var burn_taken := 1.0  # burn-DoT multiplier (air-cooled engines pay extra)
 
+## Slide-move identity (Car Tuner columns; roster-authorable, defaults neutral).
+@export var whip_scale := 1.0      # multiplies the mass-lerped handbrake-180 rate
+@export var side_slam_bonus := 1.5 # this car's broadside ram premium
+
 ## Garage-wired multipliers (all 1.0 stock; VehicleLoadout composes them
 ## MULTIPLICATIVELY so co-owned electronics stack order-free).
 @export var mg_heat_scale := 1.0      # MG heat gain per shot (MG Cooling)

@@ -52,6 +52,10 @@ static func apply(stats: VehicleStats, controller, health) -> void:
 	# launch 0 = "derive from mass" sentinel (driving_controller keeps the
 	# legacy shove); authored torque decouples dead-stop pull from mass.
 	controller.launch_factor = _slot(LAUNCH, stats.launch) if stats.launch >= 1 else 0.0
+	# Slide-move identity: the per-car trim on the handbrake-180 rate rides the
+	# same seam as every other stats->controller knob (Goliath curve swaps and
+	# the F1 bench inherit it for free).
+	controller.whip_scale = stats.whip_scale
 	if health:
 		var hp := _slot(HP, stats.armor)
 		health.max_hp = hp

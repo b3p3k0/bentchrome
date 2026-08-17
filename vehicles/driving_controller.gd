@@ -32,6 +32,8 @@ extends Node
 @export var whip_min_speed := 240.0
 @export var whip_turn_light := 2.4  # steer-rate multiplier at mass 1
 @export var whip_turn_heavy := 1.4  # steer-rate multiplier at mass 10
+@export var whip_scale := 1.0       # per-car trim on the lerped factor
+									# (VehicleStats.whip_scale, Car Tuner column)
 
 @export_group("Straighten")
 ## Post-corner recenter: the slip breathes for straighten_delay after steering
@@ -150,7 +152,7 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	if handbrake:
 		dir_sign = 1.0
 		if _whip_active:
-			whip = lerpf(whip_turn_light, whip_turn_heavy, mf)
+			whip = lerpf(whip_turn_light, whip_turn_heavy, mf) * whip_scale
 	vehicle.heading += deg_to_rad(turn_rate_deg) * float(mod["steer"]) * scale \
 		* steer * authority * dir_sign * whip * delta
 	if straightening and "HEADING_STEPS" in vehicle and vehicle.HEADING_STEPS > 0:

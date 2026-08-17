@@ -19,6 +19,7 @@ const HEADERS := {
 	"acceleration": "ACC", "top_speed": "TOP", "handling": "HND", "armor": "ARM",
 	"special_power": "SPC", "mass": "MASS", "launch": "LNCH",
 	"special_ammo_cap": "CAP", "special_recharge_seconds": "RCHG",
+	"whip_scale": "WHIP", "side_slam_bonus": "SLAM",
 }
 
 var _grid: GridContainer
@@ -100,10 +101,18 @@ func _engine_feedback(prop: String, v: float) -> String:
 		"launch":
 			return "-> derived from mass" if s < 1 \
 				else "-> launch factor %.2f" % StatCurves._slot(StatCurves.LAUNCH, s)
+		"whip_scale":
+			return "-> handbrake-180 rate x%.2f" % v
+		"side_slam_bonus":
+			return "-> broadside ram x%.2f" % v
 	return ""
 
+const FLOAT_PROPS := ["special_recharge_seconds", "whip_scale", "side_slam_bonus"]
+
 func _fmt(prop: String, v: float) -> String:
-	return "%.1f" % v if prop == "special_recharge_seconds" else str(int(v))
+	if prop == "special_recharge_seconds":
+		return "%.1f" % v
+	return "%.2f" % v if prop in FLOAT_PROPS else str(int(v))
 
 func _on_export() -> void:
 	var deck = _deck()

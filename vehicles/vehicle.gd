@@ -424,6 +424,9 @@ func _apply_stats() -> void:
 		# Garage MG Cooling: assignment (never *=) — set_stats is re-callable
 		# live (dev car switcher, enemy re-roll) and must not compound.
 		_mg_mount.heat_scale = stats.mg_heat_scale
+	# Slide-move identity (Car Tuner column) — same idempotent-assignment rule.
+	# (whip_scale rides StatCurves.apply with the other controller knobs.)
+	side_slam_bonus = stats.side_slam_bonus
 	_configure_rack()
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
