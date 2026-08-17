@@ -350,6 +350,22 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 
 ---
 
+## Slide moves (the whip & the side slam)
+
+Source: `vehicles/driving_controller.gd` (whip) + `vehicles/vehicle.gd` (slam). Player-only in practice — AI never handbrakes.
+
+| Knob | Value | Notes |
+|---|---|---|
+| `whip_min_speed` | 240 px/s | whip entry gate; the latch exits at 25% of it (a started whip finishes) |
+| `whip_turn_light` / `whip_turn_heavy` | 2.4 / 1.4 | steer-rate multiplier lerped by mass 1-10: sporty ~0.35s to 180, mid ~0.5s, land yacht ~1s |
+| dir_sign pin | while handbraking | steer rotates the nose the way you push — no mid-slide counter-steer stall |
+| reverse cap | powered reverse only | backward-facing slides keep momentum; S-gear still capped at `reverse_max_speed` |
+| `side_slam_bonus` | 1.5 | multiplies the slider's uncharged ram bill (Toe Jam charge stays its own economy) |
+| `slide_min_speed` / `SLIDE_LAT_FRAC` / `SLIDE_GRACE` | 250 / 0.8 (~53°) / 0.6s | is_side_sliding: speed floor, slip fraction, brake-recency window (excludes icy AI slip) |
+| One-way bill | victim's ram loop skips a slider | dash-style; slider also shielded from third-party rams mid-slide (directional gate = follow-up if LAN abuse shows) |
+
+---
+
 ## Driver's Ed (tutorial yard knobs)
 
 Sources: `levels/tutorial/tutorial_director.gd` / `tutorial_card.gd` static vars; yard geography in `levels/tutorial/drivers_ed.tscn` (2816×2816, zero enemies, every solid floor-authored — the ghost-mode lint `tests/test_floor_props.gd` sweeps this and every other floor-tagged level). Outside `CAMPAIGN` — contract-exempt, no interstitial, end screen never auto-advances. Entry: title → SINGLE PLAYER → mode select DRIVER'S ED → sign-up dialog (FIRST TIME DRIVER = lessons, JUST HERE FOR A TEST DRIVE = free roam with the gate already open) → car select, difficulty skipped (`GameState.game_mode` = `tutorial` / `test_drive`; ROAD TRIP = `campaign`). Exit: north tunnel → confirm (KEEP PRACTICING default) → title; pause-menu Quit works any time. **DEVGOD is inert in the lesson lane** (`GameState.is_devgod_enabled()` gates on `game_mode` — god mode blocks the ammo-delta and repair checks); the test-drive lane keeps it.

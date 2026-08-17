@@ -81,6 +81,14 @@ signal combat_hit(attacker: Node2D)
 @export var ram_damage_scale := 0.06
 @export var ram_min_speed := 220.0
 @export var ram_cooldown := 0.3
+## The side slam (wrecking ball): a handbrake-born lateral slide bills the
+## victim with this bonus and takes NOTHING back (the victim's own ram loop
+## skips a side-slider, dash-style).
+@export var side_slam_bonus := 1.5
+@export var slide_min_speed := 250.0
+
+const SLIDE_LAT_FRAC := 0.8  # sideways fraction of travel that reads as a slide (~53 deg+)
+const SLIDE_GRACE := 0.6     # seconds after handbrake release the slam still credits
 @export var punch_hp_ref := 200.0     # punch-through keep-scale reference:
 @export var punch_keep_min := 0.55    # ram-killing a prop restores entry speed
 @export var punch_keep_max := 0.95    # scaled by its heft — debris flies, cover costs
@@ -112,6 +120,7 @@ var _pit_fall_scale := 1.0:
 		if _visual and is_inside_tree():
 			_paint_depth()
 var _ram_cd := 0.0        # cooldown between ram hits
+var _hb_recent_t := 0.0   # side-slam credit window (handbrake held or just released)
 var _shake := 0.0         # camera shake energy (player only)
 var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
 var _camera_base_cached := false
@@ -582,6 +591,14 @@ func _physics_process(delta: float) -> void:
 	elif _controller:
 		_controller.service_braking = false
 	_sync_brake_lights()
+	# Side-slam credit window: handbrake now, or released within SLIDE_GRACE
+	# (the let-go-and-slam moment). AI never handbrakes, so slip alone — an
+	# icy AI corner — never buys slam credit or protection. Ticked BEFORE the
+	# slide so a same-frame slam is covered.
+	if _controller and _controller.handbraking:
+		_hb_recent_t = SLIDE_GRACE
+	elif _hb_recent_t > 0.0:
+		_hb_recent_t -= delta
 	# Captured before move_and_slide: a head-on hit on a static body zeroes
 	# velocity during the slide, so post-slide speed under-reads the impact.
 	var pre_slide_vel := velocity
@@ -1198,6 +1215,19 @@ func is_trigger_armed() -> bool:
 func is_dashing() -> bool:
 	return _special != null and _special.is_dashing()
 
+## Mid side-slam: traveling mostly sideways at speed off a recent handbrake.
+## Kinematics + the grace window — the wrecking ball's bill is one-way (other
+## cars' ram loops skip a side-slider, dash-style), and the handbrake-recency
+## requirement keeps icy AI cornering from ever buying the protection.
+func is_side_sliding() -> bool:
+	if _hb_recent_t <= 0.0:
+		return false
+	var speed := velocity.length()
+	if speed < slide_min_speed:
+		return false
+	var forward := Vector2.RIGHT.rotated(heading)
+	return absf(velocity.dot(forward.orthogonal())) >= speed * SLIDE_LAT_FRAC
+
 ## Shared respawn/repair/Leap-connect protection. Re-applying StatusReceiver's
 ## same-kind effect refreshes it to at least the full requested duration; one
 ## owned tween keeps the blink cadence from stacking when a shield is
@@ -1313,11 +1343,18 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 				# loop must never price the body-check back onto the dasher.
 				# (Two mid-dash cars billing nothing is symmetric and accepted.)
 				continue
+			if other.is_side_sliding():
+				# Side slam: the wrecking ball's bill is one-way too — skill
+				# with the brake means the broadside costs the slider nothing.
+				continue
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
-				# An armed Toe Jam charge replaces the speed-scaled hit.
+				# An armed Toe Jam charge replaces the speed-scaled hit (its
+				# own economy — the slam bonus never compounds it).
 				var charged: float = _special.take_armed_hit() if _special else 0.0
-				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
+				var hit: float = charged if charged > 0.0 \
+					else (rel - ram_min_speed) * ram_damage_scale \
+						* (side_slam_bonus if is_side_sliding() else 1.0)
 				if _special:
 					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)

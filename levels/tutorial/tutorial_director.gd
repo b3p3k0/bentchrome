@@ -46,7 +46,7 @@ const LESSONS := [
 	{
 		"id": &"control",
 		"title": "LESSON 2 — STOPPING IS A SKILL TOO",
-		"body": "Press S against your momentum for service brakes. Hold LCTRL to cut the rear tires loose — the handbrake is your drift pedal. SHIFT burns nitro for a straight-line shove (and snuffs a burning hull, if you ever find yourself on fire). Brake, handbrake, and boost once each.",
+		"body": "Press S against your momentum for service brakes. Hold LCTRL to cut the rear tires loose — the handbrake is your drift pedal. At speed, crank the wheel while you pull it to whip the nose a full one-eighty. SHIFT burns nitro for a straight-line shove (and snuffs a burning hull, if you ever find yourself on fire). Brake, handbrake, and boost once each.",
 		"hint": "LESSON 2/8 — brake (S vs travel), handbrake (LCTRL), boost (SHIFT)",
 	},
 	{
