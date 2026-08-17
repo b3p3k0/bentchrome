@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3]
+[gd_scene load_steps=58 format=3]
 
 [ext_resource type="Script" path="res://levels/capital/capital_city_carnage.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -19,6 +19,12 @@
 [ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="17_veh"]
 [ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="18_enemy"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="19_hud"]
+[ext_resource type="Script" path="res://levels/capital/capital_deco.gd" id="20_cdeco"]
+[ext_resource type="Script" path="res://levels/building_deco.gd" id="21_bdeco"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="22_block"]
+[ext_resource type="Script" path="res://levels/capital/marine_one.gd" id="23_marine"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="24_ammo"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="25_clutter"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("10_speck")
@@ -112,6 +118,42 @@ size = Vector2(24, 224)
 
 [sub_resource type="RectangleShape2D" id="R_jump"]
 size = Vector2(224, 224)
+
+[sub_resource type="RectangleShape2D" id="R_b192x320"]
+size = Vector2(192, 320)
+
+[sub_resource type="RectangleShape2D" id="R_b48"]
+size = Vector2(48, 48)
+
+[sub_resource type="RectangleShape2D" id="R_b256x640"]
+size = Vector2(256, 640)
+
+[sub_resource type="RectangleShape2D" id="R_b448x160"]
+size = Vector2(448, 160)
+
+[sub_resource type="RectangleShape2D" id="R_b320x320"]
+size = Vector2(320, 320)
+
+[sub_resource type="RectangleShape2D" id="R_b96"]
+size = Vector2(96, 96)
+
+[sub_resource type="RectangleShape2D" id="R_b448x256"]
+size = Vector2(448, 256)
+
+[sub_resource type="RectangleShape2D" id="R_b512x256"]
+size = Vector2(512, 256)
+
+[sub_resource type="RectangleShape2D" id="R_b384x512"]
+size = Vector2(384, 512)
+
+[sub_resource type="RectangleShape2D" id="R_b384x256"]
+size = Vector2(384, 256)
+
+[sub_resource type="RectangleShape2D" id="R_b448x320"]
+size = Vector2(448, 320)
+
+[sub_resource type="RectangleShape2D" id="R_b512x320"]
+size = Vector2(512, 320)
 
 [node name="CapitalCityCarnage" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -463,10 +505,16 @@ script = ExtResource("14_ribbon")
 points = PackedVector2Array(-2464, 1120, -1760, 1120)
 width = 224.0
 
-[node name="RibbonPennAve" type="Node2D" parent="."]
+[node name="RibbonPennNW" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(352, -1120, 1280, -640, 2304, -192)
+points = PackedVector2Array(352, -1120, 978, -796)
+width = 192.0
+
+[node name="RibbonPennSE" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(1592, -503, 2304, -192)
 width = 192.0
 
 [node name="RibbonCircle" type="Node2D" parent="."]
@@ -485,7 +533,7 @@ width = 176.0
 [node name="RibbonArlingtonDrive" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-2624, -1664, -2624, 1696)
+points = PackedVector2Array(-2624, -1664, -2624, 1024)
 width = 144.0
 
 [node name="RoadMarks" type="Node2D" parent="."]
@@ -723,6 +771,493 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="Jump"]
 shape = SubResource("R_jump")
+
+[node name="LincolnTemple" type="StaticBody2D" parent="."]
+position = Vector2(-1600, 0)
+collision_layer = 20
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="LincolnTemple"]
+color = Color(0.7, 0.69, 0.65, 1)
+polygon = PackedVector2Array(-96, -160, 96, -160, 96, 160, -96, 160)
+
+[node name="Col" type="CollisionShape2D" parent="LincolnTemple"]
+shape = SubResource("R_b192x320")
+
+[node name="DecoLincoln" type="Node2D" parent="."]
+position = Vector2(-1600, 0)
+script = ExtResource("20_cdeco")
+kind = &"lincoln"
+size = Vector2(256, 352)
+
+[node name="ObeliskCore" type="StaticBody2D" parent="."]
+collision_layer = 20
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+shadow_offset = Vector2(6, 8)
+
+[node name="Vis" type="Polygon2D" parent="ObeliskCore"]
+color = Color(0.8, 0.79, 0.75, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Col" type="CollisionShape2D" parent="ObeliskCore"]
+shape = SubResource("R_b48")
+
+[node name="DecoObelisk" type="Node2D" parent="."]
+script = ExtResource("20_cdeco")
+kind = &"obelisk"
+size = Vector2(64, 64)
+
+[node name="CapitolBuilding" type="StaticBody2D" parent="."]
+position = Vector2(2688, 0)
+collision_layer = 28
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+wall_face = 40.0
+shadow_offset = Vector2(16, 22)
+
+[node name="Vis" type="Polygon2D" parent="CapitolBuilding"]
+color = Color(0.78, 0.77, 0.73, 1)
+polygon = PackedVector2Array(-128, -320, 128, -320, 128, 320, -128, 320)
+
+[node name="Col" type="CollisionShape2D" parent="CapitolBuilding"]
+shape = SubResource("R_b256x640")
+
+[node name="DecoCapitol" type="Node2D" parent="."]
+position = Vector2(2688, 0)
+script = ExtResource("20_cdeco")
+kind = &"capitol"
+size = Vector2(256, 640)
+
+[node name="WhiteHouse" type="StaticBody2D" parent="."]
+position = Vector2(0, -1424)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+wall_face = 24.0
+
+[node name="Vis" type="Polygon2D" parent="WhiteHouse"]
+color = Color(0.85, 0.84, 0.8, 1)
+polygon = PackedVector2Array(-224, -80, 224, -80, 224, 80, -224, 80)
+
+[node name="Col" type="CollisionShape2D" parent="WhiteHouse"]
+shape = SubResource("R_b448x160")
+
+[node name="DecoWhiteHouse" type="Node2D" parent="."]
+position = Vector2(0, -1424)
+script = ExtResource("20_cdeco")
+kind = &"white_house"
+size = Vector2(448, 160)
+
+[node name="PentagonBuilding" type="StaticBody2D" parent="."]
+position = Vector2(-2560, 1520)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+shadow_offset = Vector2(14, 18)
+
+[node name="Vis" type="Polygon2D" parent="PentagonBuilding"]
+color = Color(0.6, 0.59, 0.56, 1)
+polygon = PackedVector2Array(-160, -160, 160, -160, 160, 160, -160, 160)
+
+[node name="Col" type="CollisionShape2D" parent="PentagonBuilding"]
+shape = SubResource("R_b320x320")
+
+[node name="DecoPentagon" type="Node2D" parent="."]
+position = Vector2(-2560, 1520)
+script = ExtResource("20_cdeco")
+kind = &"pentagon"
+size = Vector2(340, 340)
+
+[node name="FountainCore" type="StaticBody2D" parent="."]
+position = Vector2(1280, -640)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+furniture = false
+
+[node name="Vis" type="Polygon2D" parent="FountainCore"]
+color = Color(0.6, 0.6, 0.62, 1)
+polygon = PackedVector2Array(-48, -48, 48, -48, 48, 48, -48, 48)
+
+[node name="Col" type="CollisionShape2D" parent="FountainCore"]
+shape = SubResource("R_b96")
+
+[node name="DecoFountain" type="Node2D" parent="."]
+position = Vector2(1280, -640)
+script = ExtResource("20_cdeco")
+kind = &"fountain"
+size = Vector2(200, 200)
+
+[node name="DecoWW2" type="Node2D" parent="."]
+position = Vector2(-576, 0)
+script = ExtResource("20_cdeco")
+kind = &"ww2_ring"
+size = Vector2(192, 120)
+
+[node name="DecoVietnam" type="Node2D" parent="."]
+position = Vector2(-1120, -240)
+script = ExtResource("20_cdeco")
+kind = &"vietnam_wall"
+size = Vector2(256, 96)
+
+[node name="DecoKorean" type="Node2D" parent="."]
+position = Vector2(-1120, 240)
+script = ExtResource("20_cdeco")
+kind = &"korean_patrol"
+size = Vector2(200, 140)
+
+[node name="DecoHeadstonesW1" type="Node2D" parent="."]
+position = Vector2(-2756, -1088)
+script = ExtResource("20_cdeco")
+kind = &"headstone_rows"
+size = Vector2(120, 640)
+
+[node name="DecoHeadstonesW2" type="Node2D" parent="."]
+position = Vector2(-2756, -64)
+script = ExtResource("20_cdeco")
+kind = &"headstone_rows"
+size = Vector2(120, 704)
+
+[node name="DecoHeadstonesE1" type="Node2D" parent="."]
+position = Vector2(-2492, -1088)
+script = ExtResource("20_cdeco")
+kind = &"headstone_rows"
+size = Vector2(120, 640)
+
+[node name="DecoHeadstonesE2" type="Node2D" parent="."]
+position = Vector2(-2492, -64)
+script = ExtResource("20_cdeco")
+kind = &"headstone_rows"
+size = Vector2(120, 704)
+
+[node name="DecoFlame" type="Node2D" parent="."]
+position = Vector2(-2720, -1424)
+script = ExtResource("20_cdeco")
+kind = &"eternal_flame"
+size = Vector2(48, 48)
+
+[node name="DecoBridgeMemorial" type="Node2D" parent="."]
+position = Vector2(-2112, 0)
+rotation = -0.1356
+script = ExtResource("20_cdeco")
+kind = &"bridge_deck"
+size = Vector2(704, 224)
+
+[node name="DecoBridge14th" type="Node2D" parent="."]
+position = Vector2(-2112, 1120)
+script = ExtResource("20_cdeco")
+kind = &"bridge_deck"
+size = Vector2(704, 224)
+
+[node name="RailMemorialN" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2112, -100)
+rotation = -0.1356
+size = Vector2(640, 12)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 20
+
+[node name="RailMemorialS" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2112, 100)
+rotation = -0.1356
+size = Vector2(640, 12)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 21
+
+[node name="Rail14thN" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2112, 1014)
+size = Vector2(640, 12)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 22
+
+[node name="Rail14thS" parent="." instance=ExtResource("22_block")]
+position = Vector2(-2112, 1226)
+size = Vector2(640, 12)
+max_hp = 20.0
+deco = &"rail"
+floor_index = 1
+arena_net_id = 23
+
+[node name="FenceS1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(-168, -1008)
+size = Vector2(320, 12)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 10
+
+[node name="FenceS2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(168, -1008)
+size = Vector2(320, 12)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 11
+
+[node name="FenceW1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(-336, -1320)
+size = Vector2(12, 208)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 12
+
+[node name="FenceW2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(-336, -1112)
+size = Vector2(12, 208)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 13
+
+[node name="FenceE1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(336, -1320)
+size = Vector2(12, 208)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 14
+
+[node name="FenceE2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(336, -1112)
+size = Vector2(12, 208)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 15
+
+[node name="FenceN1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(-280, -1424)
+size = Vector2(112, 12)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 16
+
+[node name="FenceN2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
+position = Vector2(280, -1424)
+size = Vector2(112, 12)
+max_hp = 30.0
+deco = &"iron_fence"
+floor_index = 1
+arena_net_id = 17
+
+[node name="CrashSite" type="Node2D" parent="."]
+position = Vector2(0, -640)
+
+[node name="HulkA" parent="CrashSite" instance=ExtResource("22_block")]
+position = Vector2(-96, 16)
+size = Vector2(120, 80)
+max_hp = 15.0
+deco = &"junk"
+floor_index = 1
+
+[node name="HulkB" parent="CrashSite" instance=ExtResource("22_block")]
+position = Vector2(96, -24)
+size = Vector2(100, 70)
+max_hp = 15.0
+deco = &"junk"
+floor_index = 1
+
+[node name="DebrisA" parent="CrashSite" instance=ExtResource("25_clutter")]
+position = Vector2(-16, -72)
+kind = &"trash"
+floor_index = 1
+
+[node name="DebrisB" parent="CrashSite" instance=ExtResource("25_clutter")]
+position = Vector2(48, 64)
+kind = &"trash"
+floor_index = 1
+
+[node name="CachePower" parent="CrashSite" instance=ExtResource("24_ammo")]
+position = Vector2(-64, 40)
+kind = "power"
+amount = 2
+
+[node name="CacheHoming" parent="CrashSite" instance=ExtResource("24_ammo")]
+position = Vector2(64, -56)
+kind = "homing"
+amount = 2
+
+[node name="CacheRear" parent="CrashSite" instance=ExtResource("24_ammo")]
+position = Vector2(0, 88)
+kind = "rear"
+amount = 2
+
+[node name="MarineOne" type="StaticBody2D" parent="."]
+position = Vector2(64, -1136)
+script = ExtResource("23_marine")
+exit_point = Vector2(2600, 1560)
+door_point = Vector2(0, -1344)
+crash_site_path = NodePath("../CrashSite")
+floor_index = 1
+arena_net_id = 1
+
+[node name="MuseumN1" type="StaticBody2D" parent="."]
+position = Vector2(384, -768)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="MuseumN1"]
+color = Color(0.55, 0.53, 0.5, 1)
+polygon = PackedVector2Array(-224, -128, 224, -128, 224, 128, -224, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MuseumN1"]
+shape = SubResource("R_b448x256")
+
+[node name="MuseumS1" type="StaticBody2D" parent="."]
+position = Vector2(640, 832)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="MuseumS1"]
+color = Color(0.52, 0.5, 0.48, 1)
+polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MuseumS1"]
+shape = SubResource("R_b512x256")
+
+[node name="MuseumS2" type="StaticBody2D" parent="."]
+position = Vector2(1280, 832)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="MuseumS2"]
+color = Color(0.57, 0.55, 0.52, 1)
+polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MuseumS2"]
+shape = SubResource("R_b512x256")
+
+[node name="MuseumS3" type="StaticBody2D" parent="."]
+position = Vector2(1920, 832)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="MuseumS3"]
+color = Color(0.5, 0.49, 0.47, 1)
+polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
+
+[node name="Col" type="CollisionShape2D" parent="MuseumS3"]
+shape = SubResource("R_b512x256")
+
+[node name="BlockNE1" type="StaticBody2D" parent="."]
+position = Vector2(2048, -1088)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 36.0
+
+[node name="Vis" type="Polygon2D" parent="BlockNE1"]
+color = Color(0.32, 0.32, 0.38, 1)
+polygon = PackedVector2Array(-224, -160, 224, -160, 224, 160, -224, 160)
+
+[node name="Col" type="CollisionShape2D" parent="BlockNE1"]
+shape = SubResource("R_b448x320")
+
+[node name="BlockNE2" type="StaticBody2D" parent="."]
+position = Vector2(2560, -1216)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 36.0
+
+[node name="Vis" type="Polygon2D" parent="BlockNE2"]
+color = Color(0.3, 0.3, 0.36, 1)
+polygon = PackedVector2Array(-192, -256, 192, -256, 192, 256, -192, 256)
+
+[node name="Col" type="CollisionShape2D" parent="BlockNE2"]
+shape = SubResource("R_b384x512")
+
+[node name="BlockNE3" type="StaticBody2D" parent="."]
+position = Vector2(896, -1216)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="BlockNE3"]
+color = Color(0.34, 0.33, 0.38, 1)
+polygon = PackedVector2Array(-192, -128, 192, -128, 192, 128, -192, 128)
+
+[node name="Col" type="CollisionShape2D" parent="BlockNE3"]
+shape = SubResource("R_b384x256")
+
+[node name="BlockSW1" type="StaticBody2D" parent="."]
+position = Vector2(-1408, 1280)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="BlockSW1"]
+color = Color(0.31, 0.31, 0.36, 1)
+polygon = PackedVector2Array(-256, -160, 256, -160, 256, 160, -256, 160)
+
+[node name="Col" type="CollisionShape2D" parent="BlockSW1"]
+shape = SubResource("R_b512x320")
+
+[node name="BlockSW2" type="StaticBody2D" parent="."]
+position = Vector2(-640, 1280)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="BlockSW2"]
+color = Color(0.33, 0.32, 0.37, 1)
+polygon = PackedVector2Array(-224, -160, 224, -160, 224, 160, -224, 160)
+
+[node name="Col" type="CollisionShape2D" parent="BlockSW2"]
+shape = SubResource("R_b448x320")
+
+[node name="BlockSE1" type="StaticBody2D" parent="."]
+position = Vector2(768, 1408)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="BlockSE1"]
+color = Color(0.32, 0.31, 0.37, 1)
+polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
+
+[node name="Col" type="CollisionShape2D" parent="BlockSE1"]
+shape = SubResource("R_b512x256")
+
+[node name="BlockSE2" type="StaticBody2D" parent="."]
+position = Vector2(2048, 1408)
+collision_layer = 12
+collision_mask = 0
+script = ExtResource("21_bdeco")
+wall_face = 32.0
+
+[node name="Vis" type="Polygon2D" parent="BlockSE2"]
+color = Color(0.3, 0.31, 0.35, 1)
+polygon = PackedVector2Array(-192, -128, 192, -128, 192, 128, -192, 128)
+
+[node name="Col" type="CollisionShape2D" parent="BlockSE2"]
+shape = SubResource("R_b384x256")
 
 [node name="Boundary" type="StaticBody2D" parent="."]
 collision_layer = 2
