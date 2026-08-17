@@ -177,6 +177,7 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 |---|---:|---|
 | Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
 | Suburban Savagery | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Capital City Carnage | 21 | 6 stationary food-truck vendors, 8 mall/museum business figures, 2 police on the monument loop, 2 K St vagrants, 2 joggers, 1 Ellipse dog |
 | Mountainside Mayhem | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
 | Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
 | Ground Floor Gore | 16 baseline | 10 floor-1 workers, 4 floor-2 workers, 2 floor-3 carriers; up to 8 porta escapees |
@@ -345,7 +346,7 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 9 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR) |
 | 10 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
 | 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
-| 12 | Capital City Carnage | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; auto-detours to the finale |
+| 12 | Capital City Carnage | LARGE 5632×3584 (biggest interior) | 8 | 7 | 3 | THUNDERSTORM (night_arena StormTint, flash/dip cycle, slashing rain, headlight beams); Potomac shallow banks + lethal deep channel, 2 bridges w/ destructible rails; Lincoln + Capitol floor-2 terraces (marble ramps, open S rims), Monument `DriveableHill` knoll w/ summit crates; Penn Ave diagonal + traffic circle + Maryland diagonal on road ribbons; WH iron-fence ring (8×30 HP, ids 10-17) around **Marine One** (id 1: breach→spool 6s→3-stage floor-bit climb→sky; air kill = spiral crash + Ellipse cache; any kill = 2500 mini_boss); 6 food trucks + vendors on Constitution; net ids 1,10-17,20-23,30-35,40-57; `optional: true` while in test |
 | 13 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
 
 ---

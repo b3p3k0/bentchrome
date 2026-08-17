@@ -409,6 +409,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 | Mountainside Mayhem | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Piers of Pain | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
+| Capital City Carnage | Large / 8 | monument capital: river + bridges + diagonal avenues + two terraces | thunderstorm flash/dip, lethal channel, Marine One evacuation race | road ribbons make organic streets one node each; a signature destructible can be a countdown the whole map watches |
 | Ground Floor Gore | Large / 8 | dirt loop + foundation + scaffold network | mud, voluntary drops, wounded generator | a dry recovery ring can frame layered risk; stateful landmarks need explicit LAN identity and counterplay |
 | Goliath's Arena | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
 
