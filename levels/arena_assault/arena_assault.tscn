@@ -88,6 +88,14 @@ rotation = -1.85
 position = Vector2(896, 1056)
 rotation = 2.75
 
+[node name="WreckC1" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(448, -384)
+rotation = 1.2
+
+[node name="WreckC2" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(-448, 384)
+rotation = -1.9
+
 [node name="CrateN1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-96, -960)
 size = Vector2(96, 96)
@@ -135,6 +143,72 @@ position = Vector2(0, 896)
 size = Vector2(256, 40)
 max_hp = 80.0
 deco = &"barrier"
+
+[node name="BarrierC1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, -448)
+size = Vector2(224, 40)
+max_hp = 80.0
+deco = &"barrier"
+
+[node name="BarrierC2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, 448)
+size = Vector2(224, 40)
+max_hp = 80.0
+deco = &"barrier"
+
+[node name="CrateNW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-576, -640)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateNW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-480, -576)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateSE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(576, 640)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="BarrelSE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(480, 576)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(640, -640)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(704, -560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-640, 640)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-704, 560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="FenceE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1216, -320)
+size = Vector2(12, 320)
+max_hp = 15.0
+deco = &"fence"
 
 [node name="JunkSE" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(640, 1152)
@@ -187,6 +261,30 @@ kind = &"hydrant"
 [node name="TrashSW" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-1152, 1152)
 kind = &"trash"
+
+[node name="PalletN" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(640, -1216)
+kind = &"pallet"
+
+[node name="PalletS" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-640, 1216)
+kind = &"pallet"
+
+[node name="BollardS1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-128, 1216)
+kind = &"bollard"
+
+[node name="BollardS2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(128, 1216)
+kind = &"bollard"
+
+[node name="ConeNW2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1152, -320)
+kind = &"cone"
+
+[node name="ConeS" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(320, 1216)
+kind = &"cone"
 
 [node name="RingN" type="Node2D" parent="."]
 script = ExtResource("21_marks")
