@@ -225,6 +225,20 @@ Source: `vehicles/status_receiver.gd` + effect specs in weapon `.tres` files. Sa
 
 ---
 
+## Visual Wear (damage tiers)
+
+Source: `vehicles/paint/wear.gd` (marks) + `vehicles/drive_fx.gd` (tier poll + smoke). Purely visual — no handling change; puppets converge off mirrored hp with zero wire state; turntables (car select/garage) always FRESH.
+
+| Knob | Value | Notes |
+|---|---|---|
+| Tiers | FRESH > 2/3 hp · BANGED ≥ 1/3 · BUSTED below | `DriveFX.wear_tier`; exact thirds land BANGED; no hysteresis (heals are chunky) |
+| Marks | scratches+dents (BANGED) / +soot+chips+nose crumple (BUSTED) | deterministic per style+palette seed; BUSTED extends BANGED's RNG stream (damage accumulates) |
+| Count scale | `4·l·w / REF_AREA 1144`, clamped 0.4–1.6 | bikes 1-2 marks, APC/trailer cap; `tail_len` keeps Coldfront's plow clean |
+| Smoke | amounts [0, 6, 12] · lifetime [—, 1.1, 1.8] · gray wisps / dark trail | one lazy world-space CPUParticles2D at the rear midpoint; death cuts it, the wreck keeps its dents |
+| Exceptions | Goliath phase 2 resets wear with the pool (fresh bobtail) · trailer plates stay FRESH · derelicts keep their WRECK_TINT instead | |
+
+---
+
 ## Combat Modifiers (the fine print)
 
 Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehicles/drivers/enemy_driver.gd`, `levels/combat_level.gd`.

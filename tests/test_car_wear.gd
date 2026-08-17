@@ -7,11 +7,71 @@ extends RefCounted
 
 const WearScript := preload("res://vehicles/paint/wear.gd")
 const PaintScript := preload("res://vehicles/car_paint.gd")
+const FXScript := preload("res://vehicles/drive_fx.gd")
+const VehicleScene := preload("res://vehicles/vehicle.tscn")
 
 var t
 
 func _init(runner) -> void:
 	t = runner
+
+func _car() -> Node:
+	var car = VehicleScene.instantiate()
+	car.faction = &"enemies"  # never shadow player-group lookups in fixtures
+	car.stats = (load("res://data/vehicles/ghost.tres") as VehicleStats).duplicate()
+	t.root.add_child(car)
+	return car
+
+func test_tier_mapping_thirds() -> void:
+	t.check(FXScript.wear_tier(1.0) == 0 and FXScript.wear_tier(0.7) == 0,
+		"tier: healthy is FRESH")
+	t.check(FXScript.wear_tier(2.0 / 3.0) == 1, "tier: exactly two thirds is BANGED")
+	t.check(FXScript.wear_tier(0.5) == 1, "tier: mid band is BANGED")
+	t.check(FXScript.wear_tier(1.0 / 3.0) == 1, "tier: exactly one third still BANGED")
+	t.check(FXScript.wear_tier(0.32) == 2 and FXScript.wear_tier(0.0) == 2
+		and FXScript.wear_tier(-0.1) == 2, "tier: below a third is BUSTED, floor included")
+
+## The live loop end to end: hp drives the paint tier and the trailing smoke,
+## a full heal wipes both, and a corpse keeps its dents but stops smoking.
+func test_vehicle_wear_integration() -> void:
+	var car = _car()
+	var fx = car.get_node("DriveFX")
+	var paint = car.get_node("Visual/Body")
+	var health = car.get_node("Health")
+	health.hp = health.max_hp * 0.5
+	fx._physics_process(1.0 / 60.0)
+	t.check(paint.wear == 1, "integration: half hp paints BANGED")
+	t.check(fx._wear_smoke != null and fx._wear_smoke.amount == 6
+		and fx._wear_smoke.emitting, "integration: BANGED wisps trail")
+	health.hp = health.max_hp * 0.2
+	fx._physics_process(1.0 / 60.0)
+	t.check(paint.wear == 2, "integration: low hp paints BUSTED")
+	t.check(fx._wear_smoke.amount == 12 and fx._wear_smoke.emitting,
+		"integration: BUSTED smoke thickens")
+	health.hp = health.max_hp
+	fx._physics_process(1.0 / 60.0)
+	t.check(paint.wear == 0, "integration: a full repair wipes the wear")
+	t.check(not fx._wear_smoke.emitting, "integration: clean cars don't smoke")
+	health.hp = 0.0
+	fx._physics_process(1.0 / 60.0)
+	t.check(paint.wear == 2, "integration: the wreck keeps its dents")
+	t.check(not fx._wear_smoke.emitting, "integration: death cuts the smoke")
+	t.root.remove_child(car)
+	car.free()
+
+## Zero wire state: a puppet's mirrored hp lands on Health directly, and the
+## same DriveFX poll converges the wear on every client.
+func test_puppet_wear_converges() -> void:
+	var car = _car()
+	car.set_net_puppet(true)
+	var health = car.get_node("Health")
+	car.apply_net_state({"hp": health.max_hp * 0.25})
+	var fx = car.get_node("DriveFX")
+	fx._physics_process(1.0 / 60.0)
+	t.check(car.get_node("Visual/Body").wear == 2,
+		"puppet: mirrored hp paints BUSTED with zero wire state")
+	t.root.remove_child(car)
+	car.free()
 
 func _marks(style: StringName, tier: int, seed_value := 1234) -> Array:
 	return WearScript.wear_marks(PaintScript.STYLES[style], tier, seed_value)

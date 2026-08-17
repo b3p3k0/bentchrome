@@ -42,6 +42,11 @@ the suite goes red and names it.
    bumper) + `static func paint(c, primary, accent, steer, phase)`.
    Draw with `Parts.*` helpers; never preload car_paint.gd from a style file.
 5. **Register it**: one preload line in `car_paint.gd`'s `STYLE_SCRIPTS`.
+   **Wear is FREE**: the three visual damage tiers (FRESH/BANGED/BUSTED by HP
+   thirds) derive from `half_len`/`half_wid` (+ the `tail_len` clamp) in
+   `vehicles/paint/wear.gd` — author nothing; `tests/test_car_wear.gd`
+   bounds-checks every registered style automatically. Just eyeball the three
+   tiers once in-game (dev-mode HP) when the silhouette lands.
 6. **Size canon**: insert the id into `tests/test_car_paint.gd` `ORDER` at its radius
    rank (strictly ascending, radius must be unique across the roster).
 7. **Portrait**: `assets/img/bios/<id>.png` (see existing files for the format).
