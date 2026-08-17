@@ -8,7 +8,7 @@ const MIN_AREA_PER_CAR := 1_600_000.0
 const MIN_SHORT_SIDE := 2048.0
 const MODES := [&"arena", &"specialty", &"placeholder"]
 const SIZE_CLASSES := [&"small", &"medium", &"large"]
-const ENCOUNTERS := [&"melee", &"miniboss", &"boss", &"chase"]
+const ENCOUNTERS := [&"melee", &"miniboss", &"boss", &"chase", &"duel"]
 const SIZE_CAR_BANDS := {
 	&"small": Vector2i(4, 4),
 	&"medium": Vector2i(5, 7),
@@ -60,30 +60,44 @@ static func validate(profile: Dictionary) -> Array[String]:
 	if size_class not in SIZE_CLASSES:
 		errors.append("%s: invalid size_class" % label)
 	if encounter not in ENCOUNTERS or encounter == &"chase":
-		errors.append("%s: regular arena needs melee/miniboss/boss encounter" % label)
-	if cars < MIN_CARS:
+		errors.append("%s: regular arena needs melee/miniboss/boss/duel encounter" % label)
+	var duel := encounter == &"duel"
+	if duel:
+		# A duel arena is a deliberate campaign 1v1: exactly two baked cars,
+		# authored out of the versus pool — the four-seat LAN capacity floor
+		# does not apply to a map that never hosts a melee.
+		if cars != 2:
+			errors.append("%s: duel arena bakes exactly two cars" % label)
+		if profile.get("mp_avail", true) == true:
+			errors.append("%s: duel arena must author mp_avail false" % label)
+	elif cars < MIN_CARS:
 		errors.append("%s: target_cars must be at least %d" % [label, MIN_CARS])
 	if minf(arena_size.x, arena_size.y) < MIN_SHORT_SIDE:
 		errors.append("%s: short side must be at least %d" % [label, int(MIN_SHORT_SIDE)])
 	if area_per_car(profile) < MIN_AREA_PER_CAR:
 		errors.append("%s: needs at least %d px^2 per target car" %
 			[label, int(MIN_AREA_PER_CAR)])
-	var boss_overlay := encounter in [&"miniboss", &"boss"]
-	if SIZE_CAR_BANDS.has(size_class) and not boss_overlay:
+	var overlay := duel or encounter in [&"miniboss", &"boss"]
+	if SIZE_CAR_BANDS.has(size_class) and not overlay:
 		var band: Vector2i = SIZE_CAR_BANDS[size_class]
 		if cars < band.x or cars > band.y:
 			errors.append("%s: target cars outside %s band %d-%d" %
 				[label, size_class, band.x, band.y])
-	if STATION_BANDS.has(size_class) and not boss_overlay:
+	if STATION_BANDS.has(size_class) and not overlay:
 		var station_band: Vector2i = STATION_BANDS[size_class]
 		if stations < station_band.x or stations > station_band.y:
 			errors.append("%s: stations outside %s band %d-%d" %
 				[label, size_class, station_band.x, station_band.y])
-	elif boss_overlay and stations != 1:
-		errors.append("%s: current boss overlay contract expects one station" % label)
+	elif overlay and stations != 1:
+		errors.append("%s: boss/duel overlay contract expects one station" % label)
 	var path := String(profile.get("scene", ""))
 	var mp_ready: bool = profile.get("mp_ready", false) == true
-	if not mp_ready:
+	var mp_avail: bool = profile.get("mp_avail", true) == true
+	if not mp_avail:
+		# First-class versus-pool exclusion: a design decision, never debt.
+		if mp_ready:
+			errors.append("%s: mp_avail false contradicts mp_ready" % label)
+	elif not mp_ready:
 		if not LEGACY_MP_EXCEPTIONS.has(path):
 			errors.append("%s: new regular arenas may not add an MP exception" % label)
 		elif String(profile.get("mp_exception", "")) != String(LEGACY_MP_EXCEPTIONS[path]):

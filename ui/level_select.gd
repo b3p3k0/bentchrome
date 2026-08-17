@@ -28,15 +28,16 @@ func _ready() -> void:
 	_highlight()
 
 ## Campaign slots that belong on the fight card, in tour order. Selectable =
-## a real melee arena; placeholders list greyed; boss/chase slots don't list.
-## Static + campaign-injected so tests can probe the filter without a tree.
+## a real melee or duel arena; placeholders list greyed; boss/chase slots
+## don't list. Static + campaign-injected so tests can probe the filter
+## without a tree.
 static func listed_slots(campaign: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for i in campaign.size():
 		var profile: Dictionary = campaign[i]
 		var mode := StringName(profile.mode)
 		var enabled: bool = mode == &"arena" \
-			and StringName(profile.encounter) == &"melee"
+			and StringName(profile.encounter) in [&"melee", &"duel"]
 		if enabled or mode == &"placeholder":
 			out.append({"campaign_index": i, "name": String(profile.name),
 				"enabled": enabled, "profile": profile})
@@ -123,5 +124,7 @@ func _blurb_for(row: Dictionary) -> String:
 	if not bool(row.enabled):
 		return LOCKED_BLURB
 	var profile: Dictionary = row.profile
+	if StringName(profile.encounter) == &"duel":
+		return "%s arena — 1v1 duel" % String(profile.size_class)
 	return "%s arena — %d rivals" % [String(profile.size_class),
 		int(profile.target_cars) - 1]
