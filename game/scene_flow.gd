@@ -36,9 +36,10 @@ const MP_MAPS := [
 ## Optional/placeholder slots must never be last — their advance is a
 ## relative +1. Everything downstream is size()-driven.
 const CAMPAIGN := [
-	{"scene": "", "name": "Arena Assault",
-		"mode": &"placeholder", "size_class": &"", "encounter": &"",
-		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false},
+	{"scene": "res://levels/arena_assault/arena_assault.tscn", "name": "Arena Assault",
+		"mode": &"arena", "size_class": &"small", "encounter": &"duel",
+		"arena_size": Vector2(2560, 2560), "target_cars": 2, "stations": 1,
+		"mp_ready": false, "mp_avail": false, "optional": true},
 	{"scene": "res://levels/dock/dock.tscn", "name": "Piers of Pain",
 		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
 		"arena_size": Vector2(5120, 3584), "target_cars": 8, "stations": 2, "mp_ready": true},

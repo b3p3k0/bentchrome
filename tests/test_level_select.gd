@@ -32,10 +32,10 @@ func test_fight_card_filter() -> void:
 			enabled_tails.append(String(profile.scene).get_file())
 		else:
 			locked_names.append(String(row.name))
-	t.check(enabled_tails == ["dock.tscn", "downtown.tscn", "freeway.tscn",
-			"suburbs.tscn", "snowy.tscn", "ground_floor_gore.tscn"],
-		"fight card: every melee arena is selectable, in tour order")
-	t.check(locked_names == ["Arena Assault", "Terminal Terror",
+	t.check(enabled_tails == ["arena_assault.tscn", "dock.tscn", "downtown.tscn",
+			"freeway.tscn", "suburbs.tscn", "snowy.tscn", "ground_floor_gore.tscn"],
+		"fight card: every melee/duel arena is selectable, in tour order")
+	t.check(locked_names == ["Terminal Terror",
 			"Slaughter on the Strip", "Capital City Carnage"],
 		"fight card: unbuilt slots hang greyed as coming attractions")
 	for row_v in rows:
@@ -53,13 +53,13 @@ func test_screen_boots_onto_a_live_row() -> void:
 		"fight card: ten tour rows plus BACK")
 	t.check(bool(screen._rows[screen._index].enabled),
 		"fight card: cursor never boots onto a greyed slot")
-	t.check(String(screen._rows[screen._index].name) == "Piers of Pain",
-		"fight card: first live slot is Piers of Pain")
+	t.check(String(screen._rows[screen._index].name) == "Arena Assault",
+		"fight card: first live slot is Arena Assault")
 	var first: int = screen._index
 	screen._step(-1)
 	t.check(bool(screen._rows[screen._index].enabled) and screen._index != first,
 		"fight card: cursor hop lands live going up too")
-	t.check(screen._entries[0].modulate == screen.DISABLED_TEXT,
+	t.check(screen._entries[5].modulate == screen.DISABLED_TEXT,
 		"fight card: greyed slot wears the disabled grey")
 	t.root.remove_child(screen)
 	screen.free()

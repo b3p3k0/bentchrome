@@ -163,7 +163,7 @@ func _scene_index(flow: Node, tail: String) -> int:
 func test_campaign_order_thirteen_slots() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var expected := [
-		"Arena Assault", "dock.tscn", "downtown.tscn", "freeway.tscn",
+		"arena_assault.tscn", "dock.tscn", "downtown.tscn", "freeway.tscn",
 		"depot.tscn", "suburbs.tscn", "Terminal Terror",
 		"Slaughter on the Strip", "buzzard_run.tscn", "snowy.tscn",
 		"ground_floor_gore.tscn", "Capital City Carnage", "stadium.tscn",
