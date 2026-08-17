@@ -73,12 +73,17 @@ largest car was promised.
 ### Car capacity
 
 - **MUST:** every regular arena supports at least four simultaneously fielded
-  cars, matching the four human LAN seats.
+  cars, matching the four human LAN seats — UNLESS it is a `duel` arena
+  authored `mp_avail: false` (see below), which bakes exactly two.
 - **Small:** 4 target cars.
 - **Medium:** 5–7 target cars.
 - **Large:** 7–8 target cars.
 - A boss overlay may field only player + boss in campaign. Its underlying arena
   still declares at least four neutral MP spawn positions.
+- A **duel arena** (`encounter: &"duel"`) is a deliberate campaign 1v1:
+  exactly two baked cars, exactly one station, and mandatory
+  `mp_avail: false` — a map that never hosts a LAN melee owes no seats. The
+  aquarium rule still applies per-car. Precedent: Arena Assault.
 
 `target_cars` means the intended full field, not enemy count. A five-car
 campaign melee is one player plus four AI; a five-car LAN melee may be four
@@ -336,7 +341,11 @@ that crosses a grade seam.
 ## Campaign and LAN are one arena
 
 - **MUST:** every new regular arena ships in both `CAMPAIGN` and `MP_MAPS` using
-  the same scene.
+  the same scene — unless it authors **`mp_avail: false`**, the first-class
+  deliberate exclusion from the versus pool (duel arenas require it; any
+  future by-design campaign-only level may use it). Excluded scenes stay OUT
+  of `MP_MAPS`; the contract rejects `mp_avail: false` + `mp_ready: true`.
+  Exclusion is a design decision, never debt — debts stay named below.
 - **MUST:** `target_cars` unique baked/declared spawn positions exist with sane
   floors. Four human seats never require a smaller special-case ruleset.
 - **MUST:** `mp_managed` removes campaign cars into spawn data and stands down
@@ -393,6 +402,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 
 | Arena | Class / target | Dominant topology | Signature pressure | Reusable lesson |
 |---|---:|---|---|---|
+| Arena Assault | Small / 2 (duel, mp_avail false) | derby pit: dirt infield ring in an asphalt lane | 1v1 duel AI, center station, wall-lane pickups, chainable barrels | a duel arena buys tightness by resigning its LAN seats; terrain contrast reads at a glance |
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
 | Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
 | Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |

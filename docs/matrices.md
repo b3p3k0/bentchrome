@@ -330,11 +330,11 @@ Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGA
 
 ## Campaign
 
-Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette (specialty) and the four `placeholder` slots are excluded from the arena contract. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4. Slot order is test-pinned (`tests/test_ground_floor.gd`); placeholder slots are sceneless, ride the shared `level_X.png` sawhorse interstitial card (any key detours past), and flip to real entries with `optional: true` (STAY/DETOUR chooser) once buildable.
+Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette (specialty) and the three `placeholder` slots are excluded from the arena contract. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048 — except `duel` arenas (`mp_avail: false`, exactly 2 cars / 1 station; aquarium floors still apply per-car). Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4. Slot order is test-pinned (`tests/test_ground_floor.gd`); placeholder slots are sceneless, ride the shared `level_X.png` sawhorse interstitial card (any key detours past), and flip to real entries with `optional: true` (STAY/DETOUR chooser) once buildable — Arena Assault is the first graduate.
 
 | # | Level | Size (interior px) | Target cars | Campaign enemies | Stations | Signature hazards |
 |---|---|---|---:|---:|---:|---|
-| 1 | Arena Assault | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; auto-detours to Piers |
+| 1 | Arena Assault | SMALL 2560×2560 | 2 (duel; mp_avail false) | 1 | 1 | derby pit: dirt infield in an asphalt lane, jersey ring, center station, wall-lane M/M/H/P/X crates, barrel chains, wreck cover; `optional: true` while in test |
 | 2 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
 | 3 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
 | 4 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
