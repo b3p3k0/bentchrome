@@ -48,9 +48,12 @@ func _process(_delta: float) -> void:
 		seen[id] = true
 		var screen := world_to_screen(canvas, car.global_position)
 		var state: Dictionary = _states.get(id, {"ref": car, "visible": false})
-		if not state.get("hit_connected", false) and car.has_signal(&"combat_hit"):
+		# Ask the OBJECT, never a state flag: sensor-bounded rosters prune and
+		# rebuild _states on every range crossing, but the connection's lifetime
+		# is the car's lifetime (Godot drops it on free — no disconnect needed).
+		if car.has_signal(&"combat_hit") \
+				and not car.is_connected(&"combat_hit", _on_combat_hit.bind(car)):
 			car.connect(&"combat_hit", _on_combat_hit.bind(car))
-			state.hit_connected = true
 		var was_visible: bool = state.get("visible", false)
 		var visible_now := not PLAY_RECT.grow(HYSTERESIS).has_point(screen)
 		if was_visible:
@@ -70,8 +73,12 @@ func _process(_delta: float) -> void:
 		_states[id] = state
 	for id in _states.keys():
 		if not seen.has(id):
+			# The marker state is presentational — drop it on any exit. The
+			# hit-burst cooldown is per-CAR: it survives a sensor-range dip and
+			# clears only when the car itself is gone.
+			if not is_instance_valid(_states[id].get("ref")):
+				_last_burst_ms.erase(id)
 			_states.erase(id)
-			_last_burst_ms.erase(id)
 	separate_overlaps(_draw_records, PLAY_RECT.grow(-EDGE_INSET))
 	queue_redraw()
 

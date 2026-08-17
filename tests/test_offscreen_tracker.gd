@@ -124,6 +124,38 @@ func test_live_roster_hides_onscreen_and_cleans_dead() -> void:
 	enemy.free()
 	viewer.free()
 
+## Sensor-range churn must never re-connect: leaving reach prunes the marker
+## state, but the combat_hit connection's lifetime is the CAR's lifetime — a
+## re-entering car keeps exactly one connection (regression: the old state
+## flag was pruned with the state, spamming "already connected" per crossing).
+func test_range_reentry_never_duplicates_hit_connection() -> void:
+	var viewer := StubCar.new()
+	viewer.position = TrackerScript.PLAY_RECT.get_center()
+	viewer.add_to_group(&"local_player")
+	viewer.add_to_group(&"vehicles")
+	var enemy := StubCar.new()
+	enemy.position = Vector2(1400, 360)
+	enemy.add_to_group(&"vehicles")
+	var tracker = TrackerScript.new()
+	t.root.add_child(viewer)
+	t.root.add_child(enemy)
+	t.root.add_child(tracker)
+	tracker._process(0.0)
+	t.check(enemy.get_signal_connection_list(&"combat_hit").size() == 1,
+		"tracker: first sighting wires the hit confirm once")
+	enemy.position = Vector2(50000, -50000)  # past sensor reach — state pruned
+	tracker._process(0.0)
+	t.check(not tracker.is_tracking(enemy), "tracker: out-of-reach car drops its marker")
+	enemy.position = Vector2(1400, 360)  # back inside
+	tracker._process(0.0)
+	tracker._process(0.0)
+	t.check(enemy.get_signal_connection_list(&"combat_hit").size() == 1,
+		"tracker: re-entry never stacks a second connection")
+	t.check(tracker.is_tracking(enemy), "tracker: re-entering car earns its marker back")
+	for n in [tracker, enemy, viewer]:
+		t.root.remove_child(n)
+		n.free()
+
 func test_personal_hit_burst_filters_and_rate_limits() -> void:
 	var viewer := StubCar.new()
 	viewer.position = TrackerScript.PLAY_RECT.get_center()
