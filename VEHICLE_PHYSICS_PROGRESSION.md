@@ -452,7 +452,7 @@ includes launch); terrain pins re-pinned for razorback/cricket; bosses and
 buzzards byte-identical throughout.
 
 ### Phase 4.4 (August 2026) — Signature slide moves
-The whip and the side slam. Two lines had made a true handbrake 180
+The whip and the side slide. Two lines had made a true handbrake 180
 impossible: `dir_sign` flipped past ~90° of rotation (a held whip
 counter-steered itself back), and the reverse-speed cap chopped any
 backward-facing slide to 180 px/s in one tick. Now the handbrake pins
@@ -462,7 +462,7 @@ spins sporty cars around in ~0.35s and land yachts in ~1s, and the
 reverse cap prices powered reverse only — the slide survives the
 rotation, the straighten assist lands the nose on the 16-step grid
 (±11.25° ≈ the designed ±10 play), and the fire path never gated on the
-handbrake to begin with. The side slam rides the same brake: traveling
+handbrake to begin with. The side slide rides the same brake: traveling
 mostly sideways (slip ≥ ~53°) at speed within 0.6s of the handbrake is
 `is_side_sliding()` — the victim's ram loop skips the slider entirely
 (the dash precedent) while the slider's own bill lands ×1.5. All locked

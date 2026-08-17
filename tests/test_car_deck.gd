@@ -94,18 +94,18 @@ func test_slide_move_columns() -> void:
 	var deck = DeckScript.new()
 	var stats: Resource = load("res://data/vehicles/cyclone.tres")
 	t.check(is_equal_approx(deck.get_value("cyclone", "whip_scale"), 1.0)
-		and is_equal_approx(deck.get_value("cyclone", "side_slam_bonus"), 1.5),
+		and is_equal_approx(deck.get_value("cyclone", "side_slide_bonus"), 1.5),
 		"car deck: slide-move columns read the neutral defaults")
 	deck.set_value("cyclone", "whip_scale", 0.85)
 	t.check(is_equal_approx(stats.whip_scale, 0.85), "car deck: whip trim stays a float")
 	deck.set_value("cyclone", "whip_scale", 9.0)
 	t.check(is_equal_approx(stats.whip_scale, 2.0), "car deck: whip trim clamps to its band")
-	deck.set_value("cyclone", "side_slam_bonus", 2.25)
-	t.check(is_equal_approx(stats.side_slam_bonus, 2.25), "car deck: slam bonus lands")
+	deck.set_value("cyclone", "side_slide_bonus", 2.25)
+	t.check(is_equal_approx(stats.side_slide_bonus, 2.25), "car deck: slide bonus lands")
 	var path := deck.export_file(TMP_EXPORT)
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	t.check(is_equal_approx(float(data.cars.cyclone.whip_scale), 2.0)
-		and is_equal_approx(float(data.cars.cyclone.side_slam_bonus), 2.25),
+		and is_equal_approx(float(data.cars.cyclone.side_slide_bonus), 2.25),
 		"car deck: slide-move values ride the export as floats")
 	t.check(is_equal_approx(float(data.cars.ghost.whip_scale), 1.0),
 		"car deck: untouched cars export the neutral trim")
@@ -113,5 +113,5 @@ func test_slide_move_columns() -> void:
 	DirAccess.remove_absolute(TMP_EXPORT)
 	DirAccess.remove_absolute(DeckScript.SAVE_PATH)
 	t.check(is_equal_approx(stats.whip_scale, 1.0)
-		and is_equal_approx(stats.side_slam_bonus, 1.5),
+		and is_equal_approx(stats.side_slide_bonus, 1.5),
 		"car deck: cyclone restored (golden-lock hygiene)")

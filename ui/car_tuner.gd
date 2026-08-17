@@ -19,7 +19,7 @@ const HEADERS := {
 	"acceleration": "ACC", "top_speed": "TOP", "handling": "HND", "armor": "ARM",
 	"special_power": "SPC", "mass": "MASS", "launch": "LNCH",
 	"special_ammo_cap": "CAP", "special_recharge_seconds": "RCHG",
-	"whip_scale": "WHIP", "side_slam_bonus": "SLAM",
+	"whip_scale": "WHIP", "side_slide_bonus": "SLIDE",
 }
 
 var _grid: GridContainer
@@ -103,11 +103,11 @@ func _engine_feedback(prop: String, v: float) -> String:
 				else "-> launch factor %.2f" % StatCurves._slot(StatCurves.LAUNCH, s)
 		"whip_scale":
 			return "-> handbrake-180 rate x%.2f" % v
-		"side_slam_bonus":
+		"side_slide_bonus":
 			return "-> broadside ram x%.2f" % v
 	return ""
 
-const FLOAT_PROPS := ["special_recharge_seconds", "whip_scale", "side_slam_bonus"]
+const FLOAT_PROPS := ["special_recharge_seconds", "whip_scale", "side_slide_bonus"]
 
 func _fmt(prop: String, v: float) -> String:
 	if prop == "special_recharge_seconds":

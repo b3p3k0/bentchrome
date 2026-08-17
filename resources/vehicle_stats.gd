@@ -36,7 +36,7 @@ extends Resource
 
 ## Slide-move identity (Car Tuner columns; roster-authorable, defaults neutral).
 @export var whip_scale := 1.0      # multiplies the mass-lerped handbrake-180 rate
-@export var side_slam_bonus := 1.5 # this car's broadside ram premium
+@export var side_slide_bonus := 1.5 # this car's broadside ram premium
 
 ## Garage-wired multipliers (all 1.0 stock; VehicleLoadout composes them
 ## MULTIPLICATIVELY so co-owned electronics stack order-free).

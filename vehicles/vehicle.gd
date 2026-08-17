@@ -81,10 +81,10 @@ signal combat_hit(attacker: Node2D)
 @export var ram_damage_scale := 0.06
 @export var ram_min_speed := 220.0
 @export var ram_cooldown := 0.3
-## The side slam (wrecking ball): a handbrake-born lateral slide bills the
+## The side slide (wrecking ball): a handbrake-born lateral slide bills the
 ## victim with this bonus and takes NOTHING back (the victim's own ram loop
 ## skips a side-slider, dash-style).
-@export var side_slam_bonus := 1.5
+@export var side_slide_bonus := 1.5
 @export var slide_min_speed := 250.0
 
 const SLIDE_LAT_FRAC := 0.8  # sideways fraction of travel that reads as a slide (~53 deg+)
@@ -120,7 +120,7 @@ var _pit_fall_scale := 1.0:
 		if _visual and is_inside_tree():
 			_paint_depth()
 var _ram_cd := 0.0        # cooldown between ram hits
-var _hb_recent_t := 0.0   # side-slam credit window (handbrake held or just released)
+var _hb_recent_t := 0.0   # side-slide credit window (handbrake held or just released)
 var _shake := 0.0         # camera shake energy (player only)
 var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
 var _camera_base_cached := false
@@ -426,7 +426,7 @@ func _apply_stats() -> void:
 		_mg_mount.heat_scale = stats.mg_heat_scale
 	# Slide-move identity (Car Tuner column) — same idempotent-assignment rule.
 	# (whip_scale rides StatCurves.apply with the other controller knobs.)
-	side_slam_bonus = stats.side_slam_bonus
+	side_slide_bonus = stats.side_slide_bonus
 	_configure_rack()
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
@@ -594,7 +594,7 @@ func _physics_process(delta: float) -> void:
 	elif _controller:
 		_controller.service_braking = false
 	_sync_brake_lights()
-	# Side-slam credit window: handbrake now, or released within SLIDE_GRACE
+	# Side-slide credit window: handbrake now, or released within SLIDE_GRACE
 	# (the let-go-and-slam moment). AI never handbrakes, so slip alone — an
 	# icy AI corner — never buys slam credit or protection. Ticked BEFORE the
 	# slide so a same-frame slam is covered.
@@ -1218,7 +1218,7 @@ func is_trigger_armed() -> bool:
 func is_dashing() -> bool:
 	return _special != null and _special.is_dashing()
 
-## Mid side-slam: traveling mostly sideways at speed off a recent handbrake.
+## Mid side-slide: traveling mostly sideways at speed off a recent handbrake.
 ## Kinematics + the grace window — the wrecking ball's bill is one-way (other
 ## cars' ram loops skip a side-slider, dash-style), and the handbrake-recency
 ## requirement keeps icy AI cornering from ever buying the protection.
@@ -1347,17 +1347,17 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 				# (Two mid-dash cars billing nothing is symmetric and accepted.)
 				continue
 			if other.is_side_sliding():
-				# Side slam: the wrecking ball's bill is one-way too — skill
+				# Side slide: the wrecking ball's bill is one-way too — skill
 				# with the brake means the broadside costs the slider nothing.
 				continue
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
 				# An armed Toe Jam charge replaces the speed-scaled hit (its
-				# own economy — the slam bonus never compounds it).
+				# own economy — the slide bonus never compounds it).
 				var charged: float = _special.take_armed_hit() if _special else 0.0
 				var hit: float = charged if charged > 0.0 \
 					else (rel - ram_min_speed) * ram_damage_scale \
-						* (side_slam_bonus if is_side_sliding() else 1.0)
+						* (side_slide_bonus if is_side_sliding() else 1.0)
 				if _special:
 					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)

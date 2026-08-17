@@ -1,5 +1,5 @@
 extends RefCounted
-## The side slam: a handbrake-born lateral slide is a one-way wrecking ball —
+## The side slide: a handbrake-born lateral slide is a one-way wrecking ball —
 ## the victim takes the (boosted) ram bill, the slider takes nothing back.
 ## Locks the is_side_sliding truth table (slip window, speed floor, handbrake
 ## recency — the icy-AI exclusion) and both halves of the one-way bill.
@@ -84,9 +84,9 @@ func test_victim_never_bills_a_slider() -> void:
 		if victim.get_slide_collision_count() > 0:
 			contact = true
 			break
-	t.check(contact, "side slam rig: the victim reaches the slider")
+	t.check(contact, "side slide rig: the victim reaches the slider")
 	t.check(slider_health.hp == slider_health.max_hp,
-		"side slam: the slider's broadside costs it nothing (hp %.1f)" % slider_health.hp)
+		"side slide: the slider's broadside costs it nothing (hp %.1f)" % slider_health.hp)
 	# Control leg: slide off — the same ram DOES bill.
 	slider._hb_recent_t = 0.0
 	slider.velocity = Vector2.ZERO
@@ -109,7 +109,7 @@ func test_victim_never_bills_a_slider() -> void:
 func test_slider_bill_lands_with_the_bonus() -> void:
 	var slam_dmg := _slam_damage(true)
 	var plain_dmg := _slam_damage(false)
-	t.check(slam_dmg > 0.0 and plain_dmg > 0.0, "slam rig: both legs land a bill")
+	t.check(slam_dmg > 0.0 and plain_dmg > 0.0, "slide rig: both legs land a bill")
 	t.check(slam_dmg > plain_dmg * 1.3,
 		"slam: the broadside out-hits the plain ram (%.1f vs %.1f)" % [slam_dmg, plain_dmg])
 	_done([])

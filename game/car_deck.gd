@@ -27,7 +27,7 @@ const COLUMNS := {
 	"special_ammo_cap": [1, 9, 1],
 	"special_recharge_seconds": [1.0, 300.0, 0.5],
 	"whip_scale": [0.5, 2.0, 0.05],
-	"side_slam_bonus": [1.0, 3.0, 0.05],
+	"side_slide_bonus": [1.0, 3.0, 0.05],
 }
 
 ## Fractional step = the prop stays a float end to end (set/export).
@@ -63,7 +63,7 @@ func _init() -> void:
 			"special_ammo_cap": int(c.get("special_ammo_cap", 1)),
 			"special_recharge_seconds": float(c.get("special_recharge_seconds", 12.0)),
 			"whip_scale": float(c.get("whip_scale", 1.0)),
-			"side_slam_bonus": float(c.get("side_slam_bonus", 1.5)),
+			"side_slide_bonus": float(c.get("side_slide_bonus", 1.5)),
 		}
 
 static func tres_path(id: String) -> String:

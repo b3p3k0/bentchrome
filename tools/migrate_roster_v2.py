@@ -143,7 +143,7 @@ FOLD_PROPS = {
     "special_ammo_cap": (1, 9, False, 1),
     "special_recharge_seconds": (1.0, 300.0, True, 12.0),
     "whip_scale": (0.5, 2.0, True, 1.0),
-    "side_slam_bonus": (1.0, 3.0, True, 1.5),
+    "side_slide_bonus": (1.0, 3.0, True, 1.5),
 }
 
 
@@ -157,7 +157,7 @@ def _fold_car(c, row):
         if not lo <= v <= hi:
             sys.exit(f"fold: {c['id']}.{prop} = {v} outside [{lo}, {hi}]")
         in_stats = prop not in ("mass", "special_ammo_cap", "special_recharge_seconds",
-                                "whip_scale", "side_slam_bonus")
+                                "whip_scale", "side_slide_bonus")
         holder = c["stats"] if in_stats else c
         current = holder.get(prop, default)
         if is_float:

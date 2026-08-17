@@ -350,9 +350,9 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 
 ---
 
-## Slide moves (the whip & the side slam)
+## Slide moves (the whip & the side slide)
 
-Source: `vehicles/driving_controller.gd` (whip) + `vehicles/vehicle.gd` (slam). Player-only in practice — AI never handbrakes.
+Source: `vehicles/driving_controller.gd` (whip) + `vehicles/vehicle.gd` (slide impact). Player-only in practice — AI never handbrakes.
 
 | Knob | Value | Notes |
 |---|---|---|
@@ -360,7 +360,7 @@ Source: `vehicles/driving_controller.gd` (whip) + `vehicles/vehicle.gd` (slam). 
 | `whip_turn_light` / `whip_turn_heavy` | 2.4 / 1.4 | steer-rate multiplier lerped by mass 1-10: sporty ~0.35s to 180, mid ~0.5s, land yacht ~1s |
 | dir_sign pin | while handbraking | steer rotates the nose the way you push — no mid-slide counter-steer stall |
 | reverse cap | powered reverse only | backward-facing slides keep momentum; S-gear still capped at `reverse_max_speed` |
-| `side_slam_bonus` | 1.5 (per-car: Car Tuner SLAM column) | multiplies the slider's uncharged ram bill (Toe Jam charge stays its own economy) |
+| `side_slide_bonus` | 1.5 (per-car: Car Tuner SLIDE column) | multiplies the slider's uncharged ram bill (Toe Jam charge stays its own economy) |
 | `whip_scale` | 1.0 (per-car: Car Tuner WHIP column) | trims the mass-lerped whip factor per ride; rides StatCurves.apply, exports/folds through the roster pipeline |
 | `slide_min_speed` / `SLIDE_LAT_FRAC` / `SLIDE_GRACE` | 250 / 0.8 (~53°) / 0.6s | is_side_sliding: speed floor, slip fraction, brake-recency window (excludes icy AI slip) |
 | One-way bill | victim's ram loop skips a slider | dash-style; slider also shielded from third-party rams mid-slide (directional gate = follow-up if LAN abuse shows) |
