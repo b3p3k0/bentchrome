@@ -25,7 +25,8 @@ func test_campaign_arena_profiles_are_complete() -> void:
 		t.check(errors.is_empty(), "%s: arena profile valid (%s)" %
 			[profile.name, "; ".join(errors)])
 		if not Contract.is_regular(profile):
-			specialty += 1
+			if StringName(profile.mode) == &"specialty":
+				specialty += 1
 			continue
 		t.check(int(profile.target_cars) >= Contract.MIN_CARS,
 			"%s: four-player floor is structural" % profile.name)

@@ -6,7 +6,7 @@ extends RefCounted
 const MIN_CARS := 4
 const MIN_AREA_PER_CAR := 1_600_000.0
 const MIN_SHORT_SIDE := 2048.0
-const MODES := [&"arena", &"specialty"]
+const MODES := [&"arena", &"specialty", &"placeholder"]
 const SIZE_CLASSES := [&"small", &"medium", &"large"]
 const ENCOUNTERS := [&"melee", &"miniboss", &"boss", &"chase"]
 const SIZE_CAR_BANDS := {
@@ -38,11 +38,19 @@ static func validate(profile: Dictionary) -> Array[String]:
 	var label := String(profile.get("name", "<unnamed>"))
 	var mode := StringName(profile.get("mode", &""))
 	if mode not in MODES:
-		errors.append("%s: mode must be arena or specialty" % label)
+		errors.append("%s: mode must be arena, specialty, or placeholder" % label)
 		return errors
 	if mode == &"specialty":
 		if StringName(profile.get("encounter", &"")) != &"chase":
 			errors.append("%s: specialty profile must declare chase encounter" % label)
+		return errors
+	if mode == &"placeholder":
+		# An unbuilt slot: pinned in the order, no scene to validate. The
+		# interstitial's under-construction card rolls players past it.
+		if String(profile.get("scene", "?")) != "":
+			errors.append("%s: placeholder slots carry no scene" % label)
+		if profile.get("mp_ready", false) == true:
+			errors.append("%s: placeholder slots cannot be MP-ready" % label)
 		return errors
 	var size_class := StringName(profile.get("size_class", &""))
 	var encounter := StringName(profile.get("encounter", &""))

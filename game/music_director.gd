@@ -154,6 +154,10 @@ func _upcoming_track() -> StringName:
 	if gs == null or flow == null:
 		return &""
 	var idx: int = clampi(gs.level_index, 0, flow.CAMPAIGN.size() - 1)
+	# Placeholder slots are sceneless — their card plays the next real stop's
+	# track (the finale is never a placeholder, so the walk always lands).
+	while idx < flow.CAMPAIGN.size() - 1 and StringName(flow.CAMPAIGN[idx].mode) == &"placeholder":
+		idx += 1
 	var want: StringName = TRACKS.get(flow.CAMPAIGN[idx].scene, &"")
 	return want if not want in [UPCOMING, RESOLVE_CHILD] else &""
 
