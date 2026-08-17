@@ -1,4 +1,4 @@
-[gd_scene load_steps=53 format=3]
+[gd_scene load_steps=55 format=3]
 
 [ext_resource type="Script" path="res://levels/capital/capital_city_carnage.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="2_grid"]
@@ -54,6 +54,15 @@ shader_parameter/intensity = 0.5
 shader_parameter/scale = 10.0
 shader_parameter/shimmer = 0.0
 
+[sub_resource type="ShaderMaterial" id="SM_sidewalk"]
+shader = ExtResource("10_speck")
+shader_parameter/base_color = Color(0.5, 0.46, 0.38, 1)
+shader_parameter/speckle_color = Color(0.38, 0.34, 0.28, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.4
+shader_parameter/scale = 7.0
+shader_parameter/shimmer = 0.0
+
 [sub_resource type="ShaderMaterial" id="SM_water"]
 shader = ExtResource("10_speck")
 shader_parameter/base_color = Color(0.15, 0.3, 0.55, 0.6)
@@ -64,28 +73,31 @@ shader_parameter/scale = 14.0
 shader_parameter/shimmer = 1.6
 
 [sub_resource type="RectangleShape2D" id="R_wall_h"]
-size = Vector2(5712, 40)
+size = Vector2(6224, 40)
 
 [sub_resource type="RectangleShape2D" id="R_wall_v"]
-size = Vector2(40, 3664)
+size = Vector2(40, 3920)
 
 [sub_resource type="RectangleShape2D" id="R_arl"]
-size = Vector2(384, 2432)
+size = Vector2(640, 2560)
 
 [sub_resource type="RectangleShape2D" id="R_mallw"]
-size = Vector2(704, 160)
+size = Vector2(1088, 160)
 
 [sub_resource type="RectangleShape2D" id="R_pool"]
-size = Vector2(640, 160)
+size = Vector2(1024, 160)
 
 [sub_resource type="RectangleShape2D" id="R_panel"]
-size = Vector2(1472, 256)
+size = Vector2(1792, 256)
 
 [sub_resource type="RectangleShape2D" id="R_ellipse"]
 size = Vector2(768, 320)
 
 [sub_resource type="RectangleShape2D" id="R_whlawn"]
-size = Vector2(640, 384)
+size = Vector2(640, 448)
+
+[sub_resource type="RectangleShape2D" id="R_park"]
+size = Vector2(320, 320)
 
 [sub_resource type="RectangleShape2D" id="R_island"]
 size = Vector2(256, 256)
@@ -146,24 +158,24 @@ script = ExtResource("4_storm")
 
 [node name="Rain" type="Node2D" parent="."]
 script = ExtResource("5_rain")
-bounds = Vector2(5632, 3584)
+bounds = Vector2(6144, 3840)
 intensity = 1.3
 wind = Vector2(190, 820)
 
 [node name="Asphalt" type="Polygon2D" parent="."]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-2816, -1792, 2816, -1792, 2816, 1792, -2816, 1792)
+polygon = PackedVector2Array(-3072, -1920, 3072, -1920, 3072, 1920, -3072, 1920)
 
 [node name="GridFloor" type="Node2D" parent="."]
 script = ExtResource("2_grid")
-extent = Vector2(2816, 1792)
+extent = Vector2(3072, 1920)
 
 [node name="Floor1" parent="." instance=ExtResource("6_floor")]
 floor_index = 1
-size = Vector2(5632, 3584)
+size = Vector2(6144, 3840)
 
 [node name="ArlingtonGrass" type="Area2D" parent="."]
-position = Vector2(-2624, -576)
+position = Vector2(-2752, -640)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -172,13 +184,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="ArlingtonGrass"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-192, -1216, 192, -1216, 192, 1216, -192, 1216)
+polygon = PackedVector2Array(-320, -1280, 320, -1280, 320, 1280, -320, 1280)
 
 [node name="Col" type="CollisionShape2D" parent="ArlingtonGrass"]
 shape = SubResource("R_arl")
 
 [node name="MallWestN" type="Area2D" parent="."]
-position = Vector2(-960, -240)
+position = Vector2(-1120, -240)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -187,13 +199,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="MallWestN"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-352, -80, 352, -80, 352, 80, -352, 80)
+polygon = PackedVector2Array(-544, -80, 544, -80, 544, 80, -544, 80)
 
 [node name="Col" type="CollisionShape2D" parent="MallWestN"]
 shape = SubResource("R_mallw")
 
 [node name="MallWestS" type="Area2D" parent="."]
-position = Vector2(-960, 240)
+position = Vector2(-1120, 240)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -202,13 +214,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="MallWestS"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-352, -80, 352, -80, 352, 80, -352, 80)
+polygon = PackedVector2Array(-544, -80, 544, -80, 544, 80, -544, 80)
 
 [node name="Col" type="CollisionShape2D" parent="MallWestS"]
 shape = SubResource("R_mallw")
 
 [node name="ReflectingPool" type="Area2D" parent="."]
-position = Vector2(-960, 0)
+position = Vector2(-1120, 0)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -218,13 +230,13 @@ soften_visual = false
 [node name="Vis" type="Polygon2D" parent="ReflectingPool"]
 material = SubResource("SM_water")
 color = Color(0.15, 0.3, 0.55, 0.6)
-polygon = PackedVector2Array(-320, -80, 320, -80, 320, 80, -320, 80)
+polygon = PackedVector2Array(-512, -80, 512, -80, 512, 80, -512, 80)
 
 [node name="Col" type="CollisionShape2D" parent="ReflectingPool"]
 shape = SubResource("R_pool")
 
 [node name="MallPanelN" type="Area2D" parent="."]
-position = Vector2(1184, -192)
+position = Vector2(1408, -192)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -233,13 +245,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="MallPanelN"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-736, -128, 736, -128, 736, 128, -736, 128)
+polygon = PackedVector2Array(-896, -128, 896, -128, 896, 128, -896, 128)
 
 [node name="Col" type="CollisionShape2D" parent="MallPanelN"]
 shape = SubResource("R_panel")
 
 [node name="MallPanelS" type="Area2D" parent="."]
-position = Vector2(1184, 192)
+position = Vector2(1408, 192)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -248,13 +260,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="MallPanelS"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-736, -128, 736, -128, 736, 128, -736, 128)
+polygon = PackedVector2Array(-896, -128, 896, -128, 896, 128, -896, 128)
 
 [node name="Col" type="CollisionShape2D" parent="MallPanelS"]
 shape = SubResource("R_panel")
 
 [node name="EllipseLawn" type="Area2D" parent="."]
-position = Vector2(0, -640)
+position = Vector2(0, -768)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -269,7 +281,7 @@ polygon = PackedVector2Array(-384, -160, 384, -160, 384, 160, -384, 160)
 shape = SubResource("R_ellipse")
 
 [node name="WHLawn" type="Area2D" parent="."]
-position = Vector2(0, -1216)
+position = Vector2(0, -1312)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -278,13 +290,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="WHLawn"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-320, -192, 320, -192, 320, 192, -320, 192)
+polygon = PackedVector2Array(-320, -224, 320, -224, 320, 224, -320, 224)
 
 [node name="Col" type="CollisionShape2D" parent="WHLawn"]
 shape = SubResource("R_whlawn")
 
 [node name="CircleIsland" type="Area2D" parent="."]
-position = Vector2(1280, -640)
+position = Vector2(1408, -704)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -297,6 +309,51 @@ polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
 
 [node name="Col" type="CollisionShape2D" parent="CircleIsland"]
 shape = SubResource("R_island")
+
+[node name="ParkNW" type="Area2D" parent="."]
+position = Vector2(-1152, -1088)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="ParkNW"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-160, -160, 160, -160, 160, 160, -160, 160)
+
+[node name="Col" type="CollisionShape2D" parent="ParkNW"]
+shape = SubResource("R_park")
+
+[node name="ParkNE" type="Area2D" parent="."]
+position = Vector2(2240, -768)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="ParkNE"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-160, -160, 160, -160, 160, 160, -160, 160)
+
+[node name="Col" type="CollisionShape2D" parent="ParkNE"]
+shape = SubResource("R_park")
+
+[node name="ParkSW" type="Area2D" parent="."]
+position = Vector2(-1024, 1568)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+
+[node name="Vis" type="Polygon2D" parent="ParkSW"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-160, -160, 160, -160, 160, 160, -160, 160)
+
+[node name="Col" type="CollisionShape2D" parent="ParkSW"]
+shape = SubResource("R_park")
 
 [node name="ShallowWestN" type="Area2D" parent="."]
 position = Vector2(-2368, -976)
@@ -451,119 +508,235 @@ size = Vector2(640, 24)
 [node name="RibbonConstitution" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-1792, -448, 2816, -448)
+points = PackedVector2Array(-1792, -512, 3072, -512)
 width = 192.0
 
 [node name="RibbonIndependence" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-1792, 448, 2816, 448)
+points = PackedVector2Array(-1792, 512, 3072, 512)
 width = 192.0
 
 [node name="RibbonKStreet" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-1792, -1600, 2816, -1600)
+points = PackedVector2Array(-1792, -1728, 3072, -1728)
 width = 176.0
 
 [node name="RibbonMemorialBridge" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-2464, 0, -1760, 0)
+points = PackedVector2Array(-2752, 0, -1760, 0)
 width = 224.0
 
 [node name="Ribbon14thBridge" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-2464, 1120, -1760, 1120)
+points = PackedVector2Array(-2752, 1120, -1760, 1120)
 width = 224.0
 
 [node name="RibbonPennNW" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(352, -1120, 978, -796)
+points = PackedVector2Array(512, -1728, 1184, -960)
 width = 192.0
 
 [node name="RibbonPennSE" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(1592, -503, 2304, -192)
+points = PackedVector2Array(1725, -581, 2560, -256)
 width = 192.0
 
 [node name="RibbonCircle" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(1568, -640, 1484, -436, 1280, -352, 1076, -436, 992, -640, 1076, -844, 1280, -928, 1484, -844)
+points = PackedVector2Array(1696, -704, 1612, -500, 1408, -416, 1204, -500, 1120, -704, 1204, -908, 1408, -992, 1612, -908)
 width = 160.0
 closed = true
 
 [node name="RibbonMaryland" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-1760, 1120, -704, 640, 96, 512)
+points = PackedVector2Array(-1760, 1120, -704, 704, 160, 576)
 width = 176.0
 
 [node name="RibbonArlingtonDrive" type="Node2D" parent="."]
 material = SubResource("SM_worn")
 script = ExtResource("14_ribbon")
-points = PackedVector2Array(-2624, -1664, -2624, 1024)
+points = PackedVector2Array(-2752, -1792, -2752, 1120)
 width = 144.0
+
+[node name="RibbonStreetN1" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-576, -1728, -576, -512)
+width = 144.0
+
+[node name="RibbonStreetN2" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(1664, -1728, 1664, -1020)
+width = 144.0
+
+[node name="RibbonStreetN3" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(2560, -1728, 2560, -512)
+width = 144.0
+
+[node name="RibbonStreetS1" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-192, 512, -192, 1904)
+width = 144.0
+
+[node name="RibbonStreetS2" type="Node2D" parent="."]
+material = SubResource("SM_worn")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(1792, 512, 1792, 1904)
+width = 144.0
+
+[node name="WalkPoolRing" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1664, -136, -576, -136, -576, 136, -1664, 136)
+width = 64.0
+closed = true
+edge_lines = false
+
+[node name="WalkEllipseRing" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-416, -960, 416, -960, 416, -576, -416, -576)
+width = 64.0
+closed = true
+edge_lines = false
+
+[node name="WalkMallCenter" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(448, 0, 2304, 0)
+width = 80.0
+edge_lines = false
+
+[node name="WalkWHLawn" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(0, -1440, 0, -1096)
+width = 64.0
+edge_lines = false
+
+[node name="WalkMuseumRow" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(512, 736, 2432, 736)
+width = 72.0
+edge_lines = false
+
+[node name="WalkParkNW" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1344, -1280, -960, -1280, -960, -896, -1344, -896)
+width = 64.0
+closed = true
+edge_lines = false
+
+[node name="WalkParkNE" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(2048, -960, 2432, -960, 2432, -576, 2048, -576)
+width = 64.0
+closed = true
+edge_lines = false
+
+[node name="WalkParkSW" type="Node2D" parent="."]
+material = SubResource("SM_sidewalk")
+script = ExtResource("14_ribbon")
+points = PackedVector2Array(-1216, 1376, -832, 1376, -832, 1760, -1216, 1760)
+width = 64.0
+closed = true
+edge_lines = false
 
 [node name="RoadMarks" type="Node2D" parent="."]
 
 [node name="MarkConstitution" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-1792, -448, 2816, -448)
+points = PackedVector2Array(-1792, -512, 3072, -512)
 style = &"dashed_yellow"
 
 [node name="MarkIndependence" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-1792, 448, 2816, 448)
+points = PackedVector2Array(-1792, 512, 3072, 512)
 style = &"dashed_yellow"
 
 [node name="MarkKStreet" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-1792, -1600, 2816, -1600)
+points = PackedVector2Array(-1792, -1728, 3072, -1728)
 style = &"dashed_yellow"
 
 [node name="MarkMemorial" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-2464, 0, -1760, 0)
+points = PackedVector2Array(-2752, 0, -1760, 0)
 style = &"dashed_white"
 
 [node name="Mark14th" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-2464, 1120, -1760, 1120)
+points = PackedVector2Array(-2752, 1120, -1760, 1120)
 style = &"dashed_white"
 
 [node name="MarkPennNW" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(352, -1120, 978, -796)
+points = PackedVector2Array(512, -1728, 1184, -960)
 style = &"dashed_yellow"
 
 [node name="MarkPennSE" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(1592, -503, 2304, -192)
+points = PackedVector2Array(1725, -581, 2560, -256)
 style = &"dashed_yellow"
 
 [node name="MarkCircle" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(1568, -640, 1484, -436, 1280, -352, 1076, -436, 992, -640, 1076, -844, 1280, -928, 1484, -844, 1568, -640)
+points = PackedVector2Array(1696, -704, 1612, -500, 1408, -416, 1204, -500, 1120, -704, 1204, -908, 1408, -992, 1612, -908, 1696, -704)
 style = &"dashed_white"
 
 [node name="MarkMaryland" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(-1760, 1120, -704, 640, 96, 512)
+points = PackedVector2Array(-1760, 1120, -704, 704, 160, 576)
 style = &"dashed_yellow"
+
+[node name="MarkStreetN1" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-576, -1728, -576, -512)
+style = &"dashed_white"
+
+[node name="MarkStreetN3" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(2560, -1728, 2560, -512)
+style = &"dashed_white"
+
+[node name="MarkStreetS1" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(-192, 512, -192, 1904)
+style = &"dashed_white"
+
+[node name="MarkStreetS2" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(1792, 512, 1792, 1904)
+style = &"dashed_white"
 
 [node name="CrossConstitutionMall" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(0, -544, 0, -352)
+points = PackedVector2Array(0, -608, 0, -416)
 style = &"crosswalk"
 
 [node name="CrossKStation" type="Node2D" parent="RoadMarks"]
 script = ExtResource("15_marks")
-points = PackedVector2Array(320, -1688, 320, -1512)
+points = PackedVector2Array(320, -1816, 320, -1640)
+style = &"crosswalk"
+
+[node name="CrossIndependenceMuseum" type="Node2D" parent="RoadMarks"]
+script = ExtResource("15_marks")
+points = PackedVector2Array(768, 416, 768, 608)
 style = &"crosswalk"
 
 [node name="MonumentKnoll" parent="." instance=ExtResource("12_hill")]
@@ -574,19 +747,19 @@ high_floor = 2
 terrain_type = "grass"
 
 [node name="HealthStation1" parent="." instance=ExtResource("9_heal")]
-position = Vector2(-2624, -896)
+position = Vector2(-2752, -960)
 floor_index = 1
 
 [node name="HealthStation2" parent="." instance=ExtResource("9_heal")]
-position = Vector2(320, -1600)
+position = Vector2(320, -1728)
 floor_index = 1
 
 [node name="HealthStation3" parent="." instance=ExtResource("9_heal")]
-position = Vector2(2240, 1216)
+position = Vector2(2496, 1312)
 floor_index = 1
 
 [node name="Jump" type="Area2D" parent="."]
-position = Vector2(768, 0)
+position = Vector2(832, 0)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("16_jump")
@@ -600,7 +773,7 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 shape = SubResource("R_jump")
 
 [node name="LincolnTemple" type="StaticBody2D" parent="."]
-position = Vector2(-1600, 0)
+position = Vector2(-1856, 0)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -614,7 +787,7 @@ polygon = PackedVector2Array(-96, -160, 96, -160, 96, 160, -96, 160)
 shape = SubResource("R_b192x320")
 
 [node name="DecoLincoln" type="Node2D" parent="."]
-position = Vector2(-1600, 0)
+position = Vector2(-1856, 0)
 script = ExtResource("20_cdeco")
 kind = &"lincoln"
 size = Vector2(256, 352)
@@ -639,7 +812,7 @@ kind = &"obelisk"
 size = Vector2(64, 64)
 
 [node name="CapitolBuilding" type="StaticBody2D" parent="."]
-position = Vector2(2688, 0)
+position = Vector2(2944, 0)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -655,13 +828,13 @@ polygon = PackedVector2Array(-128, -320, 128, -320, 128, 320, -128, 320)
 shape = SubResource("R_b256x640")
 
 [node name="DecoCapitol" type="Node2D" parent="."]
-position = Vector2(2688, 0)
+position = Vector2(2944, 0)
 script = ExtResource("20_cdeco")
 kind = &"capitol"
 size = Vector2(256, 640)
 
 [node name="WhiteHouse" type="StaticBody2D" parent="."]
-position = Vector2(0, -1424)
+position = Vector2(0, -1536)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -676,13 +849,13 @@ polygon = PackedVector2Array(-224, -80, 224, -80, 224, 80, -224, 80)
 shape = SubResource("R_b448x160")
 
 [node name="DecoWhiteHouse" type="Node2D" parent="."]
-position = Vector2(0, -1424)
+position = Vector2(0, -1536)
 script = ExtResource("20_cdeco")
 kind = &"white_house"
 size = Vector2(448, 160)
 
 [node name="PentagonBuilding" type="StaticBody2D" parent="."]
-position = Vector2(-2560, 1520)
+position = Vector2(-2816, 1536)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -697,13 +870,13 @@ polygon = PackedVector2Array(-160, -160, 160, -160, 160, 160, -160, 160)
 shape = SubResource("R_b320x320")
 
 [node name="DecoPentagon" type="Node2D" parent="."]
-position = Vector2(-2560, 1520)
+position = Vector2(-2816, 1536)
 script = ExtResource("20_cdeco")
 kind = &"pentagon"
 size = Vector2(340, 340)
 
 [node name="FountainCore" type="StaticBody2D" parent="."]
-position = Vector2(1280, -640)
+position = Vector2(1408, -704)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -717,70 +890,70 @@ polygon = PackedVector2Array(-48, -48, 48, -48, 48, 48, -48, 48)
 shape = SubResource("R_b96")
 
 [node name="DecoFountain" type="Node2D" parent="."]
-position = Vector2(1280, -640)
+position = Vector2(1408, -704)
 script = ExtResource("20_cdeco")
 kind = &"fountain"
 size = Vector2(200, 200)
 
 [node name="DecoWW2" type="Node2D" parent="."]
-position = Vector2(-576, 0)
+position = Vector2(-496, 0)
 script = ExtResource("20_cdeco")
 kind = &"ww2_ring"
 size = Vector2(192, 120)
 
 [node name="DecoVietnam" type="Node2D" parent="."]
-position = Vector2(-1120, -240)
+position = Vector2(-1280, -260)
 script = ExtResource("20_cdeco")
 kind = &"vietnam_wall"
 size = Vector2(256, 96)
 
 [node name="DecoKorean" type="Node2D" parent="."]
-position = Vector2(-1120, 240)
+position = Vector2(-1280, 260)
 script = ExtResource("20_cdeco")
 kind = &"korean_patrol"
 size = Vector2(200, 140)
 
 [node name="DecoHeadstonesW1" type="Node2D" parent="."]
-position = Vector2(-2756, -1088)
+position = Vector2(-2948, -1024)
 script = ExtResource("20_cdeco")
 kind = &"headstone_rows"
-size = Vector2(120, 640)
+size = Vector2(200, 1400)
 
 [node name="DecoHeadstonesW2" type="Node2D" parent="."]
-position = Vector2(-2756, -64)
+position = Vector2(-2948, 384)
 script = ExtResource("20_cdeco")
 kind = &"headstone_rows"
-size = Vector2(120, 704)
+size = Vector2(200, 420)
 
 [node name="DecoHeadstonesE1" type="Node2D" parent="."]
-position = Vector2(-2492, -1088)
+position = Vector2(-2556, -1024)
 script = ExtResource("20_cdeco")
 kind = &"headstone_rows"
-size = Vector2(120, 640)
+size = Vector2(120, 1400)
 
 [node name="DecoHeadstonesE2" type="Node2D" parent="."]
-position = Vector2(-2492, -64)
+position = Vector2(-2556, 384)
 script = ExtResource("20_cdeco")
 kind = &"headstone_rows"
-size = Vector2(120, 704)
+size = Vector2(120, 420)
 
 [node name="DecoFlame" type="Node2D" parent="."]
-position = Vector2(-2720, -1424)
+position = Vector2(-2900, -1792)
 script = ExtResource("20_cdeco")
 kind = &"eternal_flame"
 size = Vector2(48, 48)
 
 [node name="DecoBridgeMemorial" type="Node2D" parent="."]
-position = Vector2(-2112, 0)
+position = Vector2(-2256, 0)
 script = ExtResource("20_cdeco")
 kind = &"bridge_deck"
-size = Vector2(704, 224)
+size = Vector2(992, 224)
 
 [node name="DecoBridge14th" type="Node2D" parent="."]
-position = Vector2(-2112, 1120)
+position = Vector2(-2256, 1120)
 script = ExtResource("20_cdeco")
 kind = &"bridge_deck"
-size = Vector2(704, 224)
+size = Vector2(992, 224)
 
 [node name="RailMemorialN" parent="." instance=ExtResource("22_block")]
 position = Vector2(-2112, -100)
@@ -863,7 +1036,7 @@ floor_index = 1
 arena_net_id = 23
 
 [node name="FenceS1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(-168, -1008)
+position = Vector2(-168, -1080)
 size = Vector2(320, 12)
 max_hp = 30.0
 deco = &"iron_fence"
@@ -871,7 +1044,7 @@ floor_index = 1
 arena_net_id = 10
 
 [node name="FenceS2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(168, -1008)
+position = Vector2(168, -1080)
 size = Vector2(320, 12)
 max_hp = 30.0
 deco = &"iron_fence"
@@ -879,39 +1052,39 @@ floor_index = 1
 arena_net_id = 11
 
 [node name="FenceW1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(-336, -1320)
-size = Vector2(12, 208)
+position = Vector2(-336, -1371)
+size = Vector2(12, 190)
 max_hp = 30.0
 deco = &"iron_fence"
 floor_index = 1
 arena_net_id = 12
 
 [node name="FenceW2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(-336, -1112)
-size = Vector2(12, 208)
+position = Vector2(-336, -1181)
+size = Vector2(12, 190)
 max_hp = 30.0
 deco = &"iron_fence"
 floor_index = 1
 arena_net_id = 13
 
 [node name="FenceE1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(336, -1320)
-size = Vector2(12, 208)
+position = Vector2(336, -1371)
+size = Vector2(12, 190)
 max_hp = 30.0
 deco = &"iron_fence"
 floor_index = 1
 arena_net_id = 14
 
 [node name="FenceE2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(336, -1112)
-size = Vector2(12, 208)
+position = Vector2(336, -1181)
+size = Vector2(12, 190)
 max_hp = 30.0
 deco = &"iron_fence"
 floor_index = 1
 arena_net_id = 15
 
 [node name="FenceN1" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(-280, -1424)
+position = Vector2(-280, -1472)
 size = Vector2(112, 12)
 max_hp = 30.0
 deco = &"iron_fence"
@@ -919,7 +1092,7 @@ floor_index = 1
 arena_net_id = 16
 
 [node name="FenceN2" parent="." instance=ExtResource("22_block") groups=["wh_fence"]]
-position = Vector2(280, -1424)
+position = Vector2(280, -1472)
 size = Vector2(112, 12)
 max_hp = 30.0
 deco = &"iron_fence"
@@ -927,7 +1100,7 @@ floor_index = 1
 arena_net_id = 17
 
 [node name="CrashSite" type="Node2D" parent="."]
-position = Vector2(0, -640)
+position = Vector2(0, -768)
 
 [node name="HulkA" parent="CrashSite" instance=ExtResource("22_block")]
 position = Vector2(-96, 16)
@@ -969,16 +1142,16 @@ kind = "rear"
 amount = 2
 
 [node name="MarineOne" type="StaticBody2D" parent="."]
-position = Vector2(64, -1136)
+position = Vector2(64, -1200)
 script = ExtResource("23_marine")
-exit_point = Vector2(2600, 1560)
-door_point = Vector2(0, -1280)
+exit_point = Vector2(2880, 1700)
+door_point = Vector2(0, -1400)
 crash_site_path = NodePath("../CrashSite")
 floor_index = 1
 arena_net_id = 1
 
 [node name="MuseumN1" type="StaticBody2D" parent="."]
-position = Vector2(384, -768)
+position = Vector2(448, -832)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -992,7 +1165,7 @@ polygon = PackedVector2Array(-224, -128, 224, -128, 224, 128, -224, 128)
 shape = SubResource("R_b448x256")
 
 [node name="MuseumS1" type="StaticBody2D" parent="."]
-position = Vector2(640, 832)
+position = Vector2(768, 896)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1006,7 +1179,7 @@ polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
 shape = SubResource("R_b512x256")
 
 [node name="MuseumS2" type="StaticBody2D" parent="."]
-position = Vector2(1280, 832)
+position = Vector2(1472, 896)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1020,7 +1193,7 @@ polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
 shape = SubResource("R_b512x256")
 
 [node name="MuseumS3" type="StaticBody2D" parent="."]
-position = Vector2(1920, 832)
+position = Vector2(2176, 896)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1034,7 +1207,7 @@ polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
 shape = SubResource("R_b512x256")
 
 [node name="BlockNE1" type="StaticBody2D" parent="."]
-position = Vector2(2048, -1088)
+position = Vector2(2240, -1152)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1048,7 +1221,7 @@ polygon = PackedVector2Array(-224, -160, 224, -160, 224, 160, -224, 160)
 shape = SubResource("R_b448x320")
 
 [node name="BlockNE2" type="StaticBody2D" parent="."]
-position = Vector2(2560, -1216)
+position = Vector2(2816, -1280)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1062,7 +1235,7 @@ polygon = PackedVector2Array(-192, -256, 192, -256, 192, 256, -192, 256)
 shape = SubResource("R_b384x512")
 
 [node name="BlockNE3" type="StaticBody2D" parent="."]
-position = Vector2(896, -1216)
+position = Vector2(1664, -1408)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1076,7 +1249,7 @@ polygon = PackedVector2Array(-192, -128, 192, -128, 192, 128, -192, 128)
 shape = SubResource("R_b384x256")
 
 [node name="BlockSW1" type="StaticBody2D" parent="."]
-position = Vector2(-1408, 1280)
+position = Vector2(-1472, 1408)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1090,7 +1263,7 @@ polygon = PackedVector2Array(-256, -160, 256, -160, 256, 160, -256, 160)
 shape = SubResource("R_b512x320")
 
 [node name="BlockSW2" type="StaticBody2D" parent="."]
-position = Vector2(-640, 1280)
+position = Vector2(-640, 1408)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1104,7 +1277,7 @@ polygon = PackedVector2Array(-224, -160, 224, -160, 224, 160, -224, 160)
 shape = SubResource("R_b448x320")
 
 [node name="BlockSE1" type="StaticBody2D" parent="."]
-position = Vector2(768, 1408)
+position = Vector2(896, 1536)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1118,7 +1291,7 @@ polygon = PackedVector2Array(-256, -128, 256, -128, 256, 128, -256, 128)
 shape = SubResource("R_b512x256")
 
 [node name="BlockSE2" type="StaticBody2D" parent="."]
-position = Vector2(2048, 1408)
+position = Vector2(2240, 1536)
 collision_layer = 12
 collision_mask = 0
 script = ExtResource("21_bdeco")
@@ -1136,45 +1309,45 @@ collision_layer = 2
 collision_mask = 0
 
 [node name="TopVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, -1812)
+position = Vector2(0, -1940)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-2856, -20, 2856, -20, 2856, 20, -2856, 20)
+polygon = PackedVector2Array(-3112, -20, 3112, -20, 3112, 20, -3112, 20)
 
 [node name="TopCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, -1812)
+position = Vector2(0, -1940)
 shape = SubResource("R_wall_h")
 
 [node name="BottomVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, 1812)
+position = Vector2(0, 1940)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-2856, -20, 2856, -20, 2856, 20, -2856, 20)
+polygon = PackedVector2Array(-3112, -20, 3112, -20, 3112, 20, -3112, 20)
 
 [node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, 1812)
+position = Vector2(0, 1940)
 shape = SubResource("R_wall_h")
 
 [node name="LeftVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(-2836, 0)
+position = Vector2(-3092, 0)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+polygon = PackedVector2Array(-20, -1960, 20, -1960, 20, 1960, -20, 1960)
 
 [node name="LeftCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(-2836, 0)
+position = Vector2(-3092, 0)
 shape = SubResource("R_wall_v")
 
 [node name="RightVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(2836, 0)
+position = Vector2(3092, 0)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-20, -1832, 20, -1832, 20, 1832, -20, 1832)
+polygon = PackedVector2Array(-20, -1960, 20, -1960, 20, 1960, -20, 1960)
 
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(2836, 0)
+position = Vector2(3092, 0)
 shape = SubResource("R_wall_v")
 
 [node name="FoodTrucks" type="Node2D" parent="."]
 
 [node name="FoodTruck1" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(-448, -560)
+position = Vector2(-448, -624)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1183,7 +1356,7 @@ floor_index = 1
 arena_net_id = 30
 
 [node name="FoodTruck2" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(-192, -336)
+position = Vector2(-192, -400)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1192,7 +1365,7 @@ floor_index = 1
 arena_net_id = 31
 
 [node name="FoodTruck3" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(704, -560)
+position = Vector2(704, -624)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1201,7 +1374,7 @@ floor_index = 1
 arena_net_id = 32
 
 [node name="FoodTruck4" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(960, -336)
+position = Vector2(960, -400)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1210,7 +1383,7 @@ floor_index = 1
 arena_net_id = 33
 
 [node name="FoodTruck5" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(1856, -560)
+position = Vector2(2144, -624)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1219,7 +1392,7 @@ floor_index = 1
 arena_net_id = 34
 
 [node name="FoodTruck6" parent="FoodTrucks" instance=ExtResource("22_block")]
-position = Vector2(2368, -336)
+position = Vector2(2624, -400)
 size = Vector2(128, 60)
 max_hp = 90.0
 deco = &"food_truck"
@@ -1230,7 +1403,7 @@ arena_net_id = 35
 [node name="BreakableCover" type="Node2D" parent="."]
 
 [node name="CrateK1" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(192, -1696)
+position = Vector2(192, -1824)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
@@ -1238,7 +1411,7 @@ floor_index = 1
 arena_net_id = 42
 
 [node name="CrateK2" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(448, -1712)
+position = Vector2(448, -1840)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"crate"
@@ -1246,7 +1419,7 @@ floor_index = 1
 arena_net_id = 43
 
 [node name="BarrelK1" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(560, -1680)
+position = Vector2(560, -1808)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
@@ -1254,7 +1427,7 @@ floor_index = 1
 arena_net_id = 44
 
 [node name="BarrelK2" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(608, -1728)
+position = Vector2(608, -1856)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
@@ -1262,7 +1435,7 @@ floor_index = 1
 arena_net_id = 45
 
 [node name="KioskCircle" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(1600, -864)
+position = Vector2(1728, -928)
 size = Vector2(128, 96)
 max_hp = 60.0
 deco = &"kiosk"
@@ -1270,7 +1443,7 @@ floor_index = 1
 arena_net_id = 46
 
 [node name="BarrierCapN" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(1900, -256)
+position = Vector2(2368, -256)
 size = Vector2(160, 40)
 max_hp = 80.0
 deco = &"barrier"
@@ -1278,7 +1451,7 @@ floor_index = 1
 arena_net_id = 47
 
 [node name="BarrierCapS" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(1900, 256)
+position = Vector2(2368, 256)
 size = Vector2(160, 40)
 max_hp = 80.0
 deco = &"barrier"
@@ -1286,7 +1459,7 @@ floor_index = 1
 arena_net_id = 48
 
 [node name="JunkMuseumAlley" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(960, 832)
+position = Vector2(1120, 896)
 size = Vector2(96, 64)
 max_hp = 15.0
 deco = &"junk"
@@ -1294,7 +1467,7 @@ floor_index = 1
 arena_net_id = 49
 
 [node name="BarrelSW1" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(-1024, 832)
+position = Vector2(-1120, 928)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
@@ -1302,7 +1475,7 @@ floor_index = 1
 arena_net_id = 51
 
 [node name="BarrelSW2" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(-960, 896)
+position = Vector2(-1056, 992)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
@@ -1310,7 +1483,7 @@ floor_index = 1
 arena_net_id = 52
 
 [node name="BarrelSW3" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(-1088, 880)
+position = Vector2(-1184, 976)
 size = Vector2(44, 44)
 max_hp = 30.0
 deco = &"barrel"
@@ -1318,7 +1491,7 @@ floor_index = 1
 arena_net_id = 53
 
 [node name="ChainlinkPentagonN" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(-2560, 1328)
+position = Vector2(-2816, 1344)
 size = Vector2(320, 12)
 max_hp = 12.0
 deco = &"chainlink"
@@ -1326,7 +1499,7 @@ floor_index = 1
 arena_net_id = 54
 
 [node name="ChainlinkPentagonE" parent="BreakableCover" instance=ExtResource("22_block")]
-position = Vector2(-2384, 1520)
+position = Vector2(-2640, 1536)
 size = Vector2(12, 280)
 max_hp = 12.0
 deco = &"chainlink"
@@ -1336,31 +1509,31 @@ arena_net_id = 55
 [node name="Derelicts" type="Node2D" parent="."]
 
 [node name="Derelict1" parent="Derelicts" instance=ExtResource("27_wreck")]
-position = Vector2(-1024, -560)
+position = Vector2(-1024, -624)
 rotation = 0.3
 floor_index = 1
 arena_net_id = 40
 
 [node name="Derelict2" parent="Derelicts" instance=ExtResource("27_wreck")]
-position = Vector2(-1216, -336)
+position = Vector2(-1344, -400)
 rotation = -1.2
 floor_index = 1
 arena_net_id = 41
 
 [node name="Derelict3" parent="Derelicts" instance=ExtResource("27_wreck")]
-position = Vector2(448, 560)
+position = Vector2(448, 624)
 rotation = 2.0
 floor_index = 1
 arena_net_id = 50
 
 [node name="Derelict4" parent="Derelicts" instance=ExtResource("27_wreck")]
-position = Vector2(-1600, 192)
+position = Vector2(-1648, 240)
 rotation = -0.14
 floor_index = 1
 arena_net_id = 56
 
 [node name="Derelict5" parent="Derelicts" instance=ExtResource("27_wreck")]
-position = Vector2(2240, -640)
+position = Vector2(2432, -704)
 rotation = 1.1
 floor_index = 1
 arena_net_id = 57
@@ -1368,225 +1541,275 @@ arena_net_id = 57
 [node name="LooseClutter" type="Node2D" parent="."]
 
 [node name="BollardWW2a" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-660, -48)
+position = Vector2(-608, -52)
 kind = &"bollard"
 floor_index = 1
 
 [node name="BollardWW2b" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-660, 48)
+position = Vector2(-608, 52)
 kind = &"bollard"
 floor_index = 1
 
 [node name="BollardWW2c" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-492, -48)
+position = Vector2(-384, -52)
 kind = &"bollard"
 floor_index = 1
 
 [node name="BollardWW2d" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-492, 48)
+position = Vector2(-384, 52)
 kind = &"bollard"
 floor_index = 1
 
 [node name="TrashPool1" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-1280, -140)
+position = Vector2(-1520, -140)
 kind = &"trash"
 floor_index = 1
 
 [node name="TrashPool2" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-640, 140)
+position = Vector2(-720, 150)
 kind = &"trash"
 floor_index = 1
 
 [node name="BushWH1" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-192, -1104)
+position = Vector2(-192, -1200)
 kind = &"bush"
 floor_index = 1
 
 [node name="BushWH2" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(192, -1168)
+position = Vector2(192, -1264)
 kind = &"bush"
 floor_index = 1
 
 [node name="BushWH3" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-96, -1248)
+position = Vector2(-96, -1408)
 kind = &"bush"
 floor_index = 1
 
 [node name="BushWH4" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(256, -1056)
+position = Vector2(256, -1152)
 kind = &"bush"
 floor_index = 1
 
 [node name="HydrantWH" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(400, -976)
+position = Vector2(400, -1024)
 kind = &"hydrant"
 floor_index = 1
 
 [node name="ConePenn1" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(640, -960)
+position = Vector2(960, -1120)
 kind = &"cone"
 floor_index = 1
 
 [node name="ConePenn2" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(1900, -320)
+position = Vector2(2000, -400)
 kind = &"cone"
 floor_index = 1
 
 [node name="MailboxK" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-320, -1512)
+position = Vector2(-320, -1640)
 kind = &"mailbox"
 floor_index = 1
 
 [node name="SignCapitol" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(1984, -64)
+position = Vector2(2240, -64)
 kind = &"sign"
 floor_index = 1
 
 [node name="HeadstoneA" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-2756, -448)
+position = Vector2(-2996, -320)
 kind = &"headstone"
 floor_index = 1
 
 [node name="HeadstoneB" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-2492, -320)
+position = Vector2(-2520, -704)
 kind = &"headstone"
 floor_index = 1
 
 [node name="HeadstoneC" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-2756, 320)
+position = Vector2(-2884, 500)
 kind = &"headstone"
 floor_index = 1
 
 [node name="HeadstoneD" parent="LooseClutter" instance=ExtResource("25_clutter")]
-position = Vector2(-2492, 448)
+position = Vector2(-2600, 240)
 kind = &"headstone"
+floor_index = 1
+
+[node name="PineParkNW1" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1232, -1168)
+kind = &"pine"
+footprint = 56.0
+floor_index = 1
+
+[node name="PineParkNW2" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1072, -1008)
+kind = &"pine"
+footprint = 48.0
+floor_index = 1
+
+[node name="BushParkNW" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1088, -1168)
+kind = &"bush"
+floor_index = 1
+
+[node name="PineParkNE1" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(2160, -848)
+kind = &"pine"
+footprint = 56.0
+floor_index = 1
+
+[node name="BushParkNE" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(2320, -688)
+kind = &"bush"
+floor_index = 1
+
+[node name="TrashParkNE" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(2288, -848)
+kind = &"trash"
+floor_index = 1
+
+[node name="PineParkSW1" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-1104, 1488)
+kind = &"pine"
+footprint = 56.0
+floor_index = 1
+
+[node name="PineParkSW2" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-944, 1648)
+kind = &"pine"
+footprint = 48.0
+floor_index = 1
+
+[node name="BushParkSW" parent="LooseClutter" instance=ExtResource("25_clutter")]
+position = Vector2(-960, 1488)
+kind = &"bush"
 floor_index = 1
 
 [node name="StreetDeco" type="Node2D" parent="."]
 
 [node name="LightC1" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-1408, -560)
+position = Vector2(-1536, -624)
 kind = &"street_light"
 
 [node name="LightC2" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-448, -336)
+position = Vector2(-640, -400)
 kind = &"street_light"
 
 [node name="LightC3" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(448, -560)
+position = Vector2(448, -624)
 kind = &"street_light"
 
 [node name="LightC4" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1024, -336)
+position = Vector2(1152, -400)
 kind = &"street_light"
 
 [node name="LightC5" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1984, -336)
+position = Vector2(2368, -624)
 kind = &"street_light"
 
 [node name="LightC6" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(2560, -560)
+position = Vector2(2816, -400)
 kind = &"street_light"
 
 [node name="LightK1" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-1408, -1688)
+position = Vector2(-1408, -1816)
 kind = &"street_light"
 
 [node name="LightK2" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(0, -1512)
+position = Vector2(0, -1640)
 kind = &"street_light"
 
 [node name="LightK3" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1408, -1688)
+position = Vector2(1408, -1816)
 kind = &"street_light"
 
 [node name="LightK4" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(2432, -1512)
+position = Vector2(2432, -1640)
 kind = &"street_light"
 
 [node name="LightI1" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-1408, 336)
+position = Vector2(-1408, 416)
 kind = &"street_light"
 
 [node name="LightI2" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-256, 560)
+position = Vector2(-320, 624)
 kind = &"street_light"
 
 [node name="LightI3" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1600, 336)
+position = Vector2(1600, 416)
 kind = &"street_light"
 
 [node name="LightI4" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(2240, 560)
+position = Vector2(2560, 624)
 kind = &"street_light"
 
 [node name="TrafficPenn1" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1660, -520)
+position = Vector2(1860, -580)
 kind = &"traffic_light"
 
 [node name="TrafficPenn2" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1780, -380)
+position = Vector2(1950, -440)
 kind = &"traffic_light"
 
 [node name="TrafficMall" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-64, -520)
+position = Vector2(-64, -584)
 kind = &"traffic_light"
 
 [node name="TrafficK" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(256, -1688)
+position = Vector2(256, -1808)
 kind = &"traffic_light"
 
 [node name="SteamC" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(1088, -448)
+position = Vector2(1088, -512)
 kind = &"manhole"
 
 [node name="SteamK" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(-640, -1600)
+position = Vector2(-640, -1728)
 kind = &"manhole"
 
 [node name="SteamI" type="Node2D" parent="StreetDeco"]
 script = ExtResource("26_sdeco")
-position = Vector2(192, 448)
+position = Vector2(192, 512)
 kind = &"manhole"
 
 [node name="AmmoPickups" type="Node2D" parent="."]
 
 [node name="AmmoStandard1" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(-1408, -224)
+position = Vector2(-1696, -240)
 
 [node name="AmmoStandard2" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(2048, 1104)
+position = Vector2(2240, 1424)
 
 [node name="AmmoStandard3" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(1280, -1600)
+position = Vector2(1280, -1728)
 
 [node name="AmmoHoming1" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(2464, 1216)
+position = Vector2(2720, 1312)
 kind = "homing"
 amount = 1
 
 [node name="AmmoHoming2" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(-2624, 64)
+position = Vector2(-2752, 240)
 kind = "homing"
 amount = 1
 
@@ -1608,24 +1831,24 @@ kind = "rear"
 amount = 2
 
 [node name="AmmoPower2" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(-704, 960)
+position = Vector2(-704, 1088)
 kind = "power"
 amount = 2
 
 [node name="AmmoMine2" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(2688, -832)
+position = Vector2(2528, -896)
 kind = "mine"
 amount = 2
 
 [node name="AmmoJump1" parent="AmmoPickups" instance=ExtResource("24_ammo")]
-position = Vector2(832, -128)
+position = Vector2(896, -128)
 kind = "jump"
 amount = 1
 
 [node name="AmbientLife" type="Node2D" parent="."]
 
 [node name="VendorC1" type="Node2D" parent="AmbientLife"]
-position = Vector2(-448, -500)
+position = Vector2(-448, -564)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1633,7 +1856,7 @@ bounds = Vector2(0, 0)
 seed_offset = 41
 
 [node name="VendorC2" type="Node2D" parent="AmbientLife"]
-position = Vector2(-192, -396)
+position = Vector2(-192, -460)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1641,7 +1864,7 @@ bounds = Vector2(0, 0)
 seed_offset = 42
 
 [node name="VendorC3" type="Node2D" parent="AmbientLife"]
-position = Vector2(704, -500)
+position = Vector2(704, -564)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1649,7 +1872,7 @@ bounds = Vector2(0, 0)
 seed_offset = 43
 
 [node name="VendorC4" type="Node2D" parent="AmbientLife"]
-position = Vector2(960, -396)
+position = Vector2(960, -460)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1657,7 +1880,7 @@ bounds = Vector2(0, 0)
 seed_offset = 44
 
 [node name="VendorC5" type="Node2D" parent="AmbientLife"]
-position = Vector2(1856, -500)
+position = Vector2(2144, -564)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1665,7 +1888,7 @@ bounds = Vector2(0, 0)
 seed_offset = 45
 
 [node name="VendorC6" type="Node2D" parent="AmbientLife"]
-position = Vector2(2368, -396)
+position = Vector2(2624, -460)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vendor"])
 movement = 2
@@ -1673,7 +1896,7 @@ bounds = Vector2(0, 0)
 seed_offset = 46
 
 [node name="MallCrowdW" type="Node2D" parent="AmbientLife"]
-position = Vector2(-700, 150)
+position = Vector2(-880, 150)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"business_suit", &"business_dress"])
 count = 3
@@ -1681,7 +1904,7 @@ bounds = Vector2(500, 260)
 seed_offset = 47
 
 [node name="MallCrowdE" type="Node2D" parent="AmbientLife"]
-position = Vector2(1100, 0)
+position = Vector2(1300, 64)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"business_suit", &"business_dress"])
 count = 3
@@ -1689,7 +1912,7 @@ bounds = Vector2(800, 300)
 seed_offset = 48
 
 [node name="MuseumSteps" type="Node2D" parent="AmbientLife"]
-position = Vector2(1280, 640)
+position = Vector2(1472, 700)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"business_dress", &"business_suit"])
 count = 2
@@ -1701,12 +1924,12 @@ script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"police"])
 count = 2
 movement = 1
-route_points = PackedVector2Array(-1400, -448, 2200, -448, 2200, 448, -1400, 448, -1400, -448)
+route_points = PackedVector2Array(-1500, -512, 2400, -512, 2400, 512, -1500, 512, -1500, -512)
 speed = 46.0
 seed_offset = 50
 
 [node name="VagrantsK" type="Node2D" parent="AmbientLife"]
-position = Vector2(-500, -1690)
+position = Vector2(-500, -1800)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"vagrant"])
 count = 2
@@ -1719,12 +1942,12 @@ script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"jogger"])
 count = 2
 movement = 1
-route_points = PackedVector2Array(-1300, -260, 1900, -260, 1900, 260, -1300, 260, -1300, -260)
+route_points = PackedVector2Array(-1500, -280, 2200, -280, 2200, 280, -1500, 280, -1500, -280)
 speed = 70.0
 seed_offset = 52
 
 [node name="DogEllipse" type="Node2D" parent="AmbientLife"]
-position = Vector2(0, -560)
+position = Vector2(0, -680)
 script = ExtResource("28_ambient")
 kinds = Array[StringName]([&"dog"])
 count = 1
@@ -1733,27 +1956,27 @@ speed = 62.0
 seed_offset = 53
 
 [node name="Vehicle" parent="." instance=ExtResource("17_veh")]
-position = Vector2(0, 896)
+position = Vector2(0, 1024)
 
 [node name="Enemy1" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(-2624, -1216)
+position = Vector2(-2752, -1344)
 
 [node name="Enemy2" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(-896, -1600)
+position = Vector2(-896, -1728)
 
 [node name="Enemy3" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(1664, -1600)
+position = Vector2(2048, -1728)
 
 [node name="Enemy4" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(2432, 768)
+position = Vector2(2560, 896)
 
 [node name="Enemy5" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(1408, 1408)
+position = Vector2(1536, 1536)
 
 [node name="Enemy6" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(-960, 1216)
+position = Vector2(-896, 1152)
 
 [node name="Enemy7" parent="." instance=ExtResource("18_enemy")]
-position = Vector2(-960, 224)
+position = Vector2(-1056, 288)
 
 [node name="HUD" parent="." instance=ExtResource("19_hud")]

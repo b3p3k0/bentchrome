@@ -76,7 +76,7 @@ const CAMPAIGN := [
 		"arena_size": Vector2(4608, 3840), "target_cars": 8, "stations": 2, "mp_ready": true},
 	{"scene": "res://levels/capital/capital_city_carnage.tscn", "name": "Capital City Carnage",
 		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
-		"arena_size": Vector2(5632, 3584), "target_cars": 8, "stations": 3,
+		"arena_size": Vector2(6144, 3840), "target_cars": 8, "stations": 3,
 		"mp_ready": true, "optional": true},
 	{"scene": "res://levels/stadium/stadium.tscn", "name": "Goliath's Arena",
 		"mode": &"arena", "size_class": &"large", "encounter": &"boss",
