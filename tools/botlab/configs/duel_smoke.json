@@ -1,6 +1,6 @@
 {
 	"_readme": "Harness smoke check: one short stock-vs-stock duel. PASS = exit 0 + a match JSON. Run: tools/botlab.sh tools/botlab/configs/duel_smoke.json",
-	"arena": "res://levels/arena/arena.tscn",
+	"arena": "res://levels/downtown/downtown.tscn",
 	"seed": 42,
 	"max_seconds": 30,
 	"governor": "lethal",

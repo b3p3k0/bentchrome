@@ -6,7 +6,7 @@ extends RefCounted
 
 const MIN_DIST := 700.0
 const CAMPAIGN := [
-	"res://levels/arena/arena.tscn",
+	"res://levels/downtown/downtown.tscn",
 	"res://levels/freeway/freeway.tscn",
 	"res://levels/suburbs/suburbs.tscn",
 	"res://levels/snowy/snowy.tscn",

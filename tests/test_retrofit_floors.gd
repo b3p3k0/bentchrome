@@ -6,7 +6,7 @@ extends RefCounted
 ## zone under them, grade Ramp nodes land their ends on the right floors,
 ## and every connector's approach run begins on its from_floor.
 
-const LEVELS := ["res://levels/arena/arena.tscn", "res://levels/snowy/snowy.tscn"]
+const LEVELS := ["res://levels/downtown/downtown.tscn", "res://levels/snowy/snowy.tscn"]
 const FLOOR_BITS := 8 | 16 | 32
 
 var t

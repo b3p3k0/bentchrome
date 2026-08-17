@@ -14,7 +14,7 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 # renaming a level can never mismatch its card. Levels without an entry fall to
 # the boss banner (by scene name) or the blocky panel. Add a line per new card.
 const CARDS := {
-	"arena.tscn": "level_1.png",
+	"downtown.tscn": "level_1.png",
 	"freeway.tscn": "level_2.png",
 	"suburbs.tscn": "level_3.png",
 	"snowy.tscn": "level_4.png",

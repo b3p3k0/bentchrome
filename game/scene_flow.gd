@@ -6,7 +6,6 @@ const TITLE := "res://ui/title.tscn"
 const MODE_SELECT := "res://ui/mode_select.tscn"
 const DIFFICULTY := "res://ui/difficulty_select.tscn"
 const SELECT := "res://ui/car_select.tscn"
-const ARENA := "res://levels/arena/arena.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
 const TUTORIAL := "res://levels/tutorial/drivers_ed.tscn"
 const INTERSTITIAL := "res://ui/interstitial.tscn"
@@ -20,7 +19,7 @@ const MP_SCOREBOARD := "res://ui/mp_scoreboard.tscn"
 ## Goliath's Arena) join in a later batch once their boss scripting learns to
 ## stand down; the chase course and custom JSON levels stay campaign-side.
 const MP_MAPS := [
-	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown Derby", "cars": 5},
+	{"scene": "res://levels/downtown/downtown.tscn", "name": "Downtown Derby", "cars": 5},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight", "cars": 7},
 	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburban Slaughter", "cars": 7},
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Mountainside Mayhem", "cars": 7},
@@ -33,7 +32,7 @@ const MP_MAPS := [
 ## finally into the coliseum where Goliath waits. (Junkyard and Central Park
 ## slot in before the finale when they're built — everything is size()-driven.)
 const CAMPAIGN := [
-	{"scene": "res://levels/arena/arena.tscn", "name": "Downtown Derby",
+	{"scene": "res://levels/downtown/downtown.tscn", "name": "Downtown Derby",
 		"mode": &"arena", "size_class": &"medium", "encounter": &"melee",
 		"arena_size": Vector2(3712, 3584), "target_cars": 5, "stations": 1, "mp_ready": true},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight",
@@ -75,9 +74,6 @@ func to_difficulty() -> void:
 
 func to_select() -> void:
 	goto_scene(SELECT)
-
-func to_arena() -> void:
-	goto_scene(ARENA)
 
 ## Enters a campaign level by index (clamped); keeps GameState in step.
 func to_level(index: int) -> void:

@@ -4,7 +4,7 @@ extends RefCounted
 ## empty — parking is not a strategy. Runs the real arena and pumps ~2s of
 ## physics (the runner awaits test methods).
 
-const ArenaScene := preload("res://levels/arena/arena.tscn")
+const ArenaScene := preload("res://levels/downtown/downtown.tscn")
 const ENEMIES := ["Enemy1", "Enemy2", "Enemy3", "Enemy4"]
 const FRAMES := 180           # 3 seconds — a heavy needs time to U-turn off the line
 const MIN_DISPLACEMENT := 100.0

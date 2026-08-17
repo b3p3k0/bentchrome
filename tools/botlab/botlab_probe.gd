@@ -20,7 +20,7 @@ const RecorderScript := preload("res://tools/botlab/match_recorder.gd")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
 
 var cfg := {
-	"arena": "res://levels/arena/arena.tscn",
+	"arena": "res://levels/downtown/downtown.tscn",
 	"seed": 1234,
 	"max_seconds": 180.0,
 	"governor": "lethal",

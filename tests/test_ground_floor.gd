@@ -174,7 +174,7 @@ func test_campaign_order_ground_floor_precedes_finale() -> void:
 func test_campaign_frame_invariants() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var last: int = flow.CAMPAIGN.size() - 1
-	t.check(String(flow.CAMPAIGN[0].scene).ends_with("arena.tscn"),
+	t.check(String(flow.CAMPAIGN[0].scene).ends_with("downtown.tscn"),
 		"campaign frame: Downtown Derby opens the campaign")
 	t.check(String(flow.CAMPAIGN[last].scene).ends_with("stadium.tscn"),
 		"campaign frame: Goliath's Arena is the finale")
