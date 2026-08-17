@@ -45,11 +45,11 @@ size = Vector2(1664, 1664)
 
 [sub_resource type="ShaderMaterial" id="SM_tarmac_worn"]
 shader = ExtResource("11_speck")
-shader_parameter/base_color = Color(0.13, 0.13, 0.155, 1)
-shader_parameter/speckle_color = Color(0.07, 0.07, 0.09, 1)
-shader_parameter/density = 0.5
-shader_parameter/intensity = 0.45
-shader_parameter/scale = 12.0
+shader_parameter/base_color = Color(0.21, 0.21, 0.23, 1)
+shader_parameter/speckle_color = Color(0.12, 0.12, 0.14, 1)
+shader_parameter/density = 0.45
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 9.0
 shader_parameter/shimmer = 0.0
 
 [node name="ArenaAssault" type="Node2D"]
@@ -96,6 +96,56 @@ polygon = PackedVector2Array(-832, -832, 832, -832, 832, 832, -832, 832)
 
 [node name="Col" type="CollisionShape2D" parent="DirtInfield"]
 shape = SubResource("RectangleShape2D_infield")
+
+[node name="RingN" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, -832, 832, -832)
+style = &"dashed_white"
+
+[node name="RingS" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, 832, 832, 832)
+style = &"dashed_white"
+
+[node name="RingW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, -832, -832, 832)
+style = &"dashed_white"
+
+[node name="RingE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(832, -832, 832, 832)
+style = &"dashed_white"
+
+[node name="LapLineN" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, -1056, 1056, -1056)
+style = &"dashed_yellow"
+
+[node name="LapLineS" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, 1056, 1056, 1056)
+style = &"dashed_yellow"
+
+[node name="LapLineW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, -1056, -1056, 1056)
+style = &"dashed_yellow"
+
+[node name="LapLineE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(1056, -1056, 1056, 1056)
+style = &"dashed_yellow"
+
+[node name="GridBarSW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1264, 576, -856, 576)
+style = &"stop_line"
+
+[node name="GridBarNE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(856, -576, 1264, -576)
+style = &"stop_line"
 
 [node name="WreckNW" parent="." instance=ExtResource("24_wreck")]
 position = Vector2(-896, -1056)
@@ -310,56 +360,6 @@ kind = &"cone"
 [node name="ConeS" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(320, 1216)
 kind = &"cone"
-
-[node name="RingN" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-832, -832, 832, -832)
-style = &"dashed_white"
-
-[node name="RingS" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-832, 832, 832, 832)
-style = &"dashed_white"
-
-[node name="RingW" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-832, -832, -832, 832)
-style = &"dashed_white"
-
-[node name="RingE" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(832, -832, 832, 832)
-style = &"dashed_white"
-
-[node name="LapLineN" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-1056, -1056, 1056, -1056)
-style = &"dashed_yellow"
-
-[node name="LapLineS" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-1056, 1056, 1056, 1056)
-style = &"dashed_yellow"
-
-[node name="LapLineW" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-1056, -1056, -1056, 1056)
-style = &"dashed_yellow"
-
-[node name="LapLineE" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(1056, -1056, 1056, 1056)
-style = &"dashed_yellow"
-
-[node name="GridBarSW" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(-1264, 576, -856, 576)
-style = &"stop_line"
-
-[node name="GridBarNE" type="Node2D" parent="."]
-script = ExtResource("21_marks")
-points = PackedVector2Array(856, -576, 1264, -576)
-style = &"stop_line"
 
 [node name="LightNW" type="Node2D" parent="."]
 script = ExtResource("22_deco")
