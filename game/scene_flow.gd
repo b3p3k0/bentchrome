@@ -5,6 +5,7 @@ extends Node
 const TITLE := "res://ui/title.tscn"
 const MODE_SELECT := "res://ui/mode_select.tscn"
 const DIFFICULTY := "res://ui/difficulty_select.tscn"
+const LEVEL_SELECT := "res://ui/level_select.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
 const TUTORIAL := "res://levels/tutorial/drivers_ed.tscn"
@@ -90,6 +91,9 @@ func to_difficulty() -> void:
 
 func to_select() -> void:
 	goto_scene(SELECT)
+
+func to_level_select() -> void:
+	goto_scene(LEVEL_SELECT)
 
 ## Enters a campaign level by index (clamped); keeps GameState in step.
 ## Placeholder slots have no scene — every entry point routes them to the

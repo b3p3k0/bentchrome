@@ -63,9 +63,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _done:
 		return
 	# ESC steps back one layer: dossier -> carousel -> difficulty select (or
-	# mode select when Driver's Ed skipped the DMV, or the garage lobby when
-	# this is a LAN session's ride picker). Once gameplay starts, ESC belongs
-	# to the pause menu instead.
+	# the fight card for SINGLE BATTLE, mode select when Driver's Ed skipped
+	# the DMV, or the garage lobby when this is a LAN session's ride picker).
+	# Once gameplay starts, ESC belongs to the pause menu instead.
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		UiSfx.back(self)
@@ -73,6 +73,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_bio.visible = false
 		elif _mp_session():
 			SceneFlow.to_mp_lobby()
+		elif GameState.game_mode == &"single_battle":
+			SceneFlow.to_level_select()
 		elif GameState.game_mode != &"campaign":
 			SceneFlow.to_mode_select()
 		else:
@@ -107,12 +109,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			SceneFlow.to_mp_lobby()
 			return
 		GameState.reset_campaign()
+		if GameState.game_mode == &"single_battle":
+			# One-off brawl into the fight-card pick; the mode stamp keeps the
+			# end screen off the campaign fork.
+			SceneFlow.to_level(GameState.battle_level_index)
+			return
 		if GameState.game_mode != &"campaign":
 			# Driver's Ed (lessons or test drive) — one-off yard, no campaign.
 			SceneFlow.to_tutorial()
 			return
-		# Developer Options' START LEVEL picker is gated by its master breaker.
-		SceneFlow.to_level(GameState.effective_start_level_index())
+		SceneFlow.to_level(0)
 
 ## Soft-coupled MP check: this stays a pure SP screen unless a session is live.
 func _mp_session() -> bool:

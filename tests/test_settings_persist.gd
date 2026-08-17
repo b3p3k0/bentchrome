@@ -33,7 +33,6 @@ func test_settings_round_trip() -> void:
 	gs.camera_look_ahead_distance = 180.0
 	gs.devgod = true
 	gs.dev_mode = true
-	gs.start_level_index = 3
 	gs.screen_shake = false
 	gs.mp_join_ip = "192.168.1.44"
 	gs.mp_join_port = 43555
@@ -57,7 +56,6 @@ func test_settings_round_trip() -> void:
 	gs.camera_look_ahead_distance = 20.0
 	gs.devgod = false
 	gs.dev_mode = false
-	gs.start_level_index = 0
 	gs.screen_shake = true
 	gs.mp_join_ip = ""
 	gs.mp_join_port = 0
@@ -74,7 +72,6 @@ func test_settings_round_trip() -> void:
 		and is_equal_approx(gs.camera_look_ahead_distance, 180.0),
 		"settings: look-ahead enable and distance round-trip")
 	t.check(gs.devgod and gs.dev_mode, "settings: toggles round-trip")
-	t.check(gs.start_level_index == 3, "settings: level select round-trips")
 	t.check(not gs.screen_shake, "settings: shake toggle round-trips")
 	t.check(gs.mp_join_ip == "192.168.1.44" and gs.mp_join_port == 43555,
 		"settings: last host entry round-trips")
@@ -88,7 +85,7 @@ func test_settings_round_trip() -> void:
 	f.store_string("{not json")
 	f.close()
 	gs.load_settings(TMP)
-	t.check(gs.start_level_index == 3, "settings: corrupt file changes nothing")
+	t.check(gs.dev_mode, "settings: corrupt file changes nothing")
 	# Missing file: no-op.
 	DirAccess.remove_absolute(TMP)
 	gs.load_settings(TMP)
@@ -182,22 +179,14 @@ func test_developer_mode_gates_preserved_options() -> void:
 	var gs := _gs()
 	var keep_dev: bool = gs.dev_mode
 	var keep_god: bool = gs.devgod
-	var keep_level: int = gs.start_level_index
 	gs.devgod = true
-	gs.start_level_index = 4
 	gs.dev_mode = false
 	t.check(not gs.is_devgod_enabled(), "developer breaker: DEVGOD is inert while master is off")
-	t.check(gs.effective_start_level_index() == 0,
-		"developer breaker: campaign falls back to Downtown while master is off")
-	t.check(gs.devgod and gs.start_level_index == 4,
-		"developer breaker: subordinate choices remain stored")
+	t.check(gs.devgod, "developer breaker: subordinate choices remain stored")
 	gs.dev_mode = true
 	t.check(gs.is_devgod_enabled(), "developer breaker: remembered DEVGOD returns with master")
-	t.check(gs.effective_start_level_index() == 4,
-		"developer breaker: remembered start level returns with master")
 	gs.dev_mode = keep_dev
 	gs.devgod = keep_god
-	gs.start_level_index = keep_level
 
 func test_settings_submenus_contract() -> void:
 	var gs := _gs()
@@ -228,11 +217,11 @@ func test_settings_submenus_contract() -> void:
 	var dev_names: Array[String] = []
 	for row in screen._dev_rows:
 		dev_names.append(String(row.name))
-	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "START LEVEL", "SOUNDBOARD", "CAR TUNER", "BACK"],
+	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "SOUNDBOARD", "CAR TUNER", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
 	t.check(not bool(screen._rows[0].persist) and not bool(screen._rows[1].persist)
 		and not bool(screen._gfx_rows[5].persist) and not bool(screen._audio_rows[3].persist)
-		and not bool(screen._dev_rows[5].persist),
+		and not bool(screen._dev_rows[4].persist),
 		"settings dialogs: opening and closing are non-persisting navigation")
 	t.check(screen._rows[0].kind == &"submenu" and screen._rows[1].kind == &"submenu"
 		and screen._rows[4].kind == &"action",
@@ -356,14 +345,12 @@ func test_settings_submenus_contract() -> void:
 
 	gs.dev_mode = false
 	gs.devgod = true
-	gs.start_level_index = 3
 	screen._adj_devgod(1)
-	screen._adj_level(1)
-	t.check(gs.devgod and gs.start_level_index == 3,
+	t.check(gs.devgod,
 		"developer dialog: locked child adjustments preserve remembered values")
 	screen._dev_index = 0
 	screen._step_dev(1)
-	t.check(screen._dev_index == 5, "developer dialog: navigation skips locked children")
+	t.check(screen._dev_index == 4, "developer dialog: navigation skips locked children")
 	gs.dev_mode = true
 	screen._dev_index = 0
 	screen._step_dev(1)

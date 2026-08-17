@@ -96,6 +96,7 @@ const SUITES := [
 	preload("res://tests/test_mp_maps.gd"),
 	preload("res://tests/test_tutorial_level.gd"),
 	preload("res://tests/test_mode_select.gd"),
+	preload("res://tests/test_level_select.gd"),
 	preload("res://tests/test_tutorial_director.gd"),
 	preload("res://tests/test_floor_props.gd"),
 	preload("res://tests/test_economy.gd"),

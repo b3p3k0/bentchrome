@@ -100,7 +100,6 @@ func _ready() -> void:
 	_dev_rows = [
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
 		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
-		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
 		{"name": "SOUNDBOARD", "adjust": _adj_soundboard, "value": _val_open,
 			"kind": &"submenu", "persist": false},
 		{"name": "CAR TUNER", "adjust": _adj_car_tuner, "value": _val_open,
@@ -153,14 +152,6 @@ func _adj_look_ahead_distance(d: int) -> void:
 func _val_look_ahead_distance() -> Array:
 	return ["%3d PX  %s" % [roundi(_gs.camera_look_ahead_distance),
 		_bar(_gs.camera_look_ahead_distance, LOOK_AHEAD_MIN, LOOK_AHEAD_MAX)], DIM_TEXT]
-
-func _adj_level(d: int) -> void:
-	if not _gs.dev_mode:
-		return
-	_gs.start_level_index = wrapi(_gs.start_level_index + (d if d != 0 else 1), 0, _flow.CAMPAIGN.size())
-
-func _val_level() -> Array:
-	return [String(_flow.CAMPAIGN[_gs.start_level_index].name).to_upper(), DIM_TEXT]
 
 func _adj_vol(field: String, d: int) -> void:
 	_gs.set(field, clampf(_gs.get(field) + d * VOL_STEP, 0.0, 1.0))

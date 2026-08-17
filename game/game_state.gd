@@ -22,9 +22,13 @@ var owned_mods: Array = []
 # Run state like lives: overwritten at each win, never persisted.
 var carry_ammo: Array = []
 # SP lane picked on the mode-select screen: &"campaign" (Road Trip),
-# &"tutorial" (Driver's Ed lessons), or &"test_drive" (same yard, free roam).
+# &"tutorial" (Driver's Ed lessons), &"test_drive" (same yard, free roam), or
+# &"single_battle" (one arena off the fight card, no tour).
 # Run state, never persisted; mode select re-stamps it on every confirm.
 var game_mode: StringName = &"campaign"
+# SINGLE BATTLE: the campaign slot picked on the level-select screen. Run
+# state like game_mode — car select launches into it when the lane says so.
+var battle_level_index: int = 0
 
 func reset_campaign() -> void:
 	level_index = 0
@@ -51,7 +55,6 @@ var camera_look_ahead_enabled := true
 var camera_look_ahead_distance := DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
 var devgod := false        # invincible, 1x every weapon, firing never depletes
 var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
-var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 var volume_master := 0.80  # settings sliders, 0-1 linear; applied to the
@@ -75,16 +78,15 @@ var mp_host_strict := false
 func is_devgod_enabled() -> bool:
 	return dev_mode and devgod and game_mode != &"tutorial"
 
-func effective_start_level_index() -> int:
-	return start_level_index if dev_mode else 0
-
 const SETTINGS_PATH := "user://settings.json"
 const SETTINGS_SCHEMA_VERSION := 3
 const LEGACY_DEFAULT_COMBAT_ZOOM := 0.58
 const SCHEMA2_DEFAULT_COMBAT_ZOOM := 0.66
+# start_level_index (the retired dev START LEVEL picker) may linger in old
+# files — unknown keys load as no-ops, so stale settings degrade silently.
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview",
 	"camera_look_ahead_enabled", "camera_look_ahead_distance", "devgod",
-	"dev_mode", "start_level_index", "screen_shake", "player_name",
+	"dev_mode", "screen_shake", "player_name",
 	"volume_master", "volume_music", "volume_sfx",
 	"mp_join_ip", "mp_join_port", "mp_host_port", "mp_host_garage",
 	"mp_host_strict"]
@@ -158,7 +160,6 @@ func reset_settings(path := SETTINGS_PATH) -> void:
 	camera_look_ahead_distance = DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
 	devgod = false
 	dev_mode = false
-	start_level_index = 0
 	screen_shake = true
 	player_name = ""
 	mp_join_ip = ""

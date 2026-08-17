@@ -68,11 +68,14 @@ func _process(_delta: float) -> void:
 		_show(true)
 
 ## Index of the next campaign level after this scene, or -1 (off-campaign /
-## final level — those keep the full panel with buttons).
+## final level / non-campaign lane — those keep the full panel with buttons).
 func _campaign_next_index() -> int:
 	var flow := get_node_or_null(^"/root/SceneFlow")
-	if get_node_or_null(^"/root/GameState") == null or flow == null:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null or flow == null:
 		return -1
+	if gs.game_mode != &"campaign":
+		return -1  # single battles fight one slot — there is no tour to rejoin
 	var here: String = get_tree().current_scene.scene_file_path
 	for i in flow.CAMPAIGN.size():
 		if flow.CAMPAIGN[i].scene == here and i + 1 < flow.CAMPAIGN.size():
@@ -332,7 +335,8 @@ func _build_ui() -> void:
 	_restart_btn = _button(vbox, "Restart", func() -> void:
 		_leave(func() -> void:
 			# Campaign levels restart the whole run (full wipe, level 1, 3
-			# lives); custom levels just reload themselves.
+			# lives); a single battle restarts its own slot with fresh lives;
+			# custom levels just reload themselves.
 			var gs := get_node_or_null(^"/root/GameState")
 			var flow := get_node_or_null(^"/root/SceneFlow")
 			var here: String = get_tree().current_scene.scene_file_path
@@ -343,7 +347,10 @@ func _build_ui() -> void:
 						on_campaign = true
 			if on_campaign and gs and flow:
 				gs.reset_campaign()
-				flow.to_level(0)
+				if gs.game_mode == &"single_battle":
+					flow.to_level(gs.battle_level_index)
+				else:
+					flow.to_level(0)
 			else:
 				get_tree().reload_current_scene()))
 	_button(vbox, "Change Car", func() -> void:

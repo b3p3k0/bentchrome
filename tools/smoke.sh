@@ -56,6 +56,14 @@ if echo "$DIFF_OUT" | grep -qiE "$ERR_RE"; then
   echo "== smoke: FAIL (difficulty select)"; exit 1
 fi
 
+# Level select: SINGLE BATTLE's fight card between the DMV and the roster.
+echo "== smoke: level select"
+LVLSEL_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://ui/level_select.tscn --quit-after 10 2>&1)"
+if echo "$LVLSEL_OUT" | grep -qiE "$ERR_RE"; then
+  echo "$LVLSEL_OUT" | grep -iE "$ERR_RE"
+  echo "== smoke: FAIL (level select)"; exit 1
+fi
+
 # Cold roster load: car_select pulls every vehicle .tres -> weapon defs ->
 # projectile scenes. This entry path exposes circular resource loads (the
 # boot stage never touches the roster, and the test runner warms the class
