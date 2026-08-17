@@ -18,6 +18,11 @@ const SHIELD_TIME := 2.0
 ## their first physics tick; pause/end screens, the enemy re-roll, and the
 ## lives loop all stand down — the shell (levels/mp/mp_match.gd) owns them.
 @export var mp_managed := false
+
+## Routine default: every ordinary car boots aimed at the spawn centroid
+## (face_spawns_inward). Specialty levels that stage their own opening
+## tableau flip this off and keep the baked .tscn rotations.
+@export var face_spawns := true
 var mp_spawns: Array = []  # [{pos, heading, floor}] — player slot first, then Enemy1..N
 
 @onready var _player: Vehicle = $Vehicle
@@ -36,11 +41,12 @@ func _ready() -> void:
 			push_warning("autoload MISSING: " + autoload_name)
 	# Before the MP harvest AND before the SP spawn capture: every seat's spawn
 	# data inherits the inward-facing heading either way.
-	var baked_cars: Array = []
-	for child in get_children():
-		if child is Vehicle:
-			baked_cars.append(child)
-	face_spawns_inward(baked_cars)
+	if face_spawns:
+		var baked_cars: Array = []
+		for child in get_children():
+			if child is Vehicle:
+				baked_cars.append(child)
+		face_spawns_inward(baked_cars)
 	if mp_managed:
 		Economy.enabled = false  # BOLTS are a campaign thing; MP wallets stay shut
 		_collect_and_clear_for_mp()

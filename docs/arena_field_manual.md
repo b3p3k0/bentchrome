@@ -115,6 +115,17 @@ the match in single-file traffic.
 - **MUST:** clutter and blocking props remain at least 300px from AI starts.
 - **DEFAULT:** enemy starts are also separated enough to choose independent
   opening lines instead of beginning in an antler lock.
+- **DEFAULT (don't author it unless the design says so):** spawn FACING.
+  `combat_level.face_spawns_inward` aims every ordinary car at the shared
+  spawn centroid at boot — baked `.tscn` rotations are ignored for ordinary
+  cars, so position spawns for geometry and let the shell handle the aim.
+  Opt-outs, most specific first: a `fixed_loadout` boss keeps its authored
+  entrance pose (author those deliberately); a specialty level that stages
+  its own opening tableau sets `face_spawns = false` on the root and keeps
+  every baked rotation; scenes baking fewer than two cars are exempt
+  automatically. MP seats inherit the same inward-facing spawn data via the
+  harvest. Custom/editor levels are separate: their schema authors
+  `heading_deg` per spawn explicitly, and the loader honors it.
 - **DEFAULT:** primary lanes allow two large ordinary vehicles to pass with
   steering room; 320px+ is a useful high-speed starting width. Optional cuts
   may narrow, but may not trap the largest selectable car.

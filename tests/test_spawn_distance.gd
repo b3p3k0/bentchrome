@@ -66,6 +66,11 @@ func test_spawns_face_the_centroid() -> void:
 		"facing: single-car scenes keep authored headings")
 	for n in [west, east, north, boss, challenger, loner]:
 		n.free()
+	# The knob ships ON: inward facing is the routine default, and a specialty
+	# level opts OUT in its design — never the other way around.
+	var shell = CombatLevel.new()
+	t.check(bool(shell.face_spawns), "facing: face_spawns defaults true on the shell")
+	shell.free()
 
 func test_no_enemy_spawns_on_the_player() -> void:
 	for path in CAMPAIGN:
