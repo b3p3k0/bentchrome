@@ -28,6 +28,7 @@ const SUITES := [
 	preload("res://tests/test_destructible_block.gd"),
 	preload("res://tests/test_clutter.gd"),
 	preload("res://tests/test_road_ribbon.gd"),
+	preload("res://tests/test_storm_director.gd"),
 	preload("res://tests/test_remains.gd"),
 	preload("res://tests/test_ambient_life.gd"),
 	preload("res://tests/test_car_paint.gd"),

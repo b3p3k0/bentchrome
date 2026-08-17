@@ -36,6 +36,8 @@ const CATALOG := {
 		# commit — an air-horn / engine-roar tell, played positionally
 	&"splash": {"volume_db": -2.0, "pitch_jitter": 0.1},   # fast shallow-water entry
 	&"sink": {"volume_db": 0.0, "pitch_jitter": 0.05},     # deep-water death plunge
+	&"thunder": {"volume_db": 2.0, "pitch_jitter": 0.12},  # capital storm boom (the
+		# strike cycle leads with it; distant rumbles reuse it at lower pitch)
 	&"pit_fall": {"volume_db": 0.0, "pitch_jitter": 0.05}, # pit death drop
 	&"jump_pad": {"volume_db": -2.0, "pitch_jitter": 0.08},
 	&"boost": {"volume_db": -3.0, "pitch_jitter": 0.05},  # ignition roar (edge)
