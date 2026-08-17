@@ -10,6 +10,7 @@ const TUNABLE := [
 	"turn_authority_speed", "min_turn_authority",
 	"mass", "accel_taper", "launch_boost", "launch_factor",
 	"handbrake_deceleration", "handbrake_grip_factor",
+	"whip_min_speed", "whip_turn_light", "whip_turn_heavy",
 ]
 const RANGES := {
 	"max_speed": [100.0, 900.0, 5.0],
@@ -27,6 +28,9 @@ const RANGES := {
 	"launch_factor": [0.0, 2.0, 0.05],
 	"handbrake_deceleration": [100.0, 1200.0, 10.0],
 	"handbrake_grip_factor": [0.0, 1.0, 0.01],
+	"whip_min_speed": [0.0, 500.0, 5.0],
+	"whip_turn_light": [1.0, 4.0, 0.05],
+	"whip_turn_heavy": [1.0, 4.0, 0.05],
 }
 
 const MPH_PER_PXS := 0.15       # ui/hud.gd display anchor (US units)

@@ -26,6 +26,12 @@ extends Node
 @export_group("Handbrake")
 @export var handbrake_deceleration := 400.0        # gentler than the S pedal
 @export_range(0.0, 1.0) var handbrake_grip_factor := 0.15  # rear end breaks loose
+## The whip (handbrake 180): breaking loose at speed multiplies the steer rate
+## — light cars whip quick, heavies swing slow. Entry gated on whip_min_speed;
+## the latch keeps a started whip alive while the slide bleeds.
+@export var whip_min_speed := 240.0
+@export var whip_turn_light := 2.4  # steer-rate multiplier at mass 1
+@export var whip_turn_heavy := 1.4  # steer-rate multiplier at mass 10
 
 @export_group("Straighten")
 ## Post-corner recenter: the slip breathes for straighten_delay after steering
@@ -50,6 +56,8 @@ var boosting := false    # state flags for cosmetic FX (drive_fx.gd) — set eac
 var handbraking := false
 var service_braking := false  # opposing pedal while still rolling; brake-light paint
 var _no_steer_t := 0.0   # time since the last steer/handbrake input
+var _whip_active := false  # latched per slide: a started whip finishes even
+						   # as the slide bleeds below the entry gate
 
 ## Per-surface multipliers on acceleration, top speed, and grip. road = baseline.
 ## static var (not const): const dictionaries are deep-frozen in Godot 4, and
@@ -126,8 +134,25 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	# Steering authority grows with speed (you must roll to turn).
 	var authority := clampf(speed / turn_authority_speed, min_turn_authority, 1.0)
 	var dir_sign := signf(fwd_speed) if absf(fwd_speed) > 5.0 else 1.0
+	# Mass factor hoisted above steering — the whip scales by it; the mass
+	# shaping block below is unchanged.
+	var mf := clampf((mass - 1.0) / 9.0, 0.0, 1.0)
+	# The whip (handbrake 180): latch on a fast handbrake, release on letting
+	# go (or the slide dying outright). While the handbrake is out, dir_sign
+	# pins to 1 — mid-slide the travel sign flips under the car, and without
+	# the pin a held whip counter-steers itself back at ~90°. Steer means
+	# "rotate the nose the way you push", travel be damned.
+	if handbrake and speed >= whip_min_speed:
+		_whip_active = true
+	elif not handbrake or speed < whip_min_speed * 0.25:
+		_whip_active = false
+	var whip := 1.0
+	if handbrake:
+		dir_sign = 1.0
+		if _whip_active:
+			whip = lerpf(whip_turn_light, whip_turn_heavy, mf)
 	vehicle.heading += deg_to_rad(turn_rate_deg) * float(mod["steer"]) * scale \
-		* steer * authority * dir_sign * delta
+		* steer * authority * dir_sign * whip * delta
 	if straightening and "HEADING_STEPS" in vehicle and vehicle.HEADING_STEPS > 0:
 		var step: float = TAU / vehicle.HEADING_STEPS
 		vehicle.heading = rotate_toward(vehicle.heading, snappedf(vehicle.heading, step),
@@ -136,7 +161,6 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 
 	# Mass (1-10) shapes the dynamics: heavy = weak launch, long coast, soft
 	# brakes; light = jumps off the line, sheds speed on lift, bites when braking.
-	var mf := clampf((mass - 1.0) / 9.0, 0.0, 1.0)
 	var accel_mass := lerpf(1.3, 0.5, mf)
 	# Standing-start shove: authored launch_factor wins (torque decoupled from
 	# mass — a loaded HMMWV can still pull from a dead stop); 0 keeps the
@@ -171,8 +195,15 @@ func apply(vehicle, intent: Dictionary, delta: float) -> void:
 	var lat_retain := clampf(1.0 - grip * delta, 0.0, 1.0)
 	vehicle.velocity -= right * lat_speed * (1.0 - lat_retain)
 
-	# Clamp forward speed (separate caps for forward and reverse).
+	# Clamp forward speed. `top` is the hard physical ceiling BOTH ways;
+	# reverse_max_speed prices POWERED reverse only (the S gear, and the AI's
+	# unstick reverse-out). A backward-facing SLIDE — post-whip momentum,
+	# shoves, flings — keeps its speed and decays through coast/handbrake
+	# decel + lateral grip instead of a one-tick chop. (S alone during a
+	# backward slide still engages reverse gear and its cap — unchanged.)
 	fwd_speed = vehicle.velocity.dot(forward)
-	var cap := top if fwd_speed >= 0.0 else reverse_max_speed
+	var cap := top
+	if fwd_speed < 0.0 and throttle < 0.0 and not handbrake:
+		cap = reverse_max_speed
 	if absf(fwd_speed) > cap:
 		vehicle.velocity -= forward * (fwd_speed - signf(fwd_speed) * cap)
