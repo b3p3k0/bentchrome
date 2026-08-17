@@ -354,25 +354,39 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 
 1. **Order + name:** edit the `CAMPAIGN` array in `game/scene_flow.gd` — the
    single source of truth for both. Move or insert the level dict; set its
-   `name`.
-2. **Invariants to preserve:** Downtown Derby stays index 0 (campaign start /
-   respawn target), Goliath's Arena stays last (finale), and there must be at
-   least one real arena after Route 666 Roulette — the chase's win/detour
-   advance is relative (`+1`), so it must land on a playable level.
-3. **Loading card:** cards are keyed by scene filename in `ui/interstitial.gd`
+   `name`. The full slot order is deliberately pinned in
+   `tests/test_ground_floor.gd` (`test_campaign_order_thirteen_slots`) —
+   update the expected list in the same change; that test failing on an
+   unedited list is the point.
+2. **Invariants to preserve:** Goliath's Arena stays last (finale), exactly
+   one `specialty` entry exists, and `placeholder`/`optional` slots must
+   never be last — their advance is a relative `+1`, so a next slot has to
+   exist (the frame-invariants test enforces all of this).
+3. **Unbuilt and optional slots:** a slot can hold its place before its level
+   exists — `mode: &"placeholder"`, `scene: ""` (ArenaContract exempts it).
+   The interstitial shows the shared sawhorse card
+   (`assets/img/cards/level_X.png`, "UNDER CONSTRUCTION") and any key rolls
+   past; consecutive placeholders chain. When the level becomes playable,
+   swap in the real scene and add `"optional": true` to keep the STAY/DETOUR
+   chooser (Route 666's) while it's still in test; drop the flag to make it
+   mandatory. `SceneFlow.to_level` routes placeholder slots to the
+   interstitial from every entry point, so restarts and jumps can't strand.
+4. **Loading card:** cards are keyed by scene filename in `ui/interstitial.gd`
    (`CARDS`), never by position — add a line only if the new level has bespoke
    art. Boss levels get a `bios/` banner (also by scene name); everything else
    falls to the blocky panel. No index math is involved, so reordering never
    mismatches art.
-4. **Versus:** if the level is MP-ready, add it to `MP_MAPS` (same
+5. **Versus:** if the level is MP-ready, add it to `MP_MAPS` (same
    `game/scene_flow.gd`) with a `cars` count and a matching `name`, and keep the
    duplicate scene list in `tests/test_spawn_distance.gd` in membership sync.
-5. **Docs:** update the Shipped-precedents table below, the Campaign table in
+   New melee arenas also join SINGLE BATTLE's fight card automatically
+   (`ui/level_select.gd` filters `CAMPAIGN` by mode/encounter — no edit).
+6. **Docs:** update the Shipped-precedents table below, the Campaign table in
    `docs/matrices.md`, the Level-progression list in `CLAUDE.md`, and the
    player-facing walkthrough in `README.md`.
-6. **Verify:** `tools/smoke.sh` (boots every level) and `tools/test.sh`
-   (`test_ground_floor.gd` and `test_mp_maps.gd` assert order/placement by scene
-   path, so they survive renames and catch a broken sequence).
+7. **Verify:** `tools/smoke.sh` (boots every level) and `tools/test.sh`
+   (`test_ground_floor.gd` pins the slot order; `test_mp_maps.gd` validates
+   every profile and the MP mirror by scene path).
 
 ## Shipped precedents
 
@@ -380,7 +394,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 |---|---:|---|---|---|
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
 | Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
-| Suburban Slaughter | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
+| Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
 | Mountainside Mayhem | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Piers of Pain | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |

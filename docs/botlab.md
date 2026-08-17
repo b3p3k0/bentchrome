@@ -32,7 +32,7 @@ validation), `--out DIR`.
 
 ```json
 {
-	"arena": "res://levels/arena/arena.tscn",
+	"arena": "res://levels/downtown/downtown.tscn",
 	"seed": 1234,
 	"max_seconds": 180,
 	"governor": "lethal",

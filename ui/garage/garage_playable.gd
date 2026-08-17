@@ -56,11 +56,13 @@ func _campaign_names() -> Array:
 	var names: Array = []
 	if flow != null and "CAMPAIGN" in flow:
 		for entry in flow.CAMPAIGN:
+			if StringName(entry.mode) == &"placeholder":
+				continue  # unbuilt slots have no economy to simulate
 			names.append(String(entry.name))
-	if names.is_empty():  # headless-safe fallback
-		names = ["Downtown Derby", "Freeway Firefight", "Suburban Slaughter",
-			"Mountainside Mayhem", "Lackey's Arena", "Route 666 Roulette",
-			"Piers of Pain", "Ground Floor Gore", "Goliath's Arena"]
+	if names.is_empty():  # headless-safe fallback: the playable tour, in order
+		names = ["Piers of Pain", "Downtown Derby", "Freeway Firefight",
+			"Lackey's Arena", "Suburban Savagery", "Route 666 Roulette",
+			"Mountainside Mayhem", "Ground Floor Gore", "Goliath's Arena"]
 	return names
 
 func _load_cars() -> void:

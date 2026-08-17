@@ -176,7 +176,7 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 | District | Population | Authored mix |
 |---|---:|---|
 | Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
-| Suburban Slaughter | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Suburban Savagery | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
 | Mountainside Mayhem | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
 | Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
 | Ground Floor Gore | 16 baseline | 10 floor-1 workers, 4 floor-2 workers, 2 floor-3 carriers; up to 8 porta escapees |
@@ -330,19 +330,23 @@ Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGA
 
 ## Campaign
 
-Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette is excluded. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4.
+Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette (specialty) and the four `placeholder` slots are excluded from the arena contract. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4. Slot order is test-pinned (`tests/test_ground_floor.gd`); placeholder slots are sceneless, ride the shared `level_X.png` sawhorse interstitial card (any key detours past), and flip to real entries with `optional: true` (STAY/DETOUR chooser) once buildable.
 
 | # | Level | Size (interior px) | Target cars | Campaign enemies | Stations | Signature hazards |
 |---|---|---|---:|---:|---:|---|
-| 1 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
-| 2 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
-| 3 | Suburban Slaughter | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
-| 4 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 1 | Arena Assault | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; auto-detours to Piers |
+| 2 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
+| 3 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
+| 4 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
 | 5 | Lackey's Arena | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
-| 6 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract |
-| 7 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
-| 8 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
-| 9 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+| 6 | Suburban Savagery | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
+| 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
+| 8 | Slaughter on the Strip | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into Route 666 |
+| 9 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR) |
+| 10 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
+| 12 | Capital City Carnage | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; auto-detours to the finale |
+| 13 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
 
 ---
 
@@ -453,8 +457,9 @@ Sources: `vehicles/goliath/*.gd` static vars, `data/vehicles/goliath.tres` / `go
 | Fireworks | every 0.9s, 30% double | stadium.gd FIREWORK_* | win-card backdrop, 5 shell colors |
 | Victory lap | throttle 0.8, arrive 260 | victory_lap_driver LAP_* | god-moded; end_screen.win_keeps_rolling |
 | Quit confirm | ESC on title | ui/title.gd | "Awww, giving up so soon?" — NO default |
-| Single-player entry | SINGLE PLAYER | ui/title.gd | unchanged route: difficulty select → garage → campaign |
-| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Arrow-only: Up/Down select, Left/Right change, Right enters submenu/actions, ESC backs out; WASD/Enter/Space/controller ignored; changes autosave; Developer Mode master-gates preserved DEVGOD/start-level choices |
+| Single-player entry | SINGLE PLAYER | ui/title.gd | mode select → difficulty → garage (Road Trip) or → fight card → garage (Single Battle) |
+| Single Battle | mode select row 3 | ui/mode_select.gd + ui/level_select.gd | stamps `game_mode &"single_battle"` + MEDIUM tier; fight card lists melee arenas selectable, placeholder slots greyed, boss/chase off-card; pick stamps `GameState.battle_level_index` (run state); end screen shows the classic panel, Restart re-runs the slot with fresh lives |
+| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Arrow-only: Up/Down select, Left/Right change, Right enters submenu/actions, ESC backs out; WASD/Enter/Space/controller ignored; changes autosave; Developer Mode master-gates the preserved DEVGOD choice (START LEVEL retired — jump to a level via SINGLE BATTLE) |
 
 ## Netplay (LAN multiplayer knobs)
 
