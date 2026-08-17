@@ -21,6 +21,7 @@ const CARDS := {
 	"freeway.tscn": "level_2.png",
 	"suburbs.tscn": "level_3.png",
 	"snowy.tscn": "level_4.png",
+	"capital_city_carnage.tscn": "level_capital.png",
 }
 # Skip prompt for playable-but-optional levels (CAMPAIGN `optional: true`) —
 # a level in development graduates from `placeholder` mode to this.
@@ -118,7 +119,14 @@ func _build_ui() -> void:
 	if StringName(entry.get("mode", &"")) == &"placeholder":
 		_advance_on_key = true
 		_hint_text = "press any key to detour ahead"
-		var sawhorse := TextureLoader.load_texture(PLACEHOLDER_CARD)
+		# A placeholder may author bespoke card art ("card" on its CAMPAIGN
+		# entry); the shared sawhorse covers the rest.
+		var card_file := String(entry.get("card", ""))
+		var sawhorse: Texture2D = null
+		if card_file != "":
+			sawhorse = TextureLoader.load_texture("%s/%s" % [CARD_DIR, card_file])
+		if sawhorse == null:
+			sawhorse = TextureLoader.load_texture(PLACEHOLDER_CARD)
 		if sawhorse:
 			_build_card(sawhorse, "UNDER CONSTRUCTION —  %s" % next_name.to_upper(), AMBER)
 		else:
