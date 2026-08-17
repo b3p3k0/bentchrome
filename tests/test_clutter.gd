@@ -41,7 +41,9 @@ func test_clutter_pops_on_one_hit() -> void:
 	c.kind = &"drift"
 	container.add_child(c)
 	c.get_node("Health").take_damage(1.0)
-	t.check(c.is_queued_for_deletion(), "one hit frees the clutter")
+	t.check(not c.is_queued_for_deletion() and c.collision_layer == 0
+		and c.collision_mask == 0 and c.visible,
+		"one hit flattens the clutter into drive-over remains")
 	var puff_found := false
 	for child in container.get_children():
 		if child is CPUParticles2D:
@@ -94,7 +96,8 @@ func test_pine_is_pop_through_snow_clutter() -> void:
 	t.check(not pine.is_queued_for_deletion() and is_equal_approx(health.hp, 14.0),
 		"pine: first fire missile bites but does not clear the obstacle")
 	health.take_damage(FireMissile.damage)
-	t.check(pine.is_queued_for_deletion(), "pine: second fire missile clears the lane")
+	t.check(not pine.is_queued_for_deletion() and pine.collision_layer == 0,
+		"pine: second fire missile clears the lane, stump remains stay")
 	var puff_found := false
 	for child in container.get_children():
 		if child is CPUParticles2D:

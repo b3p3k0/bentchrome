@@ -24,8 +24,11 @@ const KINDS := {
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
 const PinePaint := preload("res://environment/pine_paint.gd")
+const RemainsPaint := preload("res://environment/remains_paint.gd")
 
 static var PINE_HP := 40.0  # old growth: 1 power / 2 fire or rear / 3 homing missiles
+
+var _dead := false
 
 @export var kind: StringName = &"trash"
 @export var footprint := 40.0  # collision square; paint spills a little past it
@@ -72,7 +75,14 @@ func _pop() -> void:
 		scene.add_child(puff)
 		if kind == &"hydrant":
 			_spout(scene)
-	queue_free()
+	# Flatten in place: a visual-only smear of what stood here — driven over,
+	# shot through, freed with the scene (or the chase chunk it rides).
+	_dead = true
+	collision_layer = 0
+	collision_mask = 0
+	if is_in_group(&"tutorial_smash"):
+		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
+	queue_redraw()
 
 ## Hydrant beat: a lingering water fountain where the hydrant stood.
 const SPOUT_SECONDS := 8.0
@@ -95,6 +105,12 @@ func _spout(scene: Node) -> void:
 	scene.get_tree().create_timer(SPOUT_SECONDS).timeout.connect(water.queue_free, CONNECT_ONE_SHOT)
 
 func _draw() -> void:
+	if _dead:
+		var palette: Dictionary = KINDS.get(kind, KINDS[&"trash"])
+		RemainsPaint.draw_marks(self, RemainsPaint.generate(
+			Vector2(footprint, footprint) * 0.5, &"debris", palette.base, palette.dark,
+			RemainsPaint.remains_seed(position, 3)))
+		return
 	match kind:
 		&"pine":
 			_draw_pine()

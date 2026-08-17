@@ -11,6 +11,8 @@ const ArenaState := preload("res://game/net/arena_state.gd")
 const IDS := [&"ghost", &"splatkat", &"bumper", &"razorback", &"kandykane", &"cricket", &"hammertoe"]
 const RUST := Color(0.35, 0.26, 0.2)
 const WRECK_TINT := Color(0.55, 0.42, 0.35)
+const CHAR_TINT := Color(0.12, 0.11, 0.10)  # burned-out husk
+const RemainsPaint := preload("res://environment/remains_paint.gd")
 
 @export var max_hp := 50.0
 @export var floor_index := -1  # ≥1 joins that terrace's collision world
@@ -54,16 +56,20 @@ func _on_damaged(_amount: float, hp: float) -> void:
 func _explode_and_free() -> void:
 	if _dead:
 		return
-	_dead = true
 	_spawn_death_visual()
-	if arena_net_id > 0:
-		# Synced wreck: a hidden, noncolliding tombstone keeps replicating its
-		# terminal state instead of ghosting on late/rejoining clients.
-		collision_layer = 0
-		collision_mask = 0
-		visible = false
-	else:
-		queue_free()
+	_present_remains()
+
+## Burned-out husk: the CarPaint silhouette chars near-black over a scorch
+## pad, collisionless — driven over, shot through. One path for legacy and
+## arena-synced wrecks (the synced tombstone keeps replicating terminal state,
+## it just stays visible now).
+func _present_remains() -> void:
+	_dead = true
+	collision_layer = 0
+	collision_mask = 0
+	if _paint:
+		_paint.modulate = CHAR_TINT
+	queue_redraw()
 
 func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
@@ -90,10 +96,18 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 		_dead = false
 		visible = true
 		collision_layer = _base_collision_layer
+		queue_redraw()  # clear the scorch pad on resurrect
 	elif not _dead:
-		_dead = true
 		if not initial_state:
 			_spawn_death_visual()
-		visible = false
-		collision_layer = 0
-		collision_mask = 0
+		_present_remains()
+
+## Dead only: the scorch pad beneath the charred husk (children draw above
+## the parent canvas, so the CarPaint silhouette rides on top for free).
+func _draw() -> void:
+	if not _dead or _paint == null:
+		return
+	var m: Dictionary = _paint.metrics()
+	var half := Vector2(float(m.half_len), float(m.half_wid)) * 1.15
+	RemainsPaint.draw_marks(self, RemainsPaint.generate(half, &"scorch",
+		RUST, Color(0.05, 0.05, 0.06), RemainsPaint.remains_seed(position, 7)))

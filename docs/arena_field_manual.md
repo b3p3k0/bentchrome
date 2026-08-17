@@ -291,7 +291,8 @@ that crosses a grade seam.
   an oversized ordinary barrel.
 - **MUST:** gameplay state is host-authoritative and repeatedly snapshotted
   through stable unsigned 16-bit arena IDs. Destroyed entities remain hidden,
-  noncolliding tombstones so late clients converge without replaying death.
+  noncolliding tombstones presenting visible flattened remains, so late
+  clients converge without replaying death.
 - **MUST:** dangerous phases state range/floor/LoS rules, expose an AI-only
   danger cue, and provide cover, distance, or destruction counterplay.
 - **MUST:** attribution and death aftermath are explicit. Environmental hazards

@@ -7,6 +7,8 @@ extends RefCounted
 const RemainsPaint := preload("res://environment/remains_paint.gd")
 const RadarScript := preload("res://ui/radar.gd")
 const BlockScene := preload("res://environment/destructible_block.tscn")
+const DerelictScene := preload("res://environment/derelict_car.tscn")
+const PortaScene := preload("res://environment/porta_potty.tscn")
 
 var t
 
@@ -73,3 +75,36 @@ func test_radar_drops_remains() -> void:
 	t.root.remove_child(block)
 	block.free()
 	t.check(not RadarScript.breakable_alive(null), "radar: absent refs stay dropped")
+
+func test_derelict_chars_into_a_husk() -> void:
+	var wreck = DerelictScene.instantiate()
+	t.root.add_child(wreck)
+	wreck.get_node("Health").take_damage(999.0)
+	t.check(not wreck.is_queued_for_deletion() and wreck.visible
+		and wreck.collision_layer == 0 and wreck.collision_mask == 0,
+		"derelict: dies into a visible drive-over husk")
+	t.check(wreck._paint.modulate == wreck.CHAR_TINT,
+		"derelict: the silhouette chars near-black")
+	t.root.remove_child(wreck)
+	wreck.free()
+
+func test_porta_crumples_and_still_spawns_debris() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var porta = PortaScene.instantiate()
+	porta.set_test_roll(0.9)  # no worker — count debris deterministically
+	container.add_child(porta)
+	porta.get_node("Health").take_damage(999.0)
+	await t.process_frame  # _finish_death is deferred
+	t.check(not porta.is_queued_for_deletion() and porta.visible
+		and porta.collision_layer == 0,
+		"porta: crumples into visible drive-over remains")
+	var debris_found := false
+	for child in container.get_children():
+		if child != porta and child is Node2D:
+			debris_found = true
+	t.check(debris_found, "porta: blue debris still scatters")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
