@@ -1128,11 +1128,27 @@ func _los_clear(vehicle, target: Node2D, mask := 0) -> bool:
 
 ## Every vehicle body's RID — terrace ray queries exclude them all so the
 ## cars-are-transparent contract survives the floor bits on car layers.
+## Cached once per physics frame ACROSS all drivers (the list is tree-global,
+## and rebuilding it per feeler call per driver was the hot path). Keyed on
+## frame + group count; an exclusion list tolerates the one-frame staleness a
+## same-frame swap could theoretically produce.
+static var _rid_cache_frame := -1
+static var _rid_cache_count := -1
+static var _rid_cache: Array = []
+
 func _all_car_rids(vehicle) -> Array:
+	var tree: SceneTree = vehicle.get_tree()
+	var frame := Engine.get_physics_frames()
+	var count := tree.get_node_count_in_group(&"vehicles")
+	if frame == _rid_cache_frame and count == _rid_cache_count:
+		return _rid_cache
 	var out: Array = []
-	for v in vehicle.get_tree().get_nodes_in_group(&"vehicles"):
+	for v in tree.get_nodes_in_group(&"vehicles"):
 		if v is CollisionObject2D:
 			out.append((v as CollisionObject2D).get_rid())
+	_rid_cache_frame = frame
+	_rid_cache_count = count
+	_rid_cache = out
 	return out
 
 ## Target = highest blended score of "nearby" (w_near) and "wounded" (w_weak),
