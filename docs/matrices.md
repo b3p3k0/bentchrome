@@ -323,9 +323,26 @@ Global behavior: scan 1200 / fire range 1000 (LoS-gated) · HUNT map-wide when s
 | `EVADE_TIME` / `EVADE_COOLDOWN` | 3.0s / 7.0s | episodic flee, mandatory re-engagement |
 | `DUEL_RELENT_TIME` | 2.0s | final-rival reposition beat |
 
-The mutable archetype `PURE` table and all statics above live in `enemy_driver.gd`, except the three `FOCUS_*` statics in `ai/fight_director.gd`. `assets/data/ai_profiles.json` remains unconsumed design notes. Range-aware weapon selection, repair/ammo planning, cover utility, and terrain preference are intentionally deferred until this movement/attention pass clears playtesting.
+The mutable archetype `PURE` table and all statics above live in `enemy_driver.gd`, except the three `FOCUS_*` statics in `ai/fight_director.gd`. `assets/data/ai_profiles.json` remains unconsumed design notes. Range-aware weapon selection, repair/ammo planning, and cover utility are intentionally deferred; the lethal-hazard layer of terrain awareness landed August 2026 (below).
 
 Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGATE rides authored FloorConnectors (approach lead 220, exit lead 260, 6s timeout, boost on jump commits, grade commits never boost, commit leg ignores feelers) · ambusher/opportunist blends with an armed tracking secondary hold roof vantage up to 8s, raining missiles cross-floor (walls-only LoS), before descending · MG and non-tracking specials never fire cross-floor · hazard curbs (invisible, AI-feeler-only) rail every pit/deep-water rim — Snowy's cliffs included.
+
+Lethal-hazard avoidance (any level with deep water/pits): the kill zones are unraycastable (layer 0), so drivers query `game/hazards.gd` — zones join `&"lethal_hazards"`, rects cached once per physics frame across all drivers. Four layers: a post-ladder GUARD over every mode's intent (real-travel lookahead; steering overridden pre-clamp to the rim tangent — unless the line to the committed goal is itself clear, then only speed is shed; throttle staged by time-to-impact; boost vetoed; fire untouched; airborne and NAVIGATE jump commits exempt) · endpoint validation (escape hops deflect their landing off the rim tangent, CLEAR directions and BREAK exits reroute or finish short) · soft scoring thumbs (never a veto — HUNT stays unfiltered) · `Mode.DETOUR` (a blocked same-floor beeline routes around the blocking rect's end — river-gap ends ARE the bridges, zero authored markers; committed two-phase bridgehead run on the NAVIGATE idiom, arrival by plane-crossing because a heavy's turning circle out-radiuses any arrive circle, phase 1 committed, greedy one-rect-per-leg replans; entry only from PURSUE).
+
+| Hazard static | Value | Purpose |
+|---|---:|---|
+| `Hazards.GUARD_MARGIN` | 20px | hard-guard inflation (< the zones' 24px/side kill inset — bridge lanes stay legal) |
+| `Hazards.PLAN_MARGIN` / `Hazards.DETOUR_CLEARANCE` | 72px / 128px | detour/scoring inflation; waypoint reach past a rect end |
+| `HAZARD_REACT_TIME` / `HAZARD_REACT_BASE` | 0.9s / 120px | guard lookahead envelope (speed-scaled + floor) |
+| `HAZARD_CUT_TTI` / `HAZARD_BRAKE_TTI` | 1.2s / 0.5s | time-to-impact: throttle ×0.4 / brake −0.4 |
+| `HAZARD_GUARD_GAIN` | 2.5 | rim-tangent steering authority |
+| `HAZARD_LINE_PENALTY` / `HAZARD_CRATE_PENALTY_DIST` | −0.35 / 1500px | cross-hazard target / crate thumbs |
+| `ESCAPE_HOP_RANGE` | 280px | hop-landing validation reach (2·VZ/g at hop speed) |
+| `DETOUR_TIMEOUT` / `DETOUR_ARRIVE` / `DETOUR_LANE_HALF` | 6s per leg / 90px / 140px | leg clock; radius + plane-crossing arrival corridor |
+| `DETOUR_ENTRY_LEAD` / `DETOUR_EXIT_LEAD` | 220px / 260px | bridgehead offsets along the gap normal |
+| `DETOUR_CHECK_TIME` / `DETOUR_REPLAN_MIN` | 0.5s / 1.0s | blocked/cleared cadence; replan throttle |
+
+Coverage is linted: `tests/test_hazard_coverage.gd` samples every zone rim in the master level list — protected means curbed (32px flush-mount tolerance), chained into a sibling rect, walled (boundary or floor-bit retaining walls), or inside an authored FloorConnector launch corridor (600×±160 — a stunt-jump runway never owes a curb across itself). `tests/test_hazard_avoidance.gd` holds the geometry/guard/endpoint/detour locks plus the live-sim anti-suicide gate (a real Hammertoe crosses a gapped water column and closes on prey).
 
 ---
 

@@ -14,8 +14,8 @@ tint). Tests: `test_capital_city`, `test_marine_one`, `test_storm_director`,
 
 | Feature | Position / span | Notes |
 |---|---|---|
-| Potomac deep channel | x −2304..−1920, three rects (N y −1792..−160, M 160..960, S 1280..1792) | `DeepWaterZone` — lethal, airborne clears; gaps ARE the bridges |
-| Shore banding | outward from tarmac: **guardrail (ids 60-65, x −2474/−1750) → patchy dirt shore (96px) → shallow water (64px) → deep channel**, mirrored both sides, segmented at the gaps; river runs wall to wall (±1920) | AI curbs stay at the deep rims |
+| Potomac deep channel | x −2304..−1920, three rects (N y −1920..−160, M 160..960, S 1280..1920 — wall to wall) | `DeepWaterZone` — lethal, airborne clears; gaps ARE the bridges (and are exactly what `Mode.DETOUR`'s rect-end routing finds) |
+| Shore banding | outward from tarmac: **guardrail (ids 60-65, x −2474/−1750) → patchy dirt shore (96px) → shallow water (64px) → deep channel**, mirrored both sides, segmented at the gaps; river runs wall to wall (±1920) | AI curbs stay FLUSH at the deep rims (bridge cross-curbs mirror Memorial's flush mount; `tests/test_hazard_coverage.gd` lints it) |
 | Memorial Bridge | gap y −160..160; STRAIGHT deck (−2752, 0)→(−1616, 0) | rails ids 20/21; tees into **Riverfront Drive (x −1696, full height)** on the east bank |
 | 14th St Bridge | gap y 960..1280; deck →(−1616, 1120) | rails ids 22/23; tees into Riverfront Drive; **rear-missile crate mid-span** |
 | Arlington | west bank x −3072..−2432 (640 wide); drive ribbon x −2752 | four headstone-row columns CLEAR of drive + bridge corridor, tablet clutter, eternal flame NW, **[H1] (−2752, −960)** |
