@@ -57,6 +57,7 @@ const SUITES := [
 	preload("res://tests/test_weapon_gating.gd"),
 	preload("res://tests/test_deep_water.gd"),
 	preload("res://tests/test_hazard_curb.gd"),
+	preload("res://tests/test_hazard_avoidance.gd"),
 	preload("res://tests/test_floor_navigation.gd"),
 	preload("res://tests/test_dock_level.gd"),
 	preload("res://tests/test_ground_floor.gd"),

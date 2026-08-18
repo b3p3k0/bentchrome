@@ -19,6 +19,7 @@ var is_deep_water := true  # minimap duck-type marker (deliberately NOT is_pit)
 func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 1
+	add_to_group(&"lethal_hazards")
 	var col := CollisionShape2D.new()
 	col.name = "Col"
 	var shape := RectangleShape2D.new()
@@ -30,7 +31,18 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	for body in get_overlapping_bodies():
 		if body.has_method(&"sink_into_water") and body.get("height") == 0.0:
-			body.sink_into_water()
+			# Area2D's overlap cache can retain a body for one physics frame
+			# after respawn teleports it away; trust the shape for normal entry
+			# but reject a cached body already outside the water (pit parity).
+			var body_2d := body as Node2D
+			if body_2d and _contains_current_position(body_2d.global_position):
+				body.sink_into_water()
+
+func _contains_current_position(world_position: Vector2) -> bool:
+	var local_position: Vector2 = to_local(world_position)
+	var outer_half: Vector2 = size * 0.5
+	return absf(local_position.x) <= outer_half.x \
+		and absf(local_position.y) <= outer_half.y
 
 func _draw() -> void:
 	var half := size * 0.5

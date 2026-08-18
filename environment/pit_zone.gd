@@ -33,6 +33,7 @@ var is_pit := true  # minimap duck-type marker
 func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 1
+	add_to_group(&"lethal_hazards")
 	var col := CollisionShape2D.new()
 	col.name = "Col"
 	var shape := RectangleShape2D.new()
