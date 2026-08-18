@@ -504,6 +504,7 @@ Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
 | brake cue | one-shot on hard-brake start | drive_fx.gd _was_braking_hard | was a loop; Kevin redesigned to a single quick bite (2026-07-14) |
 | boost voice | roar edge + whoosh loop | drive_fx.gd _was_boosting | boost one-shot at ignition, boost_loop rides ctrl.boosting |
 | splat/crunch | coinflip on living soft targets | ambient_actor.gd _die | leaves_splat gates the coinflip; props always crunch; positional |
+| env_* alerts | 4 (genny wired) | power_generator.gd _present_death (host+client paths) | once-per-level global stage alerts; siren/panic/chopper await stage events |
 | announcer_<car>_wins/_loses | 28 baked lines | end_screen._announce (win = rolling/finale-only; lose = any wipe) | espeak-ng dev-bake + PA chain in synth_sfx.py; loses pitched lower; pause-immune pool (lose screen freezes the tree); no runtime TTS; 0.8s after the sting |
 
 ## BGM (background music knobs)

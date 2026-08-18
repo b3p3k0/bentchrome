@@ -70,6 +70,13 @@ const CATALOG := {
 	&"sp_tornado_alley": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"sp_placeholder": {"volume_db": 0.0, "pitch_jitter": 0.04},  # "where's the
 		# beef?" — plays for any special that fires without its own sp_* asset
+	# Stage-event alerts: once-per-level, played GLOBAL (not positional) so the
+	# player hears the arena change even off-screen. env_genny is wired (GFG
+	# generator death); siren/panic/chopper await their stage events.
+	&"env_siren": {"volume_db": -5.0, "pitch_jitter": 0.0},
+	&"env_panic": {"volume_db": -5.0, "pitch_jitter": 0.0},
+	&"env_chopper": {"volume_db": -4.0, "pitch_jitter": 0.0},
+	&"env_genny": {"volume_db": -2.0, "pitch_jitter": 0.0},
 	# PA announcer: "<Carname> wins!" (campaign finale) / "<Carname> loses!"
 	# (any last-life wipe) — baked speech (tools/synth_sfx.py announcer(),
 	# espeak-ng on the dev box; the game ships only these oggs). Keyed by

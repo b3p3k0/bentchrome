@@ -256,6 +256,9 @@ func _on_died() -> void:
 
 func _present_death(gameplay: bool) -> void:
 	_dead = true
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio:  # once-per-level stage alert — global on purpose: the whole
+		audio.play(&"env_genny")  # arena should hear the yard go dark
 	phase = Phase.DEAD
 	phase_timer = 0.0
 	_targets.clear()
