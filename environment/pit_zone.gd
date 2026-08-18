@@ -5,13 +5,26 @@ extends Area2D
 ## the painted edge so clipping the rim doesn't instantly doom you. Exported
 ## size, like the destructible block, so one scene serves any cliff.
 
-const VOID := Color(0.02, 0.02, 0.04)
-const RIM := Color(0.55, 0.5, 0.2, 0.8)      # hazard-yellow lip
-const STRATA_TOP := Color(0.28, 0.26, 0.29)  # upper rock shelf, still catching light
-const CRACK := Color(0.14, 0.13, 0.16)
-const RUBBLE := Color(0.36, 0.34, 0.37)
+const RIM := Color(0.55, 0.5, 0.2, 0.8)  # hazard-yellow lip
+const SNOW_CAP := Color(0.78, 0.82, 0.9)
+const SNOW_GLINT := Color(0.94, 0.96, 1.0, 0.85)
+const CLIFF_FACE := Color(0.28, 0.29, 0.34)
+const CLIFF_STRIPE := Color(0.43, 0.44, 0.49, 0.65)
+const OCCLUSION := Color(0.055, 0.055, 0.075)
+const CRACK := Color(0.14, 0.15, 0.19)
 const KILL_INSET := 48.0
-const STRATA_STEPS := 3  # visible wall storeys before the black swallows it
+const PinePaint := preload("res://environment/pine_paint.gd")
+
+# Presentation knobs: a tight cap over one compressed face reads as a sheer
+# snow cut from above. These never touch the collision or kill inset.
+static var SNOW_CAP_WIDTH := 12.0
+static var CLIFF_FACE_WIDTH := 52.0
+static var STRIATION_GAP := 9.0
+static var OCCLUSION_OFFSET := Vector2(0.0, 12.0)
+static var BOTTOM_SNOW_COLOR := Color(0.29, 0.34, 0.43)
+static var BOTTOM_PINE_SPACING := 28.0
+static var BOTTOM_PINE_MIN_RADIUS := 4.0
+static var BOTTOM_PINE_MAX_RADIUS := 6.5
 
 @export var size := Vector2(256, 256)
 
@@ -31,56 +44,177 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	for body in get_overlapping_bodies():
 		if body.has_method(&"fall_into_pit") and body.get("height") == 0.0:
-			body.fall_into_pit()
+			var body_2d := body as Node2D
+			# Area2D's overlap cache can retain a body for one physics frame after
+			# respawn teleports it away. Trust the shape for normal entry, but reject
+			# a cached result whose current transform is already outside the pit.
+			if body_2d and _contains_current_position(body_2d.global_position):
+				var target: Vector2 = fall_target_for(body_2d.global_position)
+				body.call(&"fall_into_pit", target)
+
+func _contains_current_position(world_position: Vector2) -> bool:
+	var local_position: Vector2 = to_local(world_position)
+	var outer_half: Vector2 = size * 0.5
+	return absf(local_position.x) <= outer_half.x \
+		and absf(local_position.y) <= outer_half.y
+
+## The long cliff should swallow a car across its short axis, never vacuum it
+## hundreds of pixels along the drop. A square chooses the dominant normalized
+## entry axis, so its nearest deep centerline stays deterministic too.
+func fall_target_for(world_position: Vector2) -> Vector2:
+	var local_position: Vector2 = to_local(world_position)
+	if size.x < size.y:
+		local_position.x = 0.0
+	elif size.y < size.x:
+		local_position.y = 0.0
+	else:
+		var half: Vector2 = (size * 0.5).max(Vector2.ONE)
+		var nx: float = absf(local_position.x) / half.x
+		var ny: float = absf(local_position.y) / half.y
+		if nx >= ny:
+			local_position.x = 0.0
+		else:
+			local_position.y = 0.0
+	return to_global(local_position)
+
+## Stable paint landmarks, public for geometry tests. Miniatures avoid the deep
+## centerline where the falling car and its distant impact need a clean read.
+func bottom_pine_positions() -> PackedVector2Array:
+	var void_half: Vector2 = _void_half()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0)) + 733
+	var spacing: float = maxf(BOTTOM_PINE_SPACING, 8.0)
+	var want: int = clampi(int(round((void_half.x + void_half.y) / spacing)), 5, 14)
+	var inset: float = minf(10.0, minf(void_half.x, void_half.y) * 0.35)
+	var corridor: float = maxf(BOTTOM_PINE_MAX_RADIUS * 1.8, 10.0)
+	var points := PackedVector2Array()
+	var attempts := 0
+	while points.size() < want and attempts < want * 16:
+		attempts += 1
+		var at := Vector2(
+			rng.randf_range(-void_half.x + inset, void_half.x - inset),
+			rng.randf_range(-void_half.y + inset, void_half.y - inset))
+		if size.x < size.y and absf(at.x) < corridor:
+			continue
+		if size.y < size.x and absf(at.y) < corridor:
+			continue
+		if is_equal_approx(size.x, size.y) and at.length() < corridor * 1.5:
+			continue
+		var separated := true
+		for other in points:
+			if at.distance_to(other) < BOTTOM_PINE_MAX_RADIUS * 2.2:
+				separated = false
+				break
+		if separated:
+			points.append(at + OCCLUSION_OFFSET)
+	return points
 
 func _draw() -> void:
-	# A drop you can read: descending rock strata — each ring a storey deeper,
-	# darker, and nudged south so the sunlit far wall shows under the north
-	# rim — until the void swallows the bottom. Crumbling cracks split the
-	# lip; rubble clings to the top shelf. All seeded per position.
-	var pts := _rounded_rect(size * 0.5, 32.0)
-	draw_colored_polygon(pts, STRATA_TOP)
-	for i in STRATA_STEPS:
-		var t := float(i + 1) / float(STRATA_STEPS)
-		var half := size * 0.5 * (1.0 - 0.2 * (i + 1))
-		if half.x < 20.0 or half.y < 20.0:
-			break
-		var ring := _rounded_rect(half, maxf(32.0 * (1.0 - 0.25 * i), 8.0))
-		var off := Vector2(0.0, 9.0 + 6.0 * i)
-		var moved := PackedVector2Array()
-		for p in ring:
-			moved.append(p + off)
-		draw_colored_polygon(moved, STRATA_TOP.lerp(VOID, t))
+	# One steep face, not a terraced excavation: snow overhang, compressed rock
+	# grain, then a hard occlusion break into black. The southward void offset
+	# exposes more of the lit far wall and makes the depth directional.
+	var outer_half: Vector2 = size * 0.5
+	var cap_width: float = minf(SNOW_CAP_WIDTH, minf(outer_half.x, outer_half.y) * 0.2)
+	var face_half: Vector2 = (outer_half - Vector2.ONE * cap_width).max(Vector2(24.0, 24.0))
+	var face_width: float = minf(CLIFF_FACE_WIDTH,
+		minf(face_half.x, face_half.y) - 12.0)
+	face_width = maxf(face_width, 8.0)
+	var void_half: Vector2 = _void_half()
+	var outer: PackedVector2Array = _rounded_rect(outer_half, 32.0)
+	var face: PackedVector2Array = _rounded_rect(face_half, 27.0)
+	var void_shape: PackedVector2Array = _rounded_rect(void_half,
+		maxf(27.0 - face_width * 0.3, 7.0))
+	draw_colored_polygon(outer, SNOW_CAP)
+	draw_colored_polygon(face, CLIFF_FACE)
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0)) + 41
-	# Rubble on the top shelf, hugging the rim band.
-	for i in 7 + rng.randi() % 4:
+	# Tight perspective scratches run down the single face. The void is drawn
+	# afterward and clips their inner ends into a hard bottomless edge.
+	var gap: float = maxf(STRIATION_GAP, 3.0)
+	var x := -face_half.x + gap
+	while x < face_half.x:
+		var jitter := rng.randf_range(-2.5, 2.5)
+		draw_line(Vector2(x, -face_half.y),
+			Vector2(x + jitter, -void_half.y) + OCCLUSION_OFFSET, CLIFF_STRIPE, 1.0)
+		draw_line(Vector2(x, face_half.y),
+			Vector2(x - jitter, void_half.y) + OCCLUSION_OFFSET, CRACK, 1.0)
+		x += gap
+	var y := -face_half.y + gap
+	while y < face_half.y:
+		var jitter := rng.randf_range(-2.5, 2.5)
+		draw_line(Vector2(-face_half.x, y),
+			Vector2(-void_half.x, y + jitter) + OCCLUSION_OFFSET, CLIFF_STRIPE, 1.0)
+		draw_line(Vector2(face_half.x, y),
+			Vector2(void_half.x, y - jitter) + OCCLUSION_OFFSET, CRACK, 1.0)
+		y += gap
+
+	var shadow_shape: PackedVector2Array = _rounded_rect(void_half + Vector2.ONE * 7.0,
+		maxf(30.0 - face_width * 0.3, 8.0))
+	draw_colored_polygon(_offset_polygon(shadow_shape, OCCLUSION_OFFSET * 0.35), OCCLUSION)
+	draw_colored_polygon(_offset_polygon(void_shape, OCCLUSION_OFFSET), BOTTOM_SNOW_COLOR)
+	# Fine, dim snow grain is deliberately much tighter than the surface texture:
+	# this is the same mountain floor, only a long way below the camera.
+	var bottom_specks: int = clampi(int(round(void_half.x * void_half.y * 4.0 / 420.0)),
+		16, 120)
+	for i in bottom_specks:
+		var speck := Vector2(rng.randf_range(-void_half.x, void_half.x),
+			rng.randf_range(-void_half.y, void_half.y)) + OCCLUSION_OFFSET
+		var speck_color := BOTTOM_SNOW_COLOR.lightened(0.1) if i % 3 else \
+			BOTTOM_SNOW_COLOR.darkened(0.08)
+		draw_circle(speck, rng.randf_range(0.45, 0.9), speck_color)
+	var pine_rng := RandomNumberGenerator.new()
+	pine_rng.seed = rng.seed + 419
+	var bottom_pines: PackedVector2Array = bottom_pine_positions()
+	for i in bottom_pines.size():
+		var pine_radius: float = pine_rng.randf_range(BOTTOM_PINE_MIN_RADIUS,
+			BOTTOM_PINE_MAX_RADIUS)
+		PinePaint.paint(self, bottom_pines[i], pine_radius, int(pine_rng.randi()), true)
+
+	# Dense little snow glints keep the cap texture finer than the broad driving
+	# surface; a few dark splits stop the overhang from reading manufactured.
+	var cap_marks := maxi(14, int(round((size.x + size.y) / 20.0)))
+	for i in cap_marks:
 		var edge := rng.randi() % 4
 		var at := Vector2(
-			rng.randf_range(-size.x * 0.5 + 18.0, size.x * 0.5 - 18.0),
-			rng.randf_range(-size.y * 0.5 + 18.0, size.y * 0.5 - 18.0))
+			rng.randf_range(-outer_half.x + 10.0, outer_half.x - 10.0),
+			rng.randf_range(-outer_half.y + 10.0, outer_half.y - 10.0))
 		match edge:
-			0: at.y = -size.y * 0.5 + rng.randf_range(8.0, 22.0)
-			1: at.y = size.y * 0.5 - rng.randf_range(8.0, 22.0)
-			2: at.x = -size.x * 0.5 + rng.randf_range(8.0, 22.0)
-			3: at.x = size.x * 0.5 - rng.randf_range(8.0, 22.0)
-		var r := rng.randf_range(2.0, 5.0)
-		draw_circle(at, r, RUBBLE if rng.randf() < 0.6 else CRACK)
-	# Crumbling lip: short jagged cracks splitting outward past the rim.
+			0: at.y = -outer_half.y + rng.randf_range(2.0, cap_width - 2.0)
+			1: at.y = outer_half.y - rng.randf_range(2.0, cap_width - 2.0)
+			2: at.x = -outer_half.x + rng.randf_range(2.0, cap_width - 2.0)
+			3: at.x = outer_half.x - rng.randf_range(2.0, cap_width - 2.0)
+		draw_circle(at, rng.randf_range(0.8, 1.8), SNOW_GLINT)
+	# Crumbling lip: short cracks split out into the road snow.
 	var cracks := 5 + rng.randi() % 4
 	for i in cracks:
 		var a := rng.randf_range(0.0, TAU)
 		var dir := Vector2.RIGHT.rotated(a)
-		var start := Vector2(dir.x * size.x * 0.5, dir.y * size.y * 0.5) * 0.98
+		var start := Vector2(dir.x * outer_half.x, dir.y * outer_half.y) * 0.98
 		var mid := start + dir * rng.randf_range(6.0, 12.0) \
 			+ dir.orthogonal() * rng.randf_range(-5.0, 5.0)
 		var tip := mid + dir * rng.randf_range(5.0, 10.0) \
 			+ dir.orthogonal() * rng.randf_range(-4.0, 4.0)
 		draw_line(start, mid, CRACK, 2.0)
 		draw_line(mid, tip, CRACK, 1.4)
-	var closed := pts.duplicate()
-	closed.append(pts[0])
+	var closed := outer.duplicate()
+	closed.append(outer[0])
 	draw_polyline(closed, RIM, 3.0)
+
+func _offset_polygon(points: PackedVector2Array, offset: Vector2) -> PackedVector2Array:
+	var moved := PackedVector2Array()
+	for point in points:
+		moved.append(point + offset)
+	return moved
+
+func _void_half() -> Vector2:
+	var outer_half: Vector2 = size * 0.5
+	var cap_width: float = minf(SNOW_CAP_WIDTH, minf(outer_half.x, outer_half.y) * 0.2)
+	var face_half: Vector2 = (outer_half - Vector2.ONE * cap_width).max(Vector2(24.0, 24.0))
+	var face_width: float = minf(CLIFF_FACE_WIDTH,
+		minf(face_half.x, face_half.y) - 12.0)
+	face_width = maxf(face_width, 8.0)
+	return (face_half - Vector2.ONE * face_width).max(Vector2(12.0, 12.0))
 
 ## Soft-cornered rect: chamfer points + an inward shoulder per corner, matching
 ## the terrain-zone treatment so hazards sit in the same visual language.

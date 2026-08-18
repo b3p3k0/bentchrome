@@ -73,12 +73,17 @@ largest car was promised.
 ### Car capacity
 
 - **MUST:** every regular arena supports at least four simultaneously fielded
-  cars, matching the four human LAN seats.
+  cars, matching the four human LAN seats — UNLESS it is a `duel` arena
+  authored `mp_avail: false` (see below), which bakes exactly two.
 - **Small:** 4 target cars.
 - **Medium:** 5–7 target cars.
 - **Large:** 7–8 target cars.
 - A boss overlay may field only player + boss in campaign. Its underlying arena
   still declares at least four neutral MP spawn positions.
+- A **duel arena** (`encounter: &"duel"`) is a deliberate campaign 1v1:
+  exactly two baked cars, exactly one station, and mandatory
+  `mp_avail: false` — a map that never hosts a LAN melee owes no seats. The
+  aquarium rule still applies per-car. Precedent: Arena Assault.
 
 `target_cars` means the intended full field, not enemy count. A five-car
 campaign melee is one player plus four AI; a five-car LAN melee may be four
@@ -115,6 +120,17 @@ the match in single-file traffic.
 - **MUST:** clutter and blocking props remain at least 300px from AI starts.
 - **DEFAULT:** enemy starts are also separated enough to choose independent
   opening lines instead of beginning in an antler lock.
+- **DEFAULT (don't author it unless the design says so):** spawn FACING.
+  `combat_level.face_spawns_inward` aims every ordinary car at the shared
+  spawn centroid at boot — baked `.tscn` rotations are ignored for ordinary
+  cars, so position spawns for geometry and let the shell handle the aim.
+  Opt-outs, most specific first: a `fixed_loadout` boss keeps its authored
+  entrance pose (author those deliberately); a specialty level that stages
+  its own opening tableau sets `face_spawns = false` on the root and keeps
+  every baked rotation; scenes baking fewer than two cars are exempt
+  automatically. MP seats inherit the same inward-facing spawn data via the
+  harvest. Custom/editor levels are separate: their schema authors
+  `heading_deg` per spawn explicitly, and the loader honors it.
 - **DEFAULT:** primary lanes allow two large ordinary vehicles to pass with
   steering room; 320px+ is a useful high-speed starting width. Optional cuts
   may narrow, but may not trap the largest selectable car.
@@ -280,7 +296,8 @@ that crosses a grade seam.
   an oversized ordinary barrel.
 - **MUST:** gameplay state is host-authoritative and repeatedly snapshotted
   through stable unsigned 16-bit arena IDs. Destroyed entities remain hidden,
-  noncolliding tombstones so late clients converge without replaying death.
+  noncolliding tombstones presenting visible flattened remains, so late
+  clients converge without replaying death.
 - **MUST:** dangerous phases state range/floor/LoS rules, expose an AI-only
   danger cue, and provide cover, distance, or destruction counterplay.
 - **MUST:** attribution and death aftermath are explicit. Environmental hazards
@@ -324,7 +341,11 @@ that crosses a grade seam.
 ## Campaign and LAN are one arena
 
 - **MUST:** every new regular arena ships in both `CAMPAIGN` and `MP_MAPS` using
-  the same scene.
+  the same scene — unless it authors **`mp_avail: false`**, the first-class
+  deliberate exclusion from the versus pool (duel arenas require it; any
+  future by-design campaign-only level may use it). Excluded scenes stay OUT
+  of `MP_MAPS`; the contract rejects `mp_avail: false` + `mp_ready: true`.
+  Exclusion is a design decision, never debt — debts stay named below.
 - **MUST:** `target_cars` unique baked/declared spawn positions exist with sane
   floors. Four human seats never require a smaller special-case ruleset.
 - **MUST:** `mp_managed` removes campaign cars into spawn data and stands down
@@ -343,36 +364,52 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 
 1. **Order + name:** edit the `CAMPAIGN` array in `game/scene_flow.gd` — the
    single source of truth for both. Move or insert the level dict; set its
-   `name`.
-2. **Invariants to preserve:** Downtown Derby stays index 0 (campaign start /
-   respawn target), Goliath's Arena stays last (finale), and there must be at
-   least one real arena after Route 666 Roulette — the chase's win/detour
-   advance is relative (`+1`), so it must land on a playable level.
-3. **Loading card:** cards are keyed by scene filename in `ui/interstitial.gd`
+   `name`. The full slot order is deliberately pinned in
+   `tests/test_ground_floor.gd` (`test_campaign_order_thirteen_slots`) —
+   update the expected list in the same change; that test failing on an
+   unedited list is the point.
+2. **Invariants to preserve:** Goliath's Arena stays last (finale), exactly
+   one `specialty` entry exists, and `placeholder`/`optional` slots must
+   never be last — their advance is a relative `+1`, so a next slot has to
+   exist (the frame-invariants test enforces all of this).
+3. **Unbuilt and optional slots:** a slot can hold its place before its level
+   exists — `mode: &"placeholder"`, `scene: ""` (ArenaContract exempts it).
+   The interstitial shows the shared sawhorse card
+   (`assets/img/cards/level_X.png`, "UNDER CONSTRUCTION") and any key rolls
+   past; consecutive placeholders chain. When the level becomes playable,
+   swap in the real scene and add `"optional": true` to keep the STAY/DETOUR
+   chooser (Route 666's) while it's still in test; drop the flag to make it
+   mandatory. `SceneFlow.to_level` routes placeholder slots to the
+   interstitial from every entry point, so restarts and jumps can't strand.
+4. **Loading card:** cards are keyed by scene filename in `ui/interstitial.gd`
    (`CARDS`), never by position — add a line only if the new level has bespoke
    art. Boss levels get a `bios/` banner (also by scene name); everything else
    falls to the blocky panel. No index math is involved, so reordering never
    mismatches art.
-4. **Versus:** if the level is MP-ready, add it to `MP_MAPS` (same
+5. **Versus:** if the level is MP-ready, add it to `MP_MAPS` (same
    `game/scene_flow.gd`) with a `cars` count and a matching `name`, and keep the
    duplicate scene list in `tests/test_spawn_distance.gd` in membership sync.
-5. **Docs:** update the Shipped-precedents table below, the Campaign table in
+   New melee arenas also join SINGLE BATTLE's fight card automatically
+   (`ui/level_select.gd` filters `CAMPAIGN` by mode/encounter — no edit).
+6. **Docs:** update the Shipped-precedents table below, the Campaign table in
    `docs/matrices.md`, the Level-progression list in `CLAUDE.md`, and the
    player-facing walkthrough in `README.md`.
-6. **Verify:** `tools/smoke.sh` (boots every level) and `tools/test.sh`
-   (`test_ground_floor.gd` and `test_mp_maps.gd` assert order/placement by scene
-   path, so they survive renames and catch a broken sequence).
+7. **Verify:** `tools/smoke.sh` (boots every level) and `tools/test.sh`
+   (`test_ground_floor.gd` pins the slot order; `test_mp_maps.gd` validates
+   every profile and the MP mirror by scene path).
 
 ## Shipped precedents
 
 | Arena | Class / target | Dominant topology | Signature pressure | Reusable lesson |
 |---|---:|---|---|---|
+| Arena Assault | Small / 2 (duel, mp_avail false) | derby pit: dirt infield ring in an asphalt lane | 1v1 duel AI, center station, wall-lane pickups, chainable barrels | a duel arena buys tightness by resigning its LAN seats; terrain contrast reads at a glance |
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
 | Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
-| Suburban Slaughter | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
+| Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
 | Mountainside Mayhem | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Piers of Pain | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
+| Capital City Carnage | Large / 8 | monument capital: river + bridges + diagonal avenues + two terraces | thunderstorm flash/dip, lethal channel, Marine One evacuation race | road ribbons make organic streets one node each; a signature destructible can be a countdown the whole map watches |
 | Ground Floor Gore | Large / 8 | dirt loop + foundation + scaffold network | mud, voluntary drops, wounded generator | a dry recovery ring can frame layered risk; stateful landmarks need explicit LAN identity and counterplay |
 | Goliath's Arena | Large / planned 4 MP | field bowl + continuous crown ring | Goliath phases, stair grades | bespoke encounter drama can sit on a rigorously reusable route graph |
 

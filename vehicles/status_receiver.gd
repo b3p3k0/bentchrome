@@ -16,10 +16,11 @@ func apply(spec: StatusEffectSpec) -> void:
 	if (spec.kind == &"disarm" or spec.kind == &"freeze") \
 			and get_parent() and bool(get_parent().get("fixed_loadout")):
 		return
-	for e in _active:  # same kind refreshes (longest remaining wins)
-		if e.kind == spec.kind:
-			e.remaining = maxf(e.remaining, spec.duration)
-			e.magnitude = spec.magnitude
+	for e in _active:  # same kind refreshes (longest remaining wins) —
+		if e.kind == spec.kind:  # unless the spec opts out (refresh = false):
+			if spec.refresh:     # then the running effect finishes untouched.
+				e.remaining = maxf(e.remaining, spec.duration)
+				e.magnitude = spec.magnitude
 			return
 	_active.append({"kind": spec.kind, "remaining": spec.duration, "magnitude": spec.magnitude})
 

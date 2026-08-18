@@ -184,7 +184,7 @@ func test_splat_lifetime_is_five_seconds() -> void:
 	splat.free()
 
 func test_downtown_population_budget_and_kinds() -> void:
-	var level: Node = load("res://levels/arena/arena.tscn").instantiate()
+	var level: Node = load("res://levels/downtown/downtown.tscn").instantiate()
 	var life: Node = level.get_node("AmbientLife")
 	var figures := 0
 	var carts := 0

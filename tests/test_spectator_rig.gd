@@ -54,3 +54,29 @@ func test_cycle_and_roam() -> void:
 	t.check(rig._free, "rig: an empty floor hovers in free roam")
 
 	_teardown(rig, targets)
+
+func test_persistent_toggle_zoom() -> void:
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var keep_combat: float = gs.zoom_combat
+	var keep_overview: float = gs.zoom_overview
+	var keep_state: bool = gs.overview
+	gs.zoom_combat = 0.55
+	gs.zoom_overview = 0.42
+	gs.overview = false
+	Input.action_release(&"zoom_toggle")
+	var pair := _rig_with(1)
+	var rig: Node2D = pair[0]
+	t.check(is_equal_approx(rig._cam.zoom.x, 0.55),
+		"spectator zoom: boots at combat depth")
+	Input.action_press(&"zoom_toggle")
+	rig._process(0.2)
+	t.check(is_equal_approx(rig._cam.zoom.x, 0.42),
+		"spectator zoom: pressing G toggles overview")
+	Input.action_release(&"zoom_toggle")
+	rig._process(0.2)
+	t.check(is_equal_approx(rig._cam.zoom.x, 0.42) and gs.overview,
+		"spectator zoom: release preserves overview state")
+	_teardown(rig, pair[1])
+	gs.zoom_combat = keep_combat
+	gs.zoom_overview = keep_overview
+	gs.overview = keep_state

@@ -26,7 +26,9 @@ func test_configure_defaults() -> void:
 	t.check(r.ammo(RackScript.Slot.HOMING) == 1, "rack: 1 homing to start")
 	t.check(r.ammo(RackScript.Slot.POWER) == 1, "rack: 1 power to start")
 	t.check(r.ammo(RackScript.Slot.REAR) == 0, "rack: rear missiles start empty")
-	t.check(r.cap(RackScript.Slot.REAR) == 6, "rack: rear missile cap mirrors fire")
+	t.check(r.cap(RackScript.Slot.REAR) == RackScript.UNCAPPED
+		and r.cap(RackScript.Slot.STANDARD) == RackScript.UNCAPPED,
+		"rack: non-special slots are uncapped")
 	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mines start empty (pickup-fed)")
 	t.check(r.ammo(RackScript.Slot.JUMP_MINE) == 0, "rack: jump mines start empty")
 	t.check(r.selected_def() != null and r.selected_def().display_name == "Test Special", "rack: selected def is the special")
@@ -48,6 +50,28 @@ func test_twin_special_shares_one_pool() -> void:
 	t.check(r.add_ammo(RackScript.Slot.MINE, 2) == 0, "rack: crates can't arm a no_mines car")
 	t.check(r.ammo(RackScript.Slot.MINE) == 0, "rack: mine slot stays empty")
 	r.free()
+
+func test_restore_ammo_clamps_and_signals() -> void:
+	var r = _rack(2, 10.0)
+	var events: Array = []
+	r.ammo_changed.connect(func(i: int, a: int) -> void: events.append([i, a]))
+	r.restore_ammo([9, 5, 0, 1, 3, 2, 1])
+	t.check(r.ammo(RackScript.Slot.SPECIAL) == 2, "restore: special clamped to its cap")
+	t.check(r.ammo(RackScript.Slot.STANDARD) == 5, "restore: uncapped counts land verbatim")
+	t.check(r.ammo(RackScript.Slot.HOMING) == 0, "restore: zero is a real count, not a skip")
+	t.check(r.ammo(RackScript.Slot.MINE) == 2 and r.ammo(RackScript.Slot.JUMP_MINE) == 1,
+		"restore: mine slots restore on an ordinary car")
+	t.check(events.size() == 7, "restore: every slot signals the HUD (%d)" % events.size())
+	t.check(r.selected_index() == RackScript.Slot.SPECIAL, "restore: selection untouched")
+	r.free()
+	# no_mines rack: the zero caps hold against a carried mine count.
+	var nm = RackScript.new()
+	var special = DefScript.new()
+	nm.configure(special, 1, 10.0, null, true)
+	nm.restore_ammo([1, 2, 1, 1, 0, 4, 4])
+	t.check(nm.ammo(RackScript.Slot.MINE) == 0 and nm.ammo(RackScript.Slot.JUMP_MINE) == 0,
+		"restore: no_mines pins the mine slots at 0")
+	nm.free()
 
 func test_single_special_has_no_twin() -> void:
 	var r = _rack()
@@ -158,12 +182,12 @@ func test_select_first_armed() -> void:
 	t.check(r.selected_index() == RackScript.Slot.POWER, "re-arm: all dry is a no-op")
 	r.free()
 
-func test_add_ammo_respects_cap() -> void:
+func test_add_ammo_uncapped_non_special() -> void:
 	var r = _rack()
 	var accepted = r.add_ammo(RackScript.Slot.STANDARD, 10)
-	t.check(accepted == 4, "add: accepts only up to cap (2 + 4 = 6)")
-	t.check(r.ammo(RackScript.Slot.STANDARD) == 6, "add: standard at cap")
-	t.check(r.add_ammo(RackScript.Slot.STANDARD, 1) == 0, "add: full slot accepts nothing")
+	t.check(accepted == 10, "add: non-special slot accepts the whole crate (uncapped)")
+	t.check(r.ammo(RackScript.Slot.STANDARD) == 12, "add: standard climbs past the old cap of 6")
+	t.check(r.add_ammo(RackScript.Slot.STANDARD, 50) == 50, "add: keeps stacking, no cap wall")
 	r.free()
 
 func test_special_recharges_to_cap() -> void:

@@ -33,6 +33,7 @@ func test_rain_component_is_cosmetic_and_bounded() -> void:
 		"rain: authored extent and intensity round-trip")
 	t.check(rain is Node2D and rain.get_child_count() == 0,
 		"rain: authoring root is paint-only before rendering setup")
+	rain.free()  # Node2D fixture — unfreed it pins its script at exit
 
 func test_ripple_material_is_local_and_opt_in() -> void:
 	var shared := ShaderMaterial.new()

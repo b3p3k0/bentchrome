@@ -244,3 +244,113 @@ func test_straighten_snaps_heading_to_grid() -> void:
 	t.check(absf(plain.heading - 0.1) < 0.001, "straighten: no grid on the vehicle, no snap")
 	c.free()
 	c2.free()
+
+## --- The whip (handbrake 180) — signature slide move ------------------------
+
+## Steps a full-lock handbrake whip from `entry` px/s until the heading crosses
+## PI (or the cap): [seconds, speed_at_crossing, fwd_at_crossing].
+func _whip_to_pi(c, entry: float) -> Array:
+	var stub := SteppedStub.new()
+	stub.velocity = Vector2.RIGHT * entry
+	var intent := {"throttle": 0.0, "steer": 1.0, "handbrake": true}
+	var elapsed := 0.0
+	while stub.heading < PI and elapsed < 4.0:
+		c.apply(stub, intent, DT)
+		elapsed += DT
+	return [elapsed, stub.velocity.length(), _fwd(stub)]
+
+func test_whip_lands_180_with_slide_surviving() -> void:
+	var c = _ctrl(5.0, 207.0)
+	var stub := SteppedStub.new()
+	stub.velocity = Vector2.RIGHT * 420.0
+	var intent := {"throttle": 0.0, "steer": 1.0, "handbrake": true}
+	var elapsed := 0.0
+	while stub.heading < PI and elapsed < 4.0:
+		c.apply(stub, intent, DT)
+		elapsed += DT
+	t.check(elapsed >= 0.35 and elapsed <= 0.70,
+		"whip: mid car lands the 180 in [0.35, 0.70]s (%.2f)" % elapsed)
+	t.check(stub.velocity.length() >= 150.0,
+		"whip: the slide survives the rotation (%.0f px/s)" % stub.velocity.length())
+	t.check(_fwd(stub) < 0.0, "whip: facing backward while still traveling — fire away")
+	# Held past the crossing, the nose keeps advancing: the dir_sign pin.
+	# Without it the flipped travel sign counter-steers and the heading stalls.
+	var before: float = stub.heading
+	for i in 18:  # 0.3s more
+		c.apply(stub, intent, DT)
+		t.check(stub.heading >= before, "whip: heading never counter-steers while held")
+		before = stub.heading
+	c.free()
+
+func test_whip_mass_ordering() -> void:
+	var light = _ctrl(2.0, 207.0)
+	var mid = _ctrl(5.0, 207.0)
+	var heavy = _ctrl(8.0, 207.0)
+	var t2: float = _whip_to_pi(light, 420.0)[0]
+	var t5: float = _whip_to_pi(mid, 420.0)[0]
+	var t8: float = _whip_to_pi(heavy, 420.0)[0]
+	t.check(t2 >= 0.25 and t2 <= 0.55, "whip: light car in [0.25, 0.55]s (%.2f)" % t2)
+	t.check(t5 >= 0.35 and t5 <= 0.70, "whip: mid car in [0.35, 0.70]s (%.2f)" % t5)
+	t.check(t8 >= 0.45 and t8 <= 0.95, "whip: heavy car in [0.45, 0.95]s (%.2f)" % t8)
+	t.check(t2 < t5 and t5 < t8, "whip: sporty whips quicker, heavies swing slower")
+	light.free()
+	mid.free()
+	heavy.free()
+
+func test_whip_needs_speed_and_handbrake() -> void:
+	# Below the entry gate the handbrake steers at the plain rate (and the
+	# bleeding slide loses authority) — no parking-lot whips.
+	var slow = _ctrl(5.0, 207.0)
+	var slow_stub := SteppedStub.new()
+	slow_stub.velocity = Vector2.RIGHT * 150.0
+	var fast = _ctrl(5.0, 207.0)
+	var fast_stub := SteppedStub.new()
+	fast_stub.velocity = Vector2.RIGHT * 420.0
+	var intent := {"throttle": 0.0, "steer": 1.0, "handbrake": true}
+	for i in 24:  # 0.4s
+		slow.apply(slow_stub, intent, DT)
+		fast.apply(fast_stub, intent, DT)
+	t.check(fast_stub.heading >= slow_stub.heading * 1.5,
+		"whip: only a FAST handbrake whips (%.2f vs %.2f rad)"
+		% [fast_stub.heading, slow_stub.heading])
+	# Steer without the handbrake stays at the base rate — the ice-feel regime
+	# (steer-only tests) is untouched by the whip.
+	var plain = _ctrl(5.0, 207.0)
+	var plain_stub := SteppedStub.new()
+	plain_stub.velocity = Vector2.RIGHT * 420.0
+	for i in 24:
+		plain.apply(plain_stub, {"throttle": 0.0, "steer": 1.0}, DT)
+	t.check(plain_stub.heading <= deg_to_rad(190.0 * 0.4 * 1.05),
+		"whip: no handbrake, no whip — base steer rate holds")
+	slow.free()
+	fast.free()
+	plain.free()
+
+func test_reverse_cap_prices_powered_reverse_only() -> void:
+	# A backward-facing slide keeps its momentum and coasts down gently.
+	var c = _ctrl(5.0, 207.0)
+	var stub := StubVehicle.new()
+	stub.velocity = Vector2.LEFT * 400.0  # heading 0, traveling backward
+	c.apply(stub, {"throttle": 0.0, "steer": 0.0}, DT)
+	t.check(_fwd(stub) < -350.0,
+		"reverse cap: a slide is never chopped to the reverse gear (%.0f)" % _fwd(stub))
+	for i in 30:  # 0.5s of coasting
+		c.apply(stub, {"throttle": 0.0, "steer": 0.0}, DT)
+	t.check(_fwd(stub) < -180.0 and _fwd(stub) > -400.0,
+		"reverse cap: the slide decays through coast, not a chop (%.0f)" % _fwd(stub))
+	# The handbrake never chops either — it eases along the nose.
+	var hb = _ctrl(5.0, 207.0)
+	var hb_stub := StubVehicle.new()
+	hb_stub.velocity = Vector2.LEFT * 400.0
+	hb.apply(hb_stub, {"throttle": 0.0, "steer": 0.0, "handbrake": true}, DT)
+	t.check(_fwd(hb_stub) < -350.0, "reverse cap: handbrake slides keep their speed")
+	# POWERED reverse (the S gear) still pays the reverse cap immediately.
+	var pw = _ctrl(5.0, 207.0)
+	var pw_stub := StubVehicle.new()
+	pw_stub.velocity = Vector2.LEFT * 400.0
+	pw.apply(pw_stub, {"throttle": -1.0, "steer": 0.0}, DT)
+	t.check(absf(_fwd(pw_stub) + 180.0) < 1.0,
+		"reverse cap: the S gear is still priced at reverse_max_speed (%.0f)" % _fwd(pw_stub))
+	c.free()
+	hb.free()
+	pw.free()

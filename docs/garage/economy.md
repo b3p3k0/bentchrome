@@ -63,13 +63,13 @@ reinforced frame. Standalone swaps (tires, kits) coexist beside chains.
 | ENGINE ch.3 | Stage 3: Bigger Injectors | 6000 | +1 accel +1 top (req S2) |
 | SUSP ch.1 | Stage 1: New Springs | 2500 | +1 handling |
 | SUSP ch.2 | Stage 2: Reinforced Frame | 4500 | +1 handling +1 armor (req S1) |
-| SUSP swap | Offroad Tires | 3500 | terrain profile swap (awd_utility-style) |
-| SUSP swap | Lowering Kit | 4000 | pavement/handling up, offroad down |
-| WEAPONS | MG Cooling | 4000 | `mg_heat_scale` (reserved axis) |
-| WEAPONS | Bay Expansion | 6000 | +ammo caps, −handling −armor |
-| WEAPONS | Improved Lock | 5000 | `lock_time_scale` + `detectability` tradeoff |
-| CPU | Radar Jammer | 4500 | `radar_range_scale` vs enemies (reserved) |
-| CPU | Extended Radar | 5000 | reserved until base radar range lands |
+| SUSP swap | Offroad Tires | 3500 | terrain_overlay: grass/dirt/mud/snow up, asphalt greasy |
+| SUSP swap | Lowering Kit | 4000 | +2 handling + terrain_overlay: asphalt up, soft ground down |
+| WEAPONS | MG Cooling | 4000 | `mg_heat_scale` 0.7 — heat builds 30% slower |
+| WEAPONS | Bay Expansion | 6000 | +2 special cap, −handling −armor |
+| WEAPONS | Improved Lock | 5000 | `tracking_scale` 1.3 + `detectability` 1.5 tradeoff |
+| CPU | Radar Jammer | 4500 | `detectability` 0.8 — sensors and AI eyes find you later |
+| CPU | Extended Radar | 5000 | `radar_range_scale` 1.5 over the 2200px base sensor range |
 | ARMOR | Plating | 5000 | +2 armor, −1 handling |
 
 Envelope check: full campaign income ~50–70k; the full engine chain runs

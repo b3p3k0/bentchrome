@@ -12,18 +12,27 @@ extends RefCounted
 ##   "id": "stage1_headers",
 ##   "stat_deltas": {"acceleration": +2, "handling": -1},  # 1-20 scale, clamped;
 ##                                                         # tradeoffs = negative deltas
-##   "terrain_profile": Array[VehicleTerrainModifier],     # tire/drivetrain swap —
+##   "terrain_profile": Array[VehicleTerrainModifier],     # drivetrain swap —
 ##                                                         # wholesale table replace
+##   "terrain_overlay": {"dirt": {"grip": 1.25}, ...},     # tire package: raw JSON
+##                # table patched per property over the composed modifiers (silent
+##                # properties keep the car's authored identity). A mod carrying
+##                # both applies swap-then-patch.
 ##   "capabilities": {"burn_taken": 0.8, "special_ammo_cap": 3},
+##                # SCALE_FIELDS entries MULTIPLY (co-owned electronics stack
+##                # order-free); "special_ammo_cap_bonus" ADDS to the authored
+##                # cap (floor 1); the rest direct-set.
 ##   "controller_overrides": {"boost_top_factor": 1.6},    # post-curve knob layer
-##   "reserved": {...}  # radar_range_scale / mg_heat_scale / lock_time_scale /
-##                      # detectability — electronics & weapon-systems seams, unwired
 ## }
+
+const TerrainTables := preload("res://resources/terrain_tables.gd")
 
 const STAT_FIELDS := ["acceleration", "top_speed", "handling", "armor",
 	"special_power", "mass", "launch"]
 const CAPABILITY_FIELDS := ["burn_taken", "no_mines", "special", "special_b",
 	"special_ammo_cap", "special_recharge_seconds"]
+const SCALE_FIELDS := ["mg_heat_scale", "tracking_scale", "radar_range_scale",
+	"detectability"]
 
 static func compose(base: VehicleStats, mods: Array) -> VehicleStats:
 	var out: VehicleStats = base.duplicate()
@@ -46,10 +55,22 @@ static func compose(base: VehicleStats, mods: Array) -> VehicleStats:
 				if m is VehicleTerrainModifier:
 					swap.append(m)
 			out.terrain_modifiers = swap
+		if mod.has("terrain_overlay") and typeof(mod["terrain_overlay"]) == TYPE_DICTIONARY:
+			# Tire package: per-property patch; overlay_modifiers duplicates every
+			# entry it touches, so shipped .tres modifiers never mutate.
+			out.terrain_modifiers = TerrainTables.overlay_modifiers(
+				out.terrain_modifiers, mod["terrain_overlay"])
 		var caps: Dictionary = mod.get("capabilities", {})
 		for field_v in caps:
-			if String(field_v) in CAPABILITY_FIELDS:
-				out.set(String(field_v), caps[field_v])
+			var field := String(field_v)
+			if field in SCALE_FIELDS:
+				# Multiplicative: improved_lock det 1.5 x jammer det 0.8 = 1.2
+				# whichever order the player bought them in.
+				out.set(field, clampf(float(out.get(field)) * float(caps[field_v]), 0.05, 20.0))
+			elif field == "special_ammo_cap_bonus":
+				out.special_ammo_cap = maxi(out.special_ammo_cap + int(caps[field_v]), 1)
+			elif field in CAPABILITY_FIELDS:
+				out.set(field, caps[field_v])
 		var knobs: Dictionary = mod.get("controller_overrides", {})
 		for knob_v in knobs:
 			out.handling_overrides[knob_v] = knobs[knob_v]

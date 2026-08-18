@@ -1,0 +1,11 @@
+{
+	"_readme": "Phase-1 balance sweep: stock-AI free-for-all on the Downtown arena. fill_stock pads to the arena's 5 spawn slots with distinct seeded roster picks. Run: tools/botlab.sh tools/botlab/configs/sweep_ffa.json --n 20 --jobs 4",
+	"arena": "res://levels/downtown/downtown.tscn",
+	"seed": 1234,
+	"max_seconds": 180,
+	"governor": "lethal",
+	"entrants": [],
+	"fill_stock": 5,
+	"fight_director": false,
+	"output": "res://tools/botlab/out"
+}

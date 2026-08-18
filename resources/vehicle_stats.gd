@@ -34,6 +34,17 @@ extends Resource
 @export var no_mines := false  # this car never arms mines, crates included
 @export var burn_taken := 1.0  # burn-DoT multiplier (air-cooled engines pay extra)
 
+## Slide-move identity (Car Tuner columns; roster-authorable, defaults neutral).
+@export var whip_scale := 1.0      # multiplies the mass-lerped handbrake-180 rate
+@export var side_slide_bonus := 1.5 # this car's broadside ram premium
+
+## Garage-wired multipliers (all 1.0 stock; VehicleLoadout composes them
+## MULTIPLICATIVELY so co-owned electronics stack order-free).
+@export var mg_heat_scale := 1.0      # MG heat gain per shot (MG Cooling)
+@export var tracking_scale := 1.0    # shooter-side lock reach AND homing turn (Improved Lock)
+@export var radar_range_scale := 1.0 # viewer-side sensor reach (Extended Radar)
+@export var detectability := 1.0     # target-side: how far others' sensors/AI notice you
+
 ## Optional, multiplicative surface identity. The shared DrivingController
 ## composes these over its global terrain table; missing entries stay neutral.
 @export var terrain_modifiers: Array[VehicleTerrainModifier] = []

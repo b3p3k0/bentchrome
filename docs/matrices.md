@@ -14,7 +14,9 @@ update the matching row here.
 
 Source: `assets/data/roster.json` (importer → `data/vehicles/*.tres`) + `data/vehicles/lackey.tres` (hand-authored, roster-external).
 The roster also binds each car's special (`special_def` → `data/weapons/*.tres`) and AI temperament (`ai_archetype`); the importer validates the whole contract and `tests/test_roster_contract.gd` enforces it. Add-a-car checklist: `docs/car_authoring.md`.
-Stats are design-scale 1-10; HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge default to 1 / 12s where the roster doesn't override.
+> ⚠️ The numeric columns below (Accel/Top/Handling/Armor/Sp.Pwr/Mass/HP **and Cap/Recharge**) predate the 1-20 stat rebase and the 2026-07 car-tuner canonization — **`assets/data/roster.json` is the sole truth** (the golden-lock lives in `tests/test_stat_rebase.gd`). Treat this table as a lore/archetype map, not live stats, until it is refreshed.
+
+HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge default to 1 / 12s where the roster doesn't override.
 
 | Car | Driver | Accel | Top | Handling | Armor | Sp.Pwr | Mass | HP | Special | Cap | Recharge | Archetype |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -66,7 +68,7 @@ Source: `resources/stat_curves.gd` — linear lerp across 1-10.
 
 ## Pickup Weapons (shared by every car)
 
-Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons/missile_*.tres`, `data/weapons/mine_*.tres`, `vehicles/weapon_rack.gd` (ammo), `environment/mine.gd` (mine behavior). Max range = speed × lifetime. AI fires all mounts at 3× cooldown (`ai_cooldown_scale`).
+Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons/missile_*.tres`, `data/weapons/mine_*.tres`, `vehicles/weapon_rack.gd` (ammo), `environment/mine.gd` (mine behavior). Max range = speed × lifetime. AI fires the MG at 3× cooldown (`ai_cooldown_scale`); every non-MG weapon runs on the same flat 2s bay lock the player has (`Vehicle.WEAPON_LOCK`). Non-special ammo slots are uncapped.
 
 | Weapon | Dmg | Speed | Rate/Cooldown | Tracking | Max Range | Start/Cap | Notes |
 |---|---|---|---|---|---|---|---|
@@ -80,7 +82,7 @@ Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons
 
 Crates: default `amount` 2, `respawn` 20s (per-instance in scenes). Rear missiles and mines are pickup-fed only. One former M crate per arena is now R, preserving authored pickup density. Ammo crates, chase medkits, and nitro share a 36px collection surface plus the contrast pink `pickup_cue` ring, contracting 36→0→36px at 18 pulses/minute; full resources leave the pickup banked. Airborne cars sail over mines and pits alike.
 
-**Floor gating (multi-floor levels only):** tracking weapons can cross floors. Fire, Homing, and Rear include cover on the shooter's floor and locked target's floor while arcing over intermediate terraces; Phantom Phire's explicit `pierces_cover` remains boundary-only. Everything else (MG, Power, Scythe, Molotov, Red Glare, Splat, Breach Turret) is physically same-floor — a cross-floor car is never even signaled. Mines only trigger on the floor they were dropped on.
+**Floor gating (multi-floor levels only):** tracking weapons can cross floors. Fire, Homing, and Rear — plus the tracking specials (Chilblain, Molotov, Chill Out, Man, Rusty 'Poon) — include cover on the shooter's floor and locked target's floor while arcing over intermediate terraces; Phantom Phire's explicit `pierces_cover` remains boundary-only. Everything else (MG, Power, Scythe, Red Glare, Breach Turret) is physically same-floor — a cross-floor car is never even signaled. Mines only trigger on the floor they were dropped on.
 
 | Projectile impact style | Presentation | Terminal? |
 |---|---|---|
@@ -96,27 +98,27 @@ Off-screen personal hit confirmation is separate from world impacts: meaningful 
 
 ## Specials (one per car)
 
-Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind legend — PROJECTILE fires from the SecondaryMount; BEAM/DASH/TRIGGER/FLAME/DROP/TORNADO/PULSE have handlers in SpecialController. Cap/Recharge in the Vehicles table. Hubcap also runs the fleet's only staggered dual MG (`mg_points`: one mount, standard 12/s and heat, origin alternates barrels).
+Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind legend — PROJECTILE fires from the SecondaryMount; BEAM/DASH/TRIGGER/FLAME/DROP/TORNADO/PULSE have handlers in SpecialController. Cap/Recharge in the Vehicles table. **Lockout column** = the unified **2s non-MG bay lock** (`Vehicle.WEAPON_LOCK`): firing ANY non-MG weapon (missile/mine/special) holds the whole bay 2s, players and AI alike; bosses (`fixed_loadout`) instead keep the def's authored long lockout (Lackey's 15s twin) and the Route 666 chase opts out (`weapon_lock_exempt`). Non-special ammo slots are uncapped (`WeaponRack.UNCAPPED`). Hubcap also runs the fleet's only staggered dual MG (`mg_points`: one mount, standard 12/s and heat, origin alternates barrels).
 
 | Special (Car) | Kind | Dmg | Speed | Cooldown | Tracking | The rest of the story |
 |---|---|---|---|---|---|---|
-| Blunt Blaze (Bumper) | FLAME | 34 dps | — | 15s post-fire | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
+| Blunt Blaze (Bumper) | FLAME | 34 dps | — | 2s bay lock | — | 2s nose column (300×70px) per ammo; 68 direct theoretical; bathed targets ignite: burn 4 dps / 10s |
 | Leap (Cricket) | DASH | ram @1400 | 1400 | per use | lock ≤700 | 0.4s body-check (~560px), sails over obstacles; dirt activation snapshots ×1.15 ram damage through surface crossings; hit: victim slow ×0.5/2s, caster invuln 2s |
-| Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 5s (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
+| Chilblain (Coldfront) | PROJECTILE | 12 | 1000 | 2.0s | 165°/s, lock 1200 | Fire-missile tracking; on hit: freeze 3s, re-hits while frozen don't extend (no pedals, no triggers; momentum damps to a stop at `Vehicle.FREEZE_DECEL` 900); snowflake roof marker + dimmed HUD rack; ICE burst; fixed_loadout bosses immune (range 4000) |
 | Phantom Phire (Ghost) | PROJECTILE | 32 | 950 | 3.0s | 240°/s, lock 3000 | Pierces cover; 6s lifetime ≈ map-wide (5700) |
 | Toe Jam (Hammertoe) | TRIGGER | 60 flat | — | per arm | — | Armed charge replaces next ram's damage; expires unspent after 5s; bumper glows |
-| Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | none | On hit: burn 3 dps / 15s (range 1360); one recipe, two families |
-| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | none | On hit: disarm 5s (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100) |
+| Molotov (Kandy Kane / Hornet) | PROJECTILE | 12 | 850 | 2.0s | 100°/s, lock 1200 | On hit: burn 3 dps / 15s (range 1360); one recipe, two families; gentle launch lean, not quite homing |
+| Chill Out, Man (Lovebug) | PROJECTILE | 0 | 1050 | 2.0s | 100°/s, lock 1200 | On hit: disarm 3s, re-hits while disarmed don't extend (MG + weapons offline; driving/ramming fine); purple roof marker + dimmed HUD rack; GLITTER burst; fixed_loadout bosses immune (range 2100); gentle launch lean |
 | Tornado Alley (Cyclone) | TORNADO | 20 dps | — | per use | — | 3s self-centered spin, AoE 2.2× visual footprint (the wind-swirl ring draws exactly at the boundary), same-floor; caught cars: land-mine spin-out + 220 shove once each (launch_immune exempt); steer ×0.3 while spinning; random exit heading; AI holds to 250px |
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
 | Red Glare (Razorback) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
-| Taser (Smoky) | BEAM | 18 dps | instant | 15s post-fire | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; cooldown starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
-| Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | none | On hit: slow ×0.5 / 3s (range 1804) |
+| Taser (Smoky) | BEAM | 18 dps | instant | 2s bay lock | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; lockout starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
+| Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | 100°/s, lock 1200 | On hit: slow ×0.5 / 3s (range 1804); gentle launch lean |
 | **Breach Turret (Lackey)** | TURRET | 45 | 1400 | 2.8s | auto-aim, 120°/s traverse | LIVE turret on the hull: tracks the player inside ~1100px independent of heading, LoS-gated, fires through break-offs. Aim lag is the dodge. |
-| **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire; pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
+| **Blaze & Bolt (Lackey)** | FLAME+BEAM twin | 34 dps / 18 dps | — | shared 15s post-fire (boss exception — keeps the def gate); pool 2 / 120s | One magazine, two 2s barrels: taser when latchable (≤400 + LoS), torch otherwise; ending either barrel locks both |
 
-Contact specials (Taser, Blunt Blaze, Leap, Toe Jam, mines, barrel blasts) are all same-floor only; Phantom Phire is the sole special that crosses floors. Lackey's turret shots are straight (same-floor on terrace levels).
+Contact specials (Taser, Blunt Blaze, Leap, Toe Jam, mines, barrel blasts) are all same-floor only. Cross-floor specials come in two flavors: the tracking class (Chilblain, Molotov, Chill Out, Man, Rusty 'Poon) arcs between the shooter's and locked target's floors, while Phantom Phire crosses via explicit `pierces_cover` (boundary-only). Lackey's turret shots are straight (same-floor on terrace levels).
 
 ---
 
@@ -174,7 +176,8 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 | District | Population | Authored mix |
 |---|---:|---|
 | Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
-| Suburban Slaughter | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Suburban Savagery | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Capital City Carnage | 21 | 6 stationary food-truck vendors, 8 mall/museum business figures, 2 police on the monument loop, 2 K St vagrants, 2 joggers, 1 Ellipse dog |
 | Mountainside Mayhem | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
 | Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
 | Ground Floor Gore | 16 baseline | 10 floor-1 workers, 4 floor-2 workers, 2 floor-3 carriers; up to 8 porta escapees |
@@ -218,8 +221,22 @@ Source: `vehicles/status_receiver.gd` + effect specs in weapon `.tres` files. Sa
 | Burn | Molotov / Blunt Blaze | 3 dps / 4 dps | 15s / 10s | Visible hull fire; **boost extinguishes it**; DoT bypasses the AI-vs-AI governor |
 | Slow | Splat / Taser / Leap hit | ×0.5 speed | 3s / while latched / 2s | Multiplies accel + top |
 | Invuln | Spawn shield / Leap connect | full immunity | 2s | Blink FX; does NOT survive pits |
-| Disarm | Chill Out, Man | — | 5s | MG + weapons offline, driving fine; purple peace marker + dimmed rack; fixed_loadout immune |
-| Freeze | Chilblain | — | 5s | All intent stripped; velocity damps to zero at `Vehicle.FREEZE_DECEL` 900 px/s²; snowflake marker + dimmed rack; fixed_loadout immune; flags2 bit over LAN |
+| Disarm | Chill Out, Man | — | 3s | Re-application while active ignored; MG + weapons offline, driving fine; purple peace marker + dimmed rack; fixed_loadout immune |
+| Freeze | Chilblain | — | 3s | Re-application while active ignored; all intent stripped; velocity damps to zero at `Vehicle.FREEZE_DECEL` 900 px/s²; snowflake marker + dimmed rack; fixed_loadout immune; flags2 bit over LAN |
+
+---
+
+## Visual Wear (damage tiers)
+
+Source: `vehicles/paint/wear.gd` (marks) + `vehicles/drive_fx.gd` (tier poll + smoke). Purely visual — no handling change; puppets converge off mirrored hp with zero wire state; turntables (car select/garage) always FRESH.
+
+| Knob | Value | Notes |
+|---|---|---|
+| Tiers | FRESH > 2/3 hp · BANGED ≥ 1/3 · BUSTED below | `DriveFX.wear_tier`; exact thirds land BANGED; no hysteresis (heals are chunky) |
+| Marks | scratches+dents (BANGED) / +soot+chips+nose crumple (BUSTED) | deterministic per style+palette seed; BUSTED extends BANGED's RNG stream (damage accumulates) |
+| Count scale | `4·l·w / REF_AREA 1144`, clamped 0.4–1.6 | bikes 1-2 marks, APC/trailer cap; `tail_len` keeps Coldfront's plow clean |
+| Smoke | amounts [0, 6, 12] · lifetime [—, 1.1, 1.8] · gray wisps / dark trail | one lazy world-space CPUParticles2D at the rear midpoint; death cuts it, the wreck keeps its dents |
+| Exceptions | Goliath phase 2 resets wear with the pool (fresh bobtail) · trailer plates stay FRESH · derelicts keep their WRECK_TINT instead | |
 
 ---
 
@@ -237,16 +254,16 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | AI-vs-AI damage | ×0.35 | the governor: their brawls are theater |
 | AI mercy | victim < 10% HP → AI damage ×0 | player damage ×1 both directions on hard; easier tiers soften incoming only (see Difficulty) |
 | Rear weak spot | ×1.5 (Lackey) | projectiles whose travel direction ≈ victim facing |
-| AI fire rate | ×3 cooldown (Lackey ×1.5) | all mounts; heat self-scales; × `ai_fire_cooldown` difficulty knob (turrets too) |
+| AI fire rate | ×3 cooldown (Lackey ×1.5) | **MG only** (heat self-scales; × `ai_fire_cooldown` difficulty knob; turrets too). Non-MG weapons run the flat 2s `Vehicle.WEAPON_LOCK` for player and AI alike; bosses (`fixed_loadout`) exempt, Route 666 chase opts out |
 | Boost | 100 tank, −5/s held | ×2.0 accel, ×1.5 top; extinguishes burn; no refill — except chase nitro bottles (+35, `boost_pickup.tscn`) |
 | Handbrake | grip ×0.15, decel 400 | the drift tool |
 | Jump-pad launch | vz 760, gravity 1300 | needs ≥120 px/s; airborne = wall-collisions only; pads are square 224 omnidirectional caution pyramids, floor-locked on terrace levels (`floor_index`) |
 | Driveable grades | grounded transition both ways | `Ramp`: rectangular halves, standalone downhill pull 120; `CornerRamp`: high right-angle triangle + low trapezoid, 45° low edge; ordinary grades interpolate visual floor lift/scale continuously; local priority-100 terrain composes road/grass/snow/dirt/ice/water/mud; Goliath's Arena stairs opt out and retain pull 170 + row nicks/bumps |
 | Scaffold network | 256px runs / 448px platforms | multiple connected routes; paired grades; explicit `edge` drops; 640×448 repair platform; floor-gated rewards; every deck edge classified rail/gate/seam/drop (`ScaffoldDeck` exports — gate shoulders build statics, gate_width 256 default, per-deck gate_offset); hazard-taped drop lips; breakaway rails = 12-HP `deco="rail"` blocks (z 2, net id) + AI-only curbs over drop lips; posts/plates/cast shadow on an understructure canvas that survives the under-fade (shared `under_fade.gd` 0.42/6.0) |
-| Signature arena state | protocol 8 repeated rows | u16 stable ID + flags + HP fraction + phase timer + 8-actor target mask; host authority; dead props persist as hidden/noncolliding tombstones |
+| Signature arena state | protocol 8 repeated rows | u16 stable ID + flags + HP fraction + phase timer + 8-actor target mask; host authority; dead props persist as visible noncolliding remains (flatten-in-place, `environment/remains_paint.gd`) |
 | Driveable hill | one root / one skin / eight faces | `DriveableHill`: compact pull 180; footprint = summit size + grade length; corner leg = grade length ÷ 2; substrate-reset + terrain skin; NW relief 0.22, projection 1.55, slope darkening 0.06, crest 0.10/18px, foot 0.12/20px, shadow (12,14)/0.20; all connector pairs generated; seam props carry both floor bits |
 | Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Goliath's Arena buttress convention |
-| Arena radar | all other live combatants, map-wide | vehicle `body_color` + contrast outline; dots same-floor, chevrons above/below; includes LAN humans; no range/difficulty/DEVGOD gate; Route 666 GPS excluded |
+| Arena radar | live combatants within `2200 × viewer radar_range_scale × target detectability` px (`Vehicles.sensed_others` — edge arrows share the bound; HP sidebar stays map-wide) | vehicle `body_color` + contrast outline; dots same-floor, chevrons above/below; includes LAN humans; no difficulty/DEVGOD gate; Route 666 GPS excluded |
 | DEVGOD (Developer Options) | immune, ∞ ammo | Developer Mode master-gates every effect while preserving the stored toggle; pits/deep water still kill but the life is comped |
 | Jump-mine pop | vz 450 | ~0.7s air |
 | Mine sensing | land 52px / jump 26px | land paint remains 14px; only the damaging mine has proximity reach |
@@ -314,19 +331,40 @@ Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGA
 
 ## Campaign
 
-Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette is excluded. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048. Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4.
+Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; full language and brief: `docs/arena_field_manual.md`. Route 666 Roulette (specialty) and the three `placeholder` slots are excluded from the arena contract. Absolute floor: 4 target cars, 1,600,000 gross px²/car, short side 2048 — except `duel` arenas (`mp_avail: false`, exactly 2 cars / 1 station; aquarium floors still apply per-car). Small/med/large target cars = 4 / 5-7 / 7-8; stations = 1 / 1-2 / 2-3. Boss campaign overlays may field two actors but underlying target stays ≥4. Slot order is test-pinned (`tests/test_ground_floor.gd`); placeholder slots are sceneless, ride the shared `level_X.png` sawhorse interstitial card (any key detours past), and flip to real entries with `optional: true` (STAY/DETOUR chooser) once buildable — Arena Assault is the first graduate.
 
 | # | Level | Size (interior px) | Target cars | Campaign enemies | Stations | Signature hazards |
 |---|---|---|---:|---:|---:|---|
-| 1 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
-| 2 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
-| 3 | Suburban Slaughter | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
-| 4 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 1 | Arena Assault | SMALL 2560×2560 | 2 (duel; mp_avail false) | 1 | 1 | derby pit: dirt infield in an asphalt lane, jersey ring, center station, wall-lane M/M/H/P/X crates, barrel chains, wreck cover; `optional: true` while in test |
+| 2 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
+| 3 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
+| 4 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
 | 5 | Lackey's Arena | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
-| 6 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract |
-| 7 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
-| 8 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
-| 9 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+| 6 | Suburban Savagery | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
+| 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
+| 8 | Slaughter on the Strip | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into Route 666 |
+| 9 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR) |
+| 10 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
+| 12 | Capital City Carnage | LARGE 6144×3840 (biggest interior; FLAT — knoll only) | 8 | 7 | 3 | THUNDERSTORM (night_arena StormTint, flash/dip cycle, slashing rain, headlight beams); Potomac shallow banks + lethal deep channel, 2 straight bridges w/ destructible rails + VISIBLE 20-HP rim guardrails (ids 60-65); Lincoln/Capitol flat painted plazas, Monument `DriveableHill` knoll w/ summit crates; Penn Ave K-to-Capitol diagonal + traffic circle + Maryland diagonal + 5 side streets + 3 pocket parks + tan sidewalk trails on road ribbons; 1024px Reflecting Pool w/ coping + algae (`pool_surround`); WH iron-fence ring (8×30 HP, ids 10-17) around **Marine One** (id 1: breach→POTUS+3-guard sprint→spool 6s→2-stage floor-bit climb→sky; air kill = spiral crash + Ellipse cache; any kill = 2500 mini_boss); 6 food trucks (128×60) + vendors on Constitution; net ids 1,10-17,20-23,30-35,40-65 sparse (43 total); `optional: true` while in test |
+| 13 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+
+---
+
+## Slide moves (the whip & the side slide)
+
+Source: `vehicles/driving_controller.gd` (whip) + `vehicles/vehicle.gd` (slide impact). Player-only in practice — AI never handbrakes.
+
+| Knob | Value | Notes |
+|---|---|---|
+| `whip_min_speed` | 240 px/s | whip entry gate; the latch exits at 25% of it (a started whip finishes) |
+| `whip_turn_light` / `whip_turn_heavy` | 2.4 / 1.4 | steer-rate multiplier lerped by mass 1-10: sporty ~0.35s to 180, mid ~0.5s, land yacht ~1s |
+| dir_sign pin | while handbraking | steer rotates the nose the way you push — no mid-slide counter-steer stall |
+| reverse cap | powered reverse only | backward-facing slides keep momentum; S-gear still capped at `reverse_max_speed` |
+| `side_slide_bonus` | 1.5 (per-car: Car Tuner SLIDE column) | multiplies the slider's uncharged ram bill (Toe Jam charge stays its own economy) |
+| `whip_scale` | 1.0 (per-car: Car Tuner WHIP column) | trims the mass-lerped whip factor per ride; rides StatCurves.apply, exports/folds through the roster pipeline |
+| `slide_min_speed` / `SLIDE_LAT_FRAC` / `SLIDE_GRACE` | 250 / 0.8 (~53°) / 0.6s | is_side_sliding: speed floor, slip fraction, brake-recency window (excludes icy AI slip) |
+| One-way bill | victim's ram loop skips a slider | dash-style; slider also shielded from third-party rams mid-slide (directional gate = follow-up if LAN abuse shows) |
 
 ---
 
@@ -437,8 +475,9 @@ Sources: `vehicles/goliath/*.gd` static vars, `data/vehicles/goliath.tres` / `go
 | Fireworks | every 0.9s, 30% double | stadium.gd FIREWORK_* | win-card backdrop, 5 shell colors |
 | Victory lap | throttle 0.8, arrive 260 | victory_lap_driver LAP_* | god-moded; end_screen.win_keeps_rolling |
 | Quit confirm | ESC on title | ui/title.gd | "Awww, giving up so soon?" — NO default |
-| Single-player entry | SINGLE PLAYER | ui/title.gd | unchanged route: difficulty select → garage → campaign |
-| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Arrow-only: Up/Down select, Left/Right change, Right enters submenu/actions, ESC backs out; WASD/Enter/Space/controller ignored; changes autosave; Developer Mode master-gates preserved DEVGOD/start-level choices |
+| Single-player entry | SINGLE PLAYER | ui/title.gd | mode select → difficulty → garage (Road Trip) or → fight card → garage (Single Battle) |
+| Single Battle | mode select row 3 | ui/mode_select.gd + ui/level_select.gd | stamps `game_mode &"single_battle"` + MEDIUM tier; fight card lists melee arenas selectable, placeholder slots greyed, boss/chase off-card; pick stamps `GameState.battle_level_index` (run state); end screen shows the classic panel, Restart re-runs the slot with fresh lives |
+| Developer Options | modal under Settings | ui/settings.gd + game_state.gd | Arrow-only: Up/Down select, Left/Right change, Right enters submenu/actions, ESC backs out; WASD/Enter/Space/controller ignored; changes autosave; Developer Mode master-gates the preserved DEVGOD choice (START LEVEL retired — jump to a level via SINGLE BATTLE) |
 
 ## Netplay (LAN multiplayer knobs)
 

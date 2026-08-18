@@ -16,15 +16,25 @@ var score: int = 0
 # lives: bought at PIT STOPs, applied at level spawn via VehicleLoadout.compose,
 # never persisted.
 var owned_mods: Array = []
+# Campaign rack carry (WeaponRack.Slot order, 7 ints; empty = no carry).
+# Captured at the end screen's continue funnel, applied at the next level's
+# first player spawn (death respawns reset to the defined load instead).
+# Run state like lives: overwritten at each win, never persisted.
+var carry_ammo: Array = []
 # SP lane picked on the mode-select screen: &"campaign" (Road Trip),
-# &"tutorial" (Driver's Ed lessons), or &"test_drive" (same yard, free roam).
+# &"tutorial" (Driver's Ed lessons), &"test_drive" (same yard, free roam), or
+# &"single_battle" (one arena off the fight card, no tour).
 # Run state, never persisted; mode select re-stamps it on every confirm.
 var game_mode: StringName = &"campaign"
+# SINGLE BATTLE: the campaign slot picked on the level-select screen. Run
+# state like game_mode — car select launches into it when the lane says so.
+var battle_level_index: int = 0
 
 func reset_campaign() -> void:
 	level_index = 0
 	lives = 3
 	owned_mods.clear()
+	carry_ammo.clear()
 	Economy.reset_run()  # fresh run, empty wallet — BOLTS are the tournament's
 
 # Custom-level flow (levels/custom_level.tscn). The editor's playtest sets all
@@ -35,12 +45,16 @@ var editor_open_path: String = ""
 
 # Player settings (exposed by ui/settings.gd; persisted to user://settings.json;
 # they survive scene changes AND campaign resets, unlike run state).
-var zoom_combat := 0.58    # default camera zoom (settings: ZOOM DEPTH 0.45-0.72)
-var zoom_overview := 0.42  # Ctrl-toggled pull-back (see more board)
-var overview := false      # the persisted zoom-toggle state
+const DEFAULT_COMBAT_ZOOM := 0.55
+const DEFAULT_OVERVIEW_ZOOM := 0.42
+const DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE := 140.0
+var zoom_combat := DEFAULT_COMBAT_ZOOM  # settings: COMBAT ZOOM 0.45-0.72
+var zoom_overview := DEFAULT_OVERVIEW_ZOOM  # toggled tactical pull-back
+var overview := false       # G/Y toggle; persisted across levels and launches
+var camera_look_ahead_enabled := true
+var camera_look_ahead_distance := DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
 var devgod := false        # invincible, 1x every weapon, firing never depletes
 var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
-var start_level_index := 0 # level select: car select launches into this level
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 var volume_master := 0.80  # settings sliders, 0-1 linear; applied to the
@@ -64,12 +78,15 @@ var mp_host_strict := false
 func is_devgod_enabled() -> bool:
 	return dev_mode and devgod and game_mode != &"tutorial"
 
-func effective_start_level_index() -> int:
-	return start_level_index if dev_mode else 0
-
 const SETTINGS_PATH := "user://settings.json"
-const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview", "devgod",
-	"dev_mode", "start_level_index", "screen_shake", "player_name",
+const SETTINGS_SCHEMA_VERSION := 3
+const LEGACY_DEFAULT_COMBAT_ZOOM := 0.58
+const SCHEMA2_DEFAULT_COMBAT_ZOOM := 0.66
+# start_level_index (the retired dev START LEVEL picker) may linger in old
+# files — unknown keys load as no-ops, so stale settings degrade silently.
+const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview",
+	"camera_look_ahead_enabled", "camera_look_ahead_distance", "devgod",
+	"dev_mode", "screen_shake", "player_name",
 	"volume_master", "volume_music", "volume_sfx",
 	"mp_join_ip", "mp_join_port", "mp_host_port", "mp_host_garage",
 	"mp_host_strict"]
@@ -83,7 +100,7 @@ func _ready() -> void:
 
 ## Settings only — run state (lives, level_index, score) never touches disk.
 func save_settings(path := SETTINGS_PATH) -> void:
-	var out := {}
+	var out := {"schema_version": SETTINGS_SCHEMA_VERSION}
 	for k in SETTINGS_KEYS:
 		out[k] = get(k)
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -102,6 +119,7 @@ func load_settings(path := SETTINGS_PATH) -> void:
 	var data: Variant = json.data
 	if typeof(data) != TYPE_DICTIONARY:
 		return
+	var schema := int(data.get("schema_version", 0))
 	for k in SETTINGS_KEYS:
 		if data.has(k) and typeof(data[k]) == typeof(get(k)):
 			set(k, data[k])
@@ -109,15 +127,39 @@ func load_settings(path := SETTINGS_PATH) -> void:
 			set(k, float(data[k]))  # JSON round numbers come back as ints
 		elif data.has(k) and get(k) is int and data[k] is float:
 			set(k, int(data[k]))
+	# Each shipped stock close-up advances once; hand-tuned values remain theirs.
+	# Schema 2 deliberately omitted overview state and look-ahead controls, so
+	# supply their new defaults only when the fields are genuinely absent.
+	if schema < SETTINGS_SCHEMA_VERSION:
+		if data.has("zoom_combat"):
+			if schema < 2 and zoom_combat == LEGACY_DEFAULT_COMBAT_ZOOM:
+				zoom_combat = DEFAULT_COMBAT_ZOOM
+			elif schema == 2 and zoom_combat == SCHEMA2_DEFAULT_COMBAT_ZOOM:
+				zoom_combat = DEFAULT_COMBAT_ZOOM
+		if not data.has("overview"):
+			overview = false
+		if not data.has("camera_look_ahead_enabled"):
+			camera_look_ahead_enabled = true
+		if not data.has("camera_look_ahead_distance"):
+			camera_look_ahead_distance = DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
+		save_settings(path)
 	apply_audio_settings()
 
-func reset_settings() -> void:
-	zoom_combat = 0.58
-	zoom_overview = 0.42
+## Gameplay toggle. Production presses save immediately; headless fixtures stay
+## hermetic and explicitly round-trip through their throwaway paths instead.
+func toggle_overview() -> void:
+	overview = not overview
+	if DisplayServer.get_name() != "headless":
+		save_settings()
+
+func reset_settings(path := SETTINGS_PATH) -> void:
+	zoom_combat = DEFAULT_COMBAT_ZOOM
+	zoom_overview = DEFAULT_OVERVIEW_ZOOM
 	overview = false
+	camera_look_ahead_enabled = true
+	camera_look_ahead_distance = DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
 	devgod = false
 	dev_mode = false
-	start_level_index = 0
 	screen_shake = true
 	player_name = ""
 	mp_join_ip = ""
@@ -129,7 +171,7 @@ func reset_settings() -> void:
 	volume_music = 0.30
 	volume_sfx = 0.55
 	apply_audio_settings()
-	save_settings()
+	save_settings(path)
 
 ## Push the persisted sliders onto the audio buses (default_bus_layout.tres:
 ## Master + Music + SFX). Bus-less contexts (hermetic tests) no-op per bus.

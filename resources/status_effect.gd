@@ -11,3 +11,7 @@ extends Resource
 @export var kind: StringName = &"burn"
 @export var duration := 3.0
 @export var magnitude := 1.0
+## false: a same-kind re-application while the effect is ACTIVE is ignored —
+## no extension, no magnitude overwrite; a fresh application after expiry
+## lands normally (Chilblain/Chill Out: hard duration ceiling, no chaining).
+@export var refresh := true

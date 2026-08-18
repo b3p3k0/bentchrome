@@ -6,6 +6,7 @@ extends StaticBody2D
 const Floors := preload("res://game/floors.gd")
 const ActorScene := preload("res://environment/ambient_actor.tscn")
 const ArenaState := preload("res://game/net/arena_state.gd")
+const RemainsPaint := preload("res://environment/remains_paint.gd")
 
 const ESCAPE_CHANCE := 0.20
 const ESCAPE_PANIC := 2.5
@@ -48,7 +49,7 @@ func _die() -> void:
 	_escaped = releases_worker(roll)
 	collision_layer = 0
 	set_deferred(&"collision_mask", 0)
-	visible = false
+	queue_redraw()  # flatten in place: the crumpled-box remains stay visible
 	call_deferred(&"_finish_death")
 
 func _finish_death() -> void:
@@ -60,8 +61,7 @@ func _finish_death() -> void:
 		var rng := _rng()
 		if _escaped:
 			_spawn_worker(host, rng)
-	if arena_net_id <= 0:
-		queue_free()
+	# No queue_free: synced or not, the remains hold the ground.
 
 func _rng() -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
@@ -83,11 +83,12 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 		_dead = false
 		visible = true
 		collision_layer = _base_collision_layer
+		queue_redraw()
 	elif not _dead:
 		_dead = true
 		collision_layer = 0
 		collision_mask = 0
-		visible = false
+		queue_redraw()
 		if not initial_state:
 			var host := get_tree().current_scene
 			if host == null:
@@ -148,6 +149,11 @@ func _spawn_blue_debris(host: Node) -> void:
 ## a proper service row: jamb band, proud leaf with hinge seam and handle, a
 ## threshold step onto the yard. One seeded unit per row hangs ajar.
 func _draw() -> void:
+	if _dead:
+		RemainsPaint.draw_marks(self, RemainsPaint.generate(Vector2(24, 30),
+			&"crumple", Color(0.22, 0.60, 0.80), Color(0.10, 0.34, 0.50),
+			RemainsPaint.remains_seed(position, seed_offset * 7919)))
+		return
 	draw_rect(Rect2(Vector2(-24, -30) + Vector2(6, 7), Vector2(48, 60)), Color(0, 0, 0, 0.3))
 	draw_rect(Rect2(-24, -30, 48, 60), Color(0.18, 0.52, 0.72))
 	draw_rect(Rect2(-21, -27, 36, 54), Color(0.22, 0.60, 0.80))

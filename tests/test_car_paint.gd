@@ -18,6 +18,8 @@ func _init(runner) -> void:
 	t = runner
 
 func test_every_car_has_a_style() -> void:
+	t.check(is_equal_approx(PaintScript.FLEET_SCALE, 1.5),
+		"fleet paint: legibility scale is 1.50")
 	for id in ORDER + [&"lackey", &"goliath_cab", &"goliath_trailer"]:
 		t.check(PaintScript.STYLES.has(id), "style exists: %s" % id)
 

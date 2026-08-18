@@ -1,10 +1,12 @@
 extends Control
 ## North-up minimap: the whole arena at a glance — walls, buildings
 ## (destructibles vanish when smashed), terrain patches, the repair pad — plus
-## live blips. Every other live combatant paints map-wide in its vehicle color.
-## Geometry is duck-typed off collision layers and
-## script properties (no class references), snapshotted once the level's
-## Boundary exists; the static rects are trivial to redraw every frame.
+## live blips. Combatants paint in their vehicle color INSIDE sensor reach
+## (Vehicles.BASE_SENSOR_RANGE x viewer radar_range_scale x target
+## detectability — the garage's Extended Radar / Radar Jammer axes); the
+## arena geometry always draws fully. Geometry is duck-typed off collision
+## layers and script properties (no class references), snapshotted once the
+## level's Boundary exists; the static rects are trivial to redraw every frame.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
@@ -51,7 +53,7 @@ func _draw() -> void:
 	for fh in _floor_high:
 		draw_rect(_map_rect(fh), FLOOR_HIGH)
 	for b in _breakables:
-		if is_instance_valid(b.ref):
+		if breakable_alive(b.ref):
 			draw_rect(_map_rect(b.rect), BREAKABLE)
 	for st in _stations:
 		var p := _map(st)
@@ -187,8 +189,15 @@ func _floor_of(node: Node) -> int:
 	var f: Variant = node.get("floor_index")
 	return int(f) if f is int else -1
 
+## Remains contract: dead breakables flatten in place with collision_layer 0 —
+## the map paints only geometry that still blocks. (Also covers the old bug
+## where hidden arena tombstones painted as live cover forever.) Duck-typed.
+static func breakable_alive(ref) -> bool:
+	return is_instance_valid(ref) and ref is StaticBody2D \
+		and (int(ref.collision_layer) & 4) != 0
+
 static func opponents(tree: SceneTree, viewer: Node) -> Array:
-	return VehiclesHelper.live_others(tree, viewer)
+	return VehiclesHelper.sensed_others(tree, viewer)
 
 static func blip_color(car: Node) -> Color:
 	return VehiclesHelper.paint_color(car)

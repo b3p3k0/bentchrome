@@ -1,13 +1,12 @@
 extends RefCounted
-## Mode select (the garage door): cursor skips the greyed SINGLE BATTLE row
-## from both directions, a confirm on it stays inert, the Driver's Ed
-## sub-dialog opens/closes/toggles, and each sign-up option stamps the right
-## GameState.game_mode. The scene is load()ed at test time, NOT const-
-## preloaded: mode_select.gd names autoloads, which only compile once
-## autoloads are registered — suite preloads happen before that. Branches
-## that swap scenes (ESC to title, ROAD TRIP routing, sub-dialog launch) stay
-## untested here; their state commits are isolated below and the human flow
-## pass covers navigation.
+## Mode select (the garage door): the cursor reaches every live row (SINGLE
+## BATTLE included), the Driver's Ed sub-dialog opens/closes/toggles, and
+## each lane commit stamps the right GameState.game_mode. The scene is
+## load()ed at test time, NOT const-preloaded: mode_select.gd names
+## autoloads, which only compile once autoloads are registered — suite
+## preloads happen before that. Branches that swap scenes (ESC to title,
+## lane routing, sub-dialog launch) stay untested here; their state commits
+## are isolated below and the human flow pass covers navigation.
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -27,36 +26,41 @@ func _press(menu: Control, action: StringName) -> void:
 	ev.pressed = true
 	menu._unhandled_input(ev)
 
-func test_nav_skips_disabled_row() -> void:
+func test_nav_reaches_every_row() -> void:
 	var menu := _fresh()
 	t.check(menu._index == 1, "mode: cursor boots on ROAD TRIP")
 	_press(menu, &"move_down")
-	t.check(menu._index == menu.BACK_INDEX, "mode: down from ROAD TRIP hops to BACK")
+	t.check(menu._index == 2, "mode: down from ROAD TRIP lands on SINGLE BATTLE")
+	_press(menu, &"move_down")
+	t.check(menu._index == menu.BACK_INDEX, "mode: down from SINGLE BATTLE lands on BACK")
 	_press(menu, &"move_down")
 	t.check(menu._index == 0, "mode: down from BACK wraps to DRIVER'S ED")
-	_press(menu, &"move_down")
-	t.check(menu._index == 1, "mode: down from DRIVER'S ED lands on ROAD TRIP")
 	_press(menu, &"move_up")
-	t.check(menu._index == 0, "mode: up from ROAD TRIP lands on DRIVER'S ED")
+	t.check(menu._index == menu.BACK_INDEX, "mode: up from DRIVER'S ED wraps to BACK")
 	_press(menu, &"move_up")
-	t.check(menu._index == menu.BACK_INDEX, "mode: up from DRIVER'S ED lands on BACK")
-	_press(menu, &"move_up")
-	t.check(menu._index == 1, "mode: up from BACK hops SINGLE BATTLE")
-	t.check(menu._entries[2].modulate == menu.DISABLED_TEXT,
-		"mode: SINGLE BATTLE wears the disabled grey")
-	t.check(not menu._entries[2].text.begins_with("["),
-		"mode: SINGLE BATTLE never renders the cursor brackets")
+	t.check(menu._index == 2, "mode: up from BACK lands on SINGLE BATTLE")
+	t.check(menu._entries[2].text.begins_with("["),
+		"mode: SINGLE BATTLE renders the cursor brackets — the row is live")
 	t.check(menu._entries[menu.BACK_INDEX].text == "BACK",
 		"mode: BACK is a visible selectable row")
 	t.root.remove_child(menu)
 	menu.free()
 
-func test_disabled_confirm_inert() -> void:
+func test_single_battle_commit_stamps_lane() -> void:
+	var gs: Node = t.root.get_node_or_null("/root/GameState")
+	t.check(gs != null, "mode: GameState autoload live for SINGLE BATTLE")
+	if gs == null:
+		return
+	var before_mode: StringName = gs.game_mode
+	var before_tier: int = Difficulty.tier
 	var menu := _fresh()
-	menu._index = 2  # unreachable via nav; forced to prove confirm stays dead
-	menu._activate()
-	t.check(not menu._done, "mode: confirm on the disabled row does nothing")
-	t.check(menu._sub == null, "mode: disabled row opens no dialog")
+	Difficulty.tier = Difficulty.Tier.HARD
+	menu._commit_single_battle()
+	t.check(gs.game_mode == &"single_battle", "mode: SINGLE BATTLE stamps its lane")
+	t.check(Difficulty.tier == Difficulty.Tier.MEDIUM,
+		"mode: SINGLE BATTLE starts on ROAD RAGING COMMUTER")
+	gs.game_mode = before_mode
+	Difficulty.tier = before_tier
 	t.root.remove_child(menu)
 	menu.free()
 

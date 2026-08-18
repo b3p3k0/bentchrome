@@ -18,6 +18,11 @@ class SustainedShooter extends CharacterBody2D:
 	func body_metrics() -> Dictionary:
 		return {"half_len": 26.0}
 
+## A boss shooter keeps the def's authored (long) sustained lockout — the 2s
+## bay collapse is for ordinary cars only.
+class BossShooter extends SustainedShooter:
+	var fixed_loadout := true
+
 func _init(runner) -> void:
 	t = runner
 
@@ -40,10 +45,10 @@ func test_lackey_loadout() -> void:
 func test_sustained_vehicle_charge_economy() -> void:
 	var bumper: VehicleStats = load("res://data/vehicles/bumper.tres")
 	var smoky: VehicleStats = load("res://data/vehicles/smoky.tres")
-	t.check(bumper.special_ammo_cap == 2 and is_equal_approx(bumper.special_recharge_seconds, 90.0),
-		"sustained economy: Bumper keeps 2 charges at 90s each")
-	t.check(smoky.special_ammo_cap == 3 and is_equal_approx(smoky.special_recharge_seconds, 90.0),
-		"sustained economy: Smoky keeps 3 charges at 90s each")
+	t.check(bumper.special_ammo_cap == 3 and is_equal_approx(bumper.special_recharge_seconds, 45.0),
+		"sustained economy: Bumper keeps 3 charges at 45s each")
+	t.check(smoky.special_ammo_cap == 3 and is_equal_approx(smoky.special_recharge_seconds, 45.0),
+		"sustained economy: Smoky keeps 3 charges at 45s each")
 	var file := FileAccess.open("res://assets/data/roster.json", FileAccess.READ)
 	var roster: Dictionary = JSON.parse_string(file.get_as_text())
 	file.close()
@@ -51,8 +56,8 @@ func test_sustained_vehicle_charge_economy() -> void:
 	for car in roster.characters:
 		if car.id in ["bumper", "smoky"]:
 			authored[car.id] = car
-	t.check(is_equal_approx(float(authored.bumper.special_recharge_seconds), 90.0)
-		and is_equal_approx(float(authored.smoky.special_recharge_seconds), 90.0),
+	t.check(is_equal_approx(float(authored.bumper.special_recharge_seconds), 45.0)
+		and is_equal_approx(float(authored.smoky.special_recharge_seconds), 45.0),
 		"sustained economy: roster source and generated resources agree")
 
 func test_twin_barrel_chooses_by_context() -> void:
@@ -87,13 +92,18 @@ func test_rusty_poon_def() -> void:
 	t.check(fx != null and fx.kind == &"slow", "rusty 'poon: slow on hit")
 	t.check_approx(fx.magnitude, 0.5, "rusty 'poon: half speed")
 	t.check_approx(fx.duration, 3.0, "rusty 'poon: 3s")
+	t.check_approx(d.turn_rate_deg, 100.0, "rusty 'poon: launch lean, not quite homing")
+	t.check_approx(d.acquisition_radius, 1200.0, "rusty 'poon: standard acquisition reach")
 
 func test_chill_out_disarm_duration() -> void:
 	var d := _def("res://data/weapons/chill_out.tres")
 	var fx := _first_effect(d)
 	t.check_approx(d.damage, 0.0, "chill out: peace sign deals no damage")
 	t.check(fx != null and fx.kind == &"disarm", "chill out: hit applies disarm")
-	t.check_approx(fx.duration, 5.0, "chill out: guns return after five seconds")
+	t.check_approx(fx.duration, 3.0, "chill out: guns return after three seconds")
+	t.check(fx.refresh == false, "chill out: re-hits while disarmed never extend")
+	t.check_approx(d.turn_rate_deg, 100.0, "chill out: launch lean, not quite homing")
+	t.check_approx(d.acquisition_radius, 1200.0, "chill out: standard acquisition reach")
 
 func test_blunt_blaze_def() -> void:
 	var d := _def("res://data/weapons/blunt_blaze.tres")
@@ -110,6 +120,14 @@ func test_molotov_def() -> void:
 	var fx := _first_effect(d)
 	t.check(fx != null and fx.kind == &"burn", "molotov: burn on hit")
 	t.check_approx(fx.duration, 15.0, "molotov: lore 15s burn")
+	t.check_approx(d.turn_rate_deg, 100.0, "molotov: launch lean, not quite homing (Hornet AND Kandy Kane)")
+	t.check_approx(d.acquisition_radius, 1200.0, "molotov: standard acquisition reach")
+
+func test_scythe_stays_straight() -> void:
+	# Mr. Ghastly is explicitly excluded from the lean pass — "no homing" is lore.
+	var d := _def("res://data/weapons/scythe.tres")
+	t.check_approx(d.turn_rate_deg, 0.0, "scythe: dead straight, no lean")
+	t.check_approx(d.acquisition_radius, 0.0, "scythe: never acquires a target")
 
 func test_red_glare_def() -> void:
 	var d := _def("res://data/weapons/red_glare.tres")
@@ -138,16 +156,16 @@ func test_sustained_cooldown_starts_after_flame_finishes() -> void:
 	t.check_approx(sc.sustained_cooldown_remaining(), 0.0,
 		"sustained cooldown: firing duration pays none of the lockout")
 	sc._physics_process(0.21)
-	t.check_approx(sc.sustained_cooldown_remaining(), 15.0,
-		"sustained cooldown: full clock arms when flame ends")
+	t.check_approx(sc.sustained_cooldown_remaining(), 2.0,
+		"sustained cooldown: ordinary car arms the 2s bay clock when flame ends")
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
 		"sustained cooldown: immediate repeat is rejected")
-	sc._physics_process(14.9)
+	sc._physics_process(1.9)
 	t.check(not sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat stays locked before fifteen seconds")
+		"sustained cooldown: repeat stays locked before two seconds")
 	sc._physics_process(0.1)
 	t.check(sc.activate(true, Vector2.ZERO, Vector2.RIGHT, shooter),
-		"sustained cooldown: repeat opens exactly after fifteen seconds")
+		"sustained cooldown: repeat opens exactly after two seconds")
 	t.root.remove_child(shooter)
 	shooter.free()
 
@@ -155,7 +173,7 @@ func test_twin_sustained_barrels_share_early_end_lockout() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
 	t.current_scene = container
-	var shooter := CharacterBody2D.new()
+	var shooter := BossShooter.new()  # Lackey: bosses keep the 15s twin lockout
 	container.add_child(shooter)
 	var sc = ControllerScript.new()
 	shooter.add_child(sc)

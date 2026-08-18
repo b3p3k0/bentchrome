@@ -1,0 +1,454 @@
+[gd_scene load_steps=21 format=3]
+
+[ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
+[ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="7_hud"]
+[ext_resource type="PackedScene" path="res://environment/ammo_pickup.tscn" id="8_ammo"]
+[ext_resource type="PackedScene" path="res://vehicles/vehicle.tscn" id="2_veh"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="3_zone"]
+[ext_resource type="PackedScene" path="res://vehicles/enemy_vehicle.tscn" id="6_enemy"]
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="9_dblock"]
+[ext_resource type="PackedScene" path="res://environment/health_station.tscn" id="10_heal"]
+[ext_resource type="Shader" path="res://shaders/terrain_speckle.gdshader" id="11_speck"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="20_clutter"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="21_marks"]
+[ext_resource type="Script" path="res://environment/street_deco.gd" id="22_deco"]
+[ext_resource type="Script" path="res://environment/jersey_wall.gd" id="23_jersey"]
+[ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="24_wreck"]
+
+[sub_resource type="ShaderMaterial" id="SM_asphalt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.11, 0.11, 0.13, 1)
+shader_parameter/speckle_color = Color(0.06, 0.06, 0.08, 1)
+shader_parameter/density = 0.4
+shader_parameter/intensity = 0.35
+shader_parameter/scale = 6.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="ShaderMaterial" id="SM_dirt"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.5, 0.36, 0.2, 0.5)
+shader_parameter/speckle_color = Color(0.32, 0.22, 0.12, 1)
+shader_parameter/density = 0.3
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 8.0
+shader_parameter/shimmer = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
+size = Vector2(2640, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
+size = Vector2(40, 2640)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_infield"]
+size = Vector2(1664, 1664)
+
+[sub_resource type="ShaderMaterial" id="SM_tarmac_worn"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.21, 0.21, 0.23, 1)
+shader_parameter/speckle_color = Color(0.12, 0.12, 0.14, 1)
+shader_parameter/density = 0.45
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 9.0
+shader_parameter/shimmer = 0.0
+
+[node name="ArenaAssault" type="Node2D"]
+script = ExtResource("1_lvl")
+
+[node name="Asphalt" type="Polygon2D" parent="."]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-1280, -1280, 1280, -1280, 1280, 1280, -1280, 1280)
+
+[node name="WornLaneN" type="Polygon2D" parent="."]
+material = SubResource("SM_tarmac_worn")
+polygon = PackedVector2Array(-1280, -1280, 1280, -1280, 1280, -832, -1280, -832)
+
+[node name="WornLaneS" type="Polygon2D" parent="."]
+material = SubResource("SM_tarmac_worn")
+polygon = PackedVector2Array(-1280, 832, 1280, 832, 1280, 1280, -1280, 1280)
+
+[node name="WornLaneW" type="Polygon2D" parent="."]
+material = SubResource("SM_tarmac_worn")
+polygon = PackedVector2Array(-1280, -832, -832, -832, -832, 832, -1280, 832)
+
+[node name="WornLaneE" type="Polygon2D" parent="."]
+material = SubResource("SM_tarmac_worn")
+polygon = PackedVector2Array(832, -832, 1280, -832, 1280, 832, 832, 832)
+
+[node name="GridFloor" type="Node2D" parent="."]
+script = ExtResource("1_grid")
+extent = Vector2(1280, 1280)
+
+[node name="JerseyWall" type="Node2D" parent="."]
+script = ExtResource("23_jersey")
+extent = Vector2(1280, 1280)
+
+[node name="DirtInfield" type="Area2D" parent="."]
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"dirt"
+
+[node name="Vis" type="Polygon2D" parent="DirtInfield"]
+material = SubResource("SM_dirt")
+color = Color(0.5, 0.36, 0.2, 0.5)
+polygon = PackedVector2Array(-832, -832, 832, -832, 832, 832, -832, 832)
+
+[node name="Col" type="CollisionShape2D" parent="DirtInfield"]
+shape = SubResource("RectangleShape2D_infield")
+
+[node name="RingN" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, -832, 832, -832)
+style = &"dashed_white"
+
+[node name="RingS" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, 832, 832, 832)
+style = &"dashed_white"
+
+[node name="RingW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-832, -832, -832, 832)
+style = &"dashed_white"
+
+[node name="RingE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(832, -832, 832, 832)
+style = &"dashed_white"
+
+[node name="LapLineN" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, -1056, 1056, -1056)
+style = &"dashed_yellow"
+
+[node name="LapLineS" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, 1056, 1056, 1056)
+style = &"dashed_yellow"
+
+[node name="LapLineW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1056, -1056, -1056, 1056)
+style = &"dashed_yellow"
+
+[node name="LapLineE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(1056, -1056, 1056, 1056)
+style = &"dashed_yellow"
+
+[node name="GridBarSW" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(-1264, 576, -856, 576)
+style = &"stop_line"
+
+[node name="GridBarNE" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(856, -576, 1264, -576)
+style = &"stop_line"
+
+[node name="WreckNW" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(-896, -1056)
+rotation = 0.42
+
+[node name="WreckW1" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(-1056, -160)
+rotation = -1.35
+
+[node name="WreckW2" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(-1040, 128)
+rotation = -1.85
+
+[node name="WreckSE" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(896, 1056)
+rotation = 2.75
+
+[node name="WreckC1" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(448, -384)
+rotation = 1.2
+
+[node name="WreckC2" parent="." instance=ExtResource("24_wreck")]
+position = Vector2(-448, 384)
+rotation = -1.9
+
+[node name="CrateN1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-96, -960)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateN2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, -864)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateN3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(96, -960)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="JunkN" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(224, -1088)
+size = Vector2(128, 96)
+max_hp = 15.0
+deco = &"junk"
+
+[node name="CrateE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1040, -96)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1120, 0)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="FenceW" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-1216, 320)
+size = Vector2(12, 448)
+max_hp = 15.0
+deco = &"fence"
+
+[node name="BarrierS" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, 896)
+size = Vector2(256, 40)
+max_hp = 80.0
+deco = &"barrier"
+
+[node name="BarrierC1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, -448)
+size = Vector2(224, 40)
+max_hp = 80.0
+deco = &"barrier"
+
+[node name="BarrierC2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, 448)
+size = Vector2(224, 40)
+max_hp = 80.0
+deco = &"barrier"
+
+[node name="CrateNW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-576, -640)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateNW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-480, -576)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="CrateSE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(576, 640)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"crate"
+
+[node name="BarrelSE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(480, 576)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(640, -640)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(704, -560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-640, 640)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelSW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-704, 560)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="FenceE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(1216, -320)
+size = Vector2(12, 320)
+max_hp = 15.0
+deco = &"fence"
+
+[node name="JunkSE" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(640, 1152)
+size = Vector2(128, 96)
+max_hp = 15.0
+deco = &"junk"
+
+[node name="BarrelNW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-640, -1120)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelNW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-544, -1040)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelS1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-160, 1056)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelS2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(0, 1120)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="BarrelS3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(160, 1056)
+size = Vector2(44, 44)
+max_hp = 30.0
+deco = &"barrel"
+
+[node name="ConeN" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-320, -1152)
+kind = &"cone"
+
+[node name="ConeE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1216, 320)
+kind = &"cone"
+
+[node name="HydrantE" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(896, 224)
+kind = &"hydrant"
+
+[node name="TrashSW" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1152, 1152)
+kind = &"trash"
+
+[node name="PalletN" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(640, -1216)
+kind = &"pallet"
+
+[node name="PalletS" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-640, 1216)
+kind = &"pallet"
+
+[node name="BollardS1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-128, 1216)
+kind = &"bollard"
+
+[node name="BollardS2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(128, 1216)
+kind = &"bollard"
+
+[node name="ConeNW2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(-1152, -320)
+kind = &"cone"
+
+[node name="ConeS" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(320, 1216)
+kind = &"cone"
+
+[node name="LightNW" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(-1300, -1300)
+kind = &"street_light"
+
+[node name="LightNE" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(1300, -1300)
+kind = &"street_light"
+
+[node name="LightSW" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(-1300, 1300)
+kind = &"street_light"
+
+[node name="LightSE" type="Node2D" parent="."]
+script = ExtResource("22_deco")
+position = Vector2(1300, 1300)
+kind = &"street_light"
+
+[node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
+position = Vector2(0, 0)
+
+[node name="Boundary" type="StaticBody2D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="TopVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, -1300)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-1320, -20, 1320, -20, 1320, 20, -1320, 20)
+
+[node name="TopCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, -1300)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="BottomVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(0, 1300)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-1320, -20, 1320, -20, 1320, 20, -1320, 20)
+
+[node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(0, 1300)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="LeftVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(-1300, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1320, 20, -1320, 20, 1320, -20, 1320)
+
+[node name="LeftCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(-1300, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="RightVis" type="Polygon2D" parent="Boundary"]
+position = Vector2(1300, 0)
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-20, -1320, 20, -1320, 20, 1320, -20, 1320)
+
+[node name="RightCol" type="CollisionShape2D" parent="Boundary"]
+position = Vector2(1300, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-1152, 640)
+
+[node name="AmmoStandard2" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1152, -640)
+
+[node name="AmmoPower1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-1152, -640)
+kind = "power"
+amount = 2
+
+[node name="AmmoHoming1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(1152, 640)
+kind = "homing"
+amount = 1
+
+[node name="AmmoMine1" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(0, 1216)
+kind = "mine"
+amount = 2
+
+[node name="Vehicle" parent="." instance=ExtResource("2_veh")]
+position = Vector2(-896, 896)
+
+[node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(896, -896)
+
+[node name="HUD" parent="." instance=ExtResource("7_hud")]

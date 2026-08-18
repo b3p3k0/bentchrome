@@ -7,8 +7,9 @@
 [sub_resource type="Resource" id="Res_chilblain_freeze"]
 script = ExtResource("3_fx")
 kind = &"freeze"
-duration = 5.0
+duration = 3.0
 magnitude = 1.0
+refresh = false
 
 [resource]
 script = ExtResource("1_def")
@@ -22,4 +23,4 @@ acquisition_radius = 1200.0
 projectile_scene = ExtResource("2_proj")
 projectile_tint = Color(0.78, 0.92, 1, 1)
 on_hit_effects = Array[ExtResource("3_fx")]([SubResource("Res_chilblain_freeze")])
-note = "Bluish-white squall with fire-missile tracking: mild damage, victim iced solid 5s (no pedals, no triggers; momentum skates to a stop). Bosses shrug it off."
+note = "Bluish-white squall with fire-missile tracking: mild damage, victim iced solid 3s (no pedals, no triggers; momentum skates to a stop; re-hits while frozen don't extend). Bosses shrug it off."

@@ -82,7 +82,8 @@ func _begin_transition() -> void:
 
 ## Bobtail: fresh pool, feel deck swapped on the CONTROLLER only (set_stats
 ## would repaint the body and reset HP from armor), immortality off. The HUD
-## bar simply refills — it polls get_hp_fraction.
+## bar simply refills — it polls get_hp_fraction. The visual wear tier resets
+## with it (DriveFX polls the same fraction): a fresh phase-2 truck, on purpose.
 func start_phase2() -> void:
 	phase = 2
 	trailer = null  # the cutscene (or the instant path) already freed it

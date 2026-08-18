@@ -89,6 +89,24 @@ func test_slow_refresh_overwrites() -> void:
 	t.check_approx(f.status.speed_scale(), 1.0, "slow: expired, scale back to neutral")
 	_done(f)
 
+## refresh = false (Chilblain / Chill Out): a same-kind re-application while
+## active is ignored outright — no extension, no magnitude overwrite — but a
+## fresh application after expiry lands normally.
+func test_no_refresh_flag_ignores_reapply() -> void:
+	var f := _fixture()
+	var first := _spec(&"slow", 3.0, 0.5)
+	first.refresh = false
+	f.status.apply(first)
+	var again := _spec(&"slow", 10.0, 0.8)
+	again.refresh = false
+	f.status.apply(again)
+	t.check_approx(f.status.speed_scale(), 0.5, "no-refresh: magnitude never overwritten")
+	f.status.tick(3.1)
+	t.check_approx(f.status.speed_scale(), 1.0, "no-refresh: original duration held, never extended")
+	f.status.apply(again)
+	t.check_approx(f.status.speed_scale(), 0.8, "no-refresh: post-expiry application lands")
+	_done(f)
+
 func test_invuln_blocks_damage() -> void:
 	var f := _fixture()
 	f.status.apply(_spec(&"invuln", 1.0))

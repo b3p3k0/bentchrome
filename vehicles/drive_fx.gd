@@ -49,6 +49,20 @@ const FLING_SCALE_HARD := 6.0
 const PeaceMarkerScript := preload("res://vehicles/peace_marker.gd")
 const FrostMarkerScript := preload("res://vehicles/frost_marker.gd")
 
+# --- progressive wear: visual damage tier + trailing smoke ------------------
+# HP thirds per spec: FRESH strictly above 2/3, exact thirds land BANGED.
+const WEAR_FRESH_MIN := 2.0 / 3.0
+const WEAR_BANGED_MIN := 1.0 / 3.0
+const WEAR_SMOKE_AMOUNTS := [0, 6, 12]  # per tier (generator's 7/12 analogue)
+const WEAR_SMOKE_COLORS := [Color(),
+	Color(0.42, 0.43, 0.46, 0.28),   # BANGED: faint thin gray wisps
+	Color(0.10, 0.10, 0.12, 0.55)]   # BUSTED: steady dark trail
+const WEAR_SMOKE_LIFETIME := [0.0, 1.1, 1.8]
+
+var _wear_tier := 0
+var _wear_smoke: CPUParticles2D  # lazily built; ONE emitter reconfigured per tier
+var _wear_paint: Node2D          # lazily resolved Visual/Body
+
 var _vehicle: CharacterBody2D
 var _skids: Array = []  # the active pair of Line2Ds, parented to the level
 var _dust: CPUParticles2D
@@ -113,6 +127,62 @@ func _skid_offsets() -> Array:
 	return [Vector2(-20, -14), Vector2(-20, 14)]
 
 ## Average of the rear tire contacts — where the fling debris streams from.
+## HP fraction -> visual damage tier. Static so tests (and derelicts, if ever
+## wanted) can map without a fixture. No hysteresis: a tier flip costs one
+## cached redraw + idempotent emitter writes, and every heal source is chunky.
+static func wear_tier(hp_fraction: float) -> int:
+	if hp_fraction > WEAR_FRESH_MIN:
+		return 0
+	if hp_fraction >= WEAR_BANGED_MIN:
+		return 1
+	return 2
+
+## The wear poll: push the tier into the paint on change, keep the smoke
+## trailing off the rear. Polling (never Health signals) is the MP-correct
+## read — puppets write _health.hp directly and heal() emits nothing.
+func _update_wear() -> void:
+	if not _vehicle.has_method(&"get_hp_fraction"):
+		return  # bare fixtures: stays FRESH
+	var f: float = _vehicle.get_hp_fraction()
+	var tier := wear_tier(f)
+	if tier != _wear_tier:
+		_wear_tier = tier
+		if _wear_paint == null or not is_instance_valid(_wear_paint):
+			_wear_paint = _vehicle.get_node_or_null(^"Visual/Body") as Node2D
+		if _wear_paint and _wear_paint.has_method(&"set_wear"):
+			_wear_paint.set_wear(tier)
+		_sync_wear_smoke(tier)
+	if _wear_smoke:
+		# Death cuts the smoke (the explosion owns the moment); the paint
+		# stays BUSTED on the player's wreck.
+		_wear_smoke.emitting = _wear_tier >= 1 and f > 0.0
+		if _wear_smoke.emitting:
+			_wear_smoke.global_position = _vehicle.global_position \
+				+ _rear_midpoint().rotated(_vehicle.heading)
+
+## Generator idiom: one lazily built world-space emitter, reconfigured per
+## tier — the trail hangs in the world behind the car like the dust does.
+func _sync_wear_smoke(tier: int) -> void:
+	if tier <= 0:
+		if _wear_smoke:
+			_wear_smoke.emitting = false
+		return
+	if _wear_smoke == null:
+		_wear_smoke = CPUParticles2D.new()
+		_wear_smoke.emitting = false
+		_wear_smoke.local_coords = false
+		_wear_smoke.direction = Vector2(0, -1)
+		_wear_smoke.spread = 28.0
+		_wear_smoke.initial_velocity_min = 6.0
+		_wear_smoke.initial_velocity_max = 18.0
+		_wear_smoke.gravity = Vector2(3, -14)  # drifts up and slightly aside
+		_wear_smoke.scale_amount_min = 2.5
+		_wear_smoke.scale_amount_max = 6.0
+		add_child(_wear_smoke)
+	_wear_smoke.amount = WEAR_SMOKE_AMOUNTS[tier]
+	_wear_smoke.lifetime = WEAR_SMOKE_LIFETIME[tier]
+	_wear_smoke.color = WEAR_SMOKE_COLORS[tier]
+
 func _rear_midpoint() -> Vector2:
 	var offs: Array = _skid_offsets()
 	if offs.is_empty():
@@ -139,7 +209,10 @@ func _flame_poly() -> PackedVector2Array:
 	])
 
 func _physics_process(_delta: float) -> void:
-	if _vehicle == null or not _vehicle.has_method(&"get_controller"):
+	if _vehicle == null:
+		return
+	_update_wear()  # damage tier + smoke need only hp; ticks on puppets too
+	if not _vehicle.has_method(&"get_controller"):
 		return
 	var ctrl = _vehicle.get_controller()
 	if ctrl == null:

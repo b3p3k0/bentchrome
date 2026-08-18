@@ -1,9 +1,12 @@
 extends CanvasLayer
 ## Between-levels breather. Shows the upcoming level's loading card
-## (assets/img/cards/level_<n>.png, 1-based campaign index) when the art
-## exists; falls back to the blocky panel otherwise. Waits for ANY
-## key/button/click. GameState.level_index already points at the NEXT level
-## (the end screen advances it before coming here).
+## (assets/img/cards/, keyed by scene file) when the art exists; falls back
+## to the blocky panel otherwise. Waits for ANY key/button/click.
+## GameState.level_index already points at the NEXT level (the end screen
+## advances it before coming here). Two special slot kinds, both authored in
+## SceneFlow.CAMPAIGN metadata: `placeholder` mode shows the sawhorse card
+## and any key rolls PAST the slot (+1, re-enter — consecutive placeholders
+## chain); `optional: true` shows the STAY/DETOUR chooser instead.
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
@@ -14,20 +17,25 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 # renaming a level can never mismatch its card. Levels without an entry fall to
 # the boss banner (by scene name) or the blocky panel. Add a line per new card.
 const CARDS := {
-	"arena.tscn": "level_1.png",
+	"downtown.tscn": "level_1.png",
 	"freeway.tscn": "level_2.png",
 	"suburbs.tscn": "level_3.png",
 	"snowy.tscn": "level_4.png",
+	"capital_city_carnage.tscn": "level_capital.png",
 }
-# Temporary skip prompt for the under-construction chase level (The Buzzard
-# Run). Delete the buzzard_run branch in _build_ui() once the level ships.
+# Skip prompt for playable-but-optional levels (CAMPAIGN `optional: true`) —
+# a level in development graduates from `placeholder` mode to this.
 const DETOUR_CAPTION := "THIS ROAD IS UNDER CONSTRUCTION"
 const DETOUR_SUB := "You don't need to play it to finish the game"
 const DETOUR_OPTIONS := ["STAY ON ROUTE", "DETOUR"]
+# Unbuilt slots (CAMPAIGN `placeholder` mode) all share the sawhorse card.
+const PLACEHOLDER_CARD := "res://assets/img/cards/level_X.png"
 
 var _armed := false
 var _hint: Label
+var _hint_text := "press any key to roll out"
 var _chooser := false
+var _advance_on_key := false  # placeholder slot: any key rolls past, not into
 var _choice_index := 0
 var _choice_entries: Array[Label] = []
 
@@ -41,7 +49,7 @@ func _arm() -> void:
 	if _chooser:
 		return
 	if _hint:
-		_hint.text = "press any key to roll out"
+		_hint.text = _hint_text
 		_hint.modulate = AMBER
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -58,7 +66,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 	var flow := get_node_or_null(^"/root/SceneFlow")
 	var gs := get_node_or_null(^"/root/GameState")
-	if flow and gs:
+	if not (flow and gs):
+		return
+	if _advance_on_key:
+		# Placeholder slot — roll past it and re-enter for the next stop
+		# (the frame test keeps a real slot after every placeholder).
+		gs.level_index = gs.level_index + 1
+		flow.to_interstitial()
+	else:
 		flow.to_level(gs.level_index)
 
 ## Two-option skip prompt: nav keys toggle STAY/DETOUR, confirm activates.
@@ -95,9 +110,28 @@ func _build_ui() -> void:
 	var next_index: int = gs.level_index if gs else 0
 	var next_name: String = "?"
 	var next_scene := ""
+	var entry: Dictionary = {}
 	if flow and next_index < flow.CAMPAIGN.size():
-		next_name = flow.CAMPAIGN[next_index].name
-		next_scene = String(flow.CAMPAIGN[next_index].scene)
+		entry = flow.CAMPAIGN[next_index]
+		next_name = entry.name
+		next_scene = String(entry.scene)
+
+	if StringName(entry.get("mode", &"")) == &"placeholder":
+		_advance_on_key = true
+		_hint_text = "press any key to detour ahead"
+		# A placeholder may author bespoke card art ("card" on its CAMPAIGN
+		# entry); the shared sawhorse covers the rest.
+		var card_file := String(entry.get("card", ""))
+		var sawhorse: Texture2D = null
+		if card_file != "":
+			sawhorse = TextureLoader.load_texture("%s/%s" % [CARD_DIR, card_file])
+		if sawhorse == null:
+			sawhorse = TextureLoader.load_texture(PLACEHOLDER_CARD)
+		if sawhorse:
+			_build_card(sawhorse, "UNDER CONSTRUCTION —  %s" % next_name.to_upper(), AMBER)
+		else:
+			_build_panel(next_index, next_name)
+		return
 
 	if next_scene.ends_with("depot.tscn"):
 		var portrait := TextureLoader.load_texture("res://assets/img/bios/lackey.png")
@@ -110,7 +144,7 @@ func _build_ui() -> void:
 			_build_card(portrait, "THE COLISEUM'S UNDEFEATED KING AWAITS — GOLIATH", AMBER)
 			return
 
-	if next_scene.ends_with("buzzard_run.tscn"):
+	if bool(entry.get("optional", false)):
 		_build_detour(_card_for(next_scene))
 		return
 

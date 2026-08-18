@@ -25,7 +25,8 @@ every ordinary crate a bespoke network system.
 - **MUST:** AI receives a navigation-only danger cue during committed danger
   phases. It does not deliberately focus the landmark unless the encounter says
   otherwise; incidental fire and rams may still damage it.
-- **DEFAULT:** destruction leaves a persistent, nonblocking aftermath that helps
+- **DEFAULT (implemented game-wide):** destruction leaves a persistent,
+  nonblocking aftermath that helps
   players read the changed battlefield.
 
 ## Host-authoritative state
@@ -44,7 +45,7 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void
   applies damage/status/shove, and decides destruction.
 - **MUST:** clients only apply presentation and collision state from repeated
   snapshots. Applying the same row twice is safe.
-- **MUST:** destruction leaves a hidden/noncolliding tombstone in the scene so
+- **MUST:** destruction leaves a noncolliding tombstone in the scene so
   its terminal state continues to replicate. Do not free a networked entity.
 - **MUST:** a client receiving the destroyed state initially suppresses the
   death burst; a live→dead edge may present it once. Missing IDs, malformed

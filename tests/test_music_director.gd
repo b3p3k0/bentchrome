@@ -52,6 +52,8 @@ func test_zero_assets_never_crash() -> void:
 
 func test_tracks_cover_flows() -> void:
 	for entry in flow.CAMPAIGN:
+		if StringName(entry.mode) == &"placeholder":
+			continue  # sceneless slot — the interstitial walks to the next real track
 		t.check(MusicScript.TRACKS.has(entry.scene),
 			"bgm: campaign scene mapped: " + str(entry.scene))
 	for entry in flow.MP_MAPS:

@@ -34,7 +34,8 @@ const TRACKS := {
 	"res://ui/mp_scoreboard.tscn": &"bgm_menu",
 	"res://levels/tutorial/drivers_ed.tscn": &"bgm_menu",
 	"res://ui/interstitial.tscn": UPCOMING,
-	"res://levels/arena/arena.tscn": &"bgm_arena",
+	"res://levels/arena_assault/arena_assault.tscn": &"bgm_arena",
+	"res://levels/downtown/downtown.tscn": &"bgm_arena",
 	"res://levels/freeway/freeway.tscn": &"bgm_freeway",
 	"res://levels/suburbs/suburbs.tscn": &"bgm_suburbs",
 	"res://levels/snowy/snowy.tscn": &"bgm_snowy",
@@ -42,6 +43,8 @@ const TRACKS := {
 	"res://levels/chase/buzzard_run.tscn": &"bgm_buzzard_run",
 	"res://levels/dock/dock.tscn": &"bgm_dock",
 	"res://levels/construction/ground_floor_gore.tscn": &"bgm_ground_floor_gore",
+	"res://levels/capital/capital_city_carnage.tscn": &"bgm_arena",  # city track
+		# for now — a bespoke storm track is a welcome follow-up
 	"res://levels/stadium/stadium.tscn": &"bgm_stadium_p1",  # p2 via set_override
 	"res://levels/mp/mp_match.tscn": RESOLVE_CHILD,
 	"res://levels/custom_level.tscn": &"bgm_arena",  # fan levels: house combat track
@@ -154,6 +157,10 @@ func _upcoming_track() -> StringName:
 	if gs == null or flow == null:
 		return &""
 	var idx: int = clampi(gs.level_index, 0, flow.CAMPAIGN.size() - 1)
+	# Placeholder slots are sceneless — their card plays the next real stop's
+	# track (the finale is never a placeholder, so the walk always lands).
+	while idx < flow.CAMPAIGN.size() - 1 and StringName(flow.CAMPAIGN[idx].mode) == &"placeholder":
+		idx += 1
 	var want: StringName = TRACKS.get(flow.CAMPAIGN[idx].scene, &"")
 	return want if not want in [UPCOMING, RESOLVE_CHILD] else &""
 
@@ -227,3 +234,11 @@ func _update(delta: float) -> void:
 				p.stop()  # never leave a muted looping decode alive
 			continue
 		p.volume_db = linear_to_db(maxf(_gain[i], 0.0001)) + _duck_db
+
+## Quit etiquette: ogg playbacks release on the AudioServer's NEXT mix pass,
+## so a same-frame quit reads as "leaked instances" at exit. SceneFlow's
+## graceful quit calls this, waits one frame, then leaves.
+func stop_all() -> void:
+	for p in _players:
+		if p is AudioStreamPlayer and p.playing:
+			p.stop()

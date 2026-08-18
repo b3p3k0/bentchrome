@@ -35,10 +35,17 @@ const FLOOR_LIFT := 32.0  # px of visual lift per floor above the baseline (2) �
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf)
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
+const IR := preload("res://game/input_router.gd")  # input names only (leaf)
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const PitFallFXScript := preload("res://environment/pit_fall_fx.gd")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
 const TurretScript := preload("res://weapons/turret.gd")
 const NetEvents := preload("res://game/net/net_events.gd")
+
+# Pit presentation only — collision, damage, and the physics body never scale.
+static var PIT_FALL_SECONDS := 0.70
+static var PIT_IMPACT_SECONDS := 0.60
+static var PIT_MIN_VISUAL_SCALE := 0.05
 
 signal combat_hit(attacker: Node2D)
 
@@ -59,6 +66,9 @@ signal combat_hit(attacker: Node2D)
 									  # soft underbelly (all that armor had to be
 									  # paid for somewhere; mine.gd reads this)
 
+@export_group("Camera")
+@export var camera_look_ahead_enabled := true
+
 @export_group("Depth")
 @export var gravity_z := 1300.0
 @export var jump_launch := 760.0
@@ -71,6 +81,14 @@ signal combat_hit(attacker: Node2D)
 @export var ram_damage_scale := 0.06
 @export var ram_min_speed := 220.0
 @export var ram_cooldown := 0.3
+## The side slide (wrecking ball): a handbrake-born lateral slide bills the
+## victim with this bonus and takes NOTHING back (the victim's own ram loop
+## skips a side-slider, dash-style).
+@export var side_slide_bonus := 1.5
+@export var slide_min_speed := 250.0
+
+const SLIDE_LAT_FRAC := 0.8  # sideways fraction of travel that reads as a slide (~53 deg+)
+const SLIDE_GRACE := 0.6     # seconds after handbrake release the slam still credits
 @export var punch_hp_ref := 200.0     # punch-through keep-scale reference:
 @export var punch_keep_min := 0.55    # ram-killing a prop restores entry speed
 @export var punch_keep_max := 0.95    # scaled by its heft — debris flies, cover costs
@@ -95,13 +113,34 @@ var _floor_vis := 1.0:    # size cue — composes into the VISUALS only, never r
 	set(v):
 		_floor_vis = v
 		if _visual:
-			_visual.scale = Vector2.ONE * body_scale * v
+			_visual.scale = Vector2.ONE * body_scale * v * _pit_fall_scale
+var _pit_fall_scale := 1.0:
+	set(v):
+		_pit_fall_scale = v
+		if _visual and is_inside_tree():
+			_paint_depth()
 var _ram_cd := 0.0        # cooldown between ram hits
+var _hb_recent_t := 0.0   # side-slide credit window (handbrake held or just released)
 var _shake := 0.0         # camera shake energy (player only)
+var _camera_base_position := Vector2.ZERO  # authored lead (Route 666 owns its own)
+var _camera_base_cached := false
+var _pit_camera_held := false  # latches past lethal impact until respawn/teardown
+var _pit_camera_world_position := Vector2.ZERO
+var _zoom_was_pressed := false
+var _locator_left := 0.0
+var _locator_elapsed := 0.0
 var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
+## Universal non-MG refire lockout: firing ANY non-MG weapon (missile, mine,
+## special) blocks every non-MG weapon for WEAPON_LOCK seconds — one clock for
+## the whole bay, players and AI alike. The MG (its own overheat) is untouched.
+## Bosses (fixed_loadout) run their own valve; weapon_lock_exempt opts a level
+## out (the Route 666 chase self-limits in its drivers).
+static var WEAPON_LOCK := 2.0
+var _weapon_lock_t := 0.0
+var weapon_lock_exempt := false
 var _mg_alt := 0          # staggered multi-barrel MG: which barrel fires next
 var _repairing := false
 var _repair_anchor := Vector2.ZERO
@@ -174,6 +213,8 @@ func _ready() -> void:
 	else:
 		_paint.apply(&"", body_color, Color(1, 0.85, 0.2))
 		_sync_body_metrics()
+	if faction == &"player":
+		_apply_campaign_carry()
 	if body_scale != 1.0:
 		_visual.scale = Vector2.ONE * body_scale
 	add_to_group(faction)        # "player" or "enemies" — identity
@@ -181,14 +222,22 @@ func _ready() -> void:
 	if start_floor >= 1:
 		_adopt_floor(start_floor)  # deferred masks land before the first physics tick
 	if faction != &"player":
-		# Same loadout as the player, a third of the trigger speed — slower
-		# still on the easier tiers (difficulty knob is 1.0 on hard).
+		# The MG keeps the AI trigger discipline (a third of the player rate,
+		# slower still on easier tiers — the knob is 1.0 on hard).
 		var trigger_scale := ai_cooldown_scale * Difficulty.knob(&"ai_fire_cooldown")
 		if _mg_mount:
 			_mg_mount.cooldown_scale = trigger_scale
+		if fixed_loadout:
+			# Bosses run their own cadence on the secondary too.
+			var boss_secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
+			if boss_secondary:
+				boss_secondary.cooldown_scale = trigger_scale
+	if not fixed_loadout:
+		# Ordinary cars (player AND AI): the unified WEAPON_LOCK is the ONLY
+		# non-MG cadence, so the secondary mount must never self-gate.
 		var secondary := get_node_or_null(^"SecondaryMount") as WeaponMount
 		if secondary:
-			secondary.cooldown_scale = trigger_scale
+			secondary.cooldown_scale = 0.0
 	if _rack and _special:
 		# Selection drives what the special/secondary path fires next. The lock
 		# forces a trigger release before the newly selected slot can fire.
@@ -214,14 +263,21 @@ func _ready() -> void:
 		if _rack:
 			_rack.god = true
 			_rack.arm_all_once()
-	# Player camera boots straight at the persisted zoom (no pull-in from the
-	# scene's authored value on every level start).
+	# Driving cameras boot at the persisted combat/overview state. Cache the
+	# authored local position before look-ahead ever moves it; Route 666 disables
+	# look-ahead and keeps its hand-authored northward lead untouched.
 	var boot_cam := get_node_or_null(^"Camera2D") as Camera2D
 	var boot_gs := get_node_or_null(^"/root/GameState")
-	if boot_cam and boot_cam.enabled and boot_gs:
-		boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview if boot_gs.overview else boot_gs.zoom_combat)
+	if boot_cam:
+		_camera_base_position = boot_cam.position
+		_camera_base_cached = true
+		_zoom_was_pressed = Input.is_action_pressed(IR.ACTION_ZOOM)
+		if boot_gs:
+			boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview \
+				if boot_gs.overview else boot_gs.zoom_combat)
 
 func _exit_tree() -> void:
+	_reset_locator_pulse()
 	_set_net_repairing(false, global_position)
 	end_repair_hold(false)
 
@@ -250,21 +306,107 @@ func _process(delta: float) -> void:
 	var camera := get_node_or_null(^"Camera2D") as Camera2D
 	if camera == null or not camera.enabled:
 		return
+	if Input.is_action_just_pressed(IR.ACTION_LOCATE_PLAYER):
+		trigger_locator_pulse()
+	_update_locator_pulse(delta)
 	if _shake > 0.05:
 		_shake = maxf(_shake - 30.0 * delta, 0.0)
 		camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake))
 	elif camera.offset != Vector2.ZERO:
 		camera.offset = Vector2.ZERO
-	# Zoom toggle: combat close-up vs overview pull-back. State + values live on
-	# GameState (proto-settings; persists across levels/respawns); the lerp makes
-	# it read as a camera move. Vector art keeps both ends pixel-crisp.
+	# Low-attention tactical toggle: one press changes depth and the state follows
+	# the player across respawns, scenes, spectators, and future launches.
 	var gs := get_node_or_null(^"/root/GameState")
 	if gs == null:
 		return
-	if Input.is_action_just_pressed(&"zoom_toggle"):
-		gs.overview = not gs.overview
-	var target: float = gs.zoom_overview if gs.overview else gs.zoom_combat
-	camera.zoom = camera.zoom.lerp(Vector2.ONE * target, minf(6.0 * delta, 1.0))
+	var zoom_pressed := Input.is_action_pressed(IR.ACTION_ZOOM)
+	if zoom_pressed and not _zoom_was_pressed:
+		gs.toggle_overview()
+	_zoom_was_pressed = zoom_pressed
+	var target_zoom: float = gs.zoom_overview if gs.overview else gs.zoom_combat
+	camera.zoom = camera.zoom.lerp(Vector2.ONE * target_zoom, minf(8.0 * delta, 1.0))
+	if _pit_camera_held:
+		# Top-level mode keeps the body tween out of this transform entirely; the
+		# assignment also makes the held contract explicit for every process frame.
+		camera.global_position = _pit_camera_world_position
+	else:
+		_update_camera_look_ahead(camera, delta, gs)
+
+## World-velocity lead: preserve object scale and spend some trailing view to
+## show the road the car is actually eating. The vehicle node never rotates, so
+## world and camera-local axes agree. Static for deterministic tuning tests.
+static func camera_look_ahead_for(world_velocity: Vector2, max_lead := 140.0) -> Vector2:
+	const DEAD_SPEED := 30.0
+	const FULL_SPEED := 400.0
+	var speed := world_velocity.length()
+	if speed <= DEAD_SPEED or max_lead <= 0.0:
+		return Vector2.ZERO
+	var strength := clampf((speed - DEAD_SPEED) / (FULL_SPEED - DEAD_SPEED), 0.0, 1.0)
+	return world_velocity.normalized() * max_lead * strength
+
+func _update_camera_look_ahead(camera: Camera2D, delta: float, gs: Node = null) -> void:
+	if not _camera_base_cached:
+		_camera_base_position = camera.position
+		_camera_base_cached = true
+	var target := _camera_base_position
+	var alive := _health == null or _health.hp > 0.0
+	if gs == null:
+		gs = get_node_or_null(^"/root/GameState")
+	var globally_enabled: bool = gs == null or bool(gs.camera_look_ahead_enabled)
+	var distance: float = 140.0 if gs == null else float(gs.camera_look_ahead_distance)
+	if camera_look_ahead_enabled and globally_enabled and visible and alive \
+			and not _repairing and not _falling:
+		target += camera_look_ahead_for(velocity, distance)
+	camera.position = camera.position.lerp(target, minf(5.0 * delta, 1.0))
+
+func _hold_camera_for_pit() -> void:
+	var camera := get_node_or_null(^"Camera2D") as Camera2D
+	if camera == null or not camera.enabled:
+		return
+	# Capture what the player actually sees, not the camera node's smoothed
+	# destination. The hold survives _falling clearing after Health.kill(), so
+	# smoothing has no pitward history to consume during the respawn delay.
+	_pit_camera_world_position = camera.get_screen_center_position()
+	_pit_camera_held = true
+	_shake = 0.0
+	camera.offset = Vector2.ZERO
+	camera.top_level = true
+	camera.global_position = _pit_camera_world_position
+	camera.reset_smoothing()
+
+## On-demand local locator: the paint alone strobes, so its self-modulate
+## composes with damage/status tint on Visual and respawn opacity above it.
+## No state leaves this client and no collision/gameplay property changes.
+func trigger_locator_pulse() -> bool:
+	if not _is_local_viewer() or _paint == null:
+		return false
+	_locator_left = 0.6
+	_locator_elapsed = 0.0
+	_paint.self_modulate = Color(2.4, 2.4, 2.4, 1.0)
+	return true
+
+func _update_locator_pulse(delta: float) -> void:
+	if _locator_left <= 0.0 or _paint == null:
+		return
+	_locator_left = maxf(_locator_left - delta, 0.0)
+	_locator_elapsed += delta
+	if _locator_left <= 0.0:
+		_reset_locator_pulse()
+		return
+	var bright := int(floor(_locator_elapsed / 0.075)) % 2 == 0
+	_paint.self_modulate = Color(2.4, 2.4, 2.4, 1.0) if bright else Color.WHITE
+
+func _reset_locator_pulse() -> void:
+	_locator_left = 0.0
+	_locator_elapsed = 0.0
+	if _paint:
+		_paint.self_modulate = Color.WHITE
+
+func _is_local_viewer() -> bool:
+	var marked := get_tree().get_first_node_in_group(&"local_player")
+	if marked:
+		return marked == self
+	return get_tree().get_first_node_in_group(&"player") == self
 
 ## Applies the current stats to the controller/health/visuals. Re-callable live
 ## (the dev dashboard's car switcher uses set_stats()).
@@ -278,9 +420,14 @@ func _apply_stats() -> void:
 	body_color = stats.primary_color
 	_paint.apply(stats.id, stats.primary_color, stats.accent_color)
 	_sync_body_metrics()
-	if _rack:
-		_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds,
-			stats.special_b, stats.no_mines)
+	if _mg_mount:
+		# Garage MG Cooling: assignment (never *=) — set_stats is re-callable
+		# live (dev car switcher, enemy re-roll) and must not compound.
+		_mg_mount.heat_scale = stats.mg_heat_scale
+	# Slide-move identity (Car Tuner column) — same idempotent-assignment rule.
+	# (whip_scale rides StatCurves.apply with the other controller knobs.)
+	side_slide_bonus = stats.side_slide_bonus
+	_configure_rack()
 	if stats.special and _special:
 		_special.set_weapon(_rack.selected_def() if _rack else stats.special)
 	if _special:
@@ -300,6 +447,44 @@ func set_stats(new_stats: VehicleStats) -> void:
 		return
 	stats = new_stats
 	_apply_stats()
+
+## The car's defined load: authored special at cap, 2 fire / 1 homing /
+## 1 power, empty rear + mines. Shared by stat application and the
+## death-respawn reset; a god rack re-arms its one-of-everything so the
+## DEVGOD bench survives resets and car switches.
+func _configure_rack() -> void:
+	if _rack == null or stats == null:
+		return
+	_rack.configure(stats.special, stats.special_ammo_cap, stats.special_recharge_seconds,
+		stats.special_b, stats.no_mines)
+	if _rack.god:
+		_rack.arm_all_once()
+
+## Campaign carry: last level's rack lands verbatim, except the special —
+## never start a level with a dead special slot (floor 1; restore clamps caps).
+func apply_ammo_carry(counts: Array) -> void:
+	if _rack == null or counts.is_empty():
+		return
+	var adjusted := counts.duplicate()
+	adjusted[WeaponRack.Slot.SPECIAL] = maxi(int(adjusted[WeaponRack.Slot.SPECIAL]), 1)
+	_rack.restore_ammo(adjusted)
+
+## The previous level's bay lands on this level's FIRST spawn only (death
+## respawns reset to the defined load). Campaign SP only: tutorial/test-drive
+## lanes, custom-level launches, and live LAN sessions never inherit a bay —
+## MP entry doesn't re-stamp game_mode, so the Net gate is load-bearing.
+func _apply_campaign_carry() -> void:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null or gs.game_mode != &"campaign":
+		return
+	if String(gs.get("pending_level_path")) != "":
+		return
+	var net := get_node_or_null(^"/root/Net")
+	if net != null and int(net.get("mode")) != 0:
+		return
+	var carry: Variant = gs.get("carry_ammo")
+	if carry is Array and not carry.is_empty():
+		apply_ammo_carry(carry)
 
 ## Pushes the paint style's footprint into everything that must agree with it:
 ## shadow silhouette, muzzle nose, collision radius. Radius is set absolutely
@@ -398,7 +583,7 @@ func _physics_process(delta: float) -> void:
 	if _special and _special.is_spinning() and intent.has("steer"):
 		# Tornado Alley: rear wheels are off the ground — mostly a passenger.
 		intent["steer"] = float(intent["steer"]) * SpecialController.TORNADO_STEER
-	if _controller and not (_special and _special.is_dashing()) \
+	if _controller and not is_dashing() \
 			and not (_driver and _driver.has_method(&"is_forcing") and _driver.is_forcing()):
 		# Normal driving; skipped mid-Leap (and mid-charge for drivers that
 		# force velocity, duck-typed) so the controller's top-speed clamp
@@ -409,6 +594,14 @@ func _physics_process(delta: float) -> void:
 	elif _controller:
 		_controller.service_braking = false
 	_sync_brake_lights()
+	# Side-slide credit window: handbrake now, or released within SLIDE_GRACE
+	# (the let-go-and-slam moment). AI never handbrakes, so slip alone — an
+	# icy AI corner — never buys slam credit or protection. Ticked BEFORE the
+	# slide so a same-frame slam is covered.
+	if _controller and _controller.handbraking:
+		_hb_recent_t = SLIDE_GRACE
+	elif _hb_recent_t > 0.0:
+		_hb_recent_t -= delta
 	# Captured before move_and_slide: a head-on hit on a static body zeroes
 	# velocity during the slide, so post-slide speed under-reads the impact.
 	var pre_slide_vel := velocity
@@ -431,6 +624,8 @@ func _physics_process(delta: float) -> void:
 			_rack.select_prev()
 		if intent.get("weapon_next", false):
 			_rack.select_next()
+	if _weapon_lock_t > 0.0:
+		_weapon_lock_t = maxf(_weapon_lock_t - delta, 0.0)
 	if _special and _muzzle:
 		var pressed: bool = intent.get("fire_selected", false)
 		if not pressed:
@@ -438,11 +633,16 @@ func _physics_process(delta: float) -> void:
 		var wants_fire := pressed and not _fire_lock
 		if _rack:
 			wants_fire = wants_fire and _rack.can_consume()
+		# Universal non-MG lockout — one recently-fired weapon holds the whole
+		# bay for WEAPON_LOCK seconds (bosses and chase levels opt out).
+		if _weapon_lock_t > 0.0 and not fixed_loadout and not weapon_lock_exempt:
+			wants_fire = false
 		# Def captured BEFORE the shot: consume() can auto-cycle the selection.
 		var firing_def: WeaponDef = _rack.selected_def() if _rack else null
 		var launch: Dictionary = secondary_launch(firing_def)
 		if _special.activate(wants_fire, launch.origin, launch.direction, self) and _rack:
 			_rack.consume()
+			_weapon_lock_t = WEAPON_LOCK
 			# Mines announce the drop; projectile fire is voiced by the mount.
 			if is_in_group(&"player") and firing_def and firing_def.kind == WeaponDef.Kind.DROP:
 				var audio_m := get_node_or_null(^"/root/AudioDirector")
@@ -470,14 +670,15 @@ func _paint_depth() -> void:
 		grounded_lift = FLOOR_LIFT * maxf(0.0, grade_floor - 2.0)
 		grounded_scale = _visual_scale_at_floor(grade_floor)
 	_visual.position.y = -(height + grounded_lift)
-	_visual.scale = Vector2.ONE * body_scale * grounded_scale
+	_visual.scale = Vector2.ONE * body_scale * grounded_scale * _pit_fall_scale
 	if _shadow:
 		# The shadow RIDES the terrace lift (tight under a driving car) and only
 		# detaches/shrinks with real airtime — floating is for jumps, not roofs.
 		_shadow.position.y = -grounded_lift
 		var s := clampf(1.0 - height * 0.0012, 0.5, 1.0) * body_scale * grounded_scale
-		_shadow.scale = Vector2(s, s)
-		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0)
+		_shadow.scale = Vector2(s, s) * _pit_fall_scale
+		_shadow.modulate.a = clampf(1.0 - height * 0.0016, 0.4, 1.0) \
+			* _pit_fall_scale
 
 func _cache_grade_visuals() -> void:
 	_grade_visuals.clear()
@@ -768,12 +969,15 @@ func launch_from_jump() -> void:
 			audio_j.play_at(&"jump_pad", global_position)
 	_set_airborne(true)
 
-## Over the edge: kill physics and collisions, shrink into the void, then die
-## for real. The fall suppresses the explosion — you fell, you didn't pop.
-func fall_into_pit() -> void:
+## Over the edge: kill physics and collisions, pull across the pit's short axis,
+## shrink into the void, then die for real. The fall suppresses the ordinary
+## explosion — the tiny distant impact is timed to pit_fall's muted thud.
+func fall_into_pit(target: Vector2) -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
 	_falling = true
+	_pit_fall_scale = 1.0
+	_hold_camera_for_pit()
 	if is_in_group(&"player"):  # the wasteland taxes clumsiness harder than combat
 		preload("res://game/economy.gd").apply_penalty(&"fall")
 	var audio_p := get_node_or_null(^"/root/AudioDirector")
@@ -787,14 +991,26 @@ func fall_into_pit() -> void:
 	set_deferred("collision_layer", 0)
 	set_deferred("collision_mask", 0)
 	var tween := create_tween()
-	if _visual:
-		tween.tween_property(_visual, "scale", Vector2(0.05, 0.05), 0.7)
-	if _shadow:
-		tween.parallel().tween_property(_shadow, "scale", Vector2(0.05, 0.05), 0.7)
-	tween.tween_callback(func() -> void:
+	tween.set_parallel(true)
+	tween.tween_property(self, "global_position", target, PIT_FALL_SECONDS) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(self, "_pit_fall_scale", PIT_MIN_VISUAL_SCALE,
+		PIT_FALL_SECONDS).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	var impact_tween := create_tween()
+	impact_tween.tween_interval(clampf(PIT_IMPACT_SECONDS, 0.0, PIT_FALL_SECONDS))
+	impact_tween.tween_callback(_spawn_pit_impact)
+	tween.chain().tween_callback(func() -> void:
 		if _health:
 			_health.kill()
 		_falling = false)
+
+func _spawn_pit_impact() -> void:
+	var world_parent: Node = get_parent()
+	if world_parent == null or not is_inside_tree():
+		return
+	var fx: Node2D = PitFallFXScript.new()
+	world_parent.add_child(fx)
+	fx.global_position = global_position
 
 ## Into the drink: the pit's diminishing-car exit, but wetter — a splash ring
 ## at entry, a slightly slower shrink darkening toward the water, and rising
@@ -997,9 +1213,29 @@ func is_tornado_active() -> bool:
 func is_trigger_armed() -> bool:
 	return _special != null and _special.trigger_armed()
 
-## Shared respawn/repair protection. Re-applying StatusReceiver's same-kind
-## effect refreshes it to at least the full requested duration; one owned tween
-## keeps the blink cadence from stacking when a shield is refreshed.
+## Mid-Leap. Other cars' ram loops check this: the dash bills its victim, never
+## the other way around.
+func is_dashing() -> bool:
+	return _special != null and _special.is_dashing()
+
+## Mid side-slide: traveling mostly sideways at speed off a recent handbrake.
+## Kinematics + the grace window — the wrecking ball's bill is one-way (other
+## cars' ram loops skip a side-slider, dash-style), and the handbrake-recency
+## requirement keeps icy AI cornering from ever buying the protection.
+func is_side_sliding() -> bool:
+	if _hb_recent_t <= 0.0:
+		return false
+	var speed := velocity.length()
+	if speed < slide_min_speed:
+		return false
+	var forward := Vector2.RIGHT.rotated(heading)
+	return absf(velocity.dot(forward.orthogonal())) >= speed * SLIDE_LAT_FRAC
+
+## Shared respawn/repair/Leap-connect protection. Re-applying StatusReceiver's
+## same-kind effect refreshes it to at least the full requested duration; one
+## owned tween keeps the blink cadence from stacking when a shield is
+## refreshed. Sets Health.invulnerable directly so callers releasing another
+## hold (or landing a dash) in the same call get no one-frame damage window.
 func grant_spawn_shield(seconds := DEFAULT_SHIELD_SECONDS) -> void:
 	if seconds <= 0.0 or _status == null:
 		return
@@ -1021,8 +1257,12 @@ func grant_spawn_shield(seconds := DEFAULT_SHIELD_SECONDS) -> void:
 		_shield_tween.tween_property(_visual, "modulate:a", 1.0, 0.1)
 
 ## Campaign respawn: back to a spawn point, full tank, physics on, and a brief
-## invuln blink-shield so spawn-camping hunters can't chain-kill.
-func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_SECONDS) -> void:
+## invuln blink-shield so spawn-camping hunters can't chain-kill. A new life
+## also restarts on the defined weapon load (all modes — SP, chase, MP);
+## reset_rack = false is the level-START blink-shield call, which must not
+## stomp a just-applied campaign carry.
+func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_SECONDS,
+		reset_rack := true) -> void:
 	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
@@ -1036,6 +1276,19 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 	global_position = at
 	heading = new_heading
 	velocity = Vector2.ZERO
+	# Camera2D smoothing remembers its last world-space center. A pit fall moves
+	# that center far from spawn, so a bare vehicle teleport makes the view snap,
+	# chase the old pit position, then catch up again. Reset the authored local
+	# lead and smoothing history in the same frame as the respawn teleport.
+	_pit_camera_held = false
+	var camera := get_node_or_null(^"Camera2D") as Camera2D
+	if camera:
+		camera.top_level = false
+		if _camera_base_cached:
+			camera.position = _camera_base_position
+		camera.offset = Vector2.ZERO
+		camera.reset_smoothing()
+	_shake = 0.0
 	height = 0.0
 	vz = 0.0
 	_falling = false
@@ -1045,12 +1298,15 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 		_floor_tween.kill()
 	_floor_vis = 1.0
 	_floor_lift = 0.0
+	_pit_fall_scale = 1.0
 	_apply_ground_collision()
 	_update_draw_order(false)
 	if _health:
 		_health.hp = _health.max_hp
 	if _status:
 		_status.clear()  # death doesn't carry its fire into the next life
+	if reset_rack:
+		_configure_rack()  # nor its scavenged bay — the defined load returns
 	set_physics_process(true)
 	if _visual:
 		_visual.scale = Vector2.ONE * body_scale  # pit falls shrink it
@@ -1062,6 +1318,7 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 func take_ram_damage(amount: float, source: Node2D = null) -> void:
 	if source:
 		last_attacker = source
+	set_meta(&"bc_hit_kind", &"ram")  # telemetry breadcrumb (botlab recorder)
 	if _health:
 		_health.take_damage(amount)
 
@@ -1084,11 +1341,23 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 		if other == self:
 			continue
 		if other is Vehicle:
+			if other.is_dashing():
+				# Leap: the ram bill is the CASTER's alone — the victim's own
+				# loop must never price the body-check back onto the dasher.
+				# (Two mid-dash cars billing nothing is symmetric and accepted.)
+				continue
+			if other.is_side_sliding():
+				# Side slide: the wrecking ball's bill is one-way too — skill
+				# with the brake means the broadside costs the slider nothing.
+				continue
 			var rel: float = (velocity - other.velocity).length()
 			if rel > ram_min_speed:
-				# An armed Toe Jam charge replaces the speed-scaled hit.
+				# An armed Toe Jam charge replaces the speed-scaled hit (its
+				# own economy — the slide bonus never compounds it).
 				var charged: float = _special.take_armed_hit() if _special else 0.0
-				var hit: float = charged if charged > 0.0 else (rel - ram_min_speed) * ram_damage_scale
+				var hit: float = charged if charged > 0.0 \
+					else (rel - ram_min_speed) * ram_damage_scale \
+						* (side_slide_bonus if is_side_sliding() else 1.0)
 				if _special:
 					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)
@@ -1141,6 +1410,8 @@ func _apply_bounce(pre_vel: Vector2) -> void:
 ## floor) — the mercy governor checks HP before the hit, so rams just above
 ## its line were still finishing cars. Obstacle crashes damage nobody anyway.
 static func ram_clamp(hit: float, attacker: Node, victim: Node) -> float:
+	if Combat.AI_MERCY_HP <= 0.0:
+		return hit  # mercy floor off (botlab lethal mode) — rams kill too
 	if attacker.is_in_group(&"player") or victim.is_in_group(&"player"):
 		return hit
 	if victim.has_method(&"get_hp"):

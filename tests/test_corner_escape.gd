@@ -5,7 +5,7 @@ extends RefCounted
 ## of grinding into the walls. Runs the real arena scene and pumps physics
 ## frames (the runner awaits test methods).
 
-const ArenaScene := preload("res://levels/arena/arena.tscn")
+const ArenaScene := preload("res://levels/downtown/downtown.tscn")
 
 const CORNER := Vector2(1876.0, -1812.0)
 const UNPIN_DIST := 250.0   # out of the corner pocket

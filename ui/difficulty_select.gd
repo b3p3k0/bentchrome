@@ -1,11 +1,13 @@
 extends Control
 ## The DMV window: pick a license class before picking a ride. Sits between
-## mode select (ROAD TRIP) and car select; the tier is run state (difficulty.gd static),
-## fixed for the whole campaign — the end screen's Restart never comes back
-## here, only Quit to Title does. Cursor lands on the current tier: choosing
-## ROAD TRIP initializes it to ROAD RAGING COMMUTER, while backing up from car
-## select preserves an explicit pick. BACK and ESC both return to mode select.
-## Manual-highlight menu idiom cloned from title.gd — no focus system.
+## mode select and the rest of the lane — ROAD TRIP continues to car select,
+## SINGLE BATTLE detours to the fight card (level select) first. The tier is
+## run state (difficulty.gd static), fixed for the whole run — the end
+## screen's Restart never comes back here, only Quit to Title does. Cursor
+## lands on the current tier: choosing a lane initializes it to ROAD RAGING
+## COMMUTER, while backing up preserves an explicit pick. BACK and ESC both
+## return to mode select. Manual-highlight menu idiom cloned from title.gd —
+## no focus system.
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -65,7 +67,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			UiSfx.select(self)
 			_done = true
 			Difficulty.tier = ORDER[_index]
-			SceneFlow.to_select()
+			if GameState.game_mode == &"single_battle":
+				SceneFlow.to_level_select()
+			else:
+				SceneFlow.to_select()
 
 func _highlight() -> void:
 	for i in _entries.size():

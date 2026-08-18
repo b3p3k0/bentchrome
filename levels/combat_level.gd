@@ -18,6 +18,11 @@ const SHIELD_TIME := 2.0
 ## their first physics tick; pause/end screens, the enemy re-roll, and the
 ## lives loop all stand down — the shell (levels/mp/mp_match.gd) owns them.
 @export var mp_managed := false
+
+## Routine default: every ordinary car boots aimed at the spawn centroid
+## (face_spawns_inward). Specialty levels that stage their own opening
+## tableau flip this off and keep the baked .tscn rotations.
+@export var face_spawns := true
 var mp_spawns: Array = []  # [{pos, heading, floor}] — player slot first, then Enemy1..N
 
 @onready var _player: Vehicle = $Vehicle
@@ -34,6 +39,14 @@ func _ready() -> void:
 	for autoload_name in ["Dev", "GameState", "SceneFlow", "Spawner", "InputRouter", "AudioDirector"]:
 		if get_node_or_null("/root/" + autoload_name) == null:
 			push_warning("autoload MISSING: " + autoload_name)
+	# Before the MP harvest AND before the SP spawn capture: every seat's spawn
+	# data inherits the inward-facing heading either way.
+	if face_spawns:
+		var baked_cars: Array = []
+		for child in get_children():
+			if child is Vehicle:
+				baked_cars.append(child)
+		face_spawns_inward(baked_cars)
 	if mp_managed:
 		Economy.enabled = false  # BOLTS are a campaign thing; MP wallets stay shut
 		_collect_and_clear_for_mp()
@@ -62,7 +75,9 @@ func _ready() -> void:
 	_spawn_point = _player.global_position
 	_spawn_heading = _player.heading
 	# Level-start gets the same blink shield as a respawn — no spawn ambushes.
-	_player.respawn(_spawn_point, _spawn_heading, SHIELD_TIME)
+	# reset_rack = false: the campaign carry landed in Vehicle._ready and this
+	# call must not stomp it back to the defined load.
+	_player.respawn(_spawn_point, _spawn_heading, SHIELD_TIME, false)
 
 ## The lives loop. Dead + lives to spare = respawn after a beat; dead on the
 ## last life = zero the tank and let the end screen call it.
@@ -114,6 +129,29 @@ func _collect_and_clear_for_mp() -> void:
 		car.free()
 	_player = null
 
+## Every combatant boots aimed at the fight — heading onto the shared spawn
+## centroid — reluctantly crouched at the starting line, nobody staring at a
+## wall with a rival parked in their rear quarter. Baked .tscn rotations stop
+## mattering for ordinary cars; bosses (fixed_loadout) keep their authored
+## entrance theatrics (they still count toward the centroid, so a duel's
+## challenger aims square at them). Fewer than two cars (Driver's Ed, the
+## chase) = authored headings stand.
+static func face_spawns_inward(cars: Array) -> void:
+	if cars.size() < 2:
+		return
+	var center := Vector2.ZERO
+	for car_v in cars:
+		center += (car_v as Node2D).global_position
+	center /= cars.size()
+	for car_v in cars:
+		var car := car_v as Node2D
+		if bool(car.get("fixed_loadout")):
+			continue
+		var to_center := center - car.global_position
+		if to_center.length_squared() < 1.0:
+			continue  # parked ON the centroid — no meaningful aim, keep authored
+		car.set("heading", to_center.angle())
+
 ## Reassigns the scene's baked enemy cars at runtime: random, all distinct,
 ## never the player's car. Children ready before the parent, so _player.stats
 ## already reflects the real car (selected or default-fallback) and the swap
@@ -125,9 +163,8 @@ func _randomize_enemies() -> void:
 			enemies.append(child)  # bosses keep their authored car
 	if enemies.is_empty():
 		return
-	var player_id := ""
-	if _player.stats:
-		player_id = _player.stats.resource_path.get_file().get_basename()
+	var gs := get_node_or_null(^"/root/GameState")
+	var player_id := player_car_id(_player.stats, gs.selected_vehicle_id if gs else &"")
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var picks: Array = Loader.pick_cars(enemies.size(), player_id, rng)
@@ -135,13 +172,27 @@ func _randomize_enemies() -> void:
 	# build (positive deltas only) so late-run fights never read stock-vs-beast.
 	# Bosses never re-roll, so boss balance stays authored.
 	var rival := {}
-	var gs := get_node_or_null(^"/root/GameState")
 	if gs and gs.game_mode == &"campaign" and not gs.owned_mods.is_empty():
 		rival = GarageCatalog.rival_mod(gs.owned_mods)
 	for i in picks.size():
 		var base: VehicleStats = load("res://data/vehicles/%s.tres" % picks[i])
 		enemies[i].set_stats(base if rival.is_empty() else VehicleLoadout.compose(base, [rival]))
 		enemies[i].get_node("Driver").mix = Loader.mix_for_car(picks[i])
+
+## The player's roster id, garage-proof: VehicleLoadout.compose() hands the
+## car a duplicate() whose resource_path is EMPTY, so exclusion must ride the
+## authored id (importer-stamped, == the .tres basename, locked by
+## test_roster_contract). Fallbacks: the picker's selection (the
+## level_loader pattern), then the path basename for hand-authored dev stats
+## that carry no id.
+static func player_car_id(stats: VehicleStats, selected_id: StringName) -> String:
+	if stats and stats.id != &"":
+		return String(stats.id)
+	if selected_id != &"":
+		return String(selected_id)
+	if stats:
+		return stats.resource_path.get_file().get_basename()
+	return ""
 
 ## Kill bounties: every baked enemy's death pays the player IF the player
 ## authored it (last_attacker attribution — AI-on-AI scraps pay nobody).

@@ -1,8 +1,8 @@
 extends StaticBody2D
 ## Roadside clutter — trash piles, dry scrub, suburb bushes, snow drifts.
-## Block semantics (layer 4) so shots connect, but 1 HP: any hit or ram pops
-## it with a quiet scatter puff (no ring, no shake — this is set dressing,
-## not an explosion). Too small for the radar (ui/radar.gd size-gates it).
+## Block semantics (layer 4) so shots connect; ordinary kinds are 1 HP, while
+## Mountainside's old pines take a few missiles before the same quiet scatter pop
+## (no ring, no shake). Too small for the radar (ui/radar.gd size-gates it).
 ## Paint is a seeded lumpy blob cluster; kind picks the palette.
 
 const KINDS := {
@@ -10,6 +10,7 @@ const KINDS := {
 	&"brush": {"base": Color(0.45, 0.42, 0.22), "dark": Color(0.3, 0.28, 0.14), "fleck": Color(0.6, 0.54, 0.3)},
 	&"bush": {"base": Color(0.22, 0.38, 0.18), "dark": Color(0.13, 0.24, 0.1), "fleck": Color(0.34, 0.52, 0.26)},
 	&"drift": {"base": Color(0.82, 0.85, 0.92), "dark": Color(0.62, 0.68, 0.8), "fleck": Color(0.95, 0.97, 1.0)},
+	&"pine": {"base": Color(0.035, 0.36, 0.12), "dark": Color(0.025, 0.19, 0.075), "fleck": Color(0.9, 0.96, 1.0)},
 	# Street furniture (bespoke draw funcs; palette base tints the pop puff):
 	&"mailbox": {"base": Color(0.25, 0.3, 0.4), "dark": Color(0.16, 0.19, 0.26), "fleck": Color(0.8, 0.2, 0.15)},
 	&"sign": {"base": Color(0.55, 0.56, 0.6), "dark": Color(0.35, 0.36, 0.4), "fleck": Color(0.8, 0.15, 0.1)},
@@ -19,9 +20,17 @@ const KINDS := {
 	# Dockyard furniture:
 	&"bollard": {"base": Color(0.16, 0.17, 0.2), "dark": Color(0.09, 0.1, 0.12), "fleck": Color(0.85, 0.7, 0.2)},
 	&"pallet": {"base": Color(0.52, 0.42, 0.27), "dark": Color(0.34, 0.27, 0.17), "fleck": Color(0.65, 0.55, 0.38)},
+	# Capital grounds:
+	&"headstone": {"base": Color(0.88, 0.88, 0.85), "dark": Color(0.6, 0.6, 0.58), "fleck": Color(0.97, 0.97, 0.95)},
 }
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
+const PinePaint := preload("res://environment/pine_paint.gd")
+const RemainsPaint := preload("res://environment/remains_paint.gd")
+
+static var PINE_HP := 40.0  # old growth: 1 power / 2 fire or rear / 3 homing missiles
+
+var _dead := false
 
 @export var kind: StringName = &"trash"
 @export var footprint := 40.0  # collision square; paint spills a little past it
@@ -35,9 +44,12 @@ func _ready() -> void:
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(footprint, footprint)
 	($Col as CollisionShape2D).shape = shape
-	# Health (child) readies before this node — set hp along with max_hp.
-	_health.max_hp = 1.0
-	_health.hp = 1.0
+	# Health (child) readies before this node — set hp along with max_hp. Pines
+	# alone have enough trunk to be an opening obstacle; every other kind keeps
+	# the classic one-hit pop-through contract.
+	var durability: float = PINE_HP if kind == &"pine" else 1.0
+	_health.max_hp = durability
+	_health.hp = durability
 	_health.died.connect(_pop)
 	queue_redraw()
 
@@ -65,7 +77,14 @@ func _pop() -> void:
 		scene.add_child(puff)
 		if kind == &"hydrant":
 			_spout(scene)
-	queue_free()
+	# Flatten in place: a visual-only smear of what stood here — driven over,
+	# shot through, freed with the scene (or the chase chunk it rides).
+	_dead = true
+	collision_layer = 0
+	collision_mask = 0
+	if is_in_group(&"tutorial_smash"):
+		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
+	queue_redraw()
 
 ## Hydrant beat: a lingering water fountain where the hydrant stood.
 const SPOUT_SECONDS := 8.0
@@ -88,7 +107,15 @@ func _spout(scene: Node) -> void:
 	scene.get_tree().create_timer(SPOUT_SECONDS).timeout.connect(water.queue_free, CONNECT_ONE_SHOT)
 
 func _draw() -> void:
+	if _dead:
+		var palette: Dictionary = KINDS.get(kind, KINDS[&"trash"])
+		RemainsPaint.draw_marks(self, RemainsPaint.generate(
+			Vector2(footprint, footprint) * 0.5, &"debris", palette.base, palette.dark,
+			RemainsPaint.remains_seed(position, 3)))
+		return
 	match kind:
+		&"pine":
+			_draw_pine()
 		&"mailbox":
 			_draw_mailbox()
 		&"sign":
@@ -103,8 +130,14 @@ func _draw() -> void:
 			_draw_bollard()
 		&"pallet":
 			_draw_pallet()
+		&"headstone":
+			_draw_headstone()
 		_:
 			_draw_blob()
+
+func _draw_pine() -> void:
+	var seed := int(absf(position.x * 7.0 + position.y * 13.0)) + 211
+	PinePaint.paint(self, Vector2.ZERO, footprint * 0.92, seed)
 
 ## The organic pile (trash/brush/bush/drift): seeded lump cluster.
 func _draw_blob() -> void:
@@ -195,3 +228,14 @@ func _draw_pallet() -> void:
 	draw_rect(Rect2(-h, -h, 4, footprint), p.dark)             # stringers
 	draw_rect(Rect2(h - 4, -h, 4, footprint), p.dark)
 	draw_rect(Rect2(-2, -h, 4, footprint), p.dark)
+
+func _draw_headstone() -> void:
+	var p: Dictionary = KINDS[&"headstone"]
+	draw_rect(Rect2(-5, -1, 12, 10), Color(0, 0, 0, 0.22))     # cast shadow
+	draw_rect(Rect2(-6, -8, 12, 15), p.base)                   # marble tablet
+	draw_circle(Vector2(0, -8), 6.0, p.base)                   # rounded crown
+	draw_rect(Rect2(-6, 5, 12, 2), p.dark)                     # ground seam
+	draw_line(Vector2(-3, -5), Vector2(3, -5), p.dark, 1.2)    # inscription hints
+	draw_line(Vector2(-4, -2), Vector2(4, -2), p.dark, 1.0)
+	draw_line(Vector2(-3, 1), Vector2(3, 1), p.dark, 1.0)
+	draw_arc(Vector2(0, -8), 6.0, PI, TAU, 10, p.fleck, 1.2)   # crown highlight

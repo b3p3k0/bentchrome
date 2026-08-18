@@ -134,7 +134,7 @@
       "special_weapon": "Blunt Blaze: a two-second front cone of fire that widens with distance, followed by a long recovery. Applies heavy burn while bathed, then ignites the target for 10 more seconds. Perfect for corner traps and lane denial.",
       "special_def": "blunt_blaze",
       "stats": {
-        "acceleration": 7,
+        "acceleration": 10,
         "top_speed": 11,
         "handling": 9,
         "armor": 13,
@@ -147,8 +147,8 @@
       },
       "portrait": "res://assets/img/bios/bumper.png",
       "ai_archetype": "defender",
-      "special_ammo_cap": 2,
-      "special_recharge_seconds": 90.0,
+      "special_ammo_cap": 3,
+      "special_recharge_seconds": 45.0,
       "mass": 11
     },
     {
@@ -156,13 +156,13 @@
       "car_name": "Coldfront",
       "driver_name": "Marta Laviini",
       "flavor": "A crimson '80s pickup wearing a yellow county snowplow like a permanent scowl. Marta plowed mountain passes for twenty winters and never once got thanked. Snow, ice, whiteout — the truck doesn't notice; asphalt manners on the worst surfaces in the game. The plow makes her wide, the payload makes her stubborn, and the handling is strictly no-hurry. Cross her lane and she'll leave you parked in a block of ice.",
-      "special_weapon": "Chilblain: a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 5 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow.",
+      "special_weapon": "Chilblain: a bluish-white squall that tracks like a fire missile. Mild damage on impact, but the victim is encased in ice for 3 seconds — no driving, no shooting, just sliding to a stop while she lines up the plow.",
       "special_def": "chilblain",
       "stats": {
-        "acceleration": 7,
-        "top_speed": 9,
-        "handling": 5,
-        "armor": 15,
+        "acceleration": 9,
+        "top_speed": 10,
+        "handling": 6,
+        "armor": 14,
         "special_power": 15,
         "launch": 11
       },
@@ -172,8 +172,8 @@
       },
       "portrait": "res://assets/img/bios/coldfront.png",
       "ai_archetype": "opportunist",
-      "special_ammo_cap": 2,
-      "special_recharge_seconds": 45.0,
+      "special_ammo_cap": 3,
+      "special_recharge_seconds": 60.0,
       "terrain_profile": "snowplow",
       "mass": 13
     },
@@ -187,9 +187,10 @@
       "stats": {
         "acceleration": 13,
         "top_speed": 15,
-        "handling": 7,
+        "handling": 6,
         "armor": 7,
-        "special_power": 15
+        "special_power": 15,
+        "launch": 3
       },
       "colors": {
         "primary": "#31ff57",
@@ -197,10 +198,10 @@
       },
       "portrait": "res://assets/img/bios/cricket.png",
       "ai_archetype": "aggressor",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 10.0,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0,
       "terrain_profile": "dirt_racer",
-      "mass": 3
+      "mass": 4
     },
     {
       "id": "cyclone",
@@ -212,9 +213,10 @@
       "stats": {
         "acceleration": 17,
         "top_speed": 19,
-        "handling": 11,
-        "armor": 3,
-        "special_power": 15
+        "handling": 14,
+        "armor": 4,
+        "special_power": 15,
+        "launch": 3
       },
       "colors": {
         "primary": "#1a5cff",
@@ -222,10 +224,10 @@
       },
       "portrait": "res://assets/img/bios/cyclone.png",
       "ai_archetype": "ambusher",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 30.0,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0,
       "terrain_profile": "racing_slicks",
-      "mass": 3
+      "mass": 4
     },
     {
       "id": "ghost",
@@ -235,7 +237,7 @@
       "special_weapon": "Phantom Phire: a spectral missile that locks the nearest target anywhere on the map. Passes through cover and expires after 90 seconds if it fails to hit. Beatable only by outrunning and breaking line.",
       "special_def": "phantom_phire",
       "stats": {
-        "acceleration": 11,
+        "acceleration": 15,
         "top_speed": 17,
         "handling": 13,
         "armor": 5,
@@ -248,8 +250,9 @@
       },
       "portrait": "res://assets/img/bios/ghost.png",
       "ai_archetype": "aggressor",
-      "mass": 5,
-      "special_recharge_seconds": 18.0
+      "mass": 6,
+      "special_recharge_seconds": 45.0,
+      "special_ammo_cap": 2
     },
     {
       "id": "hammertoe",
@@ -272,8 +275,8 @@
       },
       "portrait": "res://assets/img/bios/hammertoe.png",
       "ai_archetype": "ambusher",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 8.0,
+      "special_ammo_cap": 3,
+      "special_recharge_seconds": 45.0,
       "terrain_profile": "monster_tires",
       "mass": 15
     },
@@ -289,7 +292,8 @@
         "top_speed": 11,
         "handling": 11,
         "armor": 11,
-        "special_power": 11
+        "special_power": 11,
+        "launch": 3
       },
       "colors": {
         "primary": "#ffc61a",
@@ -297,7 +301,9 @@
       },
       "portrait": "res://assets/img/bios/hornet.png",
       "ai_archetype": "aggressor",
-      "mass": 9
+      "mass": 9,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0
     },
     {
       "id": "hubcap",
@@ -311,7 +317,8 @@
         "top_speed": 7,
         "handling": 17,
         "armor": 9,
-        "special_power": 15
+        "special_power": 15,
+        "launch": 3
       },
       "colors": {
         "primary": "#7a3bd6",
@@ -319,9 +326,9 @@
       },
       "portrait": "res://assets/img/bios/hubcap.png",
       "ai_archetype": "aggressor",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 25.0,
-      "mass": 5
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0,
+      "mass": 6
     },
     {
       "id": "kandykane",
@@ -331,10 +338,10 @@
       "special_weapon": "Molotov Cocktail: a flaming bottle that bursts on impact. Low initial hit, then burns the target for 15 seconds. Works best when pinning foes in tight alleys.",
       "special_def": "molotov",
       "stats": {
-        "acceleration": 7,
+        "acceleration": 10,
         "top_speed": 11,
         "handling": 5,
-        "armor": 15,
+        "armor": 14,
         "special_power": 15,
         "launch": 5
       },
@@ -344,22 +351,24 @@
       },
       "portrait": "res://assets/img/bios/kandykane.png",
       "ai_archetype": "mini_boss",
-      "mass": 13
+      "mass": 13,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0
     },
     {
       "id": "lovebug",
       "car_name": "Lovebug",
       "driver_name": "Moonbeam",
       "flavor": "A sunshine-yellow Beetle wearing flowers, peace signs, and thirty years of good vibes. Moonbeam doesn't believe in violence; she believes in consequences. The bug needs a running start — she winds up slow, then dances through corners, and famously floats across shallow water like the commercials promised. Thin panels and an air-cooled engine mean fire is her worst enemy. She'd rather disarm you than dent you.",
-      "special_weapon": "Chill Out, Man: a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 5 seconds. Evaporates into glitter on impact.",
+      "special_weapon": "Chill Out, Man: a glowing peace symbol that flies fast and hits soft. Zero damage, but the target's guns go offline for 3 seconds. Evaporates into glitter on impact.",
       "special_def": "chill_out",
       "stats": {
-        "acceleration": 4,
+        "acceleration": 10,
         "top_speed": 9,
         "handling": 11,
         "armor": 7,
         "special_power": 13,
-        "launch": 1
+        "launch": 3
       },
       "colors": {
         "primary": "#ffd824",
@@ -367,8 +376,8 @@
       },
       "portrait": "res://assets/img/bios/lovebug.png",
       "ai_archetype": "opportunist",
-      "special_ammo_cap": 1,
-      "special_recharge_seconds": 30.0,
+      "special_ammo_cap": 3,
+      "special_recharge_seconds": 60.0,
       "burn_taken": 1.5,
       "terrain_modifiers": {
         "water": {
@@ -387,8 +396,8 @@
       "special_weapon": "Scythe of the Damned: a straight-line, slightly slow, recharging projectile. Immense damage if it connects, no homing. Demands precise timing and lane control.",
       "special_def": "scythe",
       "stats": {
-        "acceleration": 9,
-        "top_speed": 15,
+        "acceleration": 14,
+        "top_speed": 17,
         "handling": 13,
         "armor": 3,
         "special_power": 17,
@@ -400,7 +409,9 @@
       },
       "portrait": "res://assets/img/bios/mrghastly.png",
       "ai_archetype": "aggressor",
-      "mass": 1
+      "mass": 2,
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 60.0
     },
     {
       "id": "razorback",
@@ -410,9 +421,9 @@
       "special_weapon": "Red Glare: a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches.",
       "special_def": "red_glare",
       "stats": {
-        "acceleration": 7,
-        "top_speed": 11,
-        "handling": 7,
+        "acceleration": 9,
+        "top_speed": 12,
+        "handling": 8,
         "armor": 15,
         "special_power": 13,
         "launch": 15
@@ -432,7 +443,9 @@
         "mud": {
           "accel": 1.4545454545
         }
-      }
+      },
+      "special_ammo_cap": 2,
+      "special_recharge_seconds": 45.0
     },
     {
       "id": "smoky",
@@ -443,9 +456,9 @@
       "special_def": "taser",
       "stats": {
         "acceleration": 11,
-        "top_speed": 11,
-        "handling": 7,
-        "armor": 13,
+        "top_speed": 13,
+        "handling": 9,
+        "armor": 11,
         "special_power": 13,
         "launch": 13
       },
@@ -456,9 +469,9 @@
       "portrait": "res://assets/img/bios/smoky.png",
       "ai_archetype": "defender",
       "special_ammo_cap": 3,
-      "special_recharge_seconds": 90.0,
+      "special_recharge_seconds": 45.0,
       "terrain_profile": "awd_utility",
-      "mass": 11
+      "mass": 12
     },
     {
       "id": "splatkat",
@@ -468,11 +481,12 @@
       "special_weapon": "Rusty 'Poon: on hit, the victim’s speed is cut in half immediately and capped at 50% of max for 3 seconds. Brutal for chase denial and escape setups. Best used to chain team pressure or secure pickups.",
       "special_def": "rusty_poon",
       "stats": {
-        "acceleration": 11,
-        "top_speed": 13,
-        "handling": 13,
+        "acceleration": 12,
+        "top_speed": 15,
+        "handling": 12,
         "armor": 9,
-        "special_power": 15
+        "special_power": 15,
+        "launch": 3
       },
       "colors": {
         "primary": "#c9541a",
@@ -480,9 +494,9 @@
       },
       "portrait": "res://assets/img/bios/splatkat.png",
       "ai_archetype": "ambusher",
-      "special_ammo_cap": 2,
-      "special_recharge_seconds": 6.0,
-      "mass": 9
+      "special_ammo_cap": 3,
+      "special_recharge_seconds": 45.0,
+      "mass": 11
     }
   ]
 }

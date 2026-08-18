@@ -3,7 +3,7 @@ extends RefCounted
 ## establish separation, and come back instead of entering the old endless
 ## EVADE/circle finish. Also locks assignment off/on across player respawn.
 
-const ArenaScene := preload("res://levels/arena/arena.tscn")
+const ArenaScene := preload("res://levels/downtown/downtown.tscn")
 const DriverScript := preload("res://vehicles/drivers/enemy_driver.gd")
 
 const MAX_FRAMES := 900

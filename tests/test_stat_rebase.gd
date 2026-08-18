@@ -6,7 +6,9 @@ extends RefCounted
 ## deliberate re-pin of an intentional tuning change (docs/car_authoring.md).
 ## History: pinned at the 2026-07-14 feel-frozen 1-20 rebase (bit-exact to
 ## the legacy 1-10 ramp), re-pinned 2026-07-15 for the fleet balance pass
-## (launch axis debut; anchors cyclone/hornet + bosses/buzzards unmoved).
+## (launch axis debut; anchors cyclone/hornet + bosses/buzzards unmoved),
+## re-pinned 2026-07-16 for the car-tuner canonization (playtested stats
+## folded into roster truth; bosses/buzzards still unmoved).
 
 const CtrlScript := preload("res://vehicles/driving_controller.gd")
 const Curves := preload("res://resources/stat_curves.gd")
@@ -15,26 +17,26 @@ const Importer := preload("res://tools/import_roster.gd")
 ## file basename -> [acceleration, top_speed, handling, armor, mass, launch]
 ## (authored 1-20 ints; launch 0 = mass-derived sentinel).
 const GOLDEN := {
-	"bumper": [7, 11, 9, 13, 11, 11],
+	"bumper": [10, 11, 9, 13, 11, 11],
 	"buzz_bike": [17, 15, 15, 1, 1, 0],
 	"buzz_sedan": [9, 11, 7, 3, 7, 0],
 	"buzz_technical": [5, 3, 5, 5, 11, 0],
-	"coldfront": [7, 9, 5, 15, 13, 11],
-	"cricket": [13, 15, 7, 7, 3, 0],
-	"cyclone": [17, 19, 11, 3, 3, 0],
-	"ghost": [11, 17, 13, 5, 5, 11],
+	"coldfront": [9, 10, 6, 14, 13, 11],
+	"cricket": [13, 15, 6, 7, 4, 3],
+	"cyclone": [17, 19, 14, 4, 4, 3],
+	"ghost": [15, 17, 13, 5, 6, 11],
 	"goliath": [5, 7, 3, 19, 19, 0],
 	"goliath_ph2": [9, 11, 7, 7, 15, 0],
 	"hammertoe": [12, 9, 5, 13, 15, 17],
-	"hornet": [11, 11, 11, 11, 9, 0],
-	"hubcap": [15, 7, 17, 9, 5, 0],
-	"kandykane": [7, 11, 5, 15, 13, 5],
+	"hornet": [11, 11, 11, 11, 9, 3],
+	"hubcap": [15, 7, 17, 9, 6, 3],
+	"kandykane": [10, 11, 5, 14, 13, 5],
 	"lackey": [13, 11, 11, 19, 17, 0],
-	"lovebug": [4, 9, 11, 7, 7, 1],
-	"mrghastly": [9, 15, 13, 3, 1, 15],
-	"razorback": [7, 11, 7, 15, 13, 15],
-	"smoky": [11, 11, 7, 13, 11, 13],
-	"splatkat": [11, 13, 13, 9, 9, 0],
+	"lovebug": [10, 9, 11, 7, 7, 3],
+	"mrghastly": [14, 17, 13, 3, 2, 15],
+	"razorback": [9, 12, 8, 15, 13, 15],
+	"smoky": [11, 13, 9, 11, 12, 13],
+	"splatkat": [12, 15, 12, 9, 11, 3],
 }
 
 var t
@@ -190,6 +192,39 @@ func test_loadout_compose() -> void:
 	t.check(base.armor == base_armor and base.terrain_modifiers.size() == base_surfaces
 		and base.handling_overrides.is_empty() and is_equal_approx(base.burn_taken, 1.0),
 		"loadout: the base resource is never mutated")
+
+## The garage plug-in verbs: terrain_overlay per-property patching, SCALE_FIELDS
+## multiplicative stacking, and the additive special-cap bonus.
+func test_loadout_overlay_and_scales() -> void:
+	var Loadout := preload("res://resources/vehicle_loadout.gd")
+	var base = load("res://data/vehicles/cricket.tres")  # authored dirt identity
+	var base_dirt_grip: float = base.terrain_factor(&"dirt", &"grip")
+	var modded = Loadout.compose(base, [
+		{"id": "slicks", "terrain_overlay": {"dirt": {"grip": 0.8}, "water": {"top": 0.9}}},
+	])
+	t.check(is_equal_approx(modded.terrain_factor(&"dirt", &"grip"), 0.8),
+		"overlay: spoken property patched")
+	t.check(is_equal_approx(modded.terrain_factor(&"dirt", &"dash_damage"), 1.15),
+		"overlay: silent property keeps the car's authored identity")
+	t.check(is_equal_approx(modded.terrain_factor(&"water", &"top"), 0.9),
+		"overlay: overlay-only surface joins the table")
+	t.check(is_equal_approx(base.terrain_factor(&"dirt", &"grip"), base_dirt_grip),
+		"overlay: the base .tres modifier element is never mutated")
+	# Scale knobs multiply, order-free.
+	var ab = Loadout.compose(base, [
+		{"capabilities": {"detectability": 1.5}}, {"capabilities": {"detectability": 0.8}}])
+	var ba = Loadout.compose(base, [
+		{"capabilities": {"detectability": 0.8}}, {"capabilities": {"detectability": 1.5}}])
+	t.check(is_equal_approx(ab.detectability, 1.2) and is_equal_approx(ba.detectability, 1.2),
+		"scales: multiplicative stacking is order-free (1.5 x 0.8 = 1.2)")
+	t.check(is_equal_approx(ab.tracking_scale, 1.0) and is_equal_approx(ab.mg_heat_scale, 1.0),
+		"scales: untouched knobs stay stock 1.0")
+	# Additive special cap bonus, floored at 1.
+	var cap_base: int = base.special_ammo_cap
+	var bigger = Loadout.compose(base, [{"capabilities": {"special_ammo_cap_bonus": 2}}])
+	t.check(bigger.special_ammo_cap == cap_base + 2, "cap bonus: adds on the authored cap")
+	var gutted = Loadout.compose(base, [{"capabilities": {"special_ammo_cap_bonus": -99}}])
+	t.check(gutted.special_ammo_cap == 1, "cap bonus: floors at one round")
 
 ## --- Terrain profile extraction (rebase step 3) ---------------------------
 

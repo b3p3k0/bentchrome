@@ -3,9 +3,10 @@ extends Control
 ## PLAYER and the rest of the SP chain. DRIVER'S ED opens the sign-up
 ## sub-dialog (full lesson plan vs free-roam test drive — both route through
 ## car select into the practice yard); ROAD TRIP is the campaign (difficulty
-## select -> car select); SINGLE BATTLE is a greyed placeholder until that
-## mode exists. Manual-highlight menu idiom cloned from title.gd — no focus
-## system. BACK and ESC return to title; the sub-dialog has the same pair.
+## select -> car select); SINGLE BATTLE is one arena off the fight card
+## (difficulty select -> level select -> car select). Manual-highlight menu
+## idiom cloned from title.gd — no focus system. BACK and ESC return to
+## title; the sub-dialog has the same pair.
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -14,13 +15,13 @@ const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const DISABLED_TEXT := Color(0.3, 0.32, 0.35)
 
 const ENTRY_NAMES := ["DRIVER'S ED", "ROAD TRIP", "SINGLE BATTLE", "BACK"]
-const DISABLED := {2: true}  # SINGLE BATTLE — placeholder, cursor skips it
+const DISABLED := {}  # cursor-hop mechanism kept for future greyed rows
 const BACK_INDEX := 3
 # Blurb copy is placeholder — Kevin's to word.
 const BLURBS := [
 	"learn the ropes — nobody shoots back",
-	"the campaign: downtown to the coliseum",
-	"coming soon",
+	"the campaign: the whole bent tour",
+	"one arena, one brawl — pick your battleground",
 	"back to the front door",
 ]
 
@@ -99,6 +100,10 @@ func _activate() -> void:
 			_done = true
 			_commit_road_trip()
 			SceneFlow.to_difficulty()
+		2:
+			_done = true
+			_commit_single_battle()
+			SceneFlow.to_difficulty()
 		BACK_INDEX:
 			_done = true
 			SceneFlow.to_title()
@@ -109,6 +114,12 @@ func _activate() -> void:
 ## selection itself remains sticky when the player backs up from car select.
 func _commit_road_trip() -> void:
 	GameState.game_mode = &"campaign"
+	Difficulty.tier = Difficulty.Tier.MEDIUM
+
+## Single battles ride the same license window, then detour to the fight
+## card (level select) before the garage.
+func _commit_single_battle() -> void:
+	GameState.game_mode = &"single_battle"
 	Difficulty.tier = Difficulty.Tier.MEDIUM
 
 ## The Driver's Ed sign-up window: lessons or just the yard?

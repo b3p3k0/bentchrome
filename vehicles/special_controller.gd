@@ -9,12 +9,20 @@ extends Node
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
+# Garage Improved Lock: tracking_scale widens every lock reach in this file
+# (twin pick, taser latch + hold, dash) — boss Turret excluded (bosses never
+# mod), weapon defs untouched.
 const NetEvents := preload("res://game/net/net_events.gd")  # host-armed FX tap (leaf)
 const TornadoSwirl := preload("res://vehicles/tornado_swirl.gd")  # AoE-honest wind ring
 const PulseRing := preload("res://vehicles/pulse_ring.gd")  # damage-front-honest blast ring
 const ElectricArcScene := preload("res://environment/electric_arc_fx.tscn")
 
 const BEAM_DURATION := 4.0        # legacy fallback; current defs author active_duration
+## Post-burst gate on a sustained special (Taser/Blunt Blaze) for ordinary cars.
+## Matches Vehicle.WEAPON_LOCK — the whole non-MG bay refires on one 2s clock.
+## Bosses keep the def's authored (long) cooldown instead; see _sustained_lock().
+const SUSTAINED_LOCK := 2.0
 const BEAM_SLOW := 0.5            # handling cripple while zapped
 const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
 
@@ -164,7 +172,8 @@ func _active_def(origin: Vector2, shooter: Node) -> WeaponDef:
 	if beam_def == null:
 		return _def
 	var other: WeaponDef = _def if beam_def == _twin else _twin
-	var tgt := Targeting.nearest_other(origin, shooter, beam_def.acquisition_radius, shooter)
+	var tgt := Targeting.nearest_other(origin, shooter,
+		beam_def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt and _los_clear(origin, tgt, shooter):
 		return beam_def
 	return other
@@ -257,7 +266,8 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, def: WeaponDef) -> bool:
 	if not pressed or _beam_t > 0.0 or def == null:
 		return false
-	var tgt := Targeting.nearest_other(origin, shooter, def.acquisition_radius, shooter)
+	var tgt := Targeting.nearest_other(origin, shooter,
+		def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
 	var fx_scene := get_tree().current_scene
@@ -307,7 +317,8 @@ func _beam_tick(delta: float) -> void:
 	var origin: Vector2 = muzzle.global_position if muzzle else vehicle.global_position
 	var dist := origin.distance_to(_beam_target.global_position)
 	if _beam_def == null \
-			or dist > _beam_def.acquisition_radius * BEAM_HOLD_FACTOR \
+			or dist > _beam_def.acquisition_radius \
+				* VehiclesHelper.stat_scale(vehicle, &"tracking_scale") * BEAM_HOLD_FACTOR \
 			or not Floors.same_floor(vehicle, _beam_target) \
 			or not _los_clear(origin, _beam_target, vehicle):
 		_end_beam()  # a roof-drop snaps the taser, same as breaking LoS
@@ -327,6 +338,20 @@ func _beam_tick(delta: float) -> void:
 	if _beam_t <= 0.0:
 		_end_beam()
 
+## Sustained post-burst lockout: ordinary cars refire on the shared 2s clock;
+## bosses keep the def's own (long) cooldown — their pressure valve is authored.
+func _sustained_lock(def_cooldown: float) -> float:
+	if _is_boss():
+		return maxf(def_cooldown, 0.0)
+	return SUSTAINED_LOCK
+
+func _is_boss() -> bool:
+	var p := get_parent()
+	if p == null:
+		return false
+	var flag: Variant = p.get(&"fixed_loadout")
+	return flag is bool and flag
+
 func _end_beam(arm_cooldown := true) -> void:
 	var cooldown := _beam_def.cooldown if _beam_def else 0.0
 	var was_active := _beam_def != null
@@ -334,7 +359,7 @@ func _end_beam(arm_cooldown := true) -> void:
 	_beam_def = null
 	_beam_t = 0.0
 	if arm_cooldown and was_active:
-		_sustained_cooldown_t = maxf(cooldown, 0.0)
+		_sustained_cooldown_t = _sustained_lock(cooldown)
 	if _beam_fx:
 		_beam_fx.queue_free()
 		_beam_fx = null
@@ -369,7 +394,8 @@ func _exit_tree() -> void:
 func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if not pressed or _dash_t > 0.0:
 		return false
-	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter, DASH_LOCK_RANGE, shooter)
+	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter,
+		DASH_LOCK_RANGE * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	_dash_dir = direction
 	_dash_t = DASH_DURATION
 	_dash_damage_mult = 1.0
@@ -430,10 +456,18 @@ func _dash_tick(delta: float) -> void:
 			slow.duration = DASH_SLOW_T
 			slow.magnitude = DASH_SLOW
 			other.apply_effect(slow)
-			var invuln := StatusEffectSpec.new()
-			invuln.kind = &"invuln"
-			invuln.duration = DASH_INVULN_T
-			if vehicle.has_method("apply_effect"):
+			# Same-frame bridge: a bare invuln status only reaches Health on the
+			# NEXT Status tick, leaving one frame where the victim's own ram
+			# loop can bill the caster back. grant_spawn_shield sets
+			# Health.invulnerable directly (and blinks — matrices.md already
+			# lists Leap connect under Blink FX). Duck-typed; spec fallback for
+			# bare fixtures.
+			if vehicle.has_method(&"grant_spawn_shield"):
+				vehicle.grant_spawn_shield(DASH_INVULN_T)
+			elif vehicle.has_method(&"apply_effect"):
+				var invuln := StatusEffectSpec.new()
+				invuln.kind = &"invuln"
+				invuln.duration = DASH_INVULN_T
 				vehicle.apply_effect(invuln)
 			_end_dash(vehicle)
 			return
@@ -506,6 +540,7 @@ func _flame_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body.has_method("apply_effect"):
@@ -547,7 +582,7 @@ func _end_flame(arm_cooldown := true) -> void:
 	_flame_t = 0.0
 	_flame_def = null
 	if arm_cooldown and was_active:
-		_sustained_cooldown_t = maxf(cooldown, 0.0)
+		_sustained_cooldown_t = _sustained_lock(cooldown)
 	if _flame_vis:
 		_flame_vis.queue_free()
 		_flame_vis = null
@@ -616,6 +651,7 @@ func _tornado_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_tornado_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body is CharacterBody2D and body.has_method("apply_effect") \
@@ -779,6 +815,7 @@ func _pulse_tick(delta: float) -> void:
 			if child is Health:
 				if "last_attacker" in body:
 					body.last_attacker = vehicle
+				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_pulse_def.damage * falloff * Combat.scale(vehicle, body))
 				break
 		if body is CharacterBody2D and not bool(body.get("launch_immune")):

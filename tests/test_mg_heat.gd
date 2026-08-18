@@ -74,6 +74,24 @@ func test_heat_disabled_when_zero_per_shot() -> void:
 	t.check(not f.mount.is_locked(), "disabled: never locks")
 	_done(f)
 
+## Garage MG Cooling: heat_scale multiplies GAIN only — the bar climbs slower,
+## more shots fit before the lockout, and the 0-per-shot sentinel stays inert.
+func test_heat_scale_slows_the_climb() -> void:
+	var f := _fixture(25.0)
+	f.mount.heat_scale = 0.7
+	_shots(f, 1)
+	t.check_approx(f.mount.heat, 17.5, "heat scale: 25/shot lands as 17.5")
+	t.check(_shots(f, 4) == 4, "heat scale: five shots total, still firing")
+	t.check(not f.mount.is_locked(), "heat scale: not locked at 87.5")
+	_shots(f, 1)
+	t.check(f.mount.is_locked(), "heat scale: sixth shot locks (four would have, stock)")
+	_done(f)
+	var off := _fixture(0.0)
+	off.mount.heat_scale = 0.7
+	_shots(off, 3)
+	t.check_approx(off.mount.heat, 0.0, "heat scale: zero-per-shot sentinel still inert")
+	_done(off)
+
 func test_heat_fraction() -> void:
 	var f := _fixture(25.0)
 	_shots(f, 2)

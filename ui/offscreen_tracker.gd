@@ -2,8 +2,10 @@ class_name OffscreenTracker
 extends Node2D
 ## Viewer-relative edge awareness. World positions are projected through the
 ## active camera canvas; only combatants outside the centered 720px play square
-## earn a paint-colored arrow. One node owns/reuses all marker state and draw
-## calls — no per-frame Control churn as opponents cross the boundary.
+## earn a paint-colored arrow. Arrows share the radar's sensor bound
+## (Vehicles.sensed_others) — off the scope means off the rim too. One node
+## owns/reuses all marker state and draw calls — no per-frame Control churn as
+## opponents cross the boundary.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const ExplosionScene := preload("res://environment/explosion.tscn")
@@ -38,7 +40,7 @@ func _process(_delta: float) -> void:
 		viewer_screen = PLAY_RECT.get_center()
 	var seen: Dictionary = {}
 	_draw_records.clear()
-	for car_v in VehiclesHelper.live_others(tree, viewer):
+	for car_v in VehiclesHelper.sensed_others(tree, viewer):
 		var car := car_v as Node2D
 		if car == null:
 			continue
@@ -46,9 +48,12 @@ func _process(_delta: float) -> void:
 		seen[id] = true
 		var screen := world_to_screen(canvas, car.global_position)
 		var state: Dictionary = _states.get(id, {"ref": car, "visible": false})
-		if not state.get("hit_connected", false) and car.has_signal(&"combat_hit"):
+		# Ask the OBJECT, never a state flag: sensor-bounded rosters prune and
+		# rebuild _states on every range crossing, but the connection's lifetime
+		# is the car's lifetime (Godot drops it on free — no disconnect needed).
+		if car.has_signal(&"combat_hit") \
+				and not car.is_connected(&"combat_hit", _on_combat_hit.bind(car)):
 			car.connect(&"combat_hit", _on_combat_hit.bind(car))
-			state.hit_connected = true
 		var was_visible: bool = state.get("visible", false)
 		var visible_now := not PLAY_RECT.grow(HYSTERESIS).has_point(screen)
 		if was_visible:
@@ -68,8 +73,12 @@ func _process(_delta: float) -> void:
 		_states[id] = state
 	for id in _states.keys():
 		if not seen.has(id):
+			# The marker state is presentational — drop it on any exit. The
+			# hit-burst cooldown is per-CAR: it survives a sensor-range dip and
+			# clears only when the car itself is gone.
+			if not is_instance_valid(_states[id].get("ref")):
+				_last_burst_ms.erase(id)
 			_states.erase(id)
-			_last_burst_ms.erase(id)
 	separate_overlaps(_draw_records, PLAY_RECT.grow(-EDGE_INSET))
 	queue_redraw()
 

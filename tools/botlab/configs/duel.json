@@ -1,0 +1,14 @@
+{
+	"_readme": "Bot league duel: Claude vs GPT, farthest spawn pair. League runs mirror spawns per seed: tools/botlab.sh tools/botlab/configs/duel.json --n 20 --swap-pairs",
+	"arena": "res://levels/downtown/downtown.tscn",
+	"seed": 5000,
+	"max_seconds": 120,
+	"governor": "lethal",
+	"entrants": [
+		{"car": "hornet", "driver": "res://ai/bots/claude_bot.gd"},
+		{"car": "razorback", "driver": "res://ai/bots/gpt_bot.gd"}
+	],
+	"fill_stock": 0,
+	"fight_director": false,
+	"output": "res://tools/botlab/out"
+}

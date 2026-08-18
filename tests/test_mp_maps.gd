@@ -25,10 +25,12 @@ func test_campaign_arena_profiles_are_complete() -> void:
 		t.check(errors.is_empty(), "%s: arena profile valid (%s)" %
 			[profile.name, "; ".join(errors)])
 		if not Contract.is_regular(profile):
-			specialty += 1
+			if StringName(profile.mode) == &"specialty":
+				specialty += 1
 			continue
-		t.check(int(profile.target_cars) >= Contract.MIN_CARS,
-			"%s: four-player floor is structural" % profile.name)
+		if StringName(profile.encounter) != &"duel":
+			t.check(int(profile.target_cars) >= Contract.MIN_CARS,
+				"%s: four-player floor is structural" % profile.name)
 		t.check(Contract.area_per_car(profile) >= Contract.MIN_AREA_PER_CAR,
 			"%s: aquarium area-per-car floor holds" % profile.name)
 		var arena := (load(String(profile.scene)) as PackedScene).instantiate()
@@ -50,9 +52,9 @@ func test_campaign_arena_profiles_are_complete() -> void:
 		for car in cars:
 			spots[(car as Node2D).position] = true
 		t.check(spots.size() == cars.size(), "%s: baked spawn positions are unique" % profile.name)
-		if profile.mp_ready == true:
+		if profile.mp_ready == true or profile.get("mp_avail", true) == false:
 			t.check(cars.size() == int(profile.target_cars),
-				"%s: baked cars supply the full MP field" % profile.name)
+				"%s: baked cars match the declared field" % profile.name)
 		for object_v in arena.find_children("*", "CollisionObject2D", true, false):
 			var object := object_v as CollisionObject2D
 			t.check(object.scale.is_equal_approx(Vector2.ONE),
@@ -79,6 +81,9 @@ func test_campaign_and_mp_profiles_match_exactly() -> void:
 				t.check(String(mp.name) == String(profile.name)
 						and int(mp.cars) == int(profile.target_cars),
 					"%s: campaign/MP name and field size agree" % profile.name)
+		elif profile.get("mp_avail", true) == false:
+			t.check(not mp_by_scene.has(path),
+				"%s: mp_avail-false arena stays out of MP_MAPS" % profile.name)
 		else:
 			t.check(Contract.LEGACY_MP_EXCEPTIONS.has(path),
 				"%s: campaign-only status is a named legacy exception" % profile.name)

@@ -13,9 +13,14 @@ const LOCKED_TEXT := Color(0.32, 0.34, 0.37)
 
 const UpdaterScript := preload("res://game/updater.gd")
 
-const ZOOM_MIN := 0.45
-const ZOOM_MAX := 0.72
+const COMBAT_ZOOM_MIN := 0.45
+const COMBAT_ZOOM_MAX := 0.72
+const OVERVIEW_ZOOM_MIN := 0.30
+const OVERVIEW_ZOOM_MAX := 0.55
 const ZOOM_STEP := 0.01
+const LOOK_AHEAD_MIN := 0.0
+const LOOK_AHEAD_MAX := 200.0
+const LOOK_AHEAD_STEP := 10.0
 const VOL_STEP := 0.05
 
 enum MenuKey { NONE, UP, DOWN, LEFT, RIGHT, BACK }
@@ -24,6 +29,16 @@ var _index := 0
 var _rows: Array = []  # {name, adjust, value, kind: value|submenu|action, persist}
 var _name_labels: Array = []
 var _value_labels: Array = []
+var _gfx_dialog: Control
+var _gfx_index := 0
+var _gfx_rows: Array = []
+var _gfx_name_labels: Array = []
+var _gfx_value_labels: Array = []
+var _audio_dialog: Control
+var _audio_index := 0
+var _audio_rows: Array = []
+var _audio_name_labels: Array = []
+var _audio_value_labels: Array = []
 var _dev_dialog: Control
 var _dev_index := 0
 var _dev_rows: Array = []
@@ -54,11 +69,10 @@ var _settings_path := "user://settings.json"  # overridden only by hermetic test
 
 func _ready() -> void:
 	_rows = [
-		{"name": "ZOOM DEPTH", "adjust": _adj_zoom, "value": _val_zoom},
-		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
-		{"name": "MASTER VOLUME", "adjust": _adj_vol_master, "value": _val_vol_master},
-		{"name": "MUSIC VOLUME", "adjust": _adj_vol_music, "value": _val_vol_music},
-		{"name": "SFX VOLUME", "adjust": _adj_vol_sfx, "value": _val_vol_sfx},
+		{"name": "GRAPHICS", "adjust": _adj_graphics, "value": _val_open,
+			"kind": &"submenu", "persist": false},
+		{"name": "AUDIO", "adjust": _adj_audio, "value": _val_open,
+			"kind": &"submenu", "persist": false},
 		{"name": "CHECK FOR UPDATES", "adjust": _adj_check_updates, "value": _val_updates,
 			"locked": _locked_updates, "kind": &"submenu", "persist": false},
 		{"name": "DEVELOPER OPTIONS", "adjust": _adj_dev_options, "value": _val_open,
@@ -66,10 +80,26 @@ func _ready() -> void:
 		{"name": "RESET TO DEFAULTS", "adjust": _adj_reset, "value": _val_blank,
 			"kind": &"action", "persist": false},
 	]
+	_gfx_rows = [
+		{"name": "COMBAT ZOOM", "adjust": _adj_combat_zoom, "value": _val_combat_zoom},
+		{"name": "OVERVIEW ZOOM", "adjust": _adj_overview_zoom, "value": _val_overview_zoom},
+		{"name": "CAMERA LOOK-AHEAD", "adjust": _adj_look_ahead, "value": _val_look_ahead},
+		{"name": "LOOK-AHEAD DISTANCE", "adjust": _adj_look_ahead_distance,
+			"value": _val_look_ahead_distance},
+		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
+		{"name": "BACK", "adjust": _adj_close_graphics, "value": _val_blank,
+			"kind": &"action", "persist": false},
+	]
+	_audio_rows = [
+		{"name": "MASTER VOLUME", "adjust": _adj_vol_master, "value": _val_vol_master},
+		{"name": "MUSIC VOLUME", "adjust": _adj_vol_music, "value": _val_vol_music},
+		{"name": "SFX VOLUME", "adjust": _adj_vol_sfx, "value": _val_vol_sfx},
+		{"name": "BACK", "adjust": _adj_close_audio, "value": _val_blank,
+			"kind": &"action", "persist": false},
+	]
 	_dev_rows = [
 		{"name": "DEVELOPER MODE", "adjust": _adj_dev, "value": _val_dev},
 		{"name": "DEVGOD", "adjust": _adj_devgod, "value": _val_devgod},
-		{"name": "START LEVEL", "adjust": _adj_level, "value": _val_level},
 		{"name": "SOUNDBOARD", "adjust": _adj_soundboard, "value": _val_open,
 			"kind": &"submenu", "persist": false},
 		{"name": "CAR TUNER", "adjust": _adj_car_tuner, "value": _val_open,
@@ -90,19 +120,38 @@ func _adj_devgod(_d: int) -> void:
 func _val_devgod() -> Array:
 	return ["ON — INVINCIBLE" if _gs.devgod else "OFF", WARN if _gs.devgod else DIM_TEXT]
 
-func _adj_zoom(d: int) -> void:
-	_gs.zoom_combat = clampf(_gs.zoom_combat + d * ZOOM_STEP, ZOOM_MIN, ZOOM_MAX)
+func _adj_combat_zoom(d: int) -> void:
+	var lo := clampf(maxf(COMBAT_ZOOM_MIN, _gs.zoom_overview),
+		COMBAT_ZOOM_MIN, COMBAT_ZOOM_MAX)
+	_gs.zoom_combat = clampf(_gs.zoom_combat + d * ZOOM_STEP, lo, COMBAT_ZOOM_MAX)
 
-func _val_zoom() -> Array:
-	return ["%.2f  %s" % [_gs.zoom_combat, _bar(_gs.zoom_combat, ZOOM_MIN, ZOOM_MAX)], DIM_TEXT]
+func _val_combat_zoom() -> Array:
+	return ["%.2f  %s" % [_gs.zoom_combat,
+		_bar(_gs.zoom_combat, COMBAT_ZOOM_MIN, COMBAT_ZOOM_MAX)], DIM_TEXT]
 
-func _adj_level(d: int) -> void:
-	if not _gs.dev_mode:
-		return
-	_gs.start_level_index = wrapi(_gs.start_level_index + (d if d != 0 else 1), 0, _flow.CAMPAIGN.size())
+func _adj_overview_zoom(d: int) -> void:
+	var hi := clampf(minf(OVERVIEW_ZOOM_MAX, _gs.zoom_combat),
+		OVERVIEW_ZOOM_MIN, OVERVIEW_ZOOM_MAX)
+	_gs.zoom_overview = clampf(_gs.zoom_overview + d * ZOOM_STEP, OVERVIEW_ZOOM_MIN, hi)
 
-func _val_level() -> Array:
-	return [String(_flow.CAMPAIGN[_gs.start_level_index].name).to_upper(), DIM_TEXT]
+func _val_overview_zoom() -> Array:
+	return ["%.2f  %s" % [_gs.zoom_overview,
+		_bar(_gs.zoom_overview, OVERVIEW_ZOOM_MIN, OVERVIEW_ZOOM_MAX)], DIM_TEXT]
+
+func _adj_look_ahead(_d: int) -> void:
+	_gs.camera_look_ahead_enabled = not _gs.camera_look_ahead_enabled
+
+func _val_look_ahead() -> Array:
+	return ["[X] ON" if _gs.camera_look_ahead_enabled else "[ ] OFF", DIM_TEXT]
+
+func _adj_look_ahead_distance(d: int) -> void:
+	_gs.camera_look_ahead_distance = clampf(
+		_gs.camera_look_ahead_distance + d * LOOK_AHEAD_STEP,
+		LOOK_AHEAD_MIN, LOOK_AHEAD_MAX)
+
+func _val_look_ahead_distance() -> Array:
+	return ["%3d PX  %s" % [roundi(_gs.camera_look_ahead_distance),
+		_bar(_gs.camera_look_ahead_distance, LOOK_AHEAD_MIN, LOOK_AHEAD_MAX)], DIM_TEXT]
 
 func _adj_vol(field: String, d: int) -> void:
 	_gs.set(field, clampf(_gs.get(field) + d * VOL_STEP, 0.0, 1.0))
@@ -128,6 +177,12 @@ func _val_shake() -> Array:
 func _adj_dev_options(_d: int) -> void:
 	_open_dev_dialog()
 
+func _adj_graphics(_d: int) -> void:
+	_open_graphics_dialog()
+
+func _adj_audio(_d: int) -> void:
+	_open_audio_dialog()
+
 func _val_open() -> Array:
 	return ["-->", DIM_TEXT]
 
@@ -139,8 +194,14 @@ func _val_dev() -> Array:
 	return ["ON" if _gs.dev_mode else "OFF", AMBER if _gs.dev_mode else DIM_TEXT]
 
 func _adj_reset(_d: int) -> void:
-	_gs.reset_settings()
+	_gs.reset_settings(_settings_path)
 	_sync_dev()
+
+func _adj_close_graphics(_d: int) -> void:
+	_close_graphics_dialog()
+
+func _adj_close_audio(_d: int) -> void:
+	_close_audio_dialog()
 
 func _adj_close_dev(_d: int) -> void:
 	_close_dev_dialog()
@@ -176,7 +237,7 @@ func _sync_dev() -> void:
 			dev._ensure_tuning()  # tuning deck boots the moment dev mode does
 
 func _bar(v: float, lo: float, hi: float) -> String:
-	var filled := int(round((v - lo) / (hi - lo) * 10.0))
+	var filled := clampi(int(round((v - lo) / (hi - lo) * 10.0)), 0, 10)
 	return "[" + "#".repeat(filled) + "-".repeat(10 - filled) + "]"
 
 # --- input / paint -----------------------------------------------------------
@@ -193,6 +254,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return  # arrows no-op: the tuner grid is mouse-driven
 	if _sb_dialog:
 		_sb_input(key)
+		return
+	if _gfx_dialog:
+		_gfx_input(key)
+		return
+	if _audio_dialog:
+		_audio_input(key)
 		return
 	if _dev_dialog:
 		_dev_input(key)
@@ -316,6 +383,236 @@ func _build_ui() -> void:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.modulate = DIM_TEXT
 	vbox.add_child(hint)
+
+# --- graphics dialog ---------------------------------------------------------
+
+func _gfx_input(key: MenuKey) -> void:
+	match key:
+		MenuKey.UP:
+			_gfx_index = wrapi(_gfx_index - 1, 0, _gfx_rows.size())
+			UiSfx.move(self)
+		MenuKey.DOWN:
+			_gfx_index = wrapi(_gfx_index + 1, 0, _gfx_rows.size())
+			UiSfx.move(self)
+		MenuKey.LEFT:
+			_adjust_graphics(-1)
+			return
+		MenuKey.RIGHT:
+			_adjust_graphics(1)
+			return
+		MenuKey.BACK:
+			UiSfx.back(self)
+			_close_graphics_dialog()
+			return
+	_refresh_graphics()
+
+func _adjust_graphics(dir: int) -> void:
+	var row: Dictionary = _gfx_rows[_gfx_index]
+	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
+		return
+	UiSfx.select(self)
+	(row.adjust as Callable).call(dir)
+	if bool(row.get("persist", true)):
+		_gs.save_settings(_settings_path)
+	_refresh_graphics()
+
+func _open_graphics_dialog() -> void:
+	if _gfx_dialog:
+		return
+	_gfx_index = 0
+	_gfx_dialog = Control.new()
+	_gfx_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_gfx_dialog)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_gfx_dialog.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_gfx_dialog.add_child(center)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_BG
+	style.border_color = AMBER
+	for side in ["left", "right", "top", "bottom"]:
+		style.set("border_width_" + side, 6)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.custom_minimum_size = Vector2(650, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 28)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "GRAPHICS"
+	title.add_theme_font_size_override("font_size", 32)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = AMBER
+	vbox.add_child(title)
+
+	for row in _gfx_rows:
+		var hbox := HBoxContainer.new()
+		var name_lbl := Label.new()
+		name_lbl.text = row.name
+		name_lbl.add_theme_font_size_override("font_size", 22)
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(name_lbl)
+		var value_lbl := Label.new()
+		value_lbl.add_theme_font_size_override("font_size", 22)
+		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		hbox.add_child(value_lbl)
+		vbox.add_child(hbox)
+		_gfx_name_labels.append(name_lbl)
+		_gfx_value_labels.append(value_lbl)
+
+	var hint := Label.new()
+	hint.text = "ARROWS select/change    ESC back — autosaved"
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.modulate = DIM_TEXT
+	vbox.add_child(hint)
+	_refresh_graphics()
+
+func _close_graphics_dialog() -> void:
+	if not _gfx_dialog:
+		return
+	_gfx_dialog.queue_free()
+	_gfx_dialog = null
+	_gfx_name_labels.clear()
+	_gfx_value_labels.clear()
+	_refresh()
+
+func _refresh_graphics() -> void:
+	if not _gfx_dialog:
+		return
+	for i in _gfx_rows.size():
+		_gfx_name_labels[i].modulate = AMBER if i == _gfx_index else ALIVE_TEXT
+		var v: Array = (_gfx_rows[i].value as Callable).call()
+		_gfx_value_labels[i].text = v[0]
+		_gfx_value_labels[i].modulate = v[1]
+
+# --- audio dialog ------------------------------------------------------------
+
+func _audio_input(key: MenuKey) -> void:
+	match key:
+		MenuKey.UP:
+			_audio_index = wrapi(_audio_index - 1, 0, _audio_rows.size())
+			UiSfx.move(self)
+		MenuKey.DOWN:
+			_audio_index = wrapi(_audio_index + 1, 0, _audio_rows.size())
+			UiSfx.move(self)
+		MenuKey.LEFT:
+			_adjust_audio(-1)
+			return
+		MenuKey.RIGHT:
+			_adjust_audio(1)
+			return
+		MenuKey.BACK:
+			UiSfx.back(self)
+			_close_audio_dialog()
+			return
+	_refresh_audio()
+
+func _adjust_audio(dir: int) -> void:
+	var row: Dictionary = _audio_rows[_audio_index]
+	if dir < 0 and StringName(row.get("kind", &"value")) != &"value":
+		return
+	UiSfx.select(self)
+	(row.adjust as Callable).call(dir)
+	if bool(row.get("persist", true)):
+		_gs.save_settings(_settings_path)
+	_refresh_audio()
+
+func _open_audio_dialog() -> void:
+	if _audio_dialog:
+		return
+	_audio_index = 0
+	_audio_dialog = Control.new()
+	_audio_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_audio_dialog)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_audio_dialog.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_audio_dialog.add_child(center)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_BG
+	style.border_color = AMBER
+	for side in ["left", "right", "top", "bottom"]:
+		style.set("border_width_" + side, 6)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.custom_minimum_size = Vector2(650, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 28)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "AUDIO"
+	title.add_theme_font_size_override("font_size", 32)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.modulate = AMBER
+	vbox.add_child(title)
+
+	for row in _audio_rows:
+		var hbox := HBoxContainer.new()
+		var name_lbl := Label.new()
+		name_lbl.text = row.name
+		name_lbl.add_theme_font_size_override("font_size", 22)
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(name_lbl)
+		var value_lbl := Label.new()
+		value_lbl.add_theme_font_size_override("font_size", 22)
+		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		hbox.add_child(value_lbl)
+		vbox.add_child(hbox)
+		_audio_name_labels.append(name_lbl)
+		_audio_value_labels.append(value_lbl)
+
+	var hint := Label.new()
+	hint.text = "ARROWS select/change    ESC back — live preview, autosaved"
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.modulate = DIM_TEXT
+	vbox.add_child(hint)
+	_refresh_audio()
+
+func _close_audio_dialog() -> void:
+	if not _audio_dialog:
+		return
+	_audio_dialog.queue_free()
+	_audio_dialog = null
+	_audio_name_labels.clear()
+	_audio_value_labels.clear()
+	_refresh()
+
+func _refresh_audio() -> void:
+	if not _audio_dialog:
+		return
+	for i in _audio_rows.size():
+		_audio_name_labels[i].modulate = AMBER if i == _audio_index else ALIVE_TEXT
+		var v: Array = (_audio_rows[i].value as Callable).call()
+		_audio_value_labels[i].text = v[0]
+		_audio_value_labels[i].modulate = v[1]
 
 # --- developer options dialog -----------------------------------------------
 

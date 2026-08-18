@@ -12,6 +12,7 @@ extends Driver
 ##   OPPORTUNIST — scores the weakest car highest, hangs back, pounces, flees early.
 
 const Difficulty := preload("res://game/difficulty.gd")  # boss-valve tier knobs
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
 
 @export var mix := Vector3(1, 0, 0):  # weights: x=aggressor, y=ambusher, z=opportunist
 	set(value):
@@ -860,11 +861,21 @@ func _best_target(vehicle) -> Node2D:
 			best = v
 	return best
 
+## Target-side sensor signature (garage jammer / Improved Lock tradeoff),
+## scored tier only: HUNT (_nearest_any) and liveness stay unfiltered — the
+## no-camping contract — and duel/focus leases pierce it by design (a
+## director order is narrative, not perception).
+func _det(candidate) -> float:
+	return VehiclesHelper.stat_scale(candidate, &"detectability")
+
 func _target_score(vehicle, candidate: Node2D) -> float:
 	if not _target_is_valid(vehicle, candidate):
 		return -INF
 	var d: float = vehicle.global_position.distance_to(candidate.global_position)
-	var near_term := 1.0 - d / SCAN
+	# Scaled denominator keeps near_term spanning [0,1] over each candidate's
+	# own valid band — an unscaled one would over/under-weight at gate edges.
+	var reach: float = SCAN * _det(candidate)
+	var near_term := 1.0 - d / reach
 	var hpf: float = candidate.get_hp_fraction() if candidate.has_method(&"get_hp_fraction") else 1.0
 	var score: float = _w_near * near_term + _w_weak * (1.0 - hpf)
 	var grudge: Variant = _recent_grudge(vehicle)
@@ -894,7 +905,8 @@ func _target_is_valid(vehicle, candidate: Variant) -> bool:
 		return false
 	if candidate == _shun_target and _shun_t > 0.0:
 		return false
-	return vehicle.global_position.distance_to(candidate.global_position) <= SCAN
+	return vehicle.global_position.distance_to(candidate.global_position) \
+		<= SCAN * _det(candidate)
 
 func _target_is_live(vehicle, candidate: Variant) -> bool:
 	if candidate == null or not is_instance_valid(candidate) or candidate == vehicle:

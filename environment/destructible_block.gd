@@ -1,10 +1,12 @@
 extends StaticBody2D
 ## A destructible obstacle: block semantics (layer 4 — airborne cars and
 ## cover-piercing shots ignore it) plus Health, so weapons fire and ramming
-## can break it open. Frees itself on death. Size and HP are per-instance
-## exports; `deco` picks a paint style (house roof, crate, kiosk, barrier,
-## guardrail, junk pile, gas pump, fuel barrel) — empty keeps the plain slab.
-## Barrels are the fun ones: they detonate with a real blast.
+## can break it open. Death FLATTENS it in place: the node stays as visible,
+## collisionless remains (seeded debris/scorch via remains_paint.gd) that cars
+## drive over and shots pass through. Size and HP are per-instance exports;
+## `deco` picks a paint style (house roof, crate, kiosk, barrier, guardrail,
+## junk pile, gas pump, fuel barrel) — empty keeps the plain slab. Barrels are
+## the fun ones: they detonate with a real blast.
 
 const BASE_COLOR := Color(0.45, 0.38, 0.28)     # crate-brown vs the cold gray of solid blocks
 const WRECKED_COLOR := Color(0.22, 0.18, 0.14)  # battered toward rubble as HP falls
@@ -46,12 +48,50 @@ const LINK := Color(0.55, 0.6, 0.58)       # galvanized chain-link
 const LINK_DARK := Color(0.36, 0.4, 0.39)
 const FAN_BLUE := Color(0.2, 0.42, 0.7)    # stadium crowd-control rail
 const FAN_BLUE_DARK := Color(0.12, 0.26, 0.46)
+const IRON := Color(0.09, 0.09, 0.11)      # wrought iron — capital containment
+const IRON_HI := Color(0.26, 0.26, 0.31)
+
+# Food trucks: their own livery palette, separate from the harbor rainbow.
+const TRUCK_PALETTES := [
+	Color(0.85, 0.3, 0.25),   # taco red
+	Color(0.93, 0.72, 0.2),   # empanada yellow
+	Color(0.25, 0.55, 0.75),  # kebab blue
+	Color(0.45, 0.65, 0.3),   # falafel green
+]
 
 const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 const ArenaState := preload("res://game/net/arena_state.gd")
+const RemainsPaint := preload("res://environment/remains_paint.gd")
+
+## Remains language per deco: [flavor, base, dark]. Colors authored drab
+## directly — never through _shade (a dead block's _wreck is 1.0, which would
+## collapse every palette into one mud color). Containers resolve their base
+## from the livery at draw time.
+const REMAINS := {
+	&"": [&"debris", WRECKED_COLOR, Color(0.13, 0.11, 0.09)],
+	&"house": [&"debris", ROOF_DARK, ROOF_RIDGE],
+	&"crate": [&"splinter", PLANK, PLANK_SEAM],
+	&"kiosk": [&"crumple", AWNING_RED, PLANK_SEAM],
+	&"barrier": [&"crumple", METAL, METAL_DARK],
+	&"rail": [&"crumple", METAL, METAL_DARK],
+	&"fan_rail": [&"crumple", FAN_BLUE, FAN_BLUE_DARK],
+	&"log": [&"splinter", Color(0.4, 0.28, 0.17), Color(0.28, 0.19, 0.11)],
+	&"junk": [&"debris", RUST, RUST_DARK],
+	&"pump": [&"scorch", PUMP_RED, HAZARD_DARK],
+	&"barrel": [&"scorch", BARREL_RED, BARREL_RIM],
+	&"fence": [&"splinter", Color(0.92, 0.9, 0.85), Color(0.68, 0.66, 0.6)],
+	&"iron_fence": [&"crumple", IRON_HI, IRON],
+	&"container": [&"crumple", Color.WHITE, METAL_DARK],  # base = livery, darkened
+	&"food_truck": [&"crumple", Color.WHITE, Color(0.16, 0.14, 0.13)],  # base = livery
+	&"chainlink": [&"crumple", LINK, LINK_DARK],
+	&"forms": [&"splinter", Color(0.45, 0.34, 0.20), Color(0.30, 0.22, 0.13)],
+	&"spool": [&"splinter", Color(0.48, 0.34, 0.19), Color(0.28, 0.20, 0.12)],
+	&"pipes": [&"debris", Color(0.42, 0.45, 0.46), Color(0.14, 0.16, 0.17)],
+	&"rebar": [&"debris", Color(0.42, 0.25, 0.16), Color(0.35, 0.21, 0.14)],
+}
 
 @export var size := Vector2(96, 96)
 @export var max_hp := 80.0
@@ -106,18 +146,25 @@ func _on_damaged(_amount: float, hp: float) -> void:
 func _explode_and_free() -> void:
 	if _dead:
 		return
-	_dead = true
 	_spawn_death_visual()
 	if deco == &"barrel":
 		# Deferred: death often lands mid-physics-flush (projectile Area2D
 		# signal), and shape queries need the space unlocked.
 		call_deferred("_barrel_blast")
-	if arena_net_id > 0:
-		collision_layer = 0
-		collision_mask = 0
-		visible = false
-	else:
-		queue_free()
+	_present_remains()
+
+## The flatten-in-place death state: the node STAYS — visible, collisionless
+## debris cars drive over and shots pass through. One path for legacy and
+## arena-synced blocks alike (the tombstone contract keeps the node anyway;
+## it just stops hiding it).
+func _present_remains() -> void:
+	_dead = true
+	collision_layer = 0
+	collision_mask = 0
+	_vis.visible = false  # the plain slab's polygon would keep painting the box
+	if is_in_group(&"tutorial_smash"):
+		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
+	queue_redraw()
 
 func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
@@ -143,14 +190,12 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 		_dead = false
 		visible = true
 		collision_layer = _base_collision_layer
+		_vis.visible = deco == &""  # resurrect the plain slab's polygon too
 		queue_redraw()
 	elif not _dead:
-		_dead = true
 		if not initial_state:
-			_spawn_death_visual()
-		visible = false
-		collision_layer = 0
-		collision_mask = 0
+			_spawn_death_visual()  # late joiners get silent remains, no boom
+		_present_remains()
 	_net_initialized = true
 
 func _boom_tint() -> Color:
@@ -161,6 +206,10 @@ func _boom_tint() -> Color:
 			return Color(1.0, 0.45, 0.15)  # fuel fire
 		&"fence":
 			return Color(0.9, 0.88, 0.82)  # splinters fly white
+		&"iron_fence":
+			return IRON_HI  # black iron shears dull
+		&"food_truck":
+			return Color(1.0, 0.45, 0.15)  # the propane griddle goes up
 		&"chainlink":
 			return Color(0.7, 0.74, 0.72)  # mesh crumples gray
 		&"fan_rail":
@@ -185,6 +234,9 @@ func _barrel_blast() -> void:
 			continue  # a dock-level fireball doesn't cook the roof
 		for child in body.get_children():
 			if child is Health:
+				# Kind breadcrumb only — barrel kills stay deliberately creditless
+				# (no last_attacker, no Combat.scale): shoot a barrel, walk away.
+				body.set_meta(&"bc_hit_kind", &"environment")
 				child.take_damage(BLAST_DAMAGE)
 				break
 
@@ -196,7 +248,30 @@ func _seed_rng() -> RandomNumberGenerator:
 	rng.seed = int(absf(position.x * 7.0 + position.y * 13.0))
 	return rng
 
+## The livery pick, shared by the live paint and the remains (both consume the
+## seeded rng's FIRST roll, so a crumpled container keeps its harbor color).
+func _container_livery(rng: RandomNumberGenerator) -> Color:
+	if livery >= 0 and livery < CONTAINER_PALETTES.size():
+		return CONTAINER_PALETTES[livery]
+	return CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+
+## Same contract for the street-food fleet.
+func _truck_livery(rng: RandomNumberGenerator) -> Color:
+	if livery >= 0 and livery < TRUCK_PALETTES.size():
+		return TRUCK_PALETTES[livery]
+	return TRUCK_PALETTES[rng.randi() % TRUCK_PALETTES.size()]
+
 func _draw() -> void:
+	if _dead:
+		var spec: Array = REMAINS.get(deco, REMAINS[&""])
+		var base: Color = spec[1]
+		if deco == &"container":
+			base = _container_livery(_seed_rng()).darkened(0.55)
+		elif deco == &"food_truck":
+			base = _truck_livery(_seed_rng()).darkened(0.5)
+		RemainsPaint.draw_marks(self, RemainsPaint.generate(size * 0.5, spec[0],
+			base, spec[2], RemainsPaint.remains_seed(position)))
+		return
 	match deco:
 		&"house":
 			_draw_house()
@@ -220,8 +295,12 @@ func _draw() -> void:
 			_draw_barrel()
 		&"fence":
 			_draw_fence()
+		&"iron_fence":
+			_draw_iron_fence()
 		&"container":
 			_draw_container()
+		&"food_truck":
+			_draw_food_truck()
 		&"chainlink":
 			_draw_chainlink()
 		&"forms":
@@ -434,32 +513,85 @@ func _draw_pump() -> void:
 ## Picket fence (top-down strip): white slats across the run + a shaded rail
 ## along it. 15 HP — mowing one down is a fender-tap, as intended.
 func _draw_fence() -> void:
+	_draw_picket_bar(_shade(Color(0.92, 0.9, 0.85)), _shade(Color(0.68, 0.66, 0.6)), 8.0, 6.0)
+
+## Black wrought iron (top-down strip): thin frequent bars, a highlight rail,
+## finial dots at the span ends. Authored heavier (~30 HP) — the White House
+## ring is containment you have to EARN through, not a fender-tap.
+func _draw_iron_fence() -> void:
+	_draw_picket_bar(_shade(IRON), _shade(IRON_HI), 4.0, 10.0)
+	var half := size * 0.5
+	var tall := size.y > size.x
+	var ends: Array = [Vector2(0.0, -half.y + 3.0), Vector2(0.0, half.y - 3.0)] if tall \
+		else [Vector2(-half.x + 3.0, 0.0), Vector2(half.x - 3.0, 0.0)]
+	for p: Vector2 in ends:
+		draw_circle(p, 3.0, _shade(IRON_HI))
+
+## Shared picket geometry: slats across the run + a rail along it. Fence
+## variants are palette + pitch swaps over these bones (the fan_rail idiom).
+func _draw_picket_bar(slat: Color, rail: Color, picket: float, gap: float) -> void:
 	var half := size * 0.5
 	var tall := size.y > size.x
 	var length := size.y if tall else size.x
-	var white := _shade(Color(0.92, 0.9, 0.85))
-	var rail := _shade(Color(0.68, 0.66, 0.6))
-	var picket := 8.0
-	var gap := 6.0
 	var n := int(length / (picket + gap))
 	for i in n:
 		var t := -length * 0.5 + i * (picket + gap) + gap * 0.5
 		if tall:
-			draw_rect(Rect2(-half.x, t, size.x, picket), white)
+			draw_rect(Rect2(-half.x, t, size.x, picket), slat)
 		else:
-			draw_rect(Rect2(t, -half.y, picket, size.y), white)
+			draw_rect(Rect2(t, -half.y, picket, size.y), slat)
 	if tall:
 		draw_rect(Rect2(-2.0, -half.y, 4.0, size.y), rail)
 	else:
 		draw_rect(Rect2(-half.x, -2.0, size.x, 4.0), rail)
+
+## Street food truck (top-down box truck): livery body, cab quarter, awning
+## over the serving window, roof vents, tail menu board, wheels on both sides.
+## Drawn long-axis-horizontal; tall instances ride a 90-degree canvas turn.
+func _draw_food_truck() -> void:
+	var rng := _seed_rng()
+	var base := _truck_livery(rng)
+	var dark := base.darkened(0.45)
+	var tall := size.y > size.x
+	var run := size.y if tall else size.x
+	var wide := size.x if tall else size.y
+	var h := Vector2(run, wide) * 0.5
+	if tall:
+		draw_set_transform(Vector2.ZERO, PI * 0.5, Vector2.ONE)
+	draw_rect(Rect2(-h + Vector2(6, 9), Vector2(run, wide)), SHADOW)
+	draw_rect(Rect2(-h, Vector2(run, wide)), _shade(base))
+	# Cab quarter at the +run end: steel + a windshield band.
+	var cab_w := run * 0.22
+	draw_rect(Rect2(Vector2(h.x - cab_w, -h.y), Vector2(cab_w, wide)), _shade(dark))
+	draw_rect(Rect2(Vector2(h.x - cab_w + 4.0, -h.y + 3.0), Vector2(5.0, wide - 6.0)),
+		_shade(Color(0.6, 0.72, 0.78)))
+	# Serving window along the -wide side, striped awning proud of the body.
+	var win_x := -h.x + run * 0.12
+	var win_w := run * 0.45
+	draw_rect(Rect2(Vector2(win_x, -h.y + 2.0), Vector2(win_w, 7.0)), _shade(Color(0.12, 0.1, 0.1)))
+	var stripes := maxi(int(win_w / 12.0), 4)
+	for i in stripes:
+		var sx := win_x + win_w * float(i) / float(stripes)
+		var c := Color(0.9, 0.88, 0.84) if i % 2 == 0 else base.lightened(0.2)
+		draw_rect(Rect2(Vector2(sx, -h.y - 5.0), Vector2(win_w / float(stripes), 6.0)), _shade(c))
+	# Roof furniture: vent hood + fan, tail menu board.
+	draw_rect(Rect2(Vector2(-h.x + run * 0.62, -wide * 0.2), Vector2(14.0, 10.0)), _shade(dark))
+	draw_circle(Vector2(-h.x + run * 0.56, wide * 0.14), 4.0, _shade(dark))
+	draw_rect(Rect2(Vector2(-h.x + 2.0, h.y - 9.0), Vector2(10.0, 7.0)), _shade(Color(0.2, 0.18, 0.16)))
+	# Wheels peeking past both long sides.
+	for wx: float in [-h.x + run * 0.18, h.x - cab_w * 0.5]:
+		draw_rect(Rect2(Vector2(wx - 7.0, -h.y - 1.0), Vector2(14.0, 4.0)), Color(0.08, 0.08, 0.09))
+		draw_rect(Rect2(Vector2(wx - 7.0, h.y - 3.0), Vector2(14.0, 4.0)), Color(0.08, 0.08, 0.09))
+	draw_rect(Rect2(-h, Vector2(run, wide)), _shade(dark), false, 2.5)
+	if tall:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## Shipping container (top-down): seeded livery, corrugation ribs across the
 ## short axis, corner castings, door bars on the +long end.
 func _draw_container() -> void:
 	var half := size * 0.5
 	var rng := _seed_rng()
-	var base: Color = CONTAINER_PALETTES[livery] if livery >= 0 and livery < CONTAINER_PALETTES.size() \
-		else CONTAINER_PALETTES[rng.randi() % CONTAINER_PALETTES.size()]
+	var base := _container_livery(rng)
 	var dark := base.darkened(0.4)
 	draw_rect(Rect2(-half + Vector2(6, 9), size), SHADOW)  # stacked-steel height
 	draw_rect(Rect2(-half, size), _shade(base))

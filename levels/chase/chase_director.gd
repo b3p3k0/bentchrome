@@ -100,6 +100,7 @@ func spawn(kind: StringName) -> Node:
 	stats.accent_color = stats.accent_color.darkened(rng.randf_range(0.0, 0.3))
 	b.stats = stats
 	b.hp_scale = row["hp_scale"]
+	b.weapon_lock_exempt = true  # chase pacing lives in chase_driver, not the bay lock
 	var driver = b.get_node(^"Driver")
 	driver.role = kind
 	driver.lane_offset = _lane_flip * rng.randf_range(80.0, 240.0)

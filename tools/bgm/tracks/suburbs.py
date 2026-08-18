@@ -1,4 +1,4 @@
-"""bgm_suburbs — Suburban Slaughter. Drop-tuned grunge sludge at 95: the
+"""bgm_suburbs — Suburban Savagery. Drop-tuned grunge sludge at 95: the
 quiet/loud trick — clean-ish arpeggiated verses over a lazy beat, then the
 choruses drop the D5-F5-G5-Bb5 wall. Sabbath weight, flannel pacing.
 """

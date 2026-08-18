@@ -8,6 +8,7 @@ extends CanvasLayer
 
 const UiStyle := preload("res://ui/ui_style.gd")
 const Economy := preload("res://game/economy.gd")
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
@@ -67,11 +68,14 @@ func _process(_delta: float) -> void:
 		_show(true)
 
 ## Index of the next campaign level after this scene, or -1 (off-campaign /
-## final level — those keep the full panel with buttons).
+## final level / non-campaign lane — those keep the full panel with buttons).
 func _campaign_next_index() -> int:
 	var flow := get_node_or_null(^"/root/SceneFlow")
-	if get_node_or_null(^"/root/GameState") == null or flow == null:
+	var gs := get_node_or_null(^"/root/GameState")
+	if gs == null or flow == null:
 		return -1
+	if gs.game_mode != &"campaign":
+		return -1  # single battles fight one slot — there is no tour to rejoin
 	var here: String = get_tree().current_scene.scene_file_path
 	for i in flow.CAMPAIGN.size():
 		if flow.CAMPAIGN[i].scene == here and i + 1 < flow.CAMPAIGN.size():
@@ -204,8 +208,25 @@ func _continue_campaign() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	var flow := get_node_or_null(^"/root/SceneFlow")
 	if gs and flow:
+		_capture_ammo_carry(gs)
 		gs.level_index = _campaign_next
 		flow.to_interstitial()
+
+## The winner's bay rides into the next level: snapshot all seven rack
+## counters off the (still-alive, tree-frozen) player before the scene swap
+## frees the car. Anything unreadable leaves the previous carry untouched.
+func _capture_ammo_carry(gs: Node) -> void:
+	var player := VehiclesHelper.local(get_tree())
+	if player == null or not is_instance_valid(player) \
+			or not player.has_method(&"get_rack"):
+		return
+	var rack: Variant = player.get_rack()
+	if rack == null:
+		return
+	var counts: Array = []
+	for i in WeaponRack.Slot.size():
+		counts.append(rack.ammo(i))
+	gs.carry_ammo = counts
 
 func _open_garage() -> void:
 	if _garage != null:
@@ -314,7 +335,8 @@ func _build_ui() -> void:
 	_restart_btn = _button(vbox, "Restart", func() -> void:
 		_leave(func() -> void:
 			# Campaign levels restart the whole run (full wipe, level 1, 3
-			# lives); custom levels just reload themselves.
+			# lives); a single battle restarts its own slot with fresh lives;
+			# custom levels just reload themselves.
 			var gs := get_node_or_null(^"/root/GameState")
 			var flow := get_node_or_null(^"/root/SceneFlow")
 			var here: String = get_tree().current_scene.scene_file_path
@@ -325,7 +347,10 @@ func _build_ui() -> void:
 						on_campaign = true
 			if on_campaign and gs and flow:
 				gs.reset_campaign()
-				flow.to_level(0)
+				if gs.game_mode == &"single_battle":
+					flow.to_level(gs.battle_level_index)
+				else:
+					flow.to_level(0)
 			else:
 				get_tree().reload_current_scene()))
 	_button(vbox, "Change Car", func() -> void:
@@ -345,7 +370,7 @@ func _build_ui() -> void:
 			var flow := get_node_or_null(^"/root/SceneFlow")
 			if flow:
 				flow.to_title()))
-	_button(vbox, "Quit Desktop", func() -> void: get_tree().quit())
+	_button(vbox, "Quit Desktop", _quit_desktop)
 
 func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
@@ -356,3 +381,13 @@ func _button(parent: Node, label: String, on_pressed: Callable) -> Button:
 	parent.add_child(b)
 	_buttons.append(b)
 	return b
+
+## Menu quits route through SceneFlow's graceful exit (stops audio, waits one
+## mix frame) so terminations leave a clean console; bare quit is the fallback
+## for stripped fixtures.
+func _quit_desktop() -> void:
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if flow and flow.has_method(&"quit_gracefully"):
+		flow.quit_gracefully()
+	else:
+		get_tree().quit()

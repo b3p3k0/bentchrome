@@ -12,16 +12,20 @@ extends SceneTree
 
 const Curves := preload("res://resources/stat_curves.gd")
 const Controller := preload("res://vehicles/driving_controller.gd")
+const TerrainTables := preload("res://resources/terrain_tables.gd")
 const MPH_PER_PXS := 0.15  # ui/hud.gd display anchor
 
-const TERRAIN_NAMES := ["road", "grass", "snow", "dirt", "mud", "ice", "water"]
-const TERRAIN_FIELDS := ["accel", "top", "grip", "steer", "dash_damage"]
+# Terrain vocabulary + composition live in resources/terrain_tables.gd (shared
+# with the garage's tire overlays); these stay as delegating aliases so every
+# existing call site and test keeps reading Importer.*.
+const TERRAIN_NAMES := TerrainTables.TERRAIN_NAMES
+const TERRAIN_FIELDS := TerrainTables.TERRAIN_FIELDS
 # Vocabulary the level_loader shim maps onto EnemyDriver.mix weights.
 const ARCHETYPES := ["aggressor", "ambusher", "opportunist", "defender", "mini_boss"]
 const REQUIRED_KEYS := ["id", "car_name", "driver_name", "flavor", "special_weapon",
 	"special_def", "ai_archetype", "stats", "colors", "portrait", "mass"]
 const OPTIONAL_KEYS := ["special_ammo_cap", "special_recharge_seconds", "terrain_modifiers",
-	"burn_taken", "terrain_profile"]
+	"burn_taken", "terrain_profile", "whip_scale", "side_slide_bonus"]
 const STAT_KEYS := ["acceleration", "top_speed", "handling", "armor", "special_power"]
 
 func _init() -> void:
@@ -71,6 +75,8 @@ func _init() -> void:
 		vs.special_ammo_cap = int(c.get("special_ammo_cap", 1))
 		vs.special_recharge_seconds = float(c.get("special_recharge_seconds", 12.0))
 		vs.burn_taken = float(c.get("burn_taken", 1.0))
+		vs.whip_scale = float(c.get("whip_scale", 1.0))
+		vs.side_slide_bonus = float(c.get("side_slide_bonus", 1.5))
 		vs.mass = int(c["mass"])
 		vs.terrain_modifiers = build_terrain_modifiers(
 			merged_terrain(c, data.get("terrain_profiles", {})))
@@ -204,6 +210,12 @@ static func character_errors(c: Variant) -> PackedStringArray:
 	if c.has("burn_taken") and (typeof(c["burn_taken"]) not in [TYPE_INT, TYPE_FLOAT]
 			or float(c["burn_taken"]) <= 0.0):
 		errors.append("burn_taken must be a positive number")
+	if c.has("whip_scale") and (typeof(c["whip_scale"]) not in [TYPE_INT, TYPE_FLOAT]
+			or float(c["whip_scale"]) < 0.5 or float(c["whip_scale"]) > 2.0):
+		errors.append("whip_scale must be a number in [0.5, 2.0]")
+	if c.has("side_slide_bonus") and (typeof(c["side_slide_bonus"]) not in [TYPE_INT, TYPE_FLOAT]
+			or float(c["side_slide_bonus"]) < 1.0 or float(c["side_slide_bonus"]) > 3.0):
+		errors.append("side_slide_bonus must be a number in [1.0, 3.0]")
 
 	if c.has("terrain_profile") and typeof(c["terrain_profile"]) != TYPE_STRING:
 		errors.append("terrain_profile must be a profile-name string")
@@ -221,54 +233,13 @@ static func _range_errors(label: String, value: Variant) -> PackedStringArray:
 		errors.append("%s must be 1-20 (got %d)" % [label, int(value)])
 	return errors
 
+# Delegating wrappers — the implementations moved to resources/terrain_tables.gd
+# (shared with garage tire overlays); tests and call sites keep Importer.*.
 static func terrain_profile_errors(raw: Variant) -> PackedStringArray:
-	var errors := PackedStringArray()
-	if typeof(raw) != TYPE_DICTIONARY:
-		errors.append("terrain_modifiers must be an object")
-		return errors
-	for surface_v in raw:
-		var surface := String(surface_v)
-		if surface not in TERRAIN_NAMES:
-			errors.append("unknown terrain '%s'" % surface)
-			continue
-		var fields: Variant = raw[surface_v]
-		if typeof(fields) != TYPE_DICTIONARY:
-			errors.append("terrain '%s' must contain an object" % surface)
-			continue
-		for property_v in fields:
-			var property := String(property_v)
-			if property not in TERRAIN_FIELDS:
-				errors.append("terrain '%s' has unknown property '%s'" % [surface, property])
-			elif typeof(fields[property_v]) not in [TYPE_INT, TYPE_FLOAT] \
-					or float(fields[property_v]) <= 0.0:
-				errors.append("terrain '%s' property '%s' must be a positive number" % [surface, property])
-	return errors
+	return TerrainTables.terrain_profile_errors(raw)
 
-## Composes the car's effective terrain table: the named shared profile (if
-## any) first, then the car's inline terrain_modifiers overlaid per surface
-## and property — inline always wins. Same seam a future tire/drivetrain mod
-## swap will use.
 static func merged_terrain(c: Dictionary, profiles: Dictionary) -> Dictionary:
-	var out := {}
-	var pname := String(c.get("terrain_profile", ""))
-	if not pname.is_empty() and profiles.has(pname):
-		for surface_v in profiles[pname]:
-			out[surface_v] = (profiles[pname][surface_v] as Dictionary).duplicate()
-	for surface_v in c.get("terrain_modifiers", {}):
-		var over: Dictionary = c["terrain_modifiers"][surface_v]
-		var dst: Dictionary = out.get(surface_v, {})
-		for property_v in over:
-			dst[property_v] = over[property_v]
-		out[surface_v] = dst
-	return out
+	return TerrainTables.merged_terrain(c, profiles)
 
 static func build_terrain_modifiers(raw: Dictionary) -> Array[VehicleTerrainModifier]:
-	var out: Array[VehicleTerrainModifier] = []
-	for surface_v in raw:
-		var modifier := VehicleTerrainModifier.new()
-		modifier.terrain = StringName(surface_v)
-		var fields: Dictionary = raw[surface_v]
-		for property_v in fields:
-			modifier.set(String(property_v), float(fields[property_v]))
-		out.append(modifier)
-	return out
+	return TerrainTables.build_terrain_modifiers(raw)

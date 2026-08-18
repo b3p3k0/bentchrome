@@ -214,7 +214,10 @@ func _attribute(idx: int) -> int:
 	var car: Node = actor_cars[idx] if is_instance_valid(actor_cars[idx]) else null
 	if car == null:
 		return -1
-	var atk: Node2D = car.last_attacker
+	# Variant read: a freed killer leaves last_attacker dangling, and assigning
+	# that directly to Node2D is a script error (enemy_driver's grudge read
+	# dodges the same trap).
+	var atk: Variant = car.get("last_attacker")
 	if atk == null or not is_instance_valid(atk) or atk == car:
 		return -1
 	if Time.get_ticks_msec() - int(car.last_attacker_ms) > ATTRIBUTION_MS:

@@ -534,6 +534,182 @@ kind = &"drift"
 footprint = 48.0
 floor_index = 2
 
+[node name="PineGroves" type="Node2D" parent="."]
+
+[node name="NorthRidge1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1180, -1590)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthRidge2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1040, -1530)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthRidge3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-900, -1610)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthRidge4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-760, -1550)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthRidge5" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-620, -1640)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Northwest1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1080, -1120)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Northwest2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-920, -1040)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Northwest3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1020, -980)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Northwest4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-870, -820)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Northwest5" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-740, -1080)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthMid1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-300, -650)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthMid2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-140, -560)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthMid3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-420, -480)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="NorthMid4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(40, -620)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Cliffside1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1280, 420)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Cliffside2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1210, 570)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Cliffside3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1290, 680)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Cliffside4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1160, 790)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Cliffside5" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1300, 930)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Southeast1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1100, 300)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Southeast2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1180, 430)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Southeast3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1050, 520)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Southeast4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1580, 260)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Southeast5" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1640, 420)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="SouthRidge1" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1300, 1580)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="SouthRidge2" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-1150, 1660)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="SouthRidge3" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(-980, 1570)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="SouthRidge4" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1180, 1580)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="SouthRidge5" parent="PineGroves" instance=ExtResource("20_clutter")]
+position = Vector2(1340, 1660)
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
 [node name="StreetDeco" type="Node2D" parent="."]
 
 [node name="Snowfall" type="Node2D" parent="StreetDeco"]

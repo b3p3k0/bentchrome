@@ -60,6 +60,27 @@ func test_land_mine_damages_and_deviates() -> void:
 	t.check(not is_instance_valid(f.mine), "land mine: single use")
 	_done(f)
 
+## Regression: persistent mines may outlive the car that dropped them. A freed
+## dropper still occupies the typed property as an invalid Object reference;
+## detonation must fall back to environmental damage instead of aborting after
+## each repeated course deviation.
+func test_land_mine_detonates_after_dropper_is_freed() -> void:
+	var f := _fixture(LandScene)
+	var former_dropper := Node2D.new()
+	f.container.add_child(former_dropper)
+	f.mine.dropper = former_dropper
+	former_dropper.free()
+	for i in ARM_FRAMES:
+		await t.physics_frame
+	var health = f.car.get_node("Health")
+	t.check_approx(health.max_hp - health.hp, 22.0,
+		"orphaned mine: damage lands at environmental scale")
+	t.check(f.car.last_attacker == null,
+		"orphaned mine: freed dropper is not retained for kill credit")
+	t.check(not is_instance_valid(f.mine),
+		"orphaned mine: detonates and is consumed")
+	_done(f)
+
 func test_jump_mine_pops_airborne_no_damage() -> void:
 	var f := _fixture(JumpScene)
 	for i in ARM_FRAMES:
@@ -173,6 +194,7 @@ func test_dry_slot_does_not_chain_fire_next_weapon() -> void:
 
 	stub.intent = {}  # release...
 	await t.physics_frame
+	car._weapon_lock_t = 0.0  # isolate the fire-lock check from the 2s bay lockout
 	stub.intent = {"fire_selected": true}  # ...and a fresh press fires it
 	for i in 3:
 		await t.physics_frame

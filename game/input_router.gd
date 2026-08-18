@@ -22,6 +22,7 @@ const ACTION_SELECT_NEXT := &"select_next"
 const ACTION_SELECT_CONFIRM := &"select_confirm"
 const ACTION_SELECT_INFO := &"select_more_info"
 const ACTION_ZOOM := &"zoom_toggle"
+const ACTION_LOCATE_PLAYER := &"locate_player"
 
 func _ready() -> void:
 	_ensure_action(ACTION_MOVE_UP, [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
@@ -34,12 +35,14 @@ func _ready() -> void:
 	# Mouse-first weapons: wheel cycles, "/" is the keyboard fallback (next-only
 	# — auto-skip tours all slots). Q is deliberately unbound: prime real estate
 	# reserved for future ideas. Handbrake lives on LCtrl (pinky-reachable while
-	# steering — the July 2026 playtest retired E); zoom toggles on G, convenient
-	# but out of the way (players rarely toggle it). E is now unbound/free.
+	# steering — the July 2026 playtest retired E); G toggles tactical overview.
+	# T / right-stick click briefly lights the local car after visual chaos.
+	# E is now unbound/free.
 	_ensure_action(ACTION_WEAPON_PREV, [_mouse(MOUSE_BUTTON_WHEEL_UP)])
 	_ensure_action(ACTION_WEAPON_NEXT, [_key(KEY_SLASH), _mouse(MOUSE_BUTTON_WHEEL_DOWN)])
 	_ensure_action(ACTION_HANDBRAKE, [_key(KEY_CTRL), _joy_button(JOY_BUTTON_B)])
 	_ensure_action(ACTION_ZOOM, [_key(KEY_G), _joy_button(JOY_BUTTON_Y)])
+	_ensure_action(ACTION_LOCATE_PLAYER, [_key(KEY_T), _joy_button(JOY_BUTTON_RIGHT_STICK)])
 	_ensure_action(ACTION_BOOST, [_key(KEY_SHIFT), _joy_button(JOY_BUTTON_LEFT_SHOULDER)])
 	_ensure_action(ACTION_PAUSE, [_key(KEY_ESCAPE), _joy_button(JOY_BUTTON_START)])
 	_ensure_action(ACTION_SELECT_PREV, [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])

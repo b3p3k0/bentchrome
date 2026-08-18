@@ -6,7 +6,7 @@ extends RefCounted
 ## zone under them, grade Ramp nodes land their ends on the right floors,
 ## and every connector's approach run begins on its from_floor.
 
-const LEVELS := ["res://levels/arena/arena.tscn", "res://levels/snowy/snowy.tscn"]
+const LEVELS := ["res://levels/downtown/downtown.tscn", "res://levels/snowy/snowy.tscn"]
 const FLOOR_BITS := 8 | 16 | 32
 
 var t
@@ -183,4 +183,41 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 			and deer.position == Vector2.ZERO,
 		"snowy hill: pickups and deer remain hill-relative for future moves")
 	t.root.remove_child(snowy)
+	snowy.free()
+
+func test_snowy_pine_groves_preserve_combat_space() -> void:
+	var snowy := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var groves := snowy.get_node_or_null(^"PineGroves") as Node2D
+	t.check(groves != null and groves.get_child_count() == 29,
+		"snowy pines: five sparse peripheral grove bands carry 29 trees")
+	if groves == null:
+		snowy.free()
+		return
+	var spawns: Array[Node2D] = []
+	for child in snowy.get_children():
+		if child is Node2D and (String(child.name) == "Vehicle"
+				or String(child.name).begins_with("Enemy")):
+			spawns.append(child)
+	var center_lane := Rect2(Vector2(-1450, -180), Vector2(2900, 360))
+	var donut_field := Rect2(Vector2(-800, 250), Vector2(1500, 900))
+	var hill_approaches := Rect2(Vector2(250, -1316), Vector2(1290, 1288))
+	for pine_v in groves.get_children():
+		var pine := pine_v as Node2D
+		t.check(String(pine.get("kind")) == "pine"
+				and is_equal_approx(float(pine.get("footprint")), 36.0)
+				and int(pine.get("floor_index")) == 2,
+			"snowy pines: %s is one-hit floor-2 clutter" % pine.name)
+		for spawn in spawns:
+			t.check(pine.position.distance_to(spawn.position) >= 300.0,
+				"snowy pines: %s stays 300px from %s" % [pine.name, spawn.name])
+		var radius := 18.0
+		t.check(not center_lane.grow(radius).has_point(pine.position),
+			"snowy pines: %s leaves the center east-west lane clear" % pine.name)
+		t.check(not donut_field.grow(radius).has_point(pine.position),
+			"snowy pines: %s leaves the south-central donut field open" % pine.name)
+		t.check(not hill_approaches.grow(radius).has_point(pine.position),
+			"snowy pines: %s leaves all hill approaches open" % pine.name)
+		t.check(absf(pine.position.y - 1344.0) >= 150.0
+				and absf(pine.position.y + 1344.0) >= 150.0,
+			"snowy pines: %s leaves both boundary road bands open" % pine.name)
 	snowy.free()

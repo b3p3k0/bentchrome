@@ -157,14 +157,30 @@ func _scene_index(flow: Node, tail: String) -> int:
 			return i
 	return -1
 
-func test_campaign_order_ground_floor_precedes_finale() -> void:
+## The authored tour, pinned slot by slot: real levels by scene tail,
+## unbuilt slots by placeholder name. Reordering the campaign means editing
+## this list on purpose.
+func test_campaign_order_thirteen_slots() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
-	var docks := _scene_index(flow, "dock.tscn")
+	var expected := [
+		"arena_assault.tscn", "dock.tscn", "downtown.tscn", "freeway.tscn",
+		"depot.tscn", "suburbs.tscn", "Terminal Terror",
+		"Slaughter on the Strip", "buzzard_run.tscn", "snowy.tscn",
+		"ground_floor_gore.tscn", "capital_city_carnage.tscn", "stadium.tscn",
+	]
+	t.check(flow.CAMPAIGN.size() == expected.size(),
+		"campaign order: exactly %d slots" % expected.size())
+	for i in mini(expected.size(), flow.CAMPAIGN.size()):
+		var profile: Dictionary = flow.CAMPAIGN[i]
+		var want: String = expected[i]
+		var hit: bool
+		if want.ends_with(".tscn"):
+			hit = String(profile.scene).ends_with(want)
+		else:
+			hit = String(profile.name) == want \
+				and StringName(profile.mode) == &"placeholder"
+		t.check(hit, "campaign order: slot %d is %s" % [i + 1, want])
 	var ground := _scene_index(flow, "ground_floor_gore.tscn")
-	var stadium := _scene_index(flow, "stadium.tscn")
-	t.check(ground == docks + 1 and stadium == ground + 1
-		and stadium == flow.CAMPAIGN.size() - 1,
-		"campaign flow: Ground Floor Gore is the last arena before the finale")
 	var profile: Dictionary = flow.CAMPAIGN[ground]
 	t.check(profile.size_class == &"large" and profile.target_cars == 8
 		and profile.stations == 2 and profile.mp_ready,
@@ -174,12 +190,19 @@ func test_campaign_order_ground_floor_precedes_finale() -> void:
 func test_campaign_frame_invariants() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var last: int = flow.CAMPAIGN.size() - 1
-	t.check(String(flow.CAMPAIGN[0].scene).ends_with("arena.tscn"),
-		"campaign frame: Downtown Derby opens the campaign")
 	t.check(String(flow.CAMPAIGN[last].scene).ends_with("stadium.tscn"),
 		"campaign frame: Goliath's Arena is the finale")
 	var specialty := 0
-	for profile in flow.CAMPAIGN:
+	for i in flow.CAMPAIGN.size():
+		var profile: Dictionary = flow.CAMPAIGN[i]
 		if profile.mode == &"specialty":
 			specialty += 1
+		# Placeholder/optional advance is a relative +1 — a next slot must
+		# exist, and placeholders never carry a scene.
+		if StringName(profile.mode) == &"placeholder":
+			t.check(String(profile.scene) == "" and i < last,
+				"campaign frame: placeholder slot %d is sceneless, never the finale" % (i + 1))
+		if bool(profile.get("optional", false)):
+			t.check(i < last,
+				"campaign frame: optional slot %d has a slot after it" % (i + 1))
 	t.check(specialty == 1, "campaign frame: exactly one specialty level (Route 666 Roulette)")
