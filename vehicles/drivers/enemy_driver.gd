@@ -36,7 +36,7 @@ static var PURE := {
 	"opp": {"near": 260.0, "far": 560.0, "flee": 0.35, "w_near": 0.3, "w_weak": 1.0, "flank": 0.0},
 }
 
-enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE, NAVIGATE }
+enum Mode { PURSUE, EVADE, UNSTICK, CLEAR, BREAK, RELENT, WADE, NAVIGATE, DETOUR }
 const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 static var TORNADO_FIRE_RANGE := 250.0  # melee-radius special: only pull it point-blank
@@ -57,6 +57,20 @@ const NAV_EXIT_LEAD := 260.0
 const NAV_ARRIVE := 90.0
 const NAV_SNIPE_TIME := 8.0
 const CROSS_FLOOR_PENALTY := 0.1
+
+# DETOUR (any level with lethal zones): a SAME-floor target across a river or
+# pit gets routed around the blocking rect's end — the gaps between Capital's
+# river rects ARE the bridges, so generic rect-end routing crosses at bridges
+# with zero authored markers. Committed two-phase run on the NAVIGATE pattern
+# (bridgehead in, bridgehead out); feelers stay LIVE (bridges have real
+# rails); greedy one-rect-per-leg re-planning converges across chained rects.
+static var DETOUR_TIMEOUT := 6.0
+static var DETOUR_ENTRY_LEAD := 220.0
+static var DETOUR_EXIT_LEAD := 260.0
+static var DETOUR_ARRIVE := 90.0
+static var DETOUR_LANE_HALF := 140.0  # bridgehead plane-crossing corridor half-width
+static var DETOUR_CHECK_TIME := 0.5
+static var DETOUR_REPLAN_MIN := 1.0
 
 # BREAK: the spacing move. Closing under _near veers off at a committed angle
 # instead of retreating — an arcing strafing run that keeps momentum and
@@ -190,6 +204,12 @@ var _nav_connector: Node2D = null  # committed route (duck-typed FloorConnector)
 var _nav_phase := 0                # 0 = approach the entry, 1 = commit the exit
 var _nav_t := 0.0
 var _snipe_t := 0.0                # vantage-hold meter (tracking-armed, above)
+var _detour_entry := Vector2.INF   # our-side bridgehead (committed at plan)
+var _detour_exit := Vector2.INF    # far bridgehead
+var _detour_phase := 0             # 0 = approach the entry, 1 = commit the exit
+var _detour_t := 0.0
+var _detour_check_t := 0.0         # blocked-beeline / cleared-again cadence
+var _detour_replan_cd := 0.0
 var _target: Variant = null        # Node2D or a freed ref; validate before typing/using
 var _target_commit_t := 0.0
 var _target_reeval_t := 0.0
@@ -361,6 +381,13 @@ func _intent_ladder(vehicle, delta: float) -> Dictionary:
 	if not nav.is_empty():
 		return nav
 
+	# Same-floor lethal barriers (the Potomac): a blocked beeline routes around
+	# the blocking rect's end instead of beelining into the drink. Early-
+	# returns like NAVIGATE; crate runs ride it too (the west-bank ammo case).
+	var det := _detour_gate(vehicle, target, real_vel, delta)
+	if not det.is_empty():
+		return det
+
 	# Pressure meter: only the player earns relief; AI-vs-AI is governed already.
 	# Mooks RELENT (no-fire breather); bosses run the boss valve — heavier hit
 	# budget, dominance-scaled breather, boosted disengage.
@@ -522,19 +549,42 @@ func _apply_hazard_guard(vehicle, intent: Dictionary) -> Dictionary:
 		intent["throttle"] = 0.0
 		intent["boost"] = false
 		return intent
-	# Rim tangent along the rect's long axis. Sign: committed slide first (no
-	# frame-to-frame flips), then the live target's side, then current travel.
+	var entry := Hazards.segment_entry_t(rect, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
+	var tti := entry * reach / maxf(speed, 60.0)
+	# When the line to the COMMITTED goal (detour bridgehead, adopted target)
+	# is itself hazard-clear, the danger is momentum, not direction — a hot
+	# overshoot drifting wide near a rim. Keep the ladder's steering (it's
+	# already turning in) and shed the speed that would carry us past it; a
+	# tangent override here would abandon the recovery turn entirely.
+	var goal := Vector2.INF
+	if _mode == Mode.DETOUR:
+		goal = _detour_entry if _detour_phase == 0 else _detour_exit
+	elif _target_is_live(vehicle, _target):
+		goal = (_target as Node2D).global_position
+	if goal != Vector2.INF and entry > 0.0 \
+			and not Hazards.segment_blocked(tree, pos, goal, Hazards.GUARD_MARGIN):
+		if tti < HAZARD_BRAKE_TTI:
+			intent["throttle"] = -0.4
+		elif tti < HAZARD_CUT_TTI:
+			intent["throttle"] = throttle * 0.4
+		intent["boost"] = false
+		return intent
+	# Rim tangent along the rect's long axis. Sign: an active DETOUR's
+	# committed bridgehead first (a near-perpendicular approach makes every
+	# other reference a coin flip, and a wrong flip slides the whole rim the
+	# wrong way), then the committed slide (no frame-to-frame flips), then the
+	# live target's side, then current travel.
 	var tangent := Vector2.RIGHT if rect.size.x >= rect.size.y else Vector2.DOWN
 	var ref := dir
-	if was_active and _guard_tangent != Vector2.ZERO:
+	if _mode == Mode.DETOUR and goal != Vector2.INF and goal != pos:
+		ref = (goal - pos).normalized()
+	elif was_active and _guard_tangent != Vector2.ZERO:
 		ref = _guard_tangent
 	elif _target_is_live(vehicle, _target):
 		ref = ((_target as Node2D).global_position - pos).normalized()
 	if tangent.dot(ref) < 0.0:
 		tangent = -tangent
 	_guard_tangent = tangent
-	var entry := Hazards.segment_entry_t(rect, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
-	var tti := entry * reach / maxf(speed, 60.0)
 	var aim := tangent
 	if entry <= 0.0:
 		# Already on the forgiveness band: angle OUT of it, don't stall on it.
@@ -748,6 +798,144 @@ func _navigate_intent(vehicle, target, vfloor: int, cross: bool, real_vel: Vecto
 		"fire_mg": false,
 		"fire_selected": false,
 		"boost": _nav_phase == 1 and c.get("kind") == &"jump",
+	}
+
+## DETOUR entry/exit gate, called every tick right after the NAVIGATE gate.
+## Returns the drive intent while riding a detour, {} to fall through. Entry
+## only from PURSUE (EVADE/BREAK/RELENT/WADE own their episodes; the hazard
+## guard protects them), on the check cadence, when the beeline to the
+## CURRENT ladder target — combatant or crate — crosses a lethal rect.
+func _detour_gate(vehicle, target, real_vel: Vector2, delta: float) -> Dictionary:
+	if _mode == Mode.DETOUR:
+		return _detour_intent(vehicle, target, real_vel, delta)
+	if target == null or _mode != Mode.PURSUE:
+		return {}
+	if Hazards.rects(vehicle.get_tree()).is_empty():
+		return {}
+	_detour_check_t -= delta
+	if _detour_check_t > 0.0:
+		return {}
+	_detour_check_t = DETOUR_CHECK_TIME
+	if vehicle.get_hp_fraction() < _flee:
+		return {}  # fleeing outranks routing (NAVIGATE precedent)
+	if not Hazards.segment_blocked(vehicle.get_tree(), vehicle.global_position,
+			target.global_position, Hazards.GUARD_MARGIN):
+		return {}
+	if _enter_detour(vehicle, target):
+		return _detour_intent(vehicle, target, real_vel, delta)
+	return {}  # no viable end: plain pursue — guard rim-slides, never a park
+
+## Picks the first viable detour candidate (registry order: clear approach
+## first, then shortest total path) whose bridgeheads sit in open drivable
+## space — the point probe discards rect ends that extend past the arena
+## boundary, so the bridge-gap end wins on Capital's wall-to-wall river.
+func _enter_detour(vehicle, target) -> bool:
+	var tree: SceneTree = vehicle.get_tree()
+	for c in Hazards.detour_candidates(tree, vehicle.global_position, target.global_position):
+		var point: Vector2 = c["point"]
+		var n: Vector2 = c["normal"]
+		var entry: Vector2 = point + n * DETOUR_ENTRY_LEAD
+		var exit: Vector2 = point - n * DETOUR_EXIT_LEAD
+		if not _detour_point_open(vehicle, entry) or not _detour_point_open(vehicle, exit):
+			continue
+		if not _detour_ray_clear(vehicle, entry):
+			continue  # bridgehead behind a boundary wall = a dead-end end
+		_detour_entry = entry
+		_detour_exit = exit
+		_detour_phase = 0
+		_detour_t = DETOUR_TIMEOUT
+		_detour_replan_cd = DETOUR_REPLAN_MIN
+		_mode = Mode.DETOUR
+		return true
+	return false
+
+## Plan-time only, walls-only (mask 2): a rect end whose bridgehead sits past
+## the arena boundary probes "open" (there is nothing out there to hit), so
+## reachability is the real test — a boundary wall across the approach means
+## that end is a dead end. Destructibles deliberately don't count: the AI can
+## plow through a crate on the way to a bridge (punch-through is gameplay).
+func _detour_ray_clear(vehicle, p: Vector2) -> bool:
+	if not (vehicle is CollisionObject2D):
+		return true
+	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
+	var query := PhysicsRayQueryParameters2D.create(vehicle.global_position, p, 2)
+	query.exclude = _all_car_rids(vehicle)
+	return space.intersect_ray(query).is_empty()
+
+## Plan-time only (≤2 probes per plan, never per frame): a bridgehead inside
+## a wall or same-floor static is not a route.
+func _detour_point_open(vehicle, p: Vector2) -> bool:
+	if not (vehicle is CollisionObject2D):
+		return true
+	var vfloor := Floors.floor_of(vehicle)
+	var mask := (2 | Floors.floor_bit(vfloor)) if vfloor >= 1 else (2 | 4)
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = p
+	query.collision_mask = mask
+	query.exclude = _all_car_rids(vehicle)
+	var space := (vehicle as CollisionObject2D).get_world_2d().direct_space_state
+	return space.intersect_point(query, 1).is_empty()
+
+## The committed run: bridgehead in, bridgehead out, then hand back to the
+## ladder. Exits on timeout, target loss, a flee trip, or the beeline to the
+## current target clearing (which also resolves mid-detour target switches —
+## TARGET_COMMIT keeps the churn low). Feelers stay LIVE in both phases:
+## bridges are real lanes with real rails, unlike the NAVIGATE jump runway.
+func _detour_intent(vehicle, target, real_vel: Vector2, delta: float) -> Dictionary:
+	_detour_t -= delta
+	_detour_replan_cd = maxf(_detour_replan_cd - delta, 0.0)
+	var tree: SceneTree = vehicle.get_tree()
+	var have_target: bool = target != null and is_instance_valid(target)
+	var done: bool = _detour_t <= 0.0 or not have_target \
+		or vehicle.get_hp_fraction() < _flee
+	# Re-checks run in the APPROACH phase only — phase 1 is a committed
+	# crossing (NAVIGATE's COMMIT idiom): nobody aborts halfway over a
+	# bridge because a corner-grazing sightline flickered open. The clear
+	# test uses a wider margin than entry for the same reason (hysteresis).
+	if not done and _detour_phase == 0:
+		_detour_check_t -= delta
+		if _detour_check_t <= 0.0:
+			_detour_check_t = DETOUR_CHECK_TIME
+			if not Hazards.segment_blocked(tree, vehicle.global_position,
+					target.global_position, Hazards.PLAN_MARGIN * 0.5):
+				done = true  # the beeline genuinely opened (the target moved)
+			elif _detour_replan_cd <= 0.0 \
+					and Hazards.segment_blocked(tree, vehicle.global_position,
+						_detour_entry, Hazards.GUARD_MARGIN):
+				# A different rect now blocks the approach corridor (chained
+				# rivers, moving target): re-plan in place, one rect per leg.
+				if not _enter_detour(vehicle, target):
+					done = true
+	if done:
+		_mode = Mode.PURSUE
+		return {}  # hand back to the normal ladder this same tick
+	# Arrival is a plane crossing, not just a radius — a heavy's turning
+	# circle is wider than any sane arrive radius and it would loiter-orbit
+	# the bridgehead forever. Passing the waypoint's crossing-plane inside
+	# the lane corridor counts (phase 1 drops the lateral bound: past the
+	# far plane at any offset means the water is behind us).
+	var waypoint := _detour_entry if _detour_phase == 0 else _detour_exit
+	var cross_dir := (_detour_exit - _detour_entry).normalized()
+	var rel: Vector2 = vehicle.global_position - waypoint
+	var passed: bool = cross_dir != Vector2.ZERO and rel.dot(cross_dir) > 0.0 \
+		and (_detour_phase == 1 or absf(rel.dot(cross_dir.orthogonal())) < DETOUR_LANE_HALF)
+	if passed or vehicle.global_position.distance_to(waypoint) < DETOUR_ARRIVE:
+		if _detour_phase == 0:
+			_detour_phase = 1
+			_detour_t = DETOUR_TIMEOUT  # a fresh clock for the crossing leg
+			waypoint = _detour_exit
+		else:
+			_mode = Mode.PURSUE
+			return {}
+	if _update_stuck(real_vel.length(), true, delta):
+		return _on_stuck(vehicle, target, (waypoint - vehicle.global_position).angle())
+	var diff := wrapf((waypoint - vehicle.global_position).angle() - vehicle.heading, -PI, PI)
+	return {
+		"throttle": 1.0 if absf(diff) < 1.2 else 0.35,
+		"steer": clampf(diff * 2.0 + _avoid_bias * AVOID_GAIN, -1.0, 1.0),
+		"fire_mg": false,
+		"fire_selected": false,
+		"boost": false,
 	}
 
 ## Kind-aware special envelope: a self-centered AoE (TORNADO, PULSE) is wasted
