@@ -62,7 +62,7 @@
 
   <!-- YOUR RIDE panel with live delta preview -->
   <rect x="64" y="432" width="404" height="192" fill="#101017" stroke="#3a3a45" stroke-width="3"/>
-  <text x="80" y="458" fill="#8c949e" font-size="15">YOUR RIDE — RAZORBACK</text>
+  <text x="80" y="458" fill="#8c949e" font-size="15">YOUR RIDE — WAR PIG</text>
   <!-- top-down mini car -->
   <g>
     <rect x="96" y="480" width="56" height="104" fill="#1f6f3a" stroke="#0d4020" stroke-width="4"/>

@@ -59,6 +59,6 @@ them ~5 at a time and hand you soundboard test checklists.
 | kandykane | molotov | (shares hornet's unless you want a variant) | | | | |
 | lovebug | chill_out | pacifying/disarm zap (peace marker) | https://www.youtube.com/watch?v=wtv3azyTRnk|~1 s | ~2s | notes "quick beep!beep! from a weak sounding horn
 | mrghastly | scythe | slicing projectile | | | | |
-| razorback | red_glare | rocket volley | https://www.youtube.com/watch?v=Daax1mhBRsw| 52s | ~1s | note repeats with each volley fired (3x) 
+| warpig | red_glare | rocket volley | https://www.youtube.com/watch?v=Daax1mhBRsw| 52s | ~1s | note repeats with each volley fired (3x) 
 | smoky | taser | crackling electric arc (2s sustained) | https://www.youtube.com/watch?v=sC8R8otsT68&list=PLnlyFagxGmg6slyksq4KvQB11RZ8K4-Ql|1s |duration of special (stops when interrupted)
 | splatkat | rusty_poon | harpoon launch / meaty impale | | | | |

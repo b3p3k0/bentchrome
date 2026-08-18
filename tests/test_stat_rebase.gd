@@ -34,7 +34,7 @@ const GOLDEN := {
 	"lackey": [13, 11, 11, 19, 17, 0],
 	"lovebug": [10, 9, 11, 7, 7, 3],
 	"mrghastly": [14, 17, 13, 3, 2, 15],
-	"razorback": [9, 12, 8, 15, 13, 15],
+	"warpig": [9, 12, 8, 15, 13, 15],
 	"smoky": [11, 13, 9, 11, 12, 13],
 	"splatkat": [12, 15, 12, 9, 11, 3],
 }
@@ -167,7 +167,7 @@ func test_launch_stat_seam() -> void:
 
 func test_loadout_compose() -> void:
 	var Loadout := preload("res://resources/vehicle_loadout.gd")
-	var base = load("res://data/vehicles/razorback.tres")
+	var base = load("res://data/vehicles/warpig.tres")
 	var base_armor: int = base.armor
 	var base_surfaces: int = base.terrain_modifiers.size()
 	var knobby := VehicleTerrainModifier.new()
@@ -262,13 +262,13 @@ func test_terrain_profile_validation() -> void:
 	t.check(saw_bad_surface, "terrain profiles: unknown surface in a profile fails import")
 	t.check(saw_dead_ref, "terrain profiles: dangling profile reference fails import")
 
-## Smoky and razorback share the awd_utility profile; the 2026-07 balance
-## pass gave razorback an inline dirt/mud ACCEL overlay (military 4WD
+## Smoky and warpig share the awd_utility profile; the 2026-07 balance
+## pass gave warpig an inline dirt/mud ACCEL overlay (military 4WD
 ## out-grunts the cop SUV). Everything else must stay element-equal — this
 ## is the overlay seam's live contract.
-func test_awd_utility_shared_by_smoky_and_razorback() -> void:
+func test_awd_utility_shared_by_smoky_and_warpig() -> void:
 	var smoky = load("res://data/vehicles/smoky.tres")
-	var razor = load("res://data/vehicles/razorback.tres")
+	var razor = load("res://data/vehicles/warpig.tres")
 	t.check(smoky.terrain_modifiers.size() == razor.terrain_modifiers.size()
 		and smoky.terrain_modifiers.size() > 0, "awd_utility: both carry the same surface count")
 	for m in smoky.terrain_modifiers:
@@ -279,7 +279,7 @@ func test_awd_utility_shared_by_smoky_and_razorback() -> void:
 				continue
 			if razor.terrain_factor(m.terrain, prop) != m.factor(prop):
 				factor_match = false
-		t.check(factor_match, "awd_utility: %s shared factors element-equal across smoky/razorback" % m.terrain)
+		t.check(factor_match, "awd_utility: %s shared factors element-equal across smoky/warpig" % m.terrain)
 		if overlaid:
 			t.check(razor.terrain_factor(m.terrain, &"accel") > m.factor(&"accel"),
-				"awd_utility: razorback's %s accel overlay out-grunts smoky" % m.terrain)
+				"awd_utility: warpig's %s accel overlay out-grunts smoky" % m.terrain)

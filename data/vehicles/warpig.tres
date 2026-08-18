@@ -1,49 +1,49 @@
 [gd_resource type="Resource" script_class="VehicleStats" format=3]
 
-[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_c5hvu"]
-[ext_resource type="Resource" path="res://data/weapons/red_glare.tres" id="2_mmhwo"]
-[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_pu80b"]
+[ext_resource type="Script" path="res://resources/vehicle_stats.gd" id="1_7l3db"]
+[ext_resource type="Resource" path="res://data/weapons/red_glare.tres" id="2_qukso"]
+[ext_resource type="Script" path="res://resources/vehicle_terrain_modifier.gd" id="3_cnkqa"]
 
-[sub_resource type="Resource" id="Resource_n16fk"]
-script = ExtResource("3_pu80b")
+[sub_resource type="Resource" id="Resource_upnyo"]
+script = ExtResource("3_cnkqa")
 terrain = &"grass"
 accel = 1.0555555556
 top = 1.0555555556
 grip = 1.075
 
-[sub_resource type="Resource" id="Resource_8u3r2"]
-script = ExtResource("3_pu80b")
+[sub_resource type="Resource" id="Resource_e7ooh"]
+script = ExtResource("3_cnkqa")
 terrain = &"snow"
 accel = 1.0588235294
 top = 1.0444444444
 grip = 1.1777777778
 
-[sub_resource type="Resource" id="Resource_wfjhb"]
-script = ExtResource("3_pu80b")
+[sub_resource type="Resource" id="Resource_8vxlg"]
+script = ExtResource("3_cnkqa")
 terrain = &"dirt"
 accel = 1.2
 top = 1.0823529412
 grip = 1.1166666667
 
-[sub_resource type="Resource" id="Resource_35f8p"]
-script = ExtResource("3_pu80b")
+[sub_resource type="Resource" id="Resource_ce4d5"]
+script = ExtResource("3_cnkqa")
 terrain = &"mud"
 accel = 1.4545454545
 top = 1.2333333333
 grip = 1.3095238095
 steer = 1.0666666667
 
-[sub_resource type="Resource" id="Resource_mf2pc"]
-script = ExtResource("3_pu80b")
+[sub_resource type="Resource" id="Resource_btxso"]
+script = ExtResource("3_cnkqa")
 terrain = &"water"
 accel = 1.25
 top = 1.2222222222
 grip = 1.0571428571
 
 [resource]
-script = ExtResource("1_c5hvu")
-id = &"razorback"
-car_name = "Razorback"
+script = ExtResource("1_7l3db")
+id = &"warpig"
+car_name = "War Pig"
 driver_name = "Big Sarge"
 flavor = "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes."
 special_name = "Red Glare"
@@ -56,7 +56,7 @@ mass = 13
 launch = 15
 primary_color = Color(0.12156863, 0.43529412, 0.22745098, 1)
 accent_color = Color(0.050980393, 0.2509804, 0.1254902, 1)
-special = ExtResource("2_mmhwo")
+special = ExtResource("2_qukso")
 special_ammo_cap = 2
 special_recharge_seconds = 45.0
-terrain_modifiers = Array[ExtResource("3_pu80b")]([SubResource("Resource_n16fk"), SubResource("Resource_8u3r2"), SubResource("Resource_wfjhb"), SubResource("Resource_35f8p"), SubResource("Resource_mf2pc")])
+terrain_modifiers = Array[ExtResource("3_cnkqa")]([SubResource("Resource_upnyo"), SubResource("Resource_e7ooh"), SubResource("Resource_8vxlg"), SubResource("Resource_ce4d5"), SubResource("Resource_btxso")])

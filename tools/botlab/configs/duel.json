@@ -6,7 +6,7 @@
 	"governor": "lethal",
 	"entrants": [
 		{"car": "hornet", "driver": "res://ai/bots/claude_bot.gd"},
-		{"car": "razorback", "driver": "res://ai/bots/gpt_bot.gd"}
+		{"car": "warpig", "driver": "res://ai/bots/gpt_bot.gd"}
 	],
 	"fill_stock": 0,
 	"fight_director": false,

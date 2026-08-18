@@ -8,7 +8,7 @@ Based on vehicle types and stats:
 
 ### Heavy Vehicles (10-12 seconds)
 - **Kandy Kane** (Ice Cream Truck, Accel:5, Armor:8) → 10-12 sec
-- **Razorback** (Military Hummer, Accel:3, Armor:8) → 9-11 sec
+- **War Pig** (Military Hummer, Accel:3, Armor:8) → 9-11 sec
 - **Hammertoe** (Lifted Monster, Accel:5, Armor:7) → 8-10 sec
 - **Bumper** (Cadillac Land Yacht, Accel:3, Armor:7) → 9-10 sec
 
@@ -440,7 +440,7 @@ built for it. Anchors held (cyclone the rabbit, hornet the yardstick); the
 pack spread around them, tuned against docs/car_tuning_baselines.md (√-com-
 pressed real-world 0-60 anchors) via the stat_baseline probe's measured 0-60.
 The launch axis debuted: hammertoe 17 (fleet-strongest, monster torque),
-razorback 15 (HMMWV dead-stop grunt + a dirt/mud accel overlay over
+warpig 15 (HMMWV dead-stop grunt + a dirt/mud accel overlay over
 awd_utility — first live use of the terrain overlay seam), mrghastly/ghost/
 smoky/bumper/coldfront authored pops, kandykane 5 and lovebug 1 (the founding
 "Beetle needs a running start" example, 1.90s → 4.28s, flavor reworded).
@@ -448,7 +448,7 @@ Hammertoe's accel 12 is the first even (half-step) slot. Ghost's recharge
 12→18 pays for the strongest default special. 0-60 ladder after the pass:
 0.98 / 1.43 / 1.62 / 1.77 / 1.77 / 2.22 / 2.28 / 2.50 / 3.02 / 3.43 / 3.77 /
 3.97 / 3.98 / 4.28. Golden lock re-pinned to the new authored ints (now
-includes launch); terrain pins re-pinned for razorback/cricket; bosses and
+includes launch); terrain pins re-pinned for warpig/cricket; bosses and
 buzzards byte-identical throughout.
 
 ### Phase 4.4 (August 2026) — Signature slide moves

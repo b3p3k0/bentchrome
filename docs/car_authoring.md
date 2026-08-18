@@ -90,7 +90,7 @@ Mass on the 1-20 authoring scale (engine folds to 1-10).
 | smoky     | 11   | punchy/heavy | BEAM                | defender    | awd_utility |
 | kandykane | 13   | slow/heavy   | PROJECTILE (burn)   | mini_boss   | —          |
 | coldfront | 13   | mid/heavy    | PROJECTILE (freeze) | opportunist | snow/ice=road (snowplow) |
-| razorback | 13   | slow/heavy   | PROJECTILE (salvo)  | defender    | awd_utility |
+| warpig | 13   | slow/heavy   | PROJECTILE (salvo)  | defender    | awd_utility |
 | hammertoe | 15   | mid/heavy    | TRIGGER             | ambusher    | all-road (monster_tires) |
 
 Open niches: BEAM/FLAME/DASH/TRIGGER/TORNADO/PULSE each have exactly one owner;
@@ -129,7 +129,7 @@ updates roster.json and re-runs the importer. That fold intentionally moves
 feel, so re-pin `tests/test_stat_rebase.gd`'s GOLDEN table (and
 `test_specials_data` if caps changed) as part of the same commit.
 
-## Migrating / rescaling a car (the razorback-pilot checklist)
+## Migrating / rescaling a car (the warpig-pilot checklist)
 
 When a schema or scale change touches authored values, per car:
 1. `python3 tools/migrate_roster_v2.py --car <id> --dry-run` — before/after ints

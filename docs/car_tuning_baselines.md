@@ -28,7 +28,7 @@ Keep this doc as the reference for future car additions and re-tunes. US units.
 | hornet | checker cab | ~13-15s | anchor | 2.28s | 2.28s | ANCHOR — the yardstick, untouched |
 | bumper | '70s Cadillac land yacht | ~11-13s | ~3.6s | 4.23s | 3.43s | launch 11 V8 grunt, still a slow spool |
 | coldfront | '80s plow pickup | ~13-15s | ~3.7s | 3.43s | 3.98s | launch 11 working torque; the plow is armor now (13→15) |
-| razorback | HMMWV | ~13-15s | ~3.7s | 4.78s | 3.77s | **launch 15** — dead-stop diesel grunt, slow to top; +dirt/mud accel overlay |
+| warpig | HMMWV | ~13-15s | ~3.7s | 4.78s | 3.77s | **launch 15** — dead-stop diesel grunt, slow to top; +dirt/mud accel overlay |
 | hammertoe | lifted monster truck | ~7-9s | ~2.9s | 3.93s | 3.02s | **launch 17, the fleet's strongest**; accel 12 (first even slot) |
 | kandykane | ice cream step-van | ~20s+ | ~4.2s | 3.32s | 3.97s | launch 5 — the van winds up |
 | lovebug | classic VW Beetle | ~20-27s | ~4.5s | 1.90s | 4.28s | **launch 1, accel 4** — genuinely needs a running start; handling 11 compensates; flavor reworded |

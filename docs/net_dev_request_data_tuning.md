@@ -29,7 +29,7 @@ construction:
    runs the whole match on tuned data.
 2. **Tuned CLIENTS see distorted local presentation** — their own car-select
    text, HUD-adjacent readouts, anything reading the mutated singletons.
-   Cosmetic-only, but two players can disagree about what "Razorback TOP 11"
+   Cosmetic-only, but two players can disagree about what "War Pig TOP 11"
    means.
 3. **The mod checksum can't see it**: `NetManifest` hashes only `.gd`
    source (by design, "not a security boundary") — data tuning never flips
@@ -69,6 +69,6 @@ order, so standardization wipes dev tuning but never a composed loadout.
 ## Verification sketch
 
 `tools/nettest.sh` extension: host boots with a synthetic
-`user://car_tuner.json` (e.g. razorback top_speed 20), client joins, assert
-the host's spawned razorback controller reports the ROSTER max_speed
+`user://car_tuner.json` (e.g. warpig top_speed 20), client joins, assert
+the host's spawned warpig controller reports the ROSTER max_speed
 (515.55… px/s), not the tuned table value.

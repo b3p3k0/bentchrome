@@ -1268,7 +1268,7 @@ ANNOUNCER_NAMES = {  # id -> spoken text (roster car_name)
     "cyclone": "Cyclone", "ghost": "Ghost", "hammertoe": "Hammertoe",
     "hornet": "Hornet", "hubcap": "Hubcap", "kandykane": "Kandy Kane",
     "lovebug": "Lovebug", "mrghastly": "Mister Ghastly",
-    "razorback": "Razorback", "smoky": "Smoky", "splatkat": "Splat Kat",
+    "warpig": "War Pig", "smoky": "Smoky", "splatkat": "Splat Kat",
 }
 
 

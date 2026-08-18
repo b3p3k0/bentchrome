@@ -88,7 +88,7 @@ func test_authored_vehicle_profiles_hit_effective_targets() -> void:
 			&"water": [0.50, 0.55, 0.74, 1.0],
 			&"mud": [0.72, 0.74, 0.55, 0.96],
 		},
-		&"razorback": {
+		&"warpig": {
 			# 2026-07 balance pass: inline overlay over awd_utility — the
 			# military 4WD out-grunts the cop SUV on dirt/mud accel only.
 			&"grass": [0.95, 0.95, 0.86, 1.0],

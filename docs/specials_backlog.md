@@ -11,7 +11,7 @@ the weapon `.tres` (see `data/weapons/rusty_poon.tres` for the pattern).
 | Car | Special | Kind | Behavior |
 |-----|---------|------|----------|
 | Mr. Ghastly | Scythe of the Damned | PROJECTILE | Spinning bone-pale reaper blade in a red aura, dragging a crimson trail. Straight, heavy (70), 780 px/s. Deliberately excluded from the 2026-07 lean pass — no homing, ever. |
-| Razorback | Red Glare | PROJECTILE | Three quick waves of four red rockets in a 10° shotgun choke (950 px/s), each wave off the moving truck. |
+| War Pig | Red Glare | PROJECTILE | Three quick waves of four red rockets in a 10° shotgun choke (950 px/s), each wave off the moving truck. |
 | Ghost | Phantom Phire | PROJECTILE | Map-wide aggressive homing; pierces cover (`pierces_cover`). |
 | Kandy Kane | Molotov Cocktail | PROJECTILE | Spinning green bottle with a burning rag, lobbed hard. Impact burst + 15s burn (3 dps). Gentle 100°/s launch lean (lock 1200); shared with Hornet. |
 | Splat Kat | Rusty 'Poon | PROJECTILE | Cobbled-iron harpoon; the skewered victim runs at half speed for 3s. Cap 2 / 6s. Gentle 100°/s launch lean (lock 1200). |

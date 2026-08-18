@@ -103,7 +103,7 @@ func test_recorder_kind_classification_and_attribution() -> void:
 	var victim := _car(100.0)
 	var attacker := _car(100.0)
 	rec.register_car(victim, "victim", "hornet", "stock")
-	rec.register_car(attacker, "attacker", "razorback", "stock")
+	rec.register_car(attacker, "attacker", "warpig", "stock")
 	var health: Health = victim.get_node("Health")
 	# MG hit: breadcrumb + attacker stamp, exactly like projectile.gd does it.
 	victim.last_attacker = attacker

@@ -31,7 +31,7 @@ HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge d
 | Kandy Kane | Kandy Kane | 5 | 6 | 3 | 8 | 8 | 7 | 156 | Molotov Cocktail | 1 | 12s | mini_boss |
 | Lovebug | Moonbeam | 7 | 5 | 4 | 4 | 7 | 4 | 107 | Chill Out, Man | 1 | 30s | opportunist |
 | Mr. Ghastly | ??? | 8 | 8 | 7 | 2 | 9 | 1 | 82 | Scythe of the Damned | 1 | 12s | aggressor |
-| Razorback | Big Sarge | 3 | 6 | 4 | 8 | 7 | 7 | 156 | Red Glare | 1 | 12s | defender |
+| War Pig | Big Sarge | 3 | 6 | 4 | 8 | 7 | 7 | 156 | Red Glare | 1 | 12s | defender |
 | Smoky | Officer Richard Vepsh | 7 | 6 | 4 | 7 | 7 | 6 | 143 | Taser | 3 | 90s | defender |
 | Splat Kat | Juan Dough | 6 | 7 | 7 | 5 | 8 | 5 | 119 | Rusty 'Poon | 2 | 6s | ambusher |
 | **Lackey** (miniboss) | Lackey | 7 | 6 | 6 | 10 | 10 | 9 | **360**¹ | Blaze & Bolt twin + Breach Turret | 2 (shared) | 120s | — |
@@ -112,7 +112,7 @@ Sources: `data/weapons/*.tres` + `vehicles/special_controller.gd` consts. Kind l
 | Tornado Alley (Cyclone) | TORNADO | 20 dps | — | per use | — | 3s self-centered spin, AoE 2.2× visual footprint (the wind-swirl ring draws exactly at the boundary), same-floor; caught cars: land-mine spin-out + 220 shove once each (launch_immune exempt); steer ×0.3 while spinning; random exit heading; AI holds to 250px |
 | Pulse Wave (Hubcap) | PULSE | 35 → 8.75 | 600 wave | per use | — | Neon ring expands to 270px (speed×lifetime, 0.45s), anchored at cast position; damage + radial shove (380 → 95) fall off center-to-rim, one crossing per body, same-floor, launch_immune shove-proof; caster pops a ~15px hop; ring = the hitbox; AI holds to 250px |
 | Scythe (Mr. Ghastly) | PROJECTILE | 70 | 780 | 2.5s | none | Biggest single hit in the game; slow shot (range 2340) |
-| Red Glare (Razorback) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
+| Red Glare (War Pig) | PROJECTILE | 6 ×20 | 950 | 4.0s | none | 20-rocket 26° fan; 120 theoretical point-blank (range 1235) |
 | Taser (Smoky) | BEAM | 18 dps | instant | 2s bay lock | lock ≤200 | 2s latch / 36 direct theoretical + slow ×0.5; lockout starts after natural/early end; breaks past 400, on LoS block, or if either car changes floor |
 | Rusty 'Poon (Splat Kat) | PROJECTILE | 10 | 820 | 2.0s | 100°/s, lock 1200 | On hit: slow ×0.5 / 3s (range 1804); gentle launch lean |
 | **Breach Turret (Lackey)** | TURRET | 45 | 1400 | 2.8s | auto-aim, 120°/s traverse | LIVE turret on the hull: tracks the player inside ~1100px independent of heading, LoS-gated, fires through break-offs. Aim lag is the dodge. |
@@ -154,13 +154,13 @@ These are the final global × vehicle values seen by the shared player/AI contro
 | Cyclone | Road | 1.10 | 1.05 | 1.25 | 1.10 | slicks on pavement; test-locked |
 | Cyclone | Grass/Snow/Dirt | ×0.75 | ×0.80 | ×0.60 | 1.00 | penalty box (dirt nets 0.60/0.68/0.36; test-locked) |
 | Cyclone | Water | 0.28 | 0.34 | 0.56 | 1.00 | slicks in a river |
-| Smoky / Razorback | Grass | 0.95 | 0.95 | 0.86 | 1.00 | — |
-| Smoky / Razorback | Snow | 0.90 | 0.94 | 0.53 | 1.00 | — |
-| Smoky / Razorback | Dirt | 0.88 | 0.92 | 0.67 | 1.00 | — |
-| Smoky / Razorback | Water | 0.50 | 0.55 | 0.74 | 1.00 | shallow only |
+| Smoky / War Pig | Grass | 0.95 | 0.95 | 0.86 | 1.00 | — |
+| Smoky / War Pig | Snow | 0.90 | 0.94 | 0.53 | 1.00 | — |
+| Smoky / War Pig | Dirt | 0.88 | 0.92 | 0.67 | 1.00 | — |
+| Smoky / War Pig | Water | 0.50 | 0.55 | 0.74 | 1.00 | shallow only |
 | Cricket | Mud | 0.62 | 0.65 | 0.50 | 0.98 | no dirt DASH bonus |
 | Hammertoe | Mud | 0.80 | 0.80 | 0.60 | 0.98 | big-tire advantage |
-| Smoky / Razorback | Mud | 0.72 | 0.74 | 0.55 | 0.96 | partial 4WD advantage |
+| Smoky / War Pig | Mud | 0.72 | 0.74 | 0.55 | 0.96 | partial 4WD advantage |
 | Cyclone | Mud | 0.36 | 0.40 | 0.25 | 0.78 | pavement slicks punished |
 
 Future-car recipe: add `terrain_modifiers` entries to its `assets/data/roster.json` record, run `godot --headless --path . -s res://tools/import_roster.gd`, verify current surface and effective accel/top/grip/steer in the F1 handling dashboard (use F2 to tune the global surface table live), then run straight-entry, correction, committed-slide, recovery, collision, and AI terrain feel tests. Unknown terrain/property names make the importer fail.

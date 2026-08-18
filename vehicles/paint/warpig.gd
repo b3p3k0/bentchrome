@@ -1,11 +1,11 @@
 extends RefCounted
-## Razorback: the Humvee — slab hood, steep glass band, spare on the roof.
+## War Pig: the Humvee — slab hood, steep glass band, spare on the roof.
 
 const Parts := preload("res://vehicles/paint/parts.gd")
 
 const STYLE := {
 	# radius 21.5/22: kandykane held at the legacy 22 — the corner-escape
-	# budget (mass-7 truck, 80px pocket) blows at 23; razorback slots under.
+	# budget (mass-7 truck, 80px pocket) blows at 23; warpig slots under.
 	"half_len": 28.0, "half_wid": 17.0, "radius": 21.5,
 	"skid_points": [Vector2(-17, -14), Vector2(-17, 14)],
 	"steer_wheels": [],

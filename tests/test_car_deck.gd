@@ -19,23 +19,23 @@ func test_roster_rows_and_baselines() -> void:
 	t.check(deck.car_ids.size() >= 9 and not deck.car_ids.has("goliath")
 		and not deck.car_ids.has("lackey") and not deck.car_ids.has("buzz_bike"),
 		"car deck: rows are the roster only — bosses/buzzards excluded")
-	t.check(deck.baseline("razorback", "top_speed") == 12.0
-		and deck.baseline("razorback", "launch") == 15.0
+	t.check(deck.baseline("warpig", "top_speed") == 12.0
+		and deck.baseline("warpig", "launch") == 15.0
 		and deck.baseline("hornet", "launch") == 3.0,
 		"car deck: baselines read roster truth incl. defaults")
 
 func test_set_value_mutates_singleton_and_clamps() -> void:
 	var deck = DeckScript.new()
-	var stats: Resource = load("res://data/vehicles/razorback.tres")
+	var stats: Resource = load("res://data/vehicles/warpig.tres")
 	var base_top: int = stats.top_speed
-	deck.set_value("razorback", "top_speed", 13)
+	deck.set_value("warpig", "top_speed", 13)
 	t.check(stats.top_speed == 13, "car deck: edit lands on the loaded singleton")
-	t.check(deck.get_value("razorback", "top_speed") == 13.0, "car deck: reads back")
-	deck.set_value("razorback", "top_speed", 99)
+	t.check(deck.get_value("warpig", "top_speed") == 13.0, "car deck: reads back")
+	deck.set_value("warpig", "top_speed", 99)
 	t.check(stats.top_speed == 20, "car deck: clamps to the 1-20 ceiling")
-	deck.set_value("razorback", "launch", -5)
+	deck.set_value("warpig", "launch", -5)
 	t.check(stats.launch == 0, "car deck: launch floors at the 0 sentinel")
-	deck.set_value("razorback", "special_recharge_seconds", 45.5)
+	deck.set_value("warpig", "special_recharge_seconds", 45.5)
 	t.check(is_equal_approx(stats.special_recharge_seconds, 45.5),
 		"car deck: recharge stays a float")
 	deck.reset_all()
@@ -70,7 +70,7 @@ func test_export_shape() -> void:
 	t.check(typeof(data) == TYPE_DICTIONARY and int(data.get("schema_version", 0)) == 2,
 		"car deck: export carries schema_version 2")
 	t.check(int(data.cars.lovebug.armor) == 9, "car deck: export carries the edited value")
-	t.check(int(data.cars.razorback.top_speed) == 12, "car deck: export carries untouched cars too")
+	t.check(int(data.cars.warpig.top_speed) == 12, "car deck: export carries untouched cars too")
 	deck.reset_all()
 	DirAccess.remove_absolute(TMP_EXPORT)
 	DirAccess.remove_absolute(DeckScript.SAVE_PATH)

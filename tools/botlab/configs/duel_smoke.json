@@ -6,7 +6,7 @@
 	"governor": "lethal",
 	"entrants": [
 		{"car": "hornet", "driver": "stock"},
-		{"car": "razorback", "driver": "stock"}
+		{"car": "warpig", "driver": "stock"}
 	],
 	"fill_stock": 0,
 	"fight_director": false,

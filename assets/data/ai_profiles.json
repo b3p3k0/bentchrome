@@ -313,7 +313,7 @@
       }
     },
     {
-      "id": "razorback",
+      "id": "warpig",
       "archetype": "defender",
       "state_weights": {
         "hunt": 0.4,

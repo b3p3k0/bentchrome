@@ -38,7 +38,7 @@ validation), `--out DIR`.
 	"governor": "lethal",
 	"entrants": [
 		{"car": "hornet", "driver": "stock"},
-		{"car": "razorback", "driver": "res://ai/bots/claude_bot.gd", "mix": null}
+		{"car": "warpig", "driver": "res://ai/bots/claude_bot.gd", "mix": null}
 	],
 	"fill_stock": 0,
 	"fight_director": false,

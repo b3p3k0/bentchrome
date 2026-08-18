@@ -34,7 +34,7 @@ ROSTER = Path(__file__).resolve().parent.parent / "assets" / "data" / "roster.js
 # identical table and join the profile). Lovebug's single water entry stays
 # inline on purpose: it keeps the per-car overlay path exercised.
 PROFILE_SOURCES = {
-    "awd_utility": ("razorback", ["smoky"]),
+    "awd_utility": ("warpig", ["smoky"]),
     "monster_tires": ("hammertoe", []),
     "dirt_racer": ("cricket", []),
     "racing_slicks": ("cyclone", []),

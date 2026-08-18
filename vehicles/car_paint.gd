@@ -30,7 +30,7 @@ const STYLE_SCRIPTS := {
 	&"mrghastly": preload("res://vehicles/paint/mrghastly.gd"),
 	&"cricket": preload("res://vehicles/paint/cricket.gd"),
 	&"cyclone": preload("res://vehicles/paint/cyclone.gd"),
-	&"razorback": preload("res://vehicles/paint/razorback.gd"),
+	&"warpig": preload("res://vehicles/paint/warpig.gd"),
 	&"kandykane": preload("res://vehicles/paint/kandykane.gd"),
 	&"hammertoe": preload("res://vehicles/paint/hammertoe.gd"),
 	&"hornet": preload("res://vehicles/paint/hornet.gd"),

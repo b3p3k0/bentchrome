@@ -8,7 +8,7 @@ const CarPaintScript := preload("res://vehicles/car_paint.gd")
 const Floors := preload("res://game/floors.gd")  # terraced-floor layer bit
 const ArenaState := preload("res://game/net/arena_state.gd")
 # Smoky excluded: his animated light bar reads "alive", wrong for a wreck.
-const IDS := [&"ghost", &"splatkat", &"bumper", &"razorback", &"kandykane", &"cricket", &"hammertoe"]
+const IDS := [&"ghost", &"splatkat", &"bumper", &"warpig", &"kandykane", &"cricket", &"hammertoe"]
 const RUST := Color(0.35, 0.26, 0.2)
 const WRECK_TINT := Color(0.55, 0.42, 0.35)
 const CHAR_TINT := Color(0.12, 0.11, 0.10)  # burned-out husk

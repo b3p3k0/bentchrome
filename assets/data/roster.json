@@ -414,8 +414,8 @@
       "special_recharge_seconds": 60.0
     },
     {
-      "id": "razorback",
-      "car_name": "Razorback",
+      "id": "warpig",
+      "car_name": "War Pig",
       "driver_name": "Big Sarge",
       "flavor": "A stolen military Hummer turned arena brawler. Thick plates and reinforced frame soak punishment. It lumbers into corners but holds ground like a bunker. Speed is serviceable when the road opens. Best used to herd opponents into kill lanes.",
       "special_weapon": "Red Glare: a forward pod dumps 20 fast rockets in a tight spread. Each hit hurts; eating the salvo is devastating. Ideal at mid-range on straight approaches.",
@@ -432,7 +432,7 @@
         "primary": "#1f6f3a",
         "accent": "#0d4020"
       },
-      "portrait": "res://assets/img/bios/razorback.png",
+      "portrait": "res://assets/img/bios/warpig.png",
       "ai_archetype": "defender",
       "terrain_profile": "awd_utility",
       "mass": 13,
