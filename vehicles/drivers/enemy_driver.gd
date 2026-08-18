@@ -41,6 +41,7 @@ const SCAN := 1200.0
 const FIRE_RANGE := 1000.0
 static var TORNADO_FIRE_RANGE := 250.0  # melee-radius special: only pull it point-blank
 const Floors := preload("res://game/floors.gd")  # terraced-floor math
+const Hazards := preload("res://game/hazards.gd")  # lethal-zone rect queries
 
 # NAVIGATE (floor levels only): a cross-floor target needs a connector — an
 # authored FloorConnector marking a jump pad up or a drop edge down. Committed
@@ -134,6 +135,16 @@ const FEELER_SPEED_FACTOR := 0.25 # extra length per px/s of speed
 const FEELER_ANGLE := deg_to_rad(35.0)
 const AVOID_GAIN := 1.5           # steering bias weight
 
+# Lethal-hazard guard: the kill zones are unraycastable (layer 0), so a rect
+# lookahead along REAL travel substitutes for feelers. Unlike _avoid_bias it
+# OVERRIDES steering pre-clamp and stages the throttle by time-to-impact —
+# pursuit can never saturate it away, and boost never fires into a rim.
+static var HAZARD_REACT_TIME := 0.9    # seconds of travel the lookahead covers
+static var HAZARD_REACT_BASE := 120.0  # lookahead floor at a standstill (px)
+static var HAZARD_CUT_TTI := 1.2       # time-to-impact: soften throttle
+static var HAZARD_BRAKE_TTI := 0.5     # time-to-impact: brake
+static var HAZARD_GUARD_GAIN := 2.5    # rim-tangent steering authority
+
 var _near := 140.0
 var _far := 340.0
 var _flee := 0.15
@@ -143,6 +154,8 @@ var _flank := 0.0
 var _mode: Mode = Mode.PURSUE
 var _avoid_bias := 0.0   # last feeler steering bias (also unstick escape hint)
 var _blocked := false    # center feeler hit close ahead
+var _guard_active := false          # hazard guard fired this tick (observability)
+var _guard_tangent := Vector2.ZERO  # committed rim-slide direction
 var _stuck_t := 0.0
 var _unstick_t := 0.0
 var _unstick_steer := 0.0  # committed at UNSTICK entry so the swing can't flip sides
@@ -214,7 +227,13 @@ func _apply_mix() -> void:
 	_w_weak = float(p["w_weak"])
 	_flank = float(p["flank"])
 
+## Every mode's intent passes through the lethal-hazard guard exactly once —
+## one seam instead of nine per-branch edits, and the ladder stays byte-for-
+## byte itself on every level without zones.
 func get_intent(vehicle, delta: float) -> Dictionary:
+	return _apply_hazard_guard(vehicle, _intent_ladder(vehicle, delta))
+
+func _intent_ladder(vehicle, delta: float) -> Dictionary:
 	# Engagement target inside SCAN; beyond that, HUNT the nearest combatant
 	# anywhere — parking is not a strategy in a free-for-all. A hunt target is
 	# always past _far (anything closer would have been engaged), so the normal
@@ -452,6 +471,77 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	if _update_stuck(real_vel.length(), absf(intent["throttle"]) > 0.5, delta):
 		_classify_car_pin(target, dist)
 		return _on_stuck(vehicle, target, bearing)
+	return intent
+
+## The hazard guard: a rect lookahead along REAL travel vs the lethal-hazard
+## registry. Dominant by design — steering is overridden toward the blocking
+## rect's rim tangent, throttle stages down by time-to-impact, boost is
+## vetoed; fire flags stay untouched (shooting across the river is legal).
+## Exemptions: airborne (jumps over water are gameplay), the NAVIGATE jump
+## commit (the runway points at the launch by design), and any level without
+## zones (one cached length check). Backing toward a rim stops the reverse
+## instead of fighting UNSTICK's sign-flipped steer; the stuck ladder — whose
+## hop is hazard-deflected — escalates from there.
+func _apply_hazard_guard(vehicle, intent: Dictionary) -> Dictionary:
+	var was_active := _guard_active
+	_guard_active = false
+	if intent.is_empty():
+		return intent
+	var tree: SceneTree = vehicle.get_tree()
+	if Hazards.rects(tree).is_empty():
+		return intent
+	var h: Variant = vehicle.get("height")
+	if h is float and h > 0.0:
+		return intent
+	if _mode == Mode.NAVIGATE and _nav_phase == 1 and _nav_connector != null \
+			and is_instance_valid(_nav_connector) and _nav_connector.get("kind") == &"jump":
+		return intent
+	var throttle := float(intent.get("throttle", 0.0))
+	var travel: Vector2 = vehicle.get_real_velocity()
+	var speed := travel.length()
+	if speed < 20.0:
+		if absf(throttle) < 0.05:
+			return intent
+		travel = Vector2.RIGHT.rotated(vehicle.heading) * signf(throttle)
+	var dir := travel.normalized()
+	var reach := speed * HAZARD_REACT_TIME + HAZARD_REACT_BASE
+	var pos: Vector2 = vehicle.global_position
+	var idx := Hazards.segment_hit(tree, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
+	if idx < 0:
+		return intent
+	_guard_active = true
+	var rect: Rect2 = Hazards.rects(tree)[idx]
+	if throttle < -0.05:
+		intent["throttle"] = 0.0
+		intent["boost"] = false
+		return intent
+	# Rim tangent along the rect's long axis. Sign: committed slide first (no
+	# frame-to-frame flips), then the live target's side, then current travel.
+	var tangent := Vector2.RIGHT if rect.size.x >= rect.size.y else Vector2.DOWN
+	var ref := dir
+	if was_active and _guard_tangent != Vector2.ZERO:
+		ref = _guard_tangent
+	elif _target_is_live(vehicle, _target):
+		ref = ((_target as Node2D).global_position - pos).normalized()
+	if tangent.dot(ref) < 0.0:
+		tangent = -tangent
+	_guard_tangent = tangent
+	var entry := Hazards.segment_entry_t(rect, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
+	var tti := entry * reach / maxf(speed, 60.0)
+	var aim := tangent
+	if entry <= 0.0:
+		# Already on the forgiveness band: angle OUT of it, don't stall on it.
+		var short_dir := Vector2.DOWN if rect.size.x >= rect.size.y else Vector2.RIGHT
+		var out_normal := short_dir * signf(short_dir.dot(pos - rect.get_center()))
+		aim = (tangent + out_normal * 1.2).normalized()
+		intent["throttle"] = 0.5
+	elif tti < HAZARD_BRAKE_TTI:
+		intent["throttle"] = -0.4
+	elif tti < HAZARD_CUT_TTI:
+		intent["throttle"] = throttle * 0.4
+	intent["steer"] = clampf(
+		wrapf(aim.angle() - vehicle.heading, -PI, PI) * HAZARD_GUARD_GAIN, -1.0, 1.0)
+	intent["boost"] = false
 	return intent
 
 ## Lightweight intercept: lead grows with range, caps quickly, and uses the
