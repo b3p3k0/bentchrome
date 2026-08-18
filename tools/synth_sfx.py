@@ -1063,6 +1063,199 @@ def sp_placeholder():
     write("sp_placeholder", x, peak=0.92, fade_ms=6.0)
 
 
+# ---- final specials (2026-07-14 pm): the beef retires -----------------------
+def sp_rusty_poon():
+    """~0.7s harpoon launch (ref: mid-forward pneumatic crack, .3-1k 47%):
+    gas crack + air release + brief cable whir. Impact stays in hit_weapon."""
+    dur = 0.7
+    tt = t(dur)
+    r = np.random.default_rng(601)
+    crack = biquad_bp(r.uniform(-1, 1, tt.size), 620.0, 0.5)
+    crack = crack / (np.sqrt(np.mean(crack ** 2)) + 1e-9) * np.exp(-tt / 0.018) * 1.6
+    click = one_pole_hp(r.uniform(-1, 1, tt.size), 3200.0) * np.exp(-tt / 0.005) * 0.35
+    cut = 900 - 500 * np.clip(tt / 0.35, 0, 1)
+    air = svf_bp(r.uniform(-1, 1, tt.size), cut, 1.0)
+    air = air / (np.sqrt(np.mean(air ** 2)) + 1e-9) * 0.30 * \
+        np.minimum(tt / 0.02, 1.0) * np.exp(-tt / 0.14)
+    whir = biquad_bp(r.uniform(-1, 1, tt.size), 2500.0, 2.0)
+    rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 120.0))
+    whir = whir / (np.sqrt(np.mean(whir ** 2)) + 1e-9) * 0.15 \
+        * (rough / (rough.max() + 1e-9)) * np.exp(-tt / 0.2)
+    thunk = sweep(160, 80, dur, "exp") * np.exp(-tt / 0.03) * 0.6
+    x = one_pole_lp(softclip(fit(crack + click, air + whir) + thunk, 1.6), 4500.0)
+    write("sp_rusty_poon", x, peak=0.94, fade_ms=4.0)
+
+
+def sp_chilblain():
+    """~0.85s freeze snap (ref: bright icy crack, 1-4k 40 / >4k 37, faint low
+    thud): crystalline crackle burst + glassy shimmer tail + cold air."""
+    dur = 0.85
+    tt = t(dur)
+    r = np.random.default_rng(611)
+    snap = debris_crackle(dur, 0.0, 500, 0.0015, hp=2800.0, seed=612)
+    snap = snap / (np.sqrt(np.mean(snap ** 2)) + 1e-9) * np.exp(-tt / 0.05)
+    shimmer = biquad_bp(r.uniform(-1, 1, tt.size), 4200.0, 2.5)
+    shimmer = shimmer / (np.sqrt(np.mean(shimmer ** 2)) + 1e-9) * 0.35 \
+        * np.minimum(tt / 0.03, 1.0) * np.exp(-tt / 0.28)
+    mid = biquad_bp(r.uniform(-1, 1, tt.size), 2000.0, 1.0)
+    mid = mid / (np.sqrt(np.mean(mid ** 2)) + 1e-9) * 1.0 * np.exp(-tt / 0.10)
+    thud = one_pole_lp(r.uniform(-1, 1, tt.size), 80.0)
+    thud = thud / (np.sqrt(np.mean(thud ** 2)) + 1e-9) * 0.45 * np.exp(-tt / 0.06)
+    x = softclip(snap + shimmer + mid + thud, 1.5)
+    write("sp_chilblain", x, peak=0.93, fade_ms=4.0)
+
+
+def sp_phantom_phire():
+    """~1.1s ghostly projectile (ref is bimodal: low moan 60-120 40% + airy
+    1-4k 30%): wavering hollow moan under a breathy high band, departing."""
+    dur = 1.1
+    tt = t(dur)
+    r = np.random.default_rng(621)
+    f = 88.0 * (1.0 + 0.04 * np.sin(2 * np.pi * 3.2 * tt))
+    ph = np.cumsum(f) / SR
+    moan = np.sin(2 * np.pi * ph) + 0.5 * np.sin(2 * np.pi * ph * 1.02) \
+        + 0.3 * np.sin(2 * np.pi * ph * 2.03)
+    wav = 0.7 + 0.3 * np.sin(2 * np.pi * 2.1 * tt + 1.0)
+    env = np.minimum(tt / 0.12, 1.0) * (1.0 - np.clip((tt - 0.6) / 0.5, 0, 1))
+    moan = one_pole_lp(moan * wav, 250.0) * env
+    moan = moan / (np.max(np.abs(moan)) + 1e-9)
+    breath = biquad_bp(r.uniform(-1, 1, tt.size), 2000.0, 0.8)
+    slow = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 4.0))
+    breath = breath / (np.sqrt(np.mean(breath ** 2)) + 1e-9) * 0.62 \
+        * (0.5 + 0.5 * slow / (slow.max() + 1e-9)) * env
+    mid = biquad_bp(r.uniform(-1, 1, tt.size), 620.0, 1.0)
+    mid = mid / (np.sqrt(np.mean(mid ** 2)) + 1e-9) * 0.32 * env
+    breath = one_pole_lp(breath, 3200.0)
+    x = softclip(moan * 0.9 + breath * 0.8 + mid, 1.5)
+    write("sp_phantom_phire", x, peak=0.92, fade_ms=8.0)
+
+
+def sp_scythe():
+    """~0.95s twin shriek stabs — ORIGINAL dissonant string-cluster hits in
+    the ref's character (~2.5kHz, two peaks), never the Psycho recording."""
+    def stab(dur_s, base, seed):
+        ts = t(dur_s)
+        rr = np.random.default_rng(seed)
+        x = np.zeros(ts.size)
+        for det in [1.0, 1.028, 1.061]:  # tight dissonant cluster
+            x += saw(base * det, dur_s)
+        x = softclip(x * 2.2, 2.5)
+        x = one_pole_hp(one_pole_lp(x, 6000.0), 900.0)
+        bow = biquad_bp(rr.uniform(-1, 1, ts.size), 2600.0, 1.5)
+        bow = bow / (np.sqrt(np.mean(bow ** 2)) + 1e-9) * 0.3
+        return (x + bow) * np.minimum(ts / 0.008, 1.0) * np.exp(-ts / 0.16)
+    x = fit(stab(0.5, 1240.0, 631), delay(stab(0.5, 1310.0, 632) * 1.1, 0.45))
+    write("sp_scythe", x, peak=0.93, fade_ms=4.0)
+
+
+# ---- stage-event alerts (once-per-level, global) -----------------------------
+def env_siren():
+    """~3.6s police wail (ref sweeps ~830-1450Hz): two dual-horn wail cycles
+    with sirens' natural distortion, city slap, fading out."""
+    dur = 3.6
+    tt = t(dur)
+    r = np.random.default_rng(641)
+    f = 780.0 + 660.0 * (0.5 - 0.5 * np.cos(2 * np.pi * tt / 2.0))
+    ph = np.cumsum(f) / SR
+    tone = np.sin(2 * np.pi * ph) + 0.45 * np.sin(2 * np.pi * 2 * ph) \
+        + 0.18 * np.sin(2 * np.pi * 3 * ph)
+    tone = softclip(tone * 1.8, 2.0)  # horn-driver bark
+    env = np.minimum(tt / 0.15, 1.0) * (1.0 - np.clip((tt - 2.9) / 0.7, 0, 1))
+    x = tone * env
+    out = np.zeros(x.size + int(SR * 0.3))
+    out[:x.size] += x
+    j = int(SR * 0.18)
+    out[j:j + x.size] += x * 0.28  # street slap
+    air = one_pole_hp(r.uniform(-1, 1, out.size), 3000.0) * 0.03
+    write("env_siren", one_pole_hp(out + air, 300.0), peak=0.92, fade_ms=10.0)
+
+
+def env_panic():
+    """~3.2s crowd panic (ref: sustained 1-4k screams, no lows): a shaped
+    crowd bed + a handful of swooping scream voices, rising then breaking."""
+    dur = 3.2
+    tt = t(dur)
+    r = np.random.default_rng(651)
+    bed = biquad_bp(r.uniform(-1, 1, tt.size), 1800.0, 0.5)
+    churn = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 7.0))
+    bed = bed / (np.sqrt(np.mean(bed ** 2)) + 1e-9) \
+        * (0.55 + 0.45 * churn / (churn.max() + 1e-9))
+    screams = np.zeros(tt.size)
+    for i in range(9):
+        at = r.uniform(0.1, 2.4)
+        ln = int(SR * r.uniform(0.25, 0.55))
+        tv = np.linspace(0, ln / SR, ln, endpoint=False)
+        f0 = r.uniform(700, 1200)
+        fv = f0 * (1.0 + 0.6 * np.sin(np.pi * tv / tv[-1]))  # rise-fall swoop
+        v = np.sin(2 * np.pi * np.cumsum(fv) / SR)
+        v += 0.5 * np.sin(2 * np.pi * 2 * np.cumsum(fv) / SR)
+        v = softclip(v * 2.0, 2.0) * np.sin(np.pi * tv / tv[-1]) ** 0.7
+        j = int(SR * at)
+        screams[j:j + ln] += v * r.uniform(0.25, 0.5)
+    screams = one_pole_hp(one_pole_lp(one_pole_lp(screams, 3200.0), 3200.0), 700.0)
+    env = np.minimum(tt / 0.3, 1.0) * (1.0 - np.clip((tt - 2.6) / 0.6, 0, 1))
+    x = one_pole_lp(one_pole_lp(softclip((bed * 0.8 + screams) * env, 1.6), 3000.0), 3000.0)
+    write("env_panic", x, peak=0.9, fade_ms=12.0)
+
+
+def env_chopper():
+    """~4.2s huey lifting off (ref: 10.8Hz two-blade slap, ~53Hz drone, heavy
+    60-120): slap train quickening slightly + rotor drone + faint turbine."""
+    dur = 4.2
+    tt = t(dur)
+    n = tt.size
+    r = np.random.default_rng(661)
+    # blade slaps: rate ramps 10.2 -> 11.4Hz (spooling up)
+    rate = 10.2 + 1.2 * np.clip(tt / 3.0, 0, 1)
+    ph = np.cumsum(rate) / SR
+    slaps = np.zeros(n)
+    prev = -1
+    for i in range(n):
+        k = int(ph[i])
+        if k != prev:
+            prev = k
+            ln = min(int(SR * 0.045), n - i)
+            burst = biquad_bp(r.uniform(-1, 1, ln), 105.0, 0.7) \
+                * np.exp(-np.arange(ln) / (SR * 0.012))
+            chuff = biquad_bp(r.uniform(-1, 1, ln), 320.0, 0.8) \
+                * np.exp(-np.arange(ln) / (SR * 0.008))
+            slaps[i:i + ln] += burst * 5.5 + chuff * 2.2
+    # rotor/engine drone ~53Hz harmonics, rough
+    phd = np.cumsum(53.0 * (1.0 + 0.02 * np.clip(tt / 3.0, 0, 1))) / SR
+    drone = np.zeros(n)
+    for k, a in enumerate([0.4, 1.0, 0.65, 0.35, 0.18], start=1):
+        drone += a * np.sin(2 * np.pi * k * phd)
+    grit = np.abs(one_pole_lp(r.uniform(-1, 1, n), 30.0))
+    drone = one_pole_lp(drone * (0.7 + 0.3 * grit / (grit.max() + 1e-9)), 300.0)
+    drone = drone / (np.max(np.abs(drone)) + 1e-9) * 0.6
+    turbine = biquad_bp(r.uniform(-1, 1, n), 2600.0, 3.0)
+    turbine = turbine / (np.sqrt(np.mean(turbine ** 2)) + 1e-9) * 0.06
+    env = np.minimum(tt / 0.4, 1.0) * (1.0 - np.clip((tt - 3.4) / 0.8, 0, 1))
+    x = softclip((slaps + drone + turbine) * env, 1.7)
+    write("env_chopper", x, peak=0.93, fade_ms=15.0)
+
+
+def env_genny():
+    """~3s generator death (ref: deep muffled boom, sub 43% / 60-120 34%):
+    distance-muffled double boom + electrical arc sizzle — the yard goes dark."""
+    dur = 3.0
+    tt = t(dur)
+    r = np.random.default_rng(671)
+    main = explosion(dur, sub_f0=70, sub_f1=24, sub_tau=0.32, mid_tau=0.18,
+                     tail_tau=0.5, drive=1.8, seed=672)
+    main = one_pole_lp(main, 650.0)  # heard through the arena — muffled
+    subx = one_pole_lp(np.random.default_rng(675).uniform(-1, 1, tt.size), 42.0)
+    subx = subx / (np.sqrt(np.mean(subx ** 2)) + 1e-9) * 1.8 * np.exp(-tt / 0.35)
+    main = main + subx
+    sec = explosion(1.2, sub_f0=80, sub_f1=30, sub_tau=0.14, mid_tau=0.10,
+                    tail_tau=0.25, drive=1.6, seed=673) * 0.5
+    sec = one_pole_lp(sec, 400.0)
+    arcs = debris_crackle(dur, 0.3, 60, 0.004, hp=3000.0, seed=674)
+    arcs = arcs / (np.sqrt(np.mean(arcs ** 2)) + 1e-9) * 0.10 * np.exp(-tt / 0.9)
+    x = fit(main, delay(sec, 1.3)) + arcs
+    write("env_genny", x, peak=0.95, fade_ms=15.0)
+
+
 # ---- PA announcer (2026-07-14): baked speech, no runtime TTS ----------------
 # Rendered on the dev box via espeak-ng (optional dep — section skips with a
 # notice when absent; the .ogg files are committed, so other boxes never need
@@ -1168,5 +1361,13 @@ if __name__ == "__main__":
     boost_loop()
     splat()
     crunch()
+    sp_rusty_poon()
+    sp_chilblain()
+    sp_phantom_phire()
+    sp_scythe()
+    env_siren()
+    env_panic()
+    env_chopper()
+    env_genny()
     announcer()
     print("[synth] done")
