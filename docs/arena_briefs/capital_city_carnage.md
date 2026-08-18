@@ -15,21 +15,21 @@ tint). Tests: `test_capital_city`, `test_marine_one`, `test_storm_director`,
 | Feature | Position / span | Notes |
 |---|---|---|
 | Potomac deep channel | x −2304..−1920, three rects (N y −1792..−160, M 160..960, S 1280..1792) | `DeepWaterZone` — lethal, airborne clears; gaps ARE the bridges |
-| Shallow banks | x −2432..−2304 and −1920..−1792, segmented at the gaps | `water` terrain (slow); AI curbs + **visible 20-HP guardrails (ids 60-65)** line every deep rim |
-| Memorial Bridge | gap y −160..160; STRAIGHT deck ribbon (−2752, 0)→(−1760, 0) w 224 | rails ids 20/21, deck curbs, balustrade paint; west cap dies on the Arlington drive |
-| 14th St Bridge | gap y 960..1280; ribbon y 1120 | rails ids 22/23; **rear-missile crate mid-span** |
+| Shore banding | outward from tarmac: **guardrail (ids 60-65, x −2474/−1750) → patchy dirt shore (96px) → shallow water (64px) → deep channel**, mirrored both sides, segmented at the gaps; river runs wall to wall (±1920) | AI curbs stay at the deep rims |
+| Memorial Bridge | gap y −160..160; STRAIGHT deck (−2752, 0)→(−1616, 0) | rails ids 20/21; tees into **Riverfront Drive (x −1696, full height)** on the east bank |
+| 14th St Bridge | gap y 960..1280; deck →(−1616, 1120) | rails ids 22/23; tees into Riverfront Drive; **rear-missile crate mid-span** |
 | Arlington | west bank x −3072..−2432 (640 wide); drive ribbon x −2752 | four headstone-row columns CLEAR of drive + bridge corridor, tablet clutter, eternal flame NW, **[H1] (−2752, −960)** |
-| Pentagon | (−2816, 1536) 320² solid, five-ring paint ×420 | chain-link N + E (ids 54/55) |
-| Lincoln plaza | temple solid (−1856, 0); deco 320×416 | FLAT: gravel plaza + stepped plinth + peristyle + east stair cascade — all paint |
-| Reflecting Pool | (−1120, 0) 1024×160 shallow water | `pool_surround` deco: raised marble coping + seeded algae blobs; sidewalk ring outside |
-| Memorial cluster | Vietnam (−1280, −260) 460×172, Korean (−1280, 260) 360×252, WWII (−496, 0) 344×216 | all on plaza pads with bollard accents |
-| Monument knoll | `DriveableHill` (0, 0), summit 384², grades 192 | THE high ground; obelisk core + 96px base paint, flag ring, long shadow; **summit mine + power crates (floor 2)** |
+| Pentagon | OVERSIZED into the SW corner: deco (−2960, 1936) ×880, mostly off-board (implied scale); on-board solid (−2836, 1800) 460×240 | chain-link ids 54/55 on the exposed faces |
+| Lincoln plaza | temple solid (−1456, 0) — EAST of Riverfront Drive, off the bridge lane; deco 320×416 | FLAT: gravel plaza + stepped plinth + peristyle + east stair cascade |
+| Reflecting Pool | (−864, 0) 736×160 | **SOLID coping walls** (PoolWalls, layer 12) — cars cannot ford it; `pool_surround` coping + algae paint; sidewalk ring outside |
+| Memorial cluster | Vietnam (−1024, −260), Korean (−1024, 260), WWII (−296, 0) — clear of the pool | plaza pads + bollards + **invisible-core blockers** (MemorialBlockers, layer 12): indestructible, gently bumped, paint marks the spot |
+| Monument knoll | `DriveableHill` (320, 0), summit 384², grades 192 | THE high ground; obelisk + flag ring + shadow; **summit mine + power crates (floor 2)**; jump pad (960, 0) |
 | Mall panels | (1408, ±192) 1792×256 grass + center sidewalk walk | jump pad (832, 0) |
 | Capitol | building (2944, 0) 256×640 flush east wall | FLAT west plaza + step cascade (paint); barriers ids 47/48 at (2368, ±256) |
 | White House | solid (0, −1536) 448×160; lawn (0, −1312) 640×448 | **iron-fence ring ids 10-17** (8 × 30 HP, group `wh_fence`); executive-drive paint, garden bushes + hydrant |
 | Marine One | (64, −1200), id 1 | door (0, −1400) — clear of the facade; exit (2880, 1700) |
 | Crash site | Ellipse (0, −768), dormant | 2 junk hulks, 2 debris, power/homing/rear cache — wakes on the air kill only |
-| Constitution Ave | ribbon y −512 | **6 food trucks ids 30-35** (128×60) + vendors; crosswalks, lights |
+| Constitution Ave | ribbon y −512 | **6 food trucks ids 30-35** (96×44 — KandyKane class) + vendors; derelicts run `pool_override` (no monster trucks in DC) |
 | Pennsylvania Ave | (512, −1728)→(1184, −960) and (1725, −581)→(2560, −256) | full diagonal from K Street through the circle |
 | Traffic circle | ring at (1408, −704) r≈288 | fountain core solid + paint; kiosk id 46 NE |
 | Maryland Ave | (−1760, 1120)→(−704, 704)→(160, 576) | barrel cluster ids 51-53; endpoint dies under Independence |
@@ -41,9 +41,9 @@ tint). Tests: `test_capital_city`, `test_marine_one`, `test_storm_director`,
 
 ## Spawns (all ≥700px apart; props ≥300 from AI starts)
 
-Player (0, 1024) Mall south-center. Enemies: Arlington (−2752, −1344), K St W
+Player (0, 1024) Mall south-center. Enemies: Arlington rows (−2900, −1344), K St W
 (−896, −1728), K St E (2048, −1728), Capitol plaza (2560, 896), SE blocks
-(1536, 1536), Maryland Ave (−896, 1152), Mall W (−1056, 288).
+(1536, 1536), Maryland Ave (−896, 1152), Mall W (−640, 288).
 
 ## The storm (`storm_director.gd` statics)
 
