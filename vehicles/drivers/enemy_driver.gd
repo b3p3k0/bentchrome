@@ -117,6 +117,10 @@ const CLEAR_DIST := 450.0        # ...or until this far from the pin
 # over the obstruction (Vehicle.escape_hop; airborne clears blocks and cars).
 # Cooldown keeps it an escape valve, not a pogo stick.
 const HOP_COOLDOWN := 6.0
+# Hop ballistics for endpoint checks: 2*ESCAPE_HOP_VZ/gravity_z of airtime at
+# ESCAPE_HOP_SPEED ≈ 278px. A hop aimed at a target across a river LANDS in
+# the river — every committed escape direction is hazard-validated first.
+static var ESCAPE_HOP_RANGE := 280.0
 
 # SHUN: antler-lock breaker. Two AI wedged nose-to-nose can't kill each other
 # (mercy rules) and re-target "nearest" — each other — after every reverse-out.
@@ -144,6 +148,8 @@ static var HAZARD_REACT_BASE := 120.0  # lookahead floor at a standstill (px)
 static var HAZARD_CUT_TTI := 1.2       # time-to-impact: soften throttle
 static var HAZARD_BRAKE_TTI := 0.5     # time-to-impact: brake
 static var HAZARD_GUARD_GAIN := 2.5    # rim-tangent steering authority
+static var HAZARD_LINE_PENALTY := 0.35       # target score: beeline crosses a rim
+static var HAZARD_CRATE_PENALTY_DIST := 1500.0  # scavenge surcharge across a rim
 
 var _near := 140.0
 var _far := 340.0
@@ -304,6 +310,7 @@ func _intent_ladder(vehicle, delta: float) -> Dictionary:
 				_escape_dir = (vehicle.global_position - _last_pin).normalized()
 			else:
 				_escape_dir = Vector2.RIGHT.rotated(vehicle.heading)
+			_escape_dir = _safe_escape_dir(vehicle, _escape_dir, CLEAR_DIST)
 		else:
 			return _unstick_intent()
 
@@ -579,6 +586,46 @@ func _enter_break(vehicle, target: Node2D) -> void:
 		through = Vector2.RIGHT.rotated(vehicle.heading)
 	_break_exit = predicted + through * BREAK_EXIT_DIST \
 		+ through.orthogonal() * _break_side * BREAK_LATERAL_OFFSET
+	# A drive-by exit in the river is a funeral, not a pass: flip the side
+	# first; if that corridor crosses water too, finish the pass short of it.
+	if _break_exit_unsafe(vehicle):
+		_break_side = -_break_side
+		_break_exit = predicted + through * BREAK_EXIT_DIST \
+			+ through.orthogonal() * _break_side * BREAK_LATERAL_OFFSET
+		if _break_exit_unsafe(vehicle):
+			var pos: Vector2 = vehicle.global_position
+			var idx := Hazards.segment_hit(vehicle.get_tree(), pos, _break_exit, Hazards.GUARD_MARGIN)
+			var frac := 0.5
+			if idx >= 0:
+				var entry := Hazards.segment_entry_t(Hazards.rects(vehicle.get_tree())[idx],
+					pos, _break_exit, Hazards.GUARD_MARGIN)
+				frac = maxf(entry - 0.15, 0.3)
+			_break_exit = pos + (_break_exit - pos) * frac
+
+func _break_exit_unsafe(vehicle) -> bool:
+	var tree: SceneTree = vehicle.get_tree()
+	if Hazards.rects(tree).is_empty():
+		return false
+	return Hazards.point_inside(tree, _break_exit, Hazards.PLAN_MARGIN) \
+		or Hazards.segment_blocked(tree, vehicle.global_position, _break_exit, Hazards.GUARD_MARGIN)
+
+## Deflects a committed world escape direction so its endpoint at `reach`
+## doesn't land in a lethal rect: rim tangent first (either sign), then the
+## straight reverse. Levels without zones return the direction untouched.
+func _safe_escape_dir(vehicle, dir: Vector2, reach: float) -> Vector2:
+	var tree: SceneTree = vehicle.get_tree()
+	var pos: Vector2 = vehicle.global_position
+	var idx := Hazards.segment_hit(tree, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
+	if idx < 0:
+		return dir
+	var rect: Rect2 = Hazards.rects(tree)[idx]
+	var tangent := Vector2.RIGHT if rect.size.x >= rect.size.y else Vector2.DOWN
+	if tangent.dot(dir) < 0.0:
+		tangent = -tangent
+	for cand: Vector2 in [tangent, -tangent, -dir]:
+		if not Hazards.segment_blocked(tree, pos, pos + cand * reach, Hazards.GUARD_MARGIN):
+			return cand
+	return -dir
 
 func _update_break_rearm(dist: float) -> void:
 	if not _break_rearmed and _mode != Mode.BREAK and dist >= _near * BREAK_REARM_MULT:
@@ -748,6 +795,9 @@ func _on_stuck(vehicle, target, bearing: float) -> Dictionary:
 			dir = (target.global_position - pin).normalized()
 		else:
 			dir = Vector2.RIGHT.rotated(vehicle.heading + PI)  # away from what we face
+		# A hop toward a cross-river target is a ballistic suicide (the arc is
+		# shorter than the channel). Deflect the landing before committing.
+		dir = _safe_escape_dir(vehicle, dir, ESCAPE_HOP_RANGE)
 		vehicle.escape_hop(dir)
 		_hop_cd = HOP_COOLDOWN
 		_pin_repeats = 0
@@ -847,7 +897,10 @@ func _nearest_any(vehicle) -> Node2D:
 		return _shun_target  # only combatant left — parking is never a strategy
 	return best
 
-## Nearest collectible crate (skips ones waiting to respawn).
+## Nearest collectible crate (skips ones waiting to respawn). A crate across
+## a lethal hazard pays a distance surcharge — the same-bank crate wins, but
+## when the only crate left is across the river, the shopping run still goes
+## (detour routing owns the crossing).
 func _nearest_crate(vehicle) -> Node2D:
 	var best: Node2D = null
 	var best_d := INF
@@ -855,6 +908,9 @@ func _nearest_crate(vehicle) -> Node2D:
 		if not p.monitoring:
 			continue
 		var d: float = vehicle.global_position.distance_to(p.global_position)
+		if Hazards.segment_blocked(vehicle.get_tree(), vehicle.global_position,
+				p.global_position, Hazards.GUARD_MARGIN):
+			d += HAZARD_CRATE_PENALTY_DIST
 		if d < best_d:
 			best_d = d
 			best = p
@@ -977,6 +1033,9 @@ func _target_score(vehicle, candidate: Node2D) -> float:
 			score -= NON_FOCUS_PLAYER_PENALTY
 	if not Floors.same_floor(vehicle, candidate):
 		score -= CROSS_FLOOR_PENALTY  # equidistant same-floor brawls win
+	if Hazards.segment_blocked(vehicle.get_tree(), vehicle.global_position,
+			candidate.global_position, Hazards.GUARD_MARGIN):
+		score -= HAZARD_LINE_PENALTY  # same-bank fights win near-ties; never a veto
 	return score
 
 ## Untyped until validated: a killed attacker can leave a freed instance in
