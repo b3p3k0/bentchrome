@@ -763,6 +763,10 @@ size = Vector2(20, 420)
 position = Vector2(-1984, 1324)
 size = Vector2(1152, 20)
 
+[node name="CurbQuaySeam" parent="." instance=ExtResource("26_curb")]
+position = Vector2(-1418, 1227)
+size = Vector2(20, 214)
+
 [node name="RailDeck1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(950, 1612)
 size = Vector2(192, 16)

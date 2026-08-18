@@ -621,11 +621,11 @@ position = Vector2(-2112, 148)
 size = Vector2(640, 24)
 
 [node name="Curb14thN" parent="RiverCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-2112, 1016)
+position = Vector2(-2112, 972)
 size = Vector2(640, 24)
 
 [node name="Curb14thS" parent="RiverCurbs" instance=ExtResource("8_curb")]
-position = Vector2(-2112, 1224)
+position = Vector2(-2112, 1268)
 size = Vector2(640, 24)
 
 [node name="RibbonConstitution" type="Node2D" parent="."]
