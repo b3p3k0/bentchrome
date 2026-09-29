@@ -1,4 +1,5 @@
 extends RefCounted
+
 ## Shared geometry for one paint skin built around unions of authored rects.
 ## Callers own the meaning of the bands and pass every transform/tuning input.
 static func extend_closed_sides(rect: Rect2, bounds: Rect2, bleed: float) -> Rect2:
@@ -15,6 +16,7 @@ static func extend_closed_sides(rect: Rect2, bounds: Rect2, bleed: float) -> Rec
 	if is_equal_approx(end.y, bounds.end.y):
 		end.y += bleed
 	return Rect2(begin, end - begin)
+
 static func segment_on_closed_side(a: Vector2, b: Vector2, bounds: Rect2,
 		local_to_world: Transform2D, epsilon: float) -> bool:
 	if not bounds.has_area():
@@ -25,44 +27,98 @@ static func segment_on_closed_side(a: Vector2, b: Vector2, bounds: Rect2,
 		or (wa.x > bounds.end.x + epsilon and wb.x > bounds.end.x + epsilon) \
 		or (wa.y < bounds.position.y - epsilon and wb.y < bounds.position.y - epsilon) \
 		or (wa.y > bounds.end.y + epsilon and wb.y > bounds.end.y + epsilon)
+
+static func displaced_segment_points(a: Vector2, b: Vector2, step: float,
+		displacement_min: float, displacement_max: float,
+		rng: RandomNumberGenerator, epsilon: float) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	var edge := b - a
+	step = maxf(step, epsilon)
+	var pieces := maxi(1, ceili(edge.length() / step))
+	var outward := exterior_normal(edge)
+	for j in range(1, pieces):
+		var point := a.lerp(b, float(j) / float(pieces))
+		result.append(point + outward * rng.randf_range(
+			displacement_min, displacement_max))
+	return result
+
 static func subdivide_displaced(loop: PackedVector2Array, step: float,
 		displacement_min: float, displacement_max: float,
 		rng: RandomNumberGenerator, bounds: Rect2,
 		local_to_world: Transform2D, epsilon: float) -> PackedVector2Array:
 	var result := PackedVector2Array()
-	step = maxf(step, epsilon)
 	for i in loop.size():
 		var a: Vector2 = loop[i]
 		var b: Vector2 = loop[(i + 1) % loop.size()]
-		var edge := b - a
 		result.append(a)
 		if segment_on_closed_side(a, b, bounds, local_to_world, epsilon):
 			continue
-		var pieces := maxi(1, ceili(edge.length() / step))
-		var outward := exterior_normal(edge)
-		for j in range(1, pieces):
-			var point := a.lerp(b, float(j) / float(pieces))
-			result.append(point + outward * rng.randf_range(
-				displacement_min, displacement_max))
+		result.append_array(displaced_segment_points(a, b, step,
+			displacement_min, displacement_max, rng, epsilon))
 	return result
+
+## TerrainZone-style three-point shoulders around a rectilinear union. Only
+## the remaining straight spans are subdivided, and closed sides never wander.
+static func soften_rectilinear(loop: PackedVector2Array, corner_radius: float,
+		edge_step: float, edge_jitter: float, rng: RandomNumberGenerator,
+		bounds: Rect2, local_to_world: Transform2D,
+		epsilon: float) -> PackedVector2Array:
+	if loop.size() < 3:
+		return loop.duplicate()
+	if corner_radius <= 0.0:
+		return subdivide_displaced(loop, edge_step, -absf(edge_jitter),
+			absf(edge_jitter), rng, bounds, local_to_world, epsilon)
+	var radii := PackedFloat32Array()
+	for i in loop.size():
+		var point: Vector2 = loop[i]
+		var before: Vector2 = loop[(i - 1 + loop.size()) % loop.size()]
+		var after: Vector2 = loop[(i + 1) % loop.size()]
+		radii.append(minf(corner_radius,
+			minf(point.distance_to(before), point.distance_to(after)) * 0.4))
+	var result := PackedVector2Array()
+	for i in loop.size():
+		var before: Vector2 = loop[(i - 1 + loop.size()) % loop.size()]
+		var point: Vector2 = loop[i]
+		var after: Vector2 = loop[(i + 1) % loop.size()]
+		var toward_before := point.direction_to(before)
+		var toward_after := point.direction_to(after)
+		var radius := radii[i]
+		var entry := point + toward_before * radius
+		var exit := point + toward_after * radius
+		result.append(entry)
+		result.append(point + (toward_before + toward_after) * radius * 0.3)
+		result.append(exit)
+		var after_radius := radii[(i + 1) % loop.size()]
+		var straight_end := after + after.direction_to(point) * after_radius
+		if segment_on_closed_side(exit, straight_end, bounds,
+				local_to_world, epsilon):
+			continue
+		result.append_array(displaced_segment_points(exit, straight_end,
+			edge_step, -absf(edge_jitter), absf(edge_jitter), rng, epsilon))
+	return result
+
 static func exterior_normal(edge: Vector2) -> Vector2:
 	return Vector2(edge.y, -edge.x).normalized()
+
 static func signed_area(loop: PackedVector2Array) -> float:
 	var twice_area := 0.0
 	for i in loop.size():
 		twice_area += loop[i].cross(loop[(i + 1) % loop.size()])
 	return twice_area * 0.5
+
 static func offset_loop(loop: PackedVector2Array,
 		amount: Vector2) -> PackedVector2Array:
 	var result := PackedVector2Array()
 	for point: Vector2 in loop:
 		result.append(point + amount)
 	return result
+
 static func copy_loops(source: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
 	var result: Array[PackedVector2Array] = []
 	for loop: PackedVector2Array in source:
 		result.append(loop.duplicate())
 	return result
+
 static func triangulates(loop: PackedVector2Array) -> bool:
 	return loop.size() >= 3 and not Geometry2D.triangulate_polygon(loop).is_empty()
 const STRIATION_EDGE_WINDOW := 3
@@ -132,6 +188,7 @@ static func fan_striations(outer_loop: PackedVector2Array,
 			if best <= max_distance_squared and end != start:
 				result.append(PackedVector2Array([start, end]))
 	return result
+
 ## Deterministic bilinear value noise with a smoothstep fade.
 static func value_noise(point: Vector2, cell: float, seed: int) -> float:
 	cell = maxf(cell, 0.001)
@@ -144,10 +201,12 @@ static func value_noise(point: Vector2, cell: float, seed: int) -> float:
 	var south := lerpf(_noise_corner(base.x, base.y + 1, seed),
 		_noise_corner(base.x + 1, base.y + 1, seed), smooth.x)
 	return clampf(lerpf(north, south, smooth.y), 0.0, 1.0)
+
 static func _noise_corner(x: int, y: int, seed: int) -> float:
 	var wave := sin(float(x) * 127.1 + float(y) * 311.7
 		+ float(seed) * 74.7) * 43758.5453123
 	return wave - floor(wave)
+
 ## Produces one jittered candidate per spacing cell, retaining only points in
 ## the even-odd fill represented by loops.
 static func scatter(loops: Array[PackedVector2Array], spacing: float,
@@ -172,6 +231,7 @@ static func scatter(loops: Array[PackedVector2Array], spacing: float,
 			x += spacing
 		y += spacing
 	return result
+
 ## Seeded Fisher-Yates sampling gives every candidate the same chance of
 ## surviving a cap, independent of scan order.
 static func thin_uniform(points: PackedVector2Array, cap: int,
@@ -194,6 +254,7 @@ static func thin_uniform(points: PackedVector2Array, cap: int,
 	for i in cap:
 			result.append(points[order[i]])
 	return result
+
 static func _inside_loops(point: Vector2,
 		loops: Array[PackedVector2Array]) -> bool:
 	var inside := false
@@ -201,6 +262,7 @@ static func _inside_loops(point: Vector2,
 		if Geometry2D.is_point_in_polygon(point, loop):
 			inside = not inside
 	return inside
+
 static func _loop_bounds(loops: Array[PackedVector2Array]) -> Rect2:
 	var lo := Vector2(INF, INF)
 	var hi := Vector2(-INF, -INF)

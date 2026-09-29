@@ -30,6 +30,7 @@ const SUITES := [
 	preload("res://tests/test_road_ribbon.gd"),
 	preload("res://tests/test_rect_union.gd"),
 	preload("res://tests/test_mountain_skins.gd"),
+	preload("res://tests/test_terrain_field.gd"),
 	preload("res://tests/test_boulder.gd"),
 	preload("res://tests/test_mountain_pass.gd"),
 	preload("res://tests/test_storm_director.gd"),
