@@ -10,7 +10,7 @@ text lines on the matte, a sting without a file runs silent.
 | `card_fony.png` | card 1, white matte: `FONY` / F diamond / `COMPUTER ENTERTAINMENT ™` |
 | `card_fanstation.png` | card 2, black matte: F-on-S emblem / `FanStation` / `not Licensed by Anyone` / `IPACRAO™` |
 | `boot_sting.ogg` | the one sound under both cards, 14.5s stereo one-shot |
-| `source/` | full-size generated art + the briefs that made it (`.gdignore`d — never imported, never shipped) |
+| `source/` | full-size art, the briefs that made it, and the FanStation donor card (`.gdignore`d — never imported, never shipped) |
 
 The acronym is never spelled out anywhere in the game.
 
@@ -53,10 +53,7 @@ emblem its breathing room; the final `-resize` is the softness knob.
 To repair one detail of a card that is otherwise right, EDIT it instead of
 rerolling: attach the source art and name the single change plus everything
 that must stay. `source/brief_fony_fix.md` is the pass that squared up the
-diamond's right point; `source/brief_fanstation_fix_pass1.md` then `_pass2.md`
-are the two passes that turned the FanStation base into a slim ribbon S
-(pass 2 edits the result of pass 1). Those passes also attached a reference
-screenshot as a shape guide for the S only; it is not kept in the repo.
+diamond's right point:
 
     codex exec --skip-git-repo-check -s workspace-write \
         -i source/card_fony_src.png < source/brief_fony_fix.md
@@ -64,6 +61,31 @@ screenshot as a shape guide for the S only; it is not kept in the repo.
 Editing needs a Codex build whose sandbox can read the attachment. Keep
 emblem geometry clean in briefs: an art-directed "dent" on the diamond read
 as a rendering glitch, not a joke, and was removed.
+
+## The FanStation emblem is drawn, not generated
+
+Image models could not hold the flat S: every pass closed its loops into a
+pretzel. So `tools/boot_emblem.py` draws it as exact geometry — a ribbon of
+three parallel strokes joined by two round caps, laid flat in a parallel
+projection with a thin plate edge — and composites the card:
+
+    ./venv312/bin/python tools/boot_emblem.py            # writes source/card_fanstation_src.png
+    ./venv312/bin/python tools/boot_emblem.py stroke=90 out=/tmp/try.png
+
+- `source/card_fanstation_donor.png` (the first generated card) donates the
+  red F, cut out by color, and the lettering. Its own base is discarded.
+- The F stands on the S's FRONT terminal, the way the reference's letter
+  does: the foot covers the bottom stroke's end and the stem hides the top
+  stroke's end, so only the two loops show. That placement is computed, not
+  hand-set — change `stroke`, `slot`, or the angles and it follows.
+- Knobs are `key=value` arguments (table in docs/matrices.md "Boot
+  sequence"); the defaults are what ships. Then run the `magick` card recipe
+  above.
+- A new donor with the F somewhere else needs `F_BOX` and `F_FOOT`
+  re-measured at the top of the tool.
+- To polish a drawn card with an image model, hand it the drawn card as the
+  edit target and declare the shape final; with an exact guide it holds the
+  silhouette.
 
 ## Regenerating the sting
 

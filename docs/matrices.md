@@ -604,3 +604,11 @@ Sources: `ui/boot_splash.gd` static vars (the `run/main_scene`); sting recipe in
 | `DUR` / `SWELL_TOP` / `ARRIVE` / `CHIMES` / `LAST_CHIME` / `FADE_FROM` | 14.5 / 6.4 / 7.4 / 7.6 / 11.9 / 13.2 s | tools/synth_boot.py | sting cue points — mirror `TIMING`, move them together |
 | `BEND` | -1.6 semitones | tools/synth_boot.py | how far the last chime sags (the knockoff tell); 0 or `--no-bend` plays it straight |
 | `PEAK_DB` | -1 dBFS | tools/synth_boot.py | sting peak ceiling |
+| `stroke` / `slot` | 82 / 28 px | tools/boot_emblem.py | FanStation S: ribbon width / gap between strokes (before `scale`) |
+| `half` | 100 px | tools/boot_emblem.py | cap centres sit at +-half along the strokes: loop length |
+| `thick` | 14 px | tools/boot_emblem.py | plate edge height |
+| `scale` / `fscale` | 1.15 / 1.15 | tools/boot_emblem.py | S size / F size about its own foot |
+| `foot` | 764,548 | tools/boot_emblem.py | where the F's foot lands on the 1536x1024 card; the S follows it |
+| `ang_d` / `ang_w` | 21 / 19 deg | tools/boot_emblem.py | stroke axis above horizontal / across axis below it: the viewing angle |
+| `bands` | -0.34, 0.34 | tools/boot_emblem.py | yellow-teal and teal-blue edges, as a fraction of the S's reach |
+| `ext` | 8 px | tools/boot_emblem.py | how far each hidden terminal runs on under / behind the F |
