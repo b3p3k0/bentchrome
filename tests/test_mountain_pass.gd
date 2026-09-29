@@ -3,6 +3,7 @@ extends RefCounted
 
 const PassGrid := preload("res://levels/snowy/pass_grid.gd")
 const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
+const PassDecoScript := preload("res://levels/snowy/pass_deco.gd")
 const AiNoGoScript := preload("res://environment/ai_no_go.gd")
 const PitZoneScript := preload("res://environment/pit_zone.gd")
 const UnionSkin := preload("res://environment/union_skin.gd")
@@ -661,6 +662,50 @@ func test_level_instances_generated_geometry_before_gameplay() -> void:
 			if gameplay:
 				t.check(mountain.get_index() < child.get_index(),
 					"pass level: generated geometry precedes %s" % child.name)
+	level.free()
+
+func test_level_bridge_deck_matches_grid_and_stays_paint_only() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var bridge := level.get_node_or_null(^"BridgeDeck") as Node2D
+	var drop := level.get_node_or_null(^"Drop") as Node2D
+	var mountain := level.get_node_or_null(^"Mountain") as Node2D
+	var bridge_start := PassGrid.ORIGIN + Vector2(
+		PassGrid.BRIDGE_COLS.x, PassGrid.CHASM_ROWS.x) * PassGrid.CELL
+	var bridge_size := Vector2(
+		(PassGrid.BRIDGE_COLS.y - PassGrid.BRIDGE_COLS.x + 1) * PassGrid.CELL,
+		(PassGrid.CHASM_ROWS.y - PassGrid.CHASM_ROWS.x + 1) * PassGrid.CELL)
+	var bridge_rect := Rect2(bridge.position - bridge_size * 0.5, bridge_size) \
+		if bridge != null else Rect2()
+	t.check(bridge != null and bridge.get_parent() == level
+			and bridge.get_script() == PassDecoScript
+			and bridge.get("kind") == &"bridge_deck" and bridge.get("size") == bridge_size,
+		"pass level: BridgeDeck is the direct paint-only pass deco")
+	t.check(bridge_rect == Rect2(bridge_start, bridge_size),
+		"pass level: BridgeDeck rect exactly matches the signed-off bridge cells")
+	if bridge != null and drop != null and mountain != null:
+		t.check(drop.get_index() < bridge.get_index()
+				and mountain.get_index() < bridge.get_index(),
+			"pass level: BridgeDeck follows Drop and Mountain")
+		for child: Node in level.get_children():
+			var scene_path := child.scene_file_path
+			var gameplay := child is Vehicle or String(child.name).begins_with("Jump") \
+				or scene_path.ends_with("ammo_pickup.tscn") \
+				or scene_path.ends_with("health_station.tscn")
+			if gameplay:
+				t.check(bridge.get_index() < child.get_index(),
+					"pass level: BridgeDeck precedes %s" % child.name)
+	var collisions := bridge.find_children("*", "CollisionObject2D", true, false) \
+		if bridge != null else []
+	t.check(bridge != null and not bridge is CollisionObject2D and collisions.is_empty(),
+		"pass level: BridgeDeck and its descendants contain no collision objects")
+	if bridge != null:
+		level.remove_child(bridge)
+		bridge.owner = null
+		t.root.add_child(bridge)
+		await t.process_frame
+		t.check(bridge.is_inside_tree(), "pass level: BridgeDeck draws for one frame")
+		t.root.remove_child(bridge)
+		bridge.free()
 	level.free()
 
 func test_level_mountain_uses_level_materials() -> void:
