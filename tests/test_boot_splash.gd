@@ -2,7 +2,8 @@ extends RefCounted
 ## Boot sequence contracts: the satire copy is letter-exact and in order; the
 ## timeline stays inside the sting's length; a card without art builds its
 ## fallback without a load error; the any-key skip respects the input lock and
-## key echo; the hand-off fires exactly once. The scene is load()ed at test
+## key echo; the hand-off fires exactly once; headless runs and the BOOT INTRO
+## setting both bypass the cards. The scene is load()ed at test
 ## time and built with autoplay/handoff OFF — the real scene swap stays
 ## untested here (house rule), the human launch covers it.
 
@@ -107,11 +108,18 @@ func test_hand_off_fires_once() -> void:
 	t.check(hits[0] == 1, "boot: input after the hand-off is inert")
 	_done(splash)
 
-func test_headless_bypasses_the_cards() -> void:
+func test_bypass_gate() -> void:
 	var splash := _fresh()
-	t.check(not splash.wants_intro(true), "boot: headless runs skip straight to title")
-	t.check(splash.wants_intro(false), "boot: a real launch plays the cards")
+	t.check(not splash.wants_intro(true, true), "boot: headless runs skip straight to title")
+	t.check(splash.wants_intro(false, true), "boot: a real launch plays the cards")
+	t.check(not splash.wants_intro(false, false), "boot: BOOT INTRO off skips the cards")
 	_done(splash)
+
+func test_boot_intro_setting_defaults_on() -> void:
+	var fresh: Node = (load("res://game/game_state.gd") as Script).new()
+	t.check(fresh.boot_intro, "boot: fresh installs play the cards")
+	t.check(fresh.SETTINGS_KEYS.has("boot_intro"), "boot: the toggle is a persisted setting")
+	fresh.free()
 
 func test_boot_scene_is_the_main_scene() -> void:
 	t.check(String(ProjectSettings.get_setting("application/run/main_scene")) == flow.BOOT,

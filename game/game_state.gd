@@ -56,6 +56,7 @@ var camera_look_ahead_distance := DEFAULT_CAMERA_LOOK_AHEAD_DISTANCE
 var devgod := false        # invincible, 1x every weapon, firing never depletes
 var dev_mode := false      # dev tooling (F1 dashboard; Stage-2 tuning editor)
 var screen_shake := true   # accessibility: gates Vehicle.add_shake
+var boot_intro := true     # the startup cards (ui/boot_splash.gd); off = straight to title
 var player_name := ""      # LAN identity; empty = derived from the car's driver bio
 var volume_master := 0.80  # settings sliders, 0-1 linear; applied to the
 var volume_music := 0.30   # Master/Music/SFX buses via apply_audio_settings()
@@ -86,7 +87,7 @@ const SCHEMA2_DEFAULT_COMBAT_ZOOM := 0.66
 # files — unknown keys load as no-ops, so stale settings degrade silently.
 const SETTINGS_KEYS := ["zoom_combat", "zoom_overview", "overview",
 	"camera_look_ahead_enabled", "camera_look_ahead_distance", "devgod",
-	"dev_mode", "screen_shake", "player_name",
+	"dev_mode", "screen_shake", "boot_intro", "player_name",
 	"volume_master", "volume_music", "volume_sfx",
 	"mp_join_ip", "mp_join_port", "mp_host_port", "mp_host_garage",
 	"mp_host_strict"]
@@ -161,6 +162,7 @@ func reset_settings(path := SETTINGS_PATH) -> void:
 	devgod = false
 	dev_mode = false
 	screen_shake = true
+	boot_intro = true
 	player_name = ""
 	mp_join_ip = ""
 	mp_join_port = 0

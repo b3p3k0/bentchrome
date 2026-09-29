@@ -87,6 +87,7 @@ func _ready() -> void:
 		{"name": "LOOK-AHEAD DISTANCE", "adjust": _adj_look_ahead_distance,
 			"value": _val_look_ahead_distance},
 		{"name": "SCREEN SHAKE", "adjust": _adj_shake, "value": _val_shake},
+		{"name": "BOOT INTRO", "adjust": _adj_boot_intro, "value": _val_boot_intro},
 		{"name": "BACK", "adjust": _adj_close_graphics, "value": _val_blank,
 			"kind": &"action", "persist": false},
 	]
@@ -173,6 +174,12 @@ func _adj_shake(_d: int) -> void:
 
 func _val_shake() -> Array:
 	return ["ON" if _gs.screen_shake else "OFF", DIM_TEXT]
+
+func _adj_boot_intro(_d: int) -> void:
+	_gs.boot_intro = not _gs.boot_intro
+
+func _val_boot_intro() -> Array:
+	return ["ON" if _gs.boot_intro else "OFF", DIM_TEXT]
 
 func _adj_dev_options(_d: int) -> void:
 	_open_dev_dialog()

@@ -4,8 +4,10 @@ extends Control
 ## card, crossing through black under one original sting. Art and sting are
 ## drop-in (assets/boot/ — contract in its README): a card without art falls
 ## back to its text lines on the matte, a sting without a file runs silent.
-## Any key/button/click skips once INPUT_LOCK passes. Headless runs hand
-## straight to the title, so the smoke gate's boot stage still cold-boots it.
+## Any key/button/click skips once INPUT_LOCK passes; Settings -> Graphics ->
+## BOOT INTRO (GameState.boot_intro) turns the cards off for good. Headless
+## runs hand straight to the title, so the smoke gate's boot stage still
+## cold-boots it.
 
 signal finished
 
@@ -62,14 +64,15 @@ func _ready() -> void:
 	_build()
 	if not autoplay:
 		return
-	if not wants_intro(DisplayServer.get_name() == "headless"):
+	var gs := get_node_or_null(^"/root/GameState")
+	if not wants_intro(DisplayServer.get_name() == "headless", gs == null or gs.boot_intro):
 		_finish.call_deferred()  # deferred: the tree is still adding this scene
 		return
 	begin()
 
 ## Pure gate — the launch decides once whether the cards play at all.
-static func wants_intro(headless: bool) -> bool:
-	return not headless
+static func wants_intro(headless: bool, enabled: bool) -> bool:
+	return enabled and not headless
 
 ## Wall-clock length of an unskipped run; the sting is rendered to match.
 static func total_duration() -> float:

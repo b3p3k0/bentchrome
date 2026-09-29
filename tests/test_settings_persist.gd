@@ -34,6 +34,7 @@ func test_settings_round_trip() -> void:
 	gs.devgod = true
 	gs.dev_mode = true
 	gs.screen_shake = false
+	gs.boot_intro = false
 	gs.mp_join_ip = "192.168.1.44"
 	gs.mp_join_port = 43555
 	gs.mp_host_garage = "Kevin's Chop Shop"
@@ -57,6 +58,7 @@ func test_settings_round_trip() -> void:
 	gs.devgod = false
 	gs.dev_mode = false
 	gs.screen_shake = true
+	gs.boot_intro = true
 	gs.mp_join_ip = ""
 	gs.mp_join_port = 0
 	gs.mp_host_garage = ""
@@ -73,6 +75,7 @@ func test_settings_round_trip() -> void:
 		"settings: look-ahead enable and distance round-trip")
 	t.check(gs.devgod and gs.dev_mode, "settings: toggles round-trip")
 	t.check(not gs.screen_shake, "settings: shake toggle round-trips")
+	t.check(not gs.boot_intro, "settings: boot intro toggle round-trips")
 	t.check(gs.mp_join_ip == "192.168.1.44" and gs.mp_join_port == 43555,
 		"settings: last host entry round-trips")
 	t.check(gs.mp_host_garage == "Kevin's Chop Shop" and gs.mp_host_strict,
@@ -207,8 +210,8 @@ func test_settings_submenus_contract() -> void:
 	for row in screen._gfx_rows:
 		gfx_names.append(String(row.name))
 	t.check(gfx_names == ["COMBAT ZOOM", "OVERVIEW ZOOM", "CAMERA LOOK-AHEAD",
-		"LOOK-AHEAD DISTANCE", "SCREEN SHAKE", "BACK"],
-		"graphics dialog: both depths, lead controls, shake, and back are present")
+		"LOOK-AHEAD DISTANCE", "SCREEN SHAKE", "BOOT INTRO", "BACK"],
+		"graphics dialog: both depths, lead controls, shake, boot intro, and back are present")
 	var audio_names: Array[String] = []
 	for row in screen._audio_rows:
 		audio_names.append(String(row.name))
@@ -220,7 +223,7 @@ func test_settings_submenus_contract() -> void:
 	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "SOUNDBOARD", "CAR TUNER", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
 	t.check(not bool(screen._rows[0].persist) and not bool(screen._rows[1].persist)
-		and not bool(screen._gfx_rows[5].persist) and not bool(screen._audio_rows[3].persist)
+		and not bool(screen._gfx_rows[6].persist) and not bool(screen._audio_rows[3].persist)
 		and not bool(screen._dev_rows[4].persist),
 		"settings dialogs: opening and closing are non-persisting navigation")
 	t.check(screen._rows[0].kind == &"submenu" and screen._rows[1].kind == &"submenu"
@@ -247,6 +250,7 @@ func test_settings_submenus_contract() -> void:
 	gs.camera_look_ahead_enabled = true
 	gs.camera_look_ahead_distance = 140.0
 	gs.screen_shake = true
+	gs.boot_intro = true
 	screen._gfx_index = 0
 	screen._unhandled_input(_key(KEY_LEFT))
 	t.check(is_equal_approx(gs.zoom_combat, 0.54),
@@ -278,12 +282,15 @@ func test_settings_submenus_contract() -> void:
 	screen._gfx_index = 4
 	screen._unhandled_input(_key(KEY_RIGHT))
 	t.check(not gs.screen_shake, "graphics input: Screen Shake moved into this dialog")
+	screen._gfx_index = 5
+	screen._unhandled_input(_key(KEY_LEFT))
+	t.check(not gs.boot_intro, "graphics input: Boot Intro toggles off")
 	var autosaved: Variant = JSON.parse_string(FileAccess.get_file_as_string(TMP))
 	t.check(not autosaved.camera_look_ahead_enabled
 		and is_equal_approx(float(autosaved.camera_look_ahead_distance), 130.0),
 		"graphics input: camera changes autosave immediately")
 
-	screen._gfx_index = 5
+	screen._gfx_index = 6
 	screen._unhandled_input(_key(KEY_LEFT))
 	t.check(screen._gfx_dialog != null, "graphics input: left cannot activate Back")
 	screen._unhandled_input(_key(KEY_RIGHT))
