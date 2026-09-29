@@ -1,0 +1,448 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://environment/drop_field.gd" id="1_f34jo"]
+[ext_resource type="PackedScene" path="res://environment/pit_zone.tscn" id="2_tl41r"]
+[ext_resource type="Script" path="res://environment/pit_zone.gd" id="3_nmea8"]
+[ext_resource type="PackedScene" path="res://environment/hazard_curb.tscn" id="4_5wkqk"]
+[ext_resource type="Script" path="res://environment/hazard_curb.gd" id="5_7copk"]
+
+[node name="Drop" type="Node2D" unique_id=1]
+script = ExtResource("1_f34jo")
+bounds = Rect2(-2048, -2048, 4096, 4096)
+paint_seed = 4096
+
+[node name="Pit01" type="Area2D" parent="." unique_id=2 instance=ExtResource("2_tl41r")]
+position = Vector2(1984, -1824)
+script = ExtResource("3_nmea8")
+size = Vector2(128, 192)
+paint = false
+
+[node name="Pit02" type="Area2D" parent="." unique_id=3 instance=ExtResource("2_tl41r")]
+position = Vector2(1984, -1696)
+script = ExtResource("3_nmea8")
+size = Vector2(128, 192)
+paint = false
+
+[node name="Pit03" type="Area2D" parent="." unique_id=4 instance=ExtResource("2_tl41r")]
+position = Vector2(1984, -1568)
+script = ExtResource("3_nmea8")
+size = Vector2(128, 192)
+paint = false
+
+[node name="Pit04" type="Area2D" parent="." unique_id=5 instance=ExtResource("2_tl41r")]
+position = Vector2(1984, -1440)
+script = ExtResource("3_nmea8")
+size = Vector2(128, 192)
+paint = false
+
+[node name="Pit05" type="Area2D" parent="." unique_id=6 instance=ExtResource("2_tl41r")]
+position = Vector2(1920, -1312)
+script = ExtResource("3_nmea8")
+size = Vector2(256, 192)
+paint = false
+
+[node name="Pit06" type="Area2D" parent="." unique_id=7 instance=ExtResource("2_tl41r")]
+position = Vector2(1792, -1184)
+script = ExtResource("3_nmea8")
+size = Vector2(512, 192)
+paint = false
+
+[node name="Pit07" type="Area2D" parent="." unique_id=8 instance=ExtResource("2_tl41r")]
+position = Vector2(1728, -1056)
+script = ExtResource("3_nmea8")
+size = Vector2(640, 192)
+paint = false
+
+[node name="Pit08" type="Area2D" parent="." unique_id=9 instance=ExtResource("2_tl41r")]
+position = Vector2(1664, -928)
+script = ExtResource("3_nmea8")
+size = Vector2(768, 192)
+paint = false
+
+[node name="Pit09" type="Area2D" parent="." unique_id=10 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -800)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit10" type="Area2D" parent="." unique_id=11 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -672)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit11" type="Area2D" parent="." unique_id=12 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -544)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit12" type="Area2D" parent="." unique_id=13 instance=ExtResource("2_tl41r")]
+position = Vector2(-64, -384)
+script = ExtResource("3_nmea8")
+size = Vector2(384, 256)
+paint = false
+
+[node name="Pit13" type="Area2D" parent="." unique_id=14 instance=ExtResource("2_tl41r")]
+position = Vector2(800, -384)
+script = ExtResource("3_nmea8")
+size = Vector2(576, 256)
+paint = false
+
+[node name="Pit14" type="Area2D" parent="." unique_id=15 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -416)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit15" type="Area2D" parent="." unique_id=16 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -288)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit16" type="Area2D" parent="." unique_id=17 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -160)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit17" type="Area2D" parent="." unique_id=18 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, -32)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit18" type="Area2D" parent="." unique_id=19 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, 96)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit19" type="Area2D" parent="." unique_id=20 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, 224)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit20" type="Area2D" parent="." unique_id=21 instance=ExtResource("2_tl41r")]
+position = Vector2(1536, 352)
+script = ExtResource("3_nmea8")
+size = Vector2(1024, 192)
+paint = false
+
+[node name="Pit21" type="Area2D" parent="." unique_id=22 instance=ExtResource("2_tl41r")]
+position = Vector2(1472, 480)
+script = ExtResource("3_nmea8")
+size = Vector2(1152, 192)
+paint = false
+
+[node name="Pit22" type="Area2D" parent="." unique_id=23 instance=ExtResource("2_tl41r")]
+position = Vector2(1472, 608)
+script = ExtResource("3_nmea8")
+size = Vector2(1152, 192)
+paint = false
+
+[node name="Pit23" type="Area2D" parent="." unique_id=24 instance=ExtResource("2_tl41r")]
+position = Vector2(1408, 736)
+script = ExtResource("3_nmea8")
+size = Vector2(1280, 192)
+paint = false
+
+[node name="Pit24" type="Area2D" parent="." unique_id=25 instance=ExtResource("2_tl41r")]
+position = Vector2(1344, 864)
+script = ExtResource("3_nmea8")
+size = Vector2(1408, 192)
+paint = false
+
+[node name="Pit25" type="Area2D" parent="." unique_id=26 instance=ExtResource("2_tl41r")]
+position = Vector2(1216, 992)
+script = ExtResource("3_nmea8")
+size = Vector2(1664, 192)
+paint = false
+
+[node name="Pit26" type="Area2D" parent="." unique_id=27 instance=ExtResource("2_tl41r")]
+position = Vector2(1152, 1120)
+script = ExtResource("3_nmea8")
+size = Vector2(1792, 192)
+paint = false
+
+[node name="Pit27" type="Area2D" parent="." unique_id=28 instance=ExtResource("2_tl41r")]
+position = Vector2(960, 1248)
+script = ExtResource("3_nmea8")
+size = Vector2(2176, 192)
+paint = false
+
+[node name="Pit28" type="Area2D" parent="." unique_id=29 instance=ExtResource("2_tl41r")]
+position = Vector2(832, 1376)
+script = ExtResource("3_nmea8")
+size = Vector2(2432, 192)
+paint = false
+
+[node name="Pit29" type="Area2D" parent="." unique_id=30 instance=ExtResource("2_tl41r")]
+position = Vector2(704, 1504)
+script = ExtResource("3_nmea8")
+size = Vector2(2688, 192)
+paint = false
+
+[node name="Pit30" type="Area2D" parent="." unique_id=31 instance=ExtResource("2_tl41r")]
+position = Vector2(704, 1632)
+script = ExtResource("3_nmea8")
+size = Vector2(2688, 192)
+paint = false
+
+[node name="Pit31" type="Area2D" parent="." unique_id=32 instance=ExtResource("2_tl41r")]
+position = Vector2(704, 1760)
+script = ExtResource("3_nmea8")
+size = Vector2(2688, 192)
+paint = false
+
+[node name="Pit32" type="Area2D" parent="." unique_id=33 instance=ExtResource("2_tl41r")]
+position = Vector2(704, 1888)
+script = ExtResource("3_nmea8")
+size = Vector2(2688, 192)
+paint = false
+
+[node name="Pit33" type="Area2D" parent="." unique_id=34 instance=ExtResource("2_tl41r")]
+position = Vector2(704, 1984)
+script = ExtResource("3_nmea8")
+size = Vector2(2688, 128)
+paint = false
+
+[node name="Curb01" type="StaticBody2D" parent="." unique_id=35 instance=ExtResource("4_5wkqk")]
+position = Vector2(1906, -1664)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 512)
+
+[node name="Curb02" type="StaticBody2D" parent="." unique_id=36 instance=ExtResource("4_5wkqk")]
+position = Vector2(1844, -1422)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb03" type="StaticBody2D" parent="." unique_id=37 instance=ExtResource("4_5wkqk")]
+position = Vector2(1778, -1356)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb04" type="StaticBody2D" parent="." unique_id=38 instance=ExtResource("4_5wkqk")]
+position = Vector2(1652, -1294)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(280, 24)
+
+[node name="Curb05" type="StaticBody2D" parent="." unique_id=39 instance=ExtResource("4_5wkqk")]
+position = Vector2(1522, -1228)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb06" type="StaticBody2D" parent="." unique_id=40 instance=ExtResource("4_5wkqk")]
+position = Vector2(1460, -1166)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb07" type="StaticBody2D" parent="." unique_id=41 instance=ExtResource("4_5wkqk")]
+position = Vector2(1394, -1100)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb08" type="StaticBody2D" parent="." unique_id=42 instance=ExtResource("4_5wkqk")]
+position = Vector2(1332, -1038)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb09" type="StaticBody2D" parent="." unique_id=43 instance=ExtResource("4_5wkqk")]
+position = Vector2(1266, -972)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb10" type="StaticBody2D" parent="." unique_id=44 instance=ExtResource("4_5wkqk")]
+position = Vector2(1140, -910)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(280, 24)
+
+[node name="Curb11" type="StaticBody2D" parent="." unique_id=45 instance=ExtResource("4_5wkqk")]
+position = Vector2(1010, -716)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 408)
+
+[node name="Curb12" type="StaticBody2D" parent="." unique_id=46 instance=ExtResource("4_5wkqk")]
+position = Vector2(-52, -526)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(408, 24)
+
+[node name="Curb13" type="StaticBody2D" parent="." unique_id=47 instance=ExtResource("4_5wkqk")]
+position = Vector2(756, -526)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(536, 24)
+
+[node name="Curb14" type="StaticBody2D" parent="." unique_id=48 instance=ExtResource("4_5wkqk")]
+position = Vector2(142, -384)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 304)
+
+[node name="Curb15" type="StaticBody2D" parent="." unique_id=49 instance=ExtResource("4_5wkqk")]
+position = Vector2(498, -384)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 304)
+
+[node name="Curb16" type="StaticBody2D" parent="." unique_id=50 instance=ExtResource("4_5wkqk")]
+position = Vector2(1010, 64)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 640)
+
+[node name="Curb17" type="StaticBody2D" parent="." unique_id=51 instance=ExtResource("4_5wkqk")]
+position = Vector2(-52, -242)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(408, 24)
+
+[node name="Curb18" type="StaticBody2D" parent="." unique_id=52 instance=ExtResource("4_5wkqk")]
+position = Vector2(756, -242)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(536, 24)
+
+[node name="Curb19" type="StaticBody2D" parent="." unique_id=53 instance=ExtResource("4_5wkqk")]
+position = Vector2(948, 370)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb20" type="StaticBody2D" parent="." unique_id=54 instance=ExtResource("4_5wkqk")]
+position = Vector2(882, 500)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 280)
+
+[node name="Curb21" type="StaticBody2D" parent="." unique_id=55 instance=ExtResource("4_5wkqk")]
+position = Vector2(820, 626)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb22" type="StaticBody2D" parent="." unique_id=56 instance=ExtResource("4_5wkqk")]
+position = Vector2(754, 692)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb23" type="StaticBody2D" parent="." unique_id=57 instance=ExtResource("4_5wkqk")]
+position = Vector2(692, 754)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb24" type="StaticBody2D" parent="." unique_id=58 instance=ExtResource("4_5wkqk")]
+position = Vector2(626, 820)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb25" type="StaticBody2D" parent="." unique_id=59 instance=ExtResource("4_5wkqk")]
+position = Vector2(500, 882)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(280, 24)
+
+[node name="Curb26" type="StaticBody2D" parent="." unique_id=60 instance=ExtResource("4_5wkqk")]
+position = Vector2(370, 948)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb27" type="StaticBody2D" parent="." unique_id=61 instance=ExtResource("4_5wkqk")]
+position = Vector2(308, 1010)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(152, 24)
+
+[node name="Curb28" type="StaticBody2D" parent="." unique_id=62 instance=ExtResource("4_5wkqk")]
+position = Vector2(242, 1076)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb29" type="StaticBody2D" parent="." unique_id=63 instance=ExtResource("4_5wkqk")]
+position = Vector2(52, 1138)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(408, 24)
+
+[node name="Curb30" type="StaticBody2D" parent="." unique_id=64 instance=ExtResource("4_5wkqk")]
+position = Vector2(-142, 1204)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb31" type="StaticBody2D" parent="." unique_id=65 instance=ExtResource("4_5wkqk")]
+position = Vector2(-268, 1266)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(280, 24)
+
+[node name="Curb32" type="StaticBody2D" parent="." unique_id=66 instance=ExtResource("4_5wkqk")]
+position = Vector2(-398, 1332)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 152)
+
+[node name="Curb33" type="StaticBody2D" parent="." unique_id=67 instance=ExtResource("4_5wkqk")]
+position = Vector2(-524, 1394)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(280, 24)
+
+[node name="Curb34" type="StaticBody2D" parent="." unique_id=68 instance=ExtResource("4_5wkqk")]
+position = Vector2(-654, 1652)
+collision_layer = 64
+collision_mask = 0
+script = ExtResource("5_7copk")
+size = Vector2(24, 536)

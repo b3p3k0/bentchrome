@@ -2,6 +2,9 @@ extends RefCounted
 ## Pure contract checks for the signed-off Mountainside Mayhem pass grid.
 
 const PassGrid := preload("res://levels/snowy/pass_grid.gd")
+const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
+const PitZoneScript := preload("res://environment/pit_zone.gd")
+const UnionSkin := preload("res://environment/union_skin.gd")
 
 const GOLDEN := [
 	"################################################################",
@@ -341,4 +344,249 @@ func test_golden_render() -> void:
 			bad_lengths.append(Vector2i(j, got[j].length()))
 	t.check(got.size() == 32 and bad_lengths.is_empty(),
 		"pass grid: render is 32 lines of 64 chars; bad lengths %s" % [bad_lengths])
-	t.check(got == PackedStringArray(GOLDEN), "pass grid: render matches signed-off golden character for character")
+	t.check(got == PackedStringArray(GOLDEN),
+		"pass grid: render matches signed-off golden character for character")
+
+func _is_pit_kind(kind: StringName) -> bool:
+	return kind == PassGrid.DROP or kind == PassGrid.WEST_PIT or kind == PassGrid.EAST_PIT
+
+func _rim_edges() -> Array[PackedVector2Array]:
+	var edges: Array[PackedVector2Array] = []
+	var directions: Array[Vector2i] = [
+		Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN,
+	]
+	for j in PassGrid.N:
+		for i in PassGrid.N:
+			if not _is_pit_kind(PassGrid.kind_at(i, j)):
+				continue
+			var rect := PassGrid.cell_rect(i, j)
+			for direction: Vector2i in directions:
+				if not PassGrid.is_driveable(i + direction.x, j + direction.y):
+					continue
+				var a: Vector2
+				var b: Vector2
+				if direction == Vector2i.LEFT:
+					a = rect.position
+					b = Vector2(rect.position.x, rect.end.y)
+				elif direction == Vector2i.RIGHT:
+					a = Vector2(rect.end.x, rect.position.y)
+					b = rect.end
+				elif direction == Vector2i.UP:
+					a = rect.position
+					b = Vector2(rect.end.x, rect.position.y)
+				else:
+					a = Vector2(rect.position.x, rect.end.y)
+					b = rect.end
+				edges.append(PackedVector2Array([a, b, -Vector2(direction)]))
+	return edges
+
+func _rim_samples() -> PackedVector2Array:
+	var samples := PackedVector2Array()
+	for edge: PackedVector2Array in _rim_edges():
+		var tangent := (edge[1] - edge[0]).normalized()
+		var length := edge[0].distance_to(edge[1])
+		var distance := 0.0
+		while distance < length:
+			samples.append(edge[0] + tangent * distance + edge[2] * 8.0)
+			distance += 64.0
+	return samples
+
+func _distance_to_rect(point: Vector2, rect: Rect2) -> float:
+	var nearest := Vector2(
+		clampf(point.x, rect.position.x, rect.end.x),
+		clampf(point.y, rect.position.y, rect.end.y))
+	return point.distance_to(nearest)
+
+func _distance_to_rim(point: Vector2) -> float:
+	var best := INF
+	for edge: PackedVector2Array in _rim_edges():
+		var nearest := Geometry2D.get_closest_point_to_segment(point, edge[0], edge[1])
+		best = minf(best, point.distance_to(nearest))
+	return best
+
+func _same_built_tree(a: Node2D, b: Node2D) -> bool:
+	if a.name != b.name or a.get_script() != b.get_script() \
+			or a.get("bounds") != b.get("bounds") \
+			or a.get("paint_seed") != b.get("paint_seed") \
+			or a.get_child_count() != b.get_child_count():
+		return false
+	if a.name == &"Mountain" \
+			and a.get("chamfer_exclusions") != b.get("chamfer_exclusions"):
+		return false
+	for i in a.get_child_count():
+		var child_a := a.get_child(i) as Node2D
+		var child_b := b.get_child(i) as Node2D
+		if child_a.name != child_b.name or child_a.get_class() != child_b.get_class() \
+				or child_a.position != child_b.position or child_a.scale != child_b.scale \
+				or child_a.get_script() != child_b.get_script():
+			return false
+		if child_a is CollisionObject2D:
+			var collision_a := child_a as CollisionObject2D
+			var collision_b := child_b as CollisionObject2D
+			if collision_a.collision_layer != collision_b.collision_layer \
+					or collision_a.collision_mask != collision_b.collision_mask:
+				return false
+		if child_a.name.begins_with("Block"):
+			var col_a := child_a.get_node_or_null(^"Col") as CollisionShape2D
+			var col_b := child_b.get_node_or_null(^"Col") as CollisionShape2D
+			if col_a == null or col_b == null \
+					or not col_a.shape is RectangleShape2D \
+					or not col_b.shape is RectangleShape2D:
+				return false
+			var shape_a := col_a.shape as RectangleShape2D
+			var shape_b := col_b.shape as RectangleShape2D
+			if shape_a.size != shape_b.size:
+				return false
+		else:
+			if child_a.get("size") != child_b.get("size"):
+				return false
+			if child_a.name.begins_with("Pit") \
+					and child_a.get("paint") != child_b.get("paint"):
+				return false
+	return true
+
+func test_generated_mountain_tiles_only_mountain_cells() -> void:
+	var blocks := PassGrid.mountain_blocks()
+	var bad: Array[Vector3i] = []
+	for j in PassGrid.N:
+		for i in PassGrid.N:
+			var hits := 0
+			for rect: Rect2 in blocks:
+				hits += 1 if rect.has_point(PassGrid.cell_center(i, j)) else 0
+			var want := 1 if PassGrid.kind_at(i, j) == PassGrid.MOUNTAIN else 0
+			if hits != want:
+				bad.append(Vector3i(i, j, hits))
+	t.check(bad.is_empty(),
+		"pass carve: mountain cells have one block and all other cells have none; bad %s" % [bad])
+
+func test_drop_bands_cover_lethal_cells_without_touching_road() -> void:
+	var bands := PassGrid.drop_bands()
+	var uncovered: Array[Vector2i] = []
+	var unsafe: Array[Vector2i] = []
+	for j in PassGrid.N:
+		for i in PassGrid.N:
+			var kind := PassGrid.kind_at(i, j)
+			if _is_pit_kind(kind):
+				var covered := false
+				for rect: Rect2 in bands:
+					covered = covered or rect.grow(-24.0).has_point(
+						PassGrid.cell_center(i, j))
+				if not covered:
+					uncovered.append(Vector2i(i, j))
+			elif PassGrid.is_driveable(i, j):
+				var interior := PassGrid.cell_rect(i, j).grow(-0.01)
+				for rect: Rect2 in bands:
+					if rect.intersects(interior):
+						unsafe.append(Vector2i(i, j))
+						break
+	t.check(bands.size() == 33 and uncovered.is_empty(),
+		"pass carve: 33 bands cover every lethal cell kill interior; missing %s" % [uncovered])
+	t.check(unsafe.is_empty(),
+		"pass carve: no painted band overlaps driveable cell interiors; unsafe %s" % [unsafe])
+
+func test_drop_scene_has_no_kill_seams() -> void:
+	var packed: PackedScene = load("res://levels/snowy/pass_drop.tscn")
+	var drop := packed.instantiate() as Node2D
+	t.root.add_child(drop)
+	var gaps: PackedVector2Array = drop.call("kill_gaps")
+	var warnings: PackedStringArray = drop.call("validation_warnings")
+	t.check(gaps.is_empty(), "pass carve: generated drop has no kill gaps; gaps %s" % [gaps])
+	t.check(warnings.is_empty(),
+		"pass carve: generated drop has no validation warnings; warnings %s" % [warnings])
+	t.root.remove_child(drop)
+	drop.free()
+
+func test_drop_fall_pull_stays_local() -> void:
+	var bands := PassGrid.drop_bands()
+	var missing := PackedVector2Array()
+	var worst := 0.0
+	for point: Vector2 in _rim_samples():
+		var found := false
+		for rect: Rect2 in bands:
+			if not rect.has_point(point):
+				continue
+			var pit := PitZoneScript.new() as Node2D
+			pit.position = rect.get_center()
+			pit.set("size", rect.size)
+			var target: Vector2 = pit.call("fall_target_for", point)
+			worst = maxf(worst, point.distance_to(target))
+			pit.free()
+			found = true
+			break
+		if not found:
+			missing.append(point)
+	t.check(missing.is_empty() and worst <= 200.0,
+		"pass carve: every rim sample falls locally (worst %.1f); missing %s" % [worst, missing])
+
+func test_rim_curbs_cover_edges_without_blocking_solids() -> void:
+	var curbs := PassGrid.rim_curbs()
+	var blocks := PassGrid.mountain_blocks()
+	var bands := PassGrid.drop_bands()
+	var missed := PackedVector2Array()
+	var invalid: Array[Rect2] = []
+	for point: Vector2 in _rim_samples():
+		var best := INF
+		for curb: Rect2 in curbs:
+			best = minf(best, _distance_to_rect(point, curb))
+		if best > 32.0:
+			missed.append(point)
+	for curb: Rect2 in curbs:
+		var bad := _distance_to_rim(curb.get_center()) > 40.0
+		for block: Rect2 in blocks:
+			bad = bad or curb.intersects(block)
+		for band: Rect2 in bands:
+			bad = bad or curb.intersects(band.grow(-24.0))
+		if bad:
+			invalid.append(curb)
+	t.check(missed.is_empty(),
+		"pass carve: every exposed rim sample is within 32px of a curb; missed %s" % [missed])
+	t.check(invalid.is_empty(),
+		"pass carve: curbs stay within 40px of rims and avoid blocks/kill rects; bad %s" % [invalid])
+
+func test_generated_mountain_scene_builds_valid_skin() -> void:
+	var packed: PackedScene = load("res://levels/snowy/pass_mountain.tscn")
+	var mountain := packed.instantiate() as Node2D
+	t.root.add_child(mountain)
+	var paint_loops: Array = mountain.call("outline_loops")
+	var snow_loops: Array = mountain.call("snow_loops")
+	var valid := not snow_loops.is_empty()
+	for loop: PackedVector2Array in paint_loops:
+		valid = valid and UnionSkin.triangulates(loop)
+	for loop: PackedVector2Array in snow_loops:
+		valid = valid and UnionSkin.triangulates(loop)
+	var blocks_valid := true
+	for child: Node in mountain.get_children():
+		if child.name.begins_with("Block"):
+			var body := child as StaticBody2D
+			blocks_valid = blocks_valid and body.collision_layer == 54 \
+				and body.scale == Vector2.ONE
+	var pines: PackedVector2Array = mountain.call("pine_points")
+	t.check(valid and not pines.is_empty(),
+		"pass carve: mountain paint/snow triangulate and deterministic pines exist")
+	t.check(blocks_valid, "pass carve: mountain blocks use layer 54 at unit scale")
+	t.root.remove_child(mountain)
+	mountain.free()
+
+func test_generated_scenes_are_up_to_date() -> void:
+	var built_mountain := PassBuilder.build_mountain()
+	var built_drop := PassBuilder.build_drop()
+	var saved_mountain: Node2D = load(
+		"res://levels/snowy/pass_mountain.tscn").instantiate()
+	var saved_drop: Node2D = load("res://levels/snowy/pass_drop.tscn").instantiate()
+	var same := _same_built_tree(built_mountain, saved_mountain) \
+		and _same_built_tree(built_drop, saved_drop)
+	t.check(same, "pass carve: generated scenes are current; run tools/carve_pass.gd")
+	for tree: Node2D in [built_mountain, built_drop, saved_mountain, saved_drop]:
+		tree.free()
+
+func test_pass_builder_is_deterministic() -> void:
+	var mountain_a := PassBuilder.build_mountain()
+	var mountain_b := PassBuilder.build_mountain()
+	var drop_a := PassBuilder.build_drop()
+	var drop_b := PassBuilder.build_drop()
+	t.check(_same_built_tree(mountain_a, mountain_b),
+		"pass carve: two mountain builds have identical trees")
+	t.check(_same_built_tree(drop_a, drop_b),
+		"pass carve: two drop builds have identical trees")
+	for tree: Node2D in [mountain_a, mountain_b, drop_a, drop_b]:
+		tree.free()

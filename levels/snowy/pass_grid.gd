@@ -4,6 +4,7 @@ extends RefCounted
 
 const CELL := 128
 const N := 32
+const OVERLAP := 64
 const ORIGIN := Vector2(-2048, -2048)
 const ARENA_SIZE := Vector2(4096, 4096)
 const ARENA_RECT := Rect2(ORIGIN, ARENA_SIZE)
@@ -103,6 +104,137 @@ static func cell_of(point: Vector2) -> Vector2i:
 	return Vector2i(
 		floori((point.x - ORIGIN.x) / CELL),
 		floori((point.y - ORIGIN.y) / CELL))
+
+## Mountain collision rectangles, merged first across rows and then down only
+## while the complete horizontal run remains identical.
+static func mountain_blocks() -> Array[Rect2]:
+	var blocks: Array[Rect2] = []
+	var open_runs := {}
+	for j in N:
+		var runs: Array[Vector2i] = []
+		var run_start := -1
+		for i in N + 1:
+			var mountain := i < N and kind_at(i, j) == MOUNTAIN
+			if mountain and run_start < 0:
+				run_start = i
+			elif not mountain and run_start >= 0:
+				runs.append(Vector2i(run_start, i))
+				run_start = -1
+		var next_runs := {}
+		for run: Vector2i in runs:
+			if open_runs.has(run):
+				var index: int = open_runs[run]
+				var block: Rect2 = blocks[index]
+				block.size.y += CELL
+				blocks[index] = block
+				next_runs[run] = index
+			else:
+				var position := ORIGIN + Vector2(run.x, j) * CELL
+				var size := Vector2((run.y - run.x) * CELL, CELL)
+				blocks.append(Rect2(position, size))
+				next_runs[run] = blocks.size() - 1
+		open_runs = next_runs
+	_sort_rects(blocks)
+	return blocks
+
+## Thin overlapping kill bands. Keeping every main-drop row separate limits a
+## fall to the band's short centreline instead of pulling along the whole void.
+static func drop_bands() -> Array[Rect2]:
+	var bands: Array[Rect2] = []
+	bands.append(_cell_span_rect(Rect2i(14, 12, 3, 2)))
+	var east := _cell_span_rect(Rect2i(20, 12, 4, 2))
+	east.size.x += OVERLAP
+	bands.append(east)
+	for j in range(1, N):
+		var first_drop := SOUTH_CAP_MOUNTAIN_COLS + 1
+		if ROWS.has(j):
+			var span: Vector2i = ROWS[j]
+			first_drop = span.y + 1
+		var position := ORIGIN + Vector2(first_drop, j) * CELL
+		var height := CELL if j == N - 1 else CELL + OVERLAP
+		bands.append(Rect2(position,
+			Vector2(ARENA_RECT.end.x - position.x, height)))
+	_sort_rects(bands)
+	return bands
+
+## Invisible AI rails along each lethal edge which directly faces road or
+## bridge. Runs merge on the grid before their guarded endcaps are considered.
+static func rim_curbs() -> Array[Rect2]:
+	var curbs: Array[Rect2] = []
+	for boundary in range(1, N):
+		_append_horizontal_curbs(curbs, boundary, -1)
+		_append_horizontal_curbs(curbs, boundary, 1)
+		_append_vertical_curbs(curbs, boundary, -1)
+		_append_vertical_curbs(curbs, boundary, 1)
+	_sort_rects(curbs)
+	return curbs
+
+static func _cell_span_rect(cells: Rect2i) -> Rect2:
+	return Rect2(ORIGIN + Vector2(cells.position) * CELL,
+		Vector2(cells.size) * CELL)
+
+static func _is_pit(i: int, j: int) -> bool:
+	var kind := kind_at(i, j)
+	return kind == DROP or kind == WEST_PIT or kind == EAST_PIT
+
+static func _append_horizontal_curbs(
+		curbs: Array[Rect2], boundary: int, road_side: int) -> void:
+	var pit_row := boundary if road_side < 0 else boundary - 1
+	var road_row := boundary - 1 if road_side < 0 else boundary
+	var start := -1
+	for i in N + 1:
+		var exposed := i < N and _is_pit(i, pit_row) and is_driveable(i, road_row)
+		if exposed and start < 0:
+			start = i
+		elif not exposed and start >= 0:
+			var rim_start := ORIGIN.x + start * CELL
+			var rim_end := ORIGIN.x + i * CELL
+			var rim_y := ORIGIN.y + boundary * CELL
+			var center_y := rim_y + road_side * 14.0
+			var before := 24.0 if _curb_end_clear(Vector2(rim_start - 12.0,
+				center_y)) else 0.0
+			var after := 24.0 if _curb_end_clear(Vector2(rim_end + 12.0,
+				center_y)) else 0.0
+			curbs.append(Rect2(Vector2(rim_start - before, center_y - 12.0),
+				Vector2(rim_end - rim_start + before + after, 24.0)))
+			start = -1
+
+static func _append_vertical_curbs(
+		curbs: Array[Rect2], boundary: int, road_side: int) -> void:
+	var pit_col := boundary if road_side < 0 else boundary - 1
+	var road_col := boundary - 1 if road_side < 0 else boundary
+	var start := -1
+	for j in N + 1:
+		var exposed := j < N and _is_pit(pit_col, j) and is_driveable(road_col, j)
+		if exposed and start < 0:
+			start = j
+		elif not exposed and start >= 0:
+			var rim_start := ORIGIN.y + start * CELL
+			var rim_end := ORIGIN.y + j * CELL
+			var rim_x := ORIGIN.x + boundary * CELL
+			var center_x := rim_x + road_side * 14.0
+			var before := 24.0 if _curb_end_clear(Vector2(center_x,
+				rim_start - 12.0)) else 0.0
+			var after := 24.0 if _curb_end_clear(Vector2(center_x,
+				rim_end + 12.0)) else 0.0
+			curbs.append(Rect2(Vector2(center_x - 12.0, rim_start - before),
+				Vector2(24.0, rim_end - rim_start + before + after)))
+			start = -1
+
+static func _curb_end_clear(point: Vector2) -> bool:
+	var cell := cell_of(point)
+	var kind := kind_at(cell.x, cell.y)
+	return kind != MOUNTAIN and not _is_pit(cell.x, cell.y)
+
+static func _sort_rects(rects: Array[Rect2]) -> void:
+	rects.sort_custom(func(a: Rect2, b: Rect2) -> bool:
+		if a.position.y != b.position.y:
+			return a.position.y < b.position.y
+		if a.position.x != b.position.x:
+			return a.position.x < b.position.x
+		if a.size.y != b.size.y:
+			return a.size.y < b.size.y
+		return a.size.x < b.size.x)
 
 static func clearance(point: Vector2) -> float:
 	if not ARENA_RECT.has_point(point):
