@@ -6,6 +6,7 @@ extends Node2D
 ## generated, and all relief is paint on a separate canvas.
 
 const RectUnion := preload("res://environment/rect_union.gd")
+const UnionSkin := preload("res://environment/union_skin.gd")
 const PitPaint := preload("res://environment/pit_zone.gd")
 const PinePaint := preload("res://environment/pine_paint.gd")
 
@@ -68,33 +69,27 @@ func block_rects() -> Array[Rect2]:
 
 ## Local-space silhouette used by the generated paint.
 func outline_loops() -> Array[PackedVector2Array]:
-	return _copy_loops(_paint_loops)
+	return UnionSkin.copy_loops(_paint_loops)
 
 ## Local-space snow-cap polygons retained after triangulation validation.
 func snow_loops() -> Array[PackedVector2Array]:
-	return _copy_loops(_snow_loops)
+	return UnionSkin.copy_loops(_snow_loops)
 
 ## Local-space union of boundary-extended blocks and collision chamfers.
 func solid_loops() -> Array[PackedVector2Array]:
-	return _copy_loops(_solid_loops)
+	return UnionSkin.copy_loops(_solid_loops)
 
 ## Local-space clipper offset before organic points are inserted.
 func base_rim_loops() -> Array[PackedVector2Array]:
-	return _copy_loops(_base_rim_loops)
+	return UnionSkin.copy_loops(_base_rim_loops)
 
 ## Local-space right triangles added to the generated collision body.
 func chamfer_triangles() -> Array[PackedVector2Array]:
-	return _copy_loops(_chamfers)
+	return UnionSkin.copy_loops(_chamfers)
 
 ## Deterministic local-space positions used by the generated pine paint.
 func pine_points() -> PackedVector2Array:
 	return _pine_points.duplicate()
-
-func _copy_loops(source: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
-	var result: Array[PackedVector2Array] = []
-	for loop: PackedVector2Array in source:
-		result.append(loop.duplicate())
-	return result
 
 func _build() -> void:
 	var world_rects: Array[Rect2] = block_rects()
@@ -104,7 +99,7 @@ func _build() -> void:
 		var a := to_local(rect.position)
 		var b := to_local(rect.end)
 		_block_local_rects.append(Rect2(a.min(b), (b - a).abs()))
-		var extended := _extend_closed_sides(rect)
+		var extended := UnionSkin.extend_closed_sides(rect, bounds, bleed)
 		a = to_local(extended.position)
 		b = to_local(extended.end)
 		extended_blocks.append(Rect2(a.min(b), (b - a).abs()))
@@ -113,21 +108,6 @@ func _build() -> void:
 	_build_skin(extended_blocks)
 	_build_pines()
 	_build_generated()
-
-func _extend_closed_sides(rect: Rect2) -> Rect2:
-	if not bounds.has_area():
-		return rect
-	var begin := rect.position
-	var end := rect.end
-	if is_equal_approx(begin.x, bounds.position.x):
-		begin.x -= bleed
-	if is_equal_approx(end.x, bounds.end.x):
-		end.x += bleed
-	if is_equal_approx(begin.y, bounds.position.y):
-		begin.y -= bleed
-	if is_equal_approx(end.y, bounds.end.y):
-		end.y += bleed
-	return Rect2(begin, end - begin)
 
 func _build_skin(extended_blocks: Array[Rect2]) -> void:
 	_solid_loops = RectUnion.outline(extended_blocks)
@@ -148,41 +128,21 @@ func _build_skin(extended_blocks: Array[Rect2]) -> void:
 			loop, overhang, Geometry2D.JOIN_MITER)
 		for base_rim: PackedVector2Array in rims:
 			_base_rim_loops.append(base_rim)
-			var organic := _organic_rim(base_rim, rng)
-			_paint_loops.append(organic if _triangulates(organic) else base_rim)
+			var organic := UnionSkin.subdivide_displaced(base_rim, rim_step,
+				-jitter, jitter, rng, bounds, global_transform, EPSILON)
+			_paint_loops.append(organic if UnionSkin.triangulates(organic) else base_rim)
 		var caps: Array[PackedVector2Array] = Geometry2D.offset_polygon(
 			loop, -face_width, Geometry2D.JOIN_MITER)
 		for cap: PackedVector2Array in caps:
-			if _triangulates(cap):
+			if UnionSkin.triangulates(cap):
 				_snow_loops.append(cap)
-
-func _organic_rim(loop: PackedVector2Array,
-		rng: RandomNumberGenerator) -> PackedVector2Array:
-	var result := PackedVector2Array()
-	var step := maxf(rim_step, EPSILON)
-	for i in loop.size():
-		var a: Vector2 = loop[i]
-		var b: Vector2 = loop[(i + 1) % loop.size()]
-		var edge := b - a
-		result.append(a)
-		if _segment_outside_bounds(a, b):
-			continue
-		var pieces := maxi(1, ceili(edge.length() / step))
-		var outward := _exterior_normal(edge)
-		for j in range(1, pieces):
-			var point := a.lerp(b, float(j) / float(pieces))
-			result.append(point + outward * rng.randf_range(-jitter, jitter))
-	return result
-
-func _triangulates(loop: PackedVector2Array) -> bool:
-	return loop.size() >= 3 and not Geometry2D.triangulate_polygon(loop).is_empty()
 
 func _build_chamfers() -> void:
 	_chamfers.clear()
 	if chamfer_leg <= 0.0:
 		return
 	for loop: PackedVector2Array in _raw_loops:
-		if _signed_area(loop) <= 0.0:
+		if UnionSkin.signed_area(loop) <= 0.0:
 			continue
 		for i in loop.size():
 			var before: Vector2 = loop[(i - 1 + loop.size()) % loop.size()]
@@ -223,16 +183,17 @@ func _build_pines() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = paint_seed + 104729
 	for loop: PackedVector2Array in _solid_loops:
-		if _signed_area(loop) <= 0.0:
+		if UnionSkin.signed_area(loop) <= 0.0:
 			continue
 		for i in loop.size():
 			var a: Vector2 = loop[i]
 			var b: Vector2 = loop[(i + 1) % loop.size()]
-			if _segment_outside_bounds(a, b):
+			if UnionSkin.segment_on_closed_side(a, b, bounds,
+					global_transform, EPSILON):
 				continue
 			var edge := b - a
 			var count := int(floor(edge.length() / pine_spacing))
-			var inward := -_exterior_normal(edge)
+			var inward := -UnionSkin.exterior_normal(edge)
 			for k in count:
 				var along := (float(k) + 0.5) / float(count)
 				along += rng.randf_range(-0.12, 0.12) / float(count)
@@ -313,7 +274,7 @@ func _first_block_layer() -> int:
 
 func _paint(canvas: Node2D) -> void:
 	for loop: PackedVector2Array in _paint_loops:
-		canvas.draw_colored_polygon(_offset(loop, shadow_offset),
+		canvas.draw_colored_polygon(UnionSkin.offset_loop(loop, shadow_offset),
 			Color(0.0, 0.0, 0.0, shadow_alpha))
 	for loop: PackedVector2Array in _paint_loops:
 		canvas.draw_colored_polygon(loop, PitPaint.CLIFF_FACE)
@@ -327,15 +288,16 @@ func _paint(canvas: Node2D) -> void:
 func _draw_striations(canvas: Node2D) -> void:
 	var gap: float = maxf(PitPaint.STRIATION_GAP, 3.0)
 	for loop: PackedVector2Array in _solid_loops:
-		if _signed_area(loop) <= 0.0:
+		if UnionSkin.signed_area(loop) <= 0.0:
 			continue
 		for i in loop.size():
 			var a: Vector2 = loop[i]
 			var b: Vector2 = loop[(i + 1) % loop.size()]
-			if _segment_outside_bounds(a, b):
+			if UnionSkin.segment_on_closed_side(a, b, bounds,
+					global_transform, EPSILON):
 				continue
 			var edge := b - a
-			var outward := _exterior_normal(edge)
+			var outward := UnionSkin.exterior_normal(edge)
 			var count := maxi(1, int(floor(edge.length() / gap)))
 			for k in count:
 				var at := a.lerp(b, (float(k) + 0.5) / float(count))
@@ -348,30 +310,5 @@ func _draw_crest(canvas: Node2D, loop: PackedVector2Array) -> void:
 	for i in loop.size():
 		var a: Vector2 = loop[i]
 		var b: Vector2 = loop[(i + 1) % loop.size()]
-		if _exterior_normal(b - a).dot(light) > 0.25:
+		if UnionSkin.exterior_normal(b - a).dot(light) > 0.25:
 			canvas.draw_line(a, b, PitPaint.SNOW_GLINT, CREST_WIDTH)
-
-func _segment_outside_bounds(a: Vector2, b: Vector2) -> bool:
-	if not bounds.has_area():
-		return false
-	var wa: Vector2 = to_global(a)
-	var wb: Vector2 = to_global(b)
-	return (wa.x < bounds.position.x - EPSILON and wb.x < bounds.position.x - EPSILON) \
-		or (wa.x > bounds.end.x + EPSILON and wb.x > bounds.end.x + EPSILON) \
-		or (wa.y < bounds.position.y - EPSILON and wb.y < bounds.position.y - EPSILON) \
-		or (wa.y > bounds.end.y + EPSILON and wb.y > bounds.end.y + EPSILON)
-
-func _exterior_normal(edge: Vector2) -> Vector2:
-	return Vector2(edge.y, -edge.x).normalized()
-
-func _signed_area(loop: PackedVector2Array) -> float:
-	var twice_area := 0.0
-	for i in loop.size():
-		twice_area += loop[i].cross(loop[(i + 1) % loop.size()])
-	return twice_area * 0.5
-
-func _offset(loop: PackedVector2Array, amount: Vector2) -> PackedVector2Array:
-	var result := PackedVector2Array()
-	for point: Vector2 in loop:
-		result.append(point + amount)
-	return result
