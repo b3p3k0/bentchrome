@@ -21,6 +21,12 @@ const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't cl
 ## chase host sets this and calls _show(true) itself when the clock runs out.
 @export var suppress_group_win := false
 
+## Chase mode again: nobody dies for good on Route 666 — a wreck or a catch
+## ends the level in a ROBBERY, and the host owns that call. With this set the
+## end screen never declares a loss on its own (stale lives from elsewhere
+## can't trip it); the host still drives _show() directly when it wants one.
+@export var suppress_loss := false
+
 ## Victory-lap mode (the Coliseum): a WIN shows the card WITHOUT pausing the
 ## tree — the level keeps animating behind it (auto-lap, fireworks) and the
 ## dim veil thins so the show reads. Losses still freeze the world.
@@ -62,7 +68,7 @@ func _process(_delta: float) -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	# The level's lives loop respawns the player while lives remain; the round
 	# is only lost once the tank is empty (no GameState = old single-life rule).
-	if player and player.get_hp() <= 0.0 and (gs == null or gs.lives <= 0):
+	if player and player.get_hp() <= 0.0 and (gs == null or gs.lives <= 0) and not suppress_loss:
 		_show(false)
 	elif _seen_enemies and enemies.is_empty() and not suppress_group_win:
 		_show(true)

@@ -9,9 +9,9 @@ extends RefCounted
 ## penalties are a PERCENTAGE of current funds — always hurts the same, rich
 ## or poor, and can never drive the wallet below zero.
 ##
-## feature/garage phase 1: NOT WIRED into live gameplay — the sim harness and
-## the shop are the only consumers. The plug-in phase connects kills, smashes,
-## pits/deep water, and health stations to these entry points.
+## Wired into live gameplay: kills, smashes, pits/deep water, health stations,
+## and Route 666 (the survival purse via award_flat, the robbery's BOLTS bite
+## via take_fraction — game/robbery.gd).
 
 const Difficulty := preload("res://game/difficulty.gd")
 
@@ -65,19 +65,33 @@ static func award_salvage(max_hp: float) -> int:
 	funds += paid
 	return paid
 
-## kind ∈ {&"destroyed", &"fall", &"station"}. Returns the bolts taken.
-## floori + maxi keep the wallet an int and never below zero.
-static func apply_penalty(kind: StringName) -> int:
-	if not enabled or god:
+## A flat award outside the kill/salvage tables (Route 666's survival purse
+## and daredevil bonus). Returns bolts paid.
+static func award_flat(base: int) -> int:
+	if not enabled or base <= 0:
 		return 0
+	var paid := int(round(base * Difficulty.knob(&"reward_scale")))
+	funds += paid
+	return paid
+
+## kind ∈ {&"destroyed", &"fall", &"station"}. Returns the bolts taken.
+static func apply_penalty(kind: StringName) -> int:
 	var frac := PENALTY_DESTROYED
 	match kind:
 		&"fall":
 			frac = PENALTY_FALL
 		&"station":
 			frac = PENALTY_STATION
-	frac *= Difficulty.knob(&"penalty_scale")
-	var taken := floori(funds * frac)
+	return take_fraction(frac)
+
+## Takes a fraction of CURRENT funds (penalty_scale softens it on easier
+## tiers; the scaled bite never exceeds the whole wallet). Returns the bolts
+## taken. floori + maxi keep the wallet an int and never below zero.
+static func take_fraction(frac: float) -> int:
+	if not enabled or god:
+		return 0
+	var scaled := clampf(frac * Difficulty.knob(&"penalty_scale"), 0.0, 1.0)
+	var taken := floori(funds * scaled)
 	funds = maxi(funds - taken, 0)
 	return taken
 

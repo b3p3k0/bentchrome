@@ -13,9 +13,12 @@ class FakeController:
 
 class FakeCar extends Node2D:
 	var velocity := Vector2.ZERO
+	var hp := 0.0  # only the end-screen fixtures read it: a wreck by default
 	var ctrl = FakeController.new()
 	func get_controller():
 		return ctrl
+	func get_hp() -> float:
+		return hp
 
 func _init(runner) -> void:
 	t = runner
@@ -202,6 +205,37 @@ func test_end_screen_suppression() -> void:
 	es._show(true)
 	t.check(es.visible, "end: the host's timed win still lands")
 	t.paused = false
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+## Nobody dies for good on Route 666: with suppress_loss set, a dead player on
+## an empty lives tank (stale state from anywhere) can't trip the loss card —
+## the host owns that call, and can still make it.
+func test_end_screen_loss_suppression() -> void:
+	var gs = t.root.get_node_or_null(^"/root/GameState")
+	if gs == null:
+		return
+	var lives_were: int = gs.lives
+	gs.lives = 0
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var player := FakeCar.new()
+	player.add_to_group(&"player")
+	container.add_child(player)
+	var es = load("res://ui/end_screen.tscn").instantiate()
+	es.suppress_group_win = true
+	es.suppress_loss = true
+	container.add_child(es)
+	es._process(0.016)
+	t.check(not es.visible, "end: a wreck is not a loss card in chase mode")
+	t.check(not t.paused, "end: world keeps running")
+	es.suppress_loss = false
+	es._process(0.016)
+	t.check(es.visible, "end: everywhere else a dead player on an empty tank still loses")
+	t.paused = false
+	gs.lives = lives_were
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()

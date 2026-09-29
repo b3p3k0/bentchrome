@@ -100,6 +100,42 @@ func test_devgod_courtesy() -> void:
 	t.check(Economy.award_kill(&"mook") == 1000, "economy: DEVGOD rewards stay fun")
 	_close()
 
+## Route 666's seams: a raw fraction bite (the robbery) and a flat award (the
+## survival purse) — same valve, same DEVGOD courtesy, same tier scaling.
+func test_take_fraction_and_flat_award() -> void:
+	_open()
+	Economy.funds = 1000
+	t.check(Economy.take_fraction(0.25) == 250 and Economy.funds == 750,
+		"economy: a quarter bite takes a quarter")
+	t.check(Economy.take_fraction(1.0) == 750 and Economy.funds == 0,
+		"economy: EVERYTHING empties the wallet")
+	t.check(Economy.take_fraction(0.5) == 0 and Economy.funds == 0, "economy: nothing to take from a dry wallet")
+	Economy.funds = 1000
+	t.check(Economy.take_fraction(3.0) == 1000 and Economy.funds == 0,
+		"economy: a bite never exceeds the whole wallet")
+	t.check(Economy.award_flat(3000) == 3000 and Economy.funds == 3000, "economy: a flat award pays in full")
+	t.check(Economy.award_flat(0) == 0 and Economy.award_flat(-50) == 0 and Economy.funds == 3000,
+		"economy: a flat award never charges")
+	# Easier tiers soften the bite; earning is identical everywhere.
+	Difficulty.tier = Difficulty.Tier.EASY
+	Economy.funds = 1000
+	t.check(Economy.take_fraction(1.0) == 500, "economy: easy tier halves even EVERYTHING")
+	t.check(Economy.award_flat(3000) == 3000, "economy: the purse pays the same on every tier")
+	Difficulty.tier = Difficulty.Tier.HARD
+	# apply_penalty rides the same seam — the authored percentages are unmoved.
+	Economy.funds = 1000
+	t.check(Economy.apply_penalty(&"destroyed") == Economy.take_fraction(0.0) + 200,
+		"economy: penalties delegate without changing a number")
+	Economy.god = true
+	Economy.funds = 1000
+	t.check(Economy.take_fraction(1.0) == 0 and Economy.funds == 1000, "economy: DEVGOD bites are inert")
+	t.check(Economy.award_flat(500) == 500, "economy: DEVGOD still collects the purse")
+	_close()
+	Economy.funds = 1000
+	t.check(Economy.take_fraction(0.5) == 0 and Economy.award_flat(500) == 0 and Economy.funds == 1000,
+		"economy: the valve closed = no bite, no purse")
+	_close()
+
 func test_snapshot_shape() -> void:
 	_open()
 	var snap := Economy.snapshot()
