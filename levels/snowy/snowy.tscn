@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://levels/snowy/pass_drop.tscn" id="30_drop"]
 [ext_resource type="PackedScene" path="res://levels/snowy/pass_mountain.tscn" id="31_mountain"]
 [ext_resource type="Script" path="res://levels/snowy/pass_deco.gd" id="32_pass_deco"]
+[ext_resource type="PackedScene" path="res://levels/snowy/pass_rails.tscn" id="33_rails"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -67,6 +68,8 @@ position = Vector2(320, -384)
 script = ExtResource("32_pass_deco")
 kind = &"bridge_deck"
 size = Vector2(384, 256)
+
+[node name="Rails" parent="." instance=ExtResource("33_rails")]
 
 [node name="RoadMarks" type="Node2D" parent="."]
 

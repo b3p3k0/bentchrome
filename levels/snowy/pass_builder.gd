@@ -6,6 +6,7 @@ const MountainWall := preload("res://environment/mountain_wall.gd")
 const DropField := preload("res://environment/drop_field.gd")
 const PitScene := preload("res://environment/pit_zone.tscn")
 const CurbScene := preload("res://environment/hazard_curb.tscn")
+const DestructibleBlockScene := preload("res://environment/destructible_block.tscn")
 
 static func build_mountain() -> Node2D:
 	var root := Node2D.new()
@@ -65,4 +66,22 @@ static func build_drop() -> Node2D:
 		curb.set("size", rect.size)
 		root.add_child(curb)
 		curb.owner = root
+	return root
+
+static func build_rails() -> Node2D:
+	var root := Node2D.new()
+	root.name = "Rails"
+	var rails := PassGrid.rail_segments()
+	for i in rails.size():
+		var rect: Rect2 = rails[i]
+		var rail := DestructibleBlockScene.instantiate() as Node2D
+		rail.name = "Rail%03d" % (i + 1)
+		rail.position = rect.get_center()
+		rail.set("size", rect.size)
+		rail.set("deco", &"rail")
+		rail.set("max_hp", 12.0)
+		rail.set("floor_index", 2)
+		rail.set("arena_net_id", 100 + i)
+		root.add_child(rail)
+		rail.owner = root
 	return root

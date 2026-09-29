@@ -71,6 +71,11 @@ const SPAWNS := {
 }
 const STATION := {"cell": Vector2i(10, 24), "center": Vector2(-704, 1088), "floor": 2}
 
+const RAIL_THICKNESS := 12.0
+const RAIL_RIM_INSET := 8.0
+const RAIL_END_CLEARANCE := 16.0
+const RAIL_MAX_LENGTH := 256.0
+
 static func kind_at(i: int, j: int) -> StringName:
 	if i < 0 or i >= N or j < 0 or j >= N:
 		return MOUNTAIN
@@ -173,6 +178,18 @@ static func rim_curbs() -> Array[Rect2]:
 	_sort_rects(curbs)
 	return curbs
 
+## Breakaway guardrails follow the same lethal lips as the AI curbs. The west
+## jump lane stays open so its facing pads can launch cleanly across the pit.
+static func rail_segments() -> Array[Rect2]:
+	var rails: Array[Rect2] = []
+	for boundary in range(1, N):
+		_append_horizontal_rails(rails, boundary, -1)
+		_append_horizontal_rails(rails, boundary, 1)
+		_append_vertical_rails(rails, boundary, -1)
+		_append_vertical_rails(rails, boundary, 1)
+	_sort_rects(rails)
+	return rails
+
 static func _cell_span_rect(cells: Rect2i) -> Rect2:
 	return Rect2(ORIGIN + Vector2(cells.position) * CELL,
 		Vector2(cells.size) * CELL)
@@ -224,6 +241,65 @@ static func _append_vertical_curbs(
 			curbs.append(Rect2(Vector2(center_x - 12.0, rim_start - before),
 				Vector2(24.0, rim_end - rim_start + before + after)))
 			start = -1
+
+static func _append_horizontal_rails(
+		rails: Array[Rect2], boundary: int, road_side: int) -> void:
+	var pit_row := boundary if road_side < 0 else boundary - 1
+	var road_row := boundary - 1 if road_side < 0 else boundary
+	var start := -1
+	for i in N + 1:
+		var exposed := i < N and _is_pit(i, pit_row) and is_driveable(i, road_row)
+		if exposed and kind_at(i, pit_row) == WEST_PIT and _is_jump_lane_column(i):
+			exposed = false
+		if exposed and start < 0:
+			start = i
+		elif not exposed and start >= 0:
+			var rim_start := ORIGIN.x + start * CELL + RAIL_END_CLEARANCE
+			var rim_end := ORIGIN.x + i * CELL - RAIL_END_CLEARANCE
+			var center_y := ORIGIN.y + boundary * CELL + road_side * RAIL_RIM_INSET
+			_append_split_rail_run(rails, rim_start, rim_end, center_y, true)
+			start = -1
+
+static func _append_vertical_rails(
+		rails: Array[Rect2], boundary: int, road_side: int) -> void:
+	var pit_col := boundary if road_side < 0 else boundary - 1
+	var road_col := boundary - 1 if road_side < 0 else boundary
+	var start := -1
+	for j in N + 1:
+		var exposed := j < N and _is_pit(pit_col, j) and is_driveable(road_col, j)
+		if exposed and start < 0:
+			start = j
+		elif not exposed and start >= 0:
+			var rim_start := ORIGIN.y + start * CELL + RAIL_END_CLEARANCE
+			var rim_end := ORIGIN.y + j * CELL - RAIL_END_CLEARANCE
+			var center_x := ORIGIN.x + boundary * CELL + road_side * RAIL_RIM_INSET
+			_append_split_rail_run(rails, rim_start, rim_end, center_x, false)
+			start = -1
+
+static func _is_jump_lane_column(column: int) -> bool:
+	for pad_name in PADS:
+		var pad: Dictionary = PADS[pad_name]
+		var columns: Vector2i = pad["lane_cols"]
+		if column >= columns.x and column <= columns.y:
+			return true
+	return false
+
+static func _append_split_rail_run(
+		rails: Array[Rect2], start: float, end: float, cross_axis: float,
+		horizontal: bool) -> void:
+	var length := end - start
+	if length <= 0.0:
+		return
+	var segment_count := ceili(length / RAIL_MAX_LENGTH)
+	var segment_length := length / segment_count
+	for segment_index in segment_count:
+		var along := start + segment_index * segment_length
+		if horizontal:
+			rails.append(Rect2(Vector2(along, cross_axis - RAIL_THICKNESS * 0.5),
+				Vector2(segment_length, RAIL_THICKNESS)))
+		else:
+			rails.append(Rect2(Vector2(cross_axis - RAIL_THICKNESS * 0.5, along),
+				Vector2(RAIL_THICKNESS, segment_length)))
 
 static func _curb_end_clear(point: Vector2) -> bool:
 	var cell := cell_of(point)

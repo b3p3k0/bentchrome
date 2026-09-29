@@ -5,10 +5,13 @@ extends SceneTree
 const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
 const MOUNTAIN_PATH := "res://levels/snowy/pass_mountain.tscn"
 const DROP_PATH := "res://levels/snowy/pass_drop.tscn"
+const RAILS_PATH := "res://levels/snowy/pass_rails.tscn"
 
 func _init() -> void:
-	var roots: Array[Node2D] = [PassBuilder.build_mountain(), PassBuilder.build_drop()]
-	var paths := PackedStringArray([MOUNTAIN_PATH, DROP_PATH])
+	var roots: Array[Node2D] = [
+		PassBuilder.build_mountain(), PassBuilder.build_drop(), PassBuilder.build_rails(),
+	]
+	var paths := PackedStringArray([MOUNTAIN_PATH, DROP_PATH, RAILS_PATH])
 	var checking := OS.get_cmdline_user_args().has("--check")
 	var failed := false
 	for i in roots.size():
@@ -57,7 +60,8 @@ func _matches_saved(path: String, expected: Node2D) -> bool:
 
 func _signature(root: Node2D) -> Array:
 	var script := root.get_script() as Script
-	var result: Array = [root.name, root.get_class(), script.resource_path,
+	var root_script_path := script.resource_path if script != null else ""
+	var result: Array = [root.name, root.get_class(), root_script_path,
 		root.get("bounds"), root.get("paint_seed")]
 	if root.name == &"Mountain":
 		result.append(root.get("chamfer_exclusions"))
@@ -65,7 +69,9 @@ func _signature(root: Node2D) -> Array:
 		var node := child as Node2D
 		var child_script := node.get_script() as Script
 		var script_path := child_script.resource_path if child_script != null else ""
-		var row: Array = [node.name, node.get_class(), node.position, node.scale, script_path]
+		var row: Array = [
+			node.name, node.get_class(), node.position, node.scale, node.z_index, script_path,
+		]
 		if node is CollisionObject2D:
 			var collision := node as CollisionObject2D
 			row.append_array([collision.collision_layer, collision.collision_mask])
@@ -78,5 +84,10 @@ func _signature(root: Node2D) -> Array:
 			row.append(node.get("size"))
 			if node.name.begins_with("Pit"):
 				row.append(node.get("paint"))
+			elif node.name.begins_with("Rail"):
+				row.append_array([
+					node.get("deco"), node.get("max_hp"), node.get("floor_index"),
+					node.get("arena_net_id"),
+				])
 		result.append(row)
 	return result

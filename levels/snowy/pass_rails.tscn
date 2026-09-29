@@ -1,0 +1,468 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://environment/destructible_block.tscn" id="1_n5m8j"]
+[ext_resource type="Script" path="res://environment/destructible_block.gd" id="2_hxrou"]
+
+[node name="Rails" type="Node2D" unique_id=1]
+
+[node name="Rail001" type="StaticBody2D" parent="." unique_id=2 instance=ExtResource("1_n5m8j")]
+position = Vector2(1912, -1784)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 240)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 100
+
+[node name="Rail002" type="StaticBody2D" parent="." unique_id=3 instance=ExtResource("1_n5m8j")]
+position = Vector2(1912, -1544)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 240)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 101
+
+[node name="Rail003" type="StaticBody2D" parent="." unique_id=4 instance=ExtResource("1_n5m8j")]
+position = Vector2(1856, -1416)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 102
+
+[node name="Rail004" type="StaticBody2D" parent="." unique_id=5 instance=ExtResource("1_n5m8j")]
+position = Vector2(1784, -1344)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 103
+
+[node name="Rail005" type="StaticBody2D" parent="." unique_id=6 instance=ExtResource("1_n5m8j")]
+position = Vector2(1664, -1288)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(224, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 104
+
+[node name="Rail006" type="StaticBody2D" parent="." unique_id=7 instance=ExtResource("1_n5m8j")]
+position = Vector2(1528, -1216)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 105
+
+[node name="Rail007" type="StaticBody2D" parent="." unique_id=8 instance=ExtResource("1_n5m8j")]
+position = Vector2(1472, -1160)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 106
+
+[node name="Rail008" type="StaticBody2D" parent="." unique_id=9 instance=ExtResource("1_n5m8j")]
+position = Vector2(1400, -1088)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 107
+
+[node name="Rail009" type="StaticBody2D" parent="." unique_id=10 instance=ExtResource("1_n5m8j")]
+position = Vector2(1344, -1032)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 108
+
+[node name="Rail010" type="StaticBody2D" parent="." unique_id=11 instance=ExtResource("1_n5m8j")]
+position = Vector2(1272, -960)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 109
+
+[node name="Rail011" type="StaticBody2D" parent="." unique_id=12 instance=ExtResource("1_n5m8j")]
+position = Vector2(1152, -904)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(224, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 110
+
+[node name="Rail012" type="StaticBody2D" parent="." unique_id=13 instance=ExtResource("1_n5m8j")]
+position = Vector2(1016, -792)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 176)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 111
+
+[node name="Rail013" type="StaticBody2D" parent="." unique_id=14 instance=ExtResource("1_n5m8j")]
+position = Vector2(1016, -616)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 176)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 112
+
+[node name="Rail014" type="StaticBody2D" parent="." unique_id=15 instance=ExtResource("1_n5m8j")]
+position = Vector2(-192, -520)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 113
+
+[node name="Rail015" type="StaticBody2D" parent="." unique_id=16 instance=ExtResource("1_n5m8j")]
+position = Vector2(648, -520)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(240, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 114
+
+[node name="Rail016" type="StaticBody2D" parent="." unique_id=17 instance=ExtResource("1_n5m8j")]
+position = Vector2(888, -520)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(240, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 115
+
+[node name="Rail017" type="StaticBody2D" parent="." unique_id=18 instance=ExtResource("1_n5m8j")]
+position = Vector2(136, -384)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 224)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 116
+
+[node name="Rail018" type="StaticBody2D" parent="." unique_id=19 instance=ExtResource("1_n5m8j")]
+position = Vector2(504, -384)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 224)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 117
+
+[node name="Rail019" type="StaticBody2D" parent="." unique_id=20 instance=ExtResource("1_n5m8j")]
+position = Vector2(-192, -248)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 118
+
+[node name="Rail020" type="StaticBody2D" parent="." unique_id=21 instance=ExtResource("1_n5m8j")]
+position = Vector2(648, -248)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(240, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 119
+
+[node name="Rail021" type="StaticBody2D" parent="." unique_id=22 instance=ExtResource("1_n5m8j")]
+position = Vector2(888, -248)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(240, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 120
+
+[node name="Rail022" type="StaticBody2D" parent="." unique_id=23 instance=ExtResource("1_n5m8j")]
+position = Vector2(1016, -138.66666)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 202.66667)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 121
+
+[node name="Rail023" type="StaticBody2D" parent="." unique_id=24 instance=ExtResource("1_n5m8j")]
+position = Vector2(1016, 64)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 202.66667)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 122
+
+[node name="Rail024" type="StaticBody2D" parent="." unique_id=25 instance=ExtResource("1_n5m8j")]
+position = Vector2(1016, 266.66666)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 202.66667)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 123
+
+[node name="Rail025" type="StaticBody2D" parent="." unique_id=26 instance=ExtResource("1_n5m8j")]
+position = Vector2(960, 376)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 124
+
+[node name="Rail026" type="StaticBody2D" parent="." unique_id=27 instance=ExtResource("1_n5m8j")]
+position = Vector2(888, 512)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 224)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 125
+
+[node name="Rail027" type="StaticBody2D" parent="." unique_id=28 instance=ExtResource("1_n5m8j")]
+position = Vector2(832, 632)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 126
+
+[node name="Rail028" type="StaticBody2D" parent="." unique_id=29 instance=ExtResource("1_n5m8j")]
+position = Vector2(760, 704)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 127
+
+[node name="Rail029" type="StaticBody2D" parent="." unique_id=30 instance=ExtResource("1_n5m8j")]
+position = Vector2(704, 760)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 128
+
+[node name="Rail030" type="StaticBody2D" parent="." unique_id=31 instance=ExtResource("1_n5m8j")]
+position = Vector2(632, 832)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 129
+
+[node name="Rail031" type="StaticBody2D" parent="." unique_id=32 instance=ExtResource("1_n5m8j")]
+position = Vector2(512, 888)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(224, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 130
+
+[node name="Rail032" type="StaticBody2D" parent="." unique_id=33 instance=ExtResource("1_n5m8j")]
+position = Vector2(376, 960)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 131
+
+[node name="Rail033" type="StaticBody2D" parent="." unique_id=34 instance=ExtResource("1_n5m8j")]
+position = Vector2(320, 1016)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(96, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 132
+
+[node name="Rail034" type="StaticBody2D" parent="." unique_id=35 instance=ExtResource("1_n5m8j")]
+position = Vector2(248, 1088)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 133
+
+[node name="Rail035" type="StaticBody2D" parent="." unique_id=36 instance=ExtResource("1_n5m8j")]
+position = Vector2(-24, 1144)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(176, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 134
+
+[node name="Rail036" type="StaticBody2D" parent="." unique_id=37 instance=ExtResource("1_n5m8j")]
+position = Vector2(152, 1144)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(176, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 135
+
+[node name="Rail037" type="StaticBody2D" parent="." unique_id=38 instance=ExtResource("1_n5m8j")]
+position = Vector2(-136, 1216)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 136
+
+[node name="Rail038" type="StaticBody2D" parent="." unique_id=39 instance=ExtResource("1_n5m8j")]
+position = Vector2(-256, 1272)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(224, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 137
+
+[node name="Rail039" type="StaticBody2D" parent="." unique_id=40 instance=ExtResource("1_n5m8j")]
+position = Vector2(-392, 1344)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 96)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 138
+
+[node name="Rail040" type="StaticBody2D" parent="." unique_id=41 instance=ExtResource("1_n5m8j")]
+position = Vector2(-512, 1400)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(224, 12)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 139
+
+[node name="Rail041" type="StaticBody2D" parent="." unique_id=42 instance=ExtResource("1_n5m8j")]
+position = Vector2(-648, 1544)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 240)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 140
+
+[node name="Rail042" type="StaticBody2D" parent="." unique_id=43 instance=ExtResource("1_n5m8j")]
+position = Vector2(-648, 1784)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_hxrou")
+size = Vector2(12, 240)
+max_hp = 12.0
+deco = &"rail"
+floor_index = 2
+arena_net_id = 141

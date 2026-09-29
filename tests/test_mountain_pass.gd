@@ -6,6 +6,7 @@ const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
 const PassDecoScript := preload("res://levels/snowy/pass_deco.gd")
 const AiNoGoScript := preload("res://environment/ai_no_go.gd")
 const PitZoneScript := preload("res://environment/pit_zone.gd")
+const DestructibleBlockScript := preload("res://environment/destructible_block.gd")
 const UnionSkin := preload("res://environment/union_skin.gd")
 
 const GOLDEN := [
@@ -454,6 +455,10 @@ func _distance_to_rim(point: Vector2) -> float:
 		best = minf(best, point.distance_to(nearest))
 	return best
 
+func _rail_rect(node: Node2D) -> Rect2:
+	var size: Vector2 = node.get("size")
+	return Rect2(node.position - size * 0.5, size)
+
 func _same_built_tree(a: Node2D, b: Node2D) -> bool:
 	if a.name != b.name or a.get_script() != b.get_script() \
 			or a.get("bounds") != b.get("bounds") \
@@ -468,6 +473,7 @@ func _same_built_tree(a: Node2D, b: Node2D) -> bool:
 		var child_b := b.get_child(i) as Node2D
 		if child_a.name != child_b.name or child_a.get_class() != child_b.get_class() \
 				or child_a.position != child_b.position or child_a.scale != child_b.scale \
+				or child_a.z_index != child_b.z_index \
 				or child_a.get_script() != child_b.get_script():
 			return false
 		if child_a is CollisionObject2D:
@@ -492,6 +498,12 @@ func _same_built_tree(a: Node2D, b: Node2D) -> bool:
 				return false
 			if child_a.name.begins_with("Pit") \
 					and child_a.get("paint") != child_b.get("paint"):
+				return false
+			if child_a.name.begins_with("Rail") and (
+					child_a.get("deco") != child_b.get("deco") \
+					or child_a.get("max_hp") != child_b.get("max_hp") \
+					or child_a.get("floor_index") != child_b.get("floor_index") \
+					or child_a.get("arena_net_id") != child_b.get("arena_net_id")):
 				return false
 	return true
 
@@ -593,6 +605,106 @@ func test_rim_curbs_cover_edges_without_blocking_solids() -> void:
 	t.check(invalid.is_empty(),
 		"pass carve: curbs stay within 40px of rims and avoid blocks/kill rects; bad %s" % [invalid])
 
+func test_rail_segments_cover_guarded_rims_and_clear_hazards() -> void:
+	var rails := PassGrid.rail_segments()
+	var curbs := PassGrid.rim_curbs()
+	var blocks := PassGrid.mountain_blocks()
+	var bands := PassGrid.drop_bands()
+	var invalid: Array = []
+	for rail: Rect2 in rails:
+		var thin := minf(rail.size.x, rail.size.y)
+		var long := maxf(rail.size.x, rail.size.y)
+		var curb_distance := INF
+		for curb: Rect2 in curbs:
+			curb_distance = minf(curb_distance, _distance_to_rect(rail.get_center(), curb))
+		var bad := not is_equal_approx(thin, 12.0) or long > 256.0 \
+			or curb_distance > 32.0
+		for block: Rect2 in blocks:
+			bad = bad or rail.intersects(block)
+		for band: Rect2 in bands:
+			bad = bad or rail.intersects(band)
+		for pad_name in PassGrid.PADS:
+			var pad: Dictionary = PassGrid.PADS[pad_name]
+			var pad_size: Vector2 = pad["size"]
+			bad = bad or rail.intersects(Rect2(pad["center"] - pad_size * 0.5, pad_size))
+		bad = bad or rail.intersects(_knoll_rect())
+		if bad:
+			invalid.append({"rail": rail, "curb_distance": curb_distance})
+	t.check(not rails.is_empty() and rails.size() <= 60 and invalid.is_empty(),
+		"pass rails: 1..60 short rim-aligned segments clear hazards; bad %s" % [invalid])
+
+func test_rail_segments_cover_samples_except_jump_lane() -> void:
+	var rails := PassGrid.rail_segments()
+	var missed := PackedVector2Array()
+	var lane_start := PassGrid.N
+	var lane_end := -1
+	for pad_name in PassGrid.PADS:
+		var columns: Vector2i = PassGrid.PADS[pad_name]["lane_cols"]
+		lane_start = mini(lane_start, columns.x)
+		lane_end = maxi(lane_end, columns.y)
+	var lane_x := Vector2(PassGrid.ORIGIN.x + lane_start * PassGrid.CELL,
+		PassGrid.ORIGIN.x + (lane_end + 1) * PassGrid.CELL)
+	var north_y := PassGrid.ORIGIN.y + PassGrid.CHASM_ROWS.x * PassGrid.CELL
+	var south_y := PassGrid.ORIGIN.y + (PassGrid.CHASM_ROWS.y + 1) * PassGrid.CELL
+	for edge: PackedVector2Array in _rim_edges():
+		var horizontal := is_equal_approx(edge[0].y, edge[1].y)
+		var edge_middle := (edge[0] + edge[1]) * 0.5
+		var jump_lane := horizontal and (is_equal_approx(edge_middle.y, north_y) \
+			or is_equal_approx(edge_middle.y, south_y)) \
+			and edge_middle.x >= lane_x.x and edge_middle.x <= lane_x.y
+		if jump_lane:
+			continue
+		var tangent := (edge[1] - edge[0]).normalized()
+		for distance in [32.0, 96.0]:
+			var sample: Vector2 = edge[0] + tangent * distance - edge[2] * 8.0
+			var best := INF
+			for rail: Rect2 in rails:
+				best = minf(best, _distance_to_rect(sample, rail))
+			if best > 24.0:
+				missed.append(sample)
+	var jump_strips := [
+		Rect2(Vector2(lane_x.x, north_y - 16.0), Vector2(lane_x.y - lane_x.x, 32.0)),
+		Rect2(Vector2(lane_x.x, south_y - 16.0), Vector2(lane_x.y - lane_x.x, 32.0)),
+	]
+	var blocked_jump: Array[Rect2] = []
+	for rail: Rect2 in rails:
+		for strip: Rect2 in jump_strips:
+			if rail.intersects(strip):
+				blocked_jump.append(rail)
+	t.check(missed.is_empty(),
+		"pass rails: every non-jump rim sample is within 24px; missed %s" % [missed])
+	t.check(blocked_jump.is_empty(),
+		"pass rails: west-pit pad lane stays open on both faces; blocked %s" % [blocked_jump])
+
+func test_built_rails_are_floor_stamped_and_networked() -> void:
+	var root := PassBuilder.build_rails()
+	var ids: Array[int] = []
+	var invalid := []
+	for i in root.get_child_count():
+		var rail := root.get_child(i) as Node2D
+		ids.append(int(rail.get("arena_net_id")))
+		if rail.name != "Rail%03d" % (i + 1) or rail.scale != Vector2.ONE \
+				or rail.get_script() != DestructibleBlockScript \
+				or rail.get("deco") != &"rail" or not is_equal_approx(rail.get("max_hp"), 12.0) \
+				or rail.get("floor_index") != 2 or rail.get("arena_net_id") != 100 + i:
+			invalid.append(rail.name)
+	t.check(root.name == &"Rails" and root.get_script() == null and invalid.is_empty(),
+		"pass rails: plain root owns ordered 12 HP floor-2 rail destructibles; bad %s" % [invalid])
+	t.check(ids == range(100, 100 + root.get_child_count()),
+		"pass rails: arena IDs are unique and contiguous from 100; got %s" % [ids])
+	root.free()
+
+func test_built_rails_stay_at_ground_draw_order() -> void:
+	var root := PassBuilder.build_rails()
+	var elevated: Array[StringName] = []
+	# Ground-floor rails stay at z 0; the z 2 recipe is for floor-3 decks.
+	for rail: Node2D in root.get_children():
+		if rail.z_index != 0:
+			elevated.append(rail.name)
+	t.check(elevated.is_empty(),
+		"pass rails: every ground-floor rail stays at z 0; elevated %s" % [elevated])
+	root.free()
+
 func test_generated_mountain_scene_builds_valid_skin() -> void:
 	var packed: PackedScene = load("res://levels/snowy/pass_mountain.tscn")
 	var mountain := packed.instantiate() as Node2D
@@ -620,13 +732,17 @@ func test_generated_mountain_scene_builds_valid_skin() -> void:
 func test_generated_scenes_are_up_to_date() -> void:
 	var built_mountain := PassBuilder.build_mountain()
 	var built_drop := PassBuilder.build_drop()
+	var built_rails := PassBuilder.build_rails()
 	var saved_mountain: Node2D = load(
 		"res://levels/snowy/pass_mountain.tscn").instantiate()
 	var saved_drop: Node2D = load("res://levels/snowy/pass_drop.tscn").instantiate()
+	var saved_rails: Node2D = load("res://levels/snowy/pass_rails.tscn").instantiate()
 	var same := _same_built_tree(built_mountain, saved_mountain) \
-		and _same_built_tree(built_drop, saved_drop)
+		and _same_built_tree(built_drop, saved_drop) \
+		and _same_built_tree(built_rails, saved_rails)
 	t.check(same, "pass carve: generated scenes are current; run tools/carve_pass.gd")
-	for tree: Node2D in [built_mountain, built_drop, saved_mountain, saved_drop]:
+	for tree: Node2D in [built_mountain, built_drop, built_rails,
+			saved_mountain, saved_drop, saved_rails]:
 		tree.free()
 
 func test_pass_builder_is_deterministic() -> void:
@@ -634,33 +750,42 @@ func test_pass_builder_is_deterministic() -> void:
 	var mountain_b := PassBuilder.build_mountain()
 	var drop_a := PassBuilder.build_drop()
 	var drop_b := PassBuilder.build_drop()
+	var rails_a := PassBuilder.build_rails()
+	var rails_b := PassBuilder.build_rails()
 	t.check(_same_built_tree(mountain_a, mountain_b),
 		"pass carve: two mountain builds have identical trees")
 	t.check(_same_built_tree(drop_a, drop_b),
 		"pass carve: two drop builds have identical trees")
-	for tree: Node2D in [mountain_a, mountain_b, drop_a, drop_b]:
+	t.check(_same_built_tree(rails_a, rails_b),
+		"pass carve: two rail builds have identical trees")
+	for tree: Node2D in [mountain_a, mountain_b, drop_a, drop_b, rails_a, rails_b]:
 		tree.free()
 
 func test_level_instances_generated_geometry_before_gameplay() -> void:
 	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
 	var drop := level.get_node_or_null(^"Drop") as Node2D
 	var mountain := level.get_node_or_null(^"Mountain") as Node2D
+	var bridge := level.get_node_or_null(^"BridgeDeck") as Node2D
+	var rails := level.get_node_or_null(^"Rails") as Node2D
 	t.check(drop != null and drop.scene_file_path == "res://levels/snowy/pass_drop.tscn",
 		"pass level: Drop is a direct instance of the generated drop scene")
 	t.check(mountain != null
 			and mountain.scene_file_path == "res://levels/snowy/pass_mountain.tscn",
 		"pass level: Mountain is a direct instance of the generated mountain scene")
-	if drop != null and mountain != null:
+	t.check(rails != null and rails.scene_file_path == "res://levels/snowy/pass_rails.tscn",
+		"pass level: Rails is a direct instance of the generated rail scene")
+	if drop != null and mountain != null and bridge != null and rails != null:
 		t.check(drop.get_parent() == level and mountain.get_parent() == level
-				and drop.get_index() < mountain.get_index(),
-			"pass level: Drop precedes Mountain as direct root geometry")
+				and rails.get_parent() == level and drop.get_index() < mountain.get_index()
+				and bridge.get_index() < rails.get_index(),
+			"pass level: Rails follows BridgeDeck as direct root geometry")
 		for child: Node in level.get_children():
 			var scene_path := child.scene_file_path
 			var gameplay := child is Vehicle or String(child.name).begins_with("Jump") \
 				or scene_path.ends_with("ammo_pickup.tscn") \
 				or scene_path.ends_with("health_station.tscn")
 			if gameplay:
-				t.check(mountain.get_index() < child.get_index(),
+				t.check(rails.get_index() < child.get_index(),
 					"pass level: generated geometry precedes %s" % child.name)
 	level.free()
 
