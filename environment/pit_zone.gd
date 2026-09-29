@@ -27,6 +27,9 @@ static var BOTTOM_PINE_MIN_RADIUS := 4.0
 static var BOTTOM_PINE_MAX_RADIUS := 6.5
 
 @export var size := Vector2(256, 256)
+@export var paint := true
+# False draws nothing: a separate skin node paints a chain of pits as one
+# continuous cliff; the kill shape, hazard group, and minimap marker are unaffected.
 
 var is_pit := true  # minimap duck-type marker
 
@@ -111,6 +114,8 @@ func bottom_pine_positions() -> PackedVector2Array:
 	return points
 
 func _draw() -> void:
+	if not paint:
+		return
 	# One steep face, not a terraced excavation: snow overhang, compressed rock
 	# grain, then a hard occlusion break into black. The southward void offset
 	# exposes more of the lit far wall and makes the depth directional.

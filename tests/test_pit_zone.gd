@@ -12,11 +12,13 @@ var t
 func _init(runner) -> void:
 	t = runner
 
-func _fixture(pit_size := Vector2(400, 400), car_at := Vector2.ZERO) -> Dictionary:
+func _fixture(pit_size := Vector2(400, 400), car_at := Vector2.ZERO,
+		pit_paint := true) -> Dictionary:
 	var container := Node2D.new()
 	t.root.add_child(container)
 	var pit = PitScene.instantiate()
 	pit.size = pit_size
+	pit.paint = pit_paint
 	container.add_child(pit)
 	var car: Vehicle = VehicleScene.instantiate()
 	car.faction = &"enemies"  # never shadow the live player autoload/group lookup
@@ -230,3 +232,27 @@ func test_airborne_car_sails_over() -> void:
 	var health: Health = f.health
 	t.check(health.hp >= health.max_hp, "pit: airborne car passes over untouched")
 	_done(f)
+
+func test_paintless_pit_is_still_lethal() -> void:
+	var grounded := _fixture(Vector2(400, 400), Vector2.ZERO, false)
+	var pit: Area2D = grounded.pit
+	var col := pit.get_node(^"Col") as CollisionShape2D
+	var shape := col.shape as RectangleShape2D
+	t.check(pit.is_in_group(&"lethal_hazards"),
+		"paintless pit: still registers as a lethal hazard")
+	t.check(shape.size.is_equal_approx(pit.size - Vector2(48, 48)),
+		"paintless pit: keeps the inset collision shape")
+	for i in 55:
+		await t.physics_frame
+	t.check(bool(grounded.died[0]), "paintless pit: grounded car still dies")
+	_done(grounded)
+
+	var airborne := _fixture(Vector2(400, 400), Vector2.ZERO, false)
+	var car: Vehicle = airborne.car
+	car.height = 500.0
+	for i in 20:
+		await t.physics_frame
+	var health: Health = airborne.health
+	t.check(health.hp >= health.max_hp,
+		"paintless pit: airborne car still passes over untouched")
+	_done(airborne)
