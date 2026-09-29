@@ -10,9 +10,11 @@ const CourseScript := preload("res://levels/chase/chase_course.gd")
 const StreamerScript := preload("res://levels/chase/course_streamer.gd")
 const WallScript := preload("res://levels/chase/horde_wall.gd")
 const DirectorScript := preload("res://levels/chase/chase_director.gd")
+const KeeperScript := preload("res://levels/chase/pace_keeper.gd")
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 static var RUN_SECONDS := 120.0
-static var ROLL_SPEED := 300.0     # respawn rolling start (300 px/s = 45 mph)
+static var ROLL_SPEED := 300.0     # rolling-start fallback when the car has no controller
 static var SCATTER_RADIUS := 550.0 # buzzards this close get shoved off a respawn
 
 var course = null
@@ -22,6 +24,7 @@ var kills := 0   # director bumps this; the chase HUD reads it
 var _wall = null
 var _streamer = null
 var _director = null
+var _keeper = null
 var _end_screen = null
 var _won := false
 
@@ -33,7 +36,7 @@ func _ready() -> void:
 		# The green flag drops on a ROLLING start (the level-start respawn in
 		# super() zeroed velocity): the pack rides a short leash now, and a
 		# standing launch would hand it the first hundred pixels for free.
-		_player.velocity = Vector2(0.0, -ROLL_SPEED)
+		_player.velocity = Vector2(0.0, -_roll_speed())
 	var seed_val := randi() & 0x7FFFFFFF
 	course = CourseScript.new()
 	course.pre_roll(seed_val)
@@ -55,6 +58,11 @@ func _ready() -> void:
 	_director.target = _player
 	_director.wall = _wall
 	add_child(_director)
+	_keeper = KeeperScript.new()
+	_keeper.name = "PaceKeeper"
+	_keeper.target = _player
+	_keeper.course = course
+	add_child(_keeper)
 	for child in get_children():
 		if child is CanvasLayer and "suppress_group_win" in child:
 			_end_screen = child
@@ -107,12 +115,21 @@ func _respawn() -> void:
 	var half: float = s["half_w"]
 	var x := clampf(pos.x, road_x - half + 70.0, road_x + half - 70.0)
 	_player.respawn(Vector2(x, pos.y), -PI / 2.0, SHIELD_TIME)
-	_player.velocity = Vector2(0.0, -ROLL_SPEED)  # respawn() zeroes it — set after
+	_player.velocity = Vector2(0.0, -_roll_speed())  # respawn() zeroes it — set after
 	_scatter_buzzards()
 	if _wall:
 		_wall.reset_behind(pos.y + WallScript.RESPAWN_GAP)
 	if _director:
 		_director.on_player_respawn()
+
+## Rolling starts land at the player's own cruise — the speed the pedal would
+## settle at hands-off, so the first input is a choice, not a rescue.
+func _roll_speed() -> float:
+	if _player != null and _player.has_method(&"get_controller"):
+		var ctrl = _player.get_controller()
+		if ctrl != null:
+			return ctrl.max_speed * SpeedBand.CRUISE_FRAC
+	return ROLL_SPEED
 
 func _scatter_buzzards() -> void:
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):

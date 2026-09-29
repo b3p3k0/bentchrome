@@ -78,6 +78,7 @@ const SUITES := [
 	preload("res://tests/test_horde_wall.gd"),
 	preload("res://tests/test_chase_driver.gd"),
 	preload("res://tests/test_chase_director.gd"),
+	preload("res://tests/test_pace_keeper.gd"),
 	preload("res://tests/test_stadium_level.gd"),
 	preload("res://tests/test_goliath_trailer.gd"),
 	preload("res://tests/test_goliath_boss.gd"),
