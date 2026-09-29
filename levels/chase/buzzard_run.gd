@@ -74,6 +74,10 @@ func time_left() -> float:
 func wall_gap() -> float:
 	return _wall.gap() if _wall else WallScript.MAX_GAP
 
+## World y of the dust crest — Buzzard drivers keep their marks north of it.
+func wall_front_y() -> float:
+	return _wall.front_y if _wall else INF
+
 ## Rolling-start respawn: same course position (x clamped onto the asphalt),
 ## nose north, shield up, already rolling — the run never stops. Nearby
 ## Buzzardz get shoved back so the first seconds aren't a re-kill.

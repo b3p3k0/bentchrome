@@ -17,6 +17,13 @@ class FakeVehicle extends Node2D:
 	func get_controller():
 		return ctrl
 
+## The chase host's duck-typed surface as the Buzzard brain sees it.
+class FakeHost extends Node:
+	var course = null
+	var front := INF
+	func wall_front_y() -> float:
+		return front
+
 func _init(runner) -> void:
 	t = runner
 
@@ -74,6 +81,34 @@ func test_pace_hold_never_stops() -> void:
 	vehicle.global_position = Vector2(0, -6000)    # overshot far ahead
 	var ahead: Dictionary = r[2].get_intent(vehicle, 0.016)
 	t.check(is_equal_approx(ahead["throttle"], 0.35), "chase-ai: ahead eases to the floor, never stops")
+	_done(r[0])
+
+## A hold mark never sits in the murk: the pack rides close now, and a sedan
+## station of 430px would park it inside the dust to be absorbed.
+func test_hold_mark_stays_north_of_the_crest() -> void:
+	var open: float = DriverScript.hold_mark(-1000.0, 430.0, INF)
+	t.check(is_equal_approx(open, -570.0), "chase-ai: no wall, the role's station stands")
+	var far: float = DriverScript.hold_mark(-1000.0, 190.0, -400.0)
+	t.check(is_equal_approx(far, -810.0), "chase-ai: a mark clear of the crest is untouched")
+	var squeezed: float = DriverScript.hold_mark(-1000.0, 430.0, -700.0)
+	t.check(is_equal_approx(squeezed, -700.0 - DriverScript.CREST_CLEAR),
+		"chase-ai: a mark in the dust is pulled north of the crest (%d)" % int(squeezed))
+	# Live: a host in the tree feeds the crest, and the sedan drives for the
+	# clamped mark — 30px behind it means gas, not the ease-off its raw
+	# station (170px further south) would call for.
+	var r := _rig()
+	var host := FakeHost.new()
+	host.front = 300.0
+	host.add_to_group(&"chase_host")
+	r[0].add_child(host)
+	var driver = r[2]
+	driver.role = &"sedan"
+	driver.phase = 3.0  # outside the swoop window: the far station is live
+	r[3].global_position = Vector2.ZERO
+	r[1].global_position = Vector2(0, 260)
+	var intent: Dictionary = driver.get_intent(r[1], 0.016)
+	t.check(intent["throttle"] > 0.6,
+		"chase-ai: behind the clamped mark = on the gas (%.2f)" % intent["throttle"])
 	_done(r[0])
 
 func test_burst_duty_cycle() -> void:

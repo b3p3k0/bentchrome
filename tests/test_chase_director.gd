@@ -48,12 +48,16 @@ func test_spawn_cull_grace_and_kills() -> void:
 	var director = scene.get_node(^"ChaseDirector")
 	var player = scene.get_node(^"Vehicle")
 	var wall = scene.get_node(^"HordeWall")
-	# The recipe: a spawned bike lands behind the player, on the road, tuned.
+	# The recipe: a spawned bike boils up out of the dust crest, on the road, tuned.
 	var bike = director.spawn(&"bike")
 	t.check(bike.is_in_group(&"enemies"), "director: spawn joins the enemies group")
-	var dy: float = bike.global_position.y - player.global_position.y
-	t.check(absf(dy - DirectorScript.SPAWN_BEHIND) < 50.0,
-		"director: spawns off-screen behind (dy %d)" % int(dy))
+	var depth: float = bike.global_position.y - wall.front_y
+	t.check(is_equal_approx(depth, DirectorScript.EMERGE_DEPTH),
+		"director: pursuers are born inside the dust crest (depth %d)" % int(depth))
+	t.check(DirectorScript.EMERGE_DEPTH < DirectorScript.ABSORB_DEPTH,
+		"director: a newborn is never already past the absorb line")
+	t.check(bike.global_position.y > player.global_position.y,
+		"director: the pack spawns behind the player")
 	t.check(bike.get_node(^"Driver").role == &"bike", "director: driver role set")
 	var bike_hp: float = bike.get_node(^"Health").max_hp
 	t.check(bike_hp < 50.0, "director: bike is glass (hp %d)" % int(bike_hp))
@@ -82,6 +86,9 @@ func test_spawn_cull_grace_and_kills() -> void:
 	await t.physics_frame
 	t.check(is_equal_approx(wall.pace_frac, 0.97), "director: all-in drives the pack's pace")
 	scene.clock = 20.0  # back off the crescendo for the rest of the test
+	# Park the dust front: the long wait below tests the grace, not the chase
+	# (a surging front rolls over its own outriders and absorbs them).
+	wall.set_physics_process(false)
 	# Respawn grace: the pack holds fire, then releases.
 	director.on_player_respawn()
 	t.check(bike.get_node(^"Driver").hold_fire, "director: grace holds the pack's fire")
@@ -99,13 +106,30 @@ func test_spawn_cull_grace_and_kills() -> void:
 		if script and script.resource_path.ends_with("death_tumble.gd"):
 			tumbling = true
 	t.check(tumbling, "director: the wreck tumbles out")
-	# Cull: freeze new spawns, leave the field far behind, sweep.
+	# Absorb: freeze new spawns, leave the field far behind, let the dust
+	# front catch up (one tick clamps it to MAX_GAP), sweep. The pack takes
+	# its own back quietly — no wreck, no bell, no bounty.
 	director.frozen = true
+	wall.set_physics_process(true)
+	var straggler = director.spawn(&"bike")
+	await t.physics_frame
+	var Economy := preload("res://game/economy.gd")
+	var econ_was: bool = Economy.enabled
+	Economy.enabled = true
+	var funds_before: int = Economy.funds
+	var kills_at_absorb: int = scene.kills
 	player.global_position.y -= 6000.0
-	director._cull()
+	await t.physics_frame
+	t.check(straggler.global_position.y > wall.front_y + DirectorScript.ABSORB_DEPTH,
+		"director: the dust front rolled over the straggler")
+	director._absorb()
 	await t.physics_frame
 	await t.physics_frame
-	t.check(get_tree_enemies() == 0, "director: stragglers cull far south (got %d)" % get_tree_enemies())
+	t.check(get_tree_enemies() == 0, "director: the pack absorbs what you outrun (got %d)" % get_tree_enemies())
+	t.check(scene.kills == kills_at_absorb, "director: an absorbed Buzzard rings no bell")
+	t.check(Economy.funds == funds_before, "director: an absorbed Buzzard pays no bounty")
+	Economy.enabled = econ_was
+	Economy.funds = funds_before
 	t.paused = false
 	if gs != null:
 		gs.lives = 3

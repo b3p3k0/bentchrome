@@ -40,6 +40,7 @@ static var ROLES := {
 const ROAD_MARGIN := 70.0   # stay this far inside the sampled road edge
 const LOOKAHEAD := 240.0    # steer at a point this far up the road
 const STEER_GAIN := 2.2
+const CREST_CLEAR := 70.0   # a hold mark never sits closer than this to the dust crest
 
 ## Yo-yo catch-up: far behind, a Buzzard's engine finds whatever it takes to
 ## keep up (max_speed rides the player's + margin); back in the knife-fight
@@ -83,7 +84,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		target_x = _clamp_to_road(vehicle, own, _aim_pos.x)   # the swerve-in
 	else:
 		target_x = _road_target(vehicle, own, lane_offset)
-	var target_y: float = player.global_position.y + hold_dy
+	var target_y := hold_mark(player.global_position.y, hold_dy, _front_y(vehicle))
 	if p.get("yoyo", false):
 		_yoyo(vehicle, player, own, delta)
 	var steer: float = _steer_to(vehicle, Vector2(target_x, own.y - LOOKAHEAD)) \
@@ -129,6 +130,19 @@ func _yoyo(vehicle, player: Node2D, own: Vector2, delta: float) -> void:
 	elif behind > YOYO_NEAR:
 		return  # hysteresis band — hold whatever it's doing
 	ctrl.max_speed = lerpf(ctrl.max_speed, want, minf(delta * 2.0, 1.0))
+
+## The world y a Buzzard tries to hold: its role's station off the player,
+## pulled north of the dust crest — a mark inside the pack is a Buzzard that
+## parks in the murk and gets absorbed for it.
+static func hold_mark(player_y: float, hold_dy: float, front_y: float) -> float:
+	return minf(player_y + hold_dy, front_y - CREST_CLEAR)
+
+## Dust crest world y, duck-typed off the chase host (INF = no wall to mind).
+func _front_y(vehicle) -> float:
+	_course(vehicle)  # refreshes the cached host
+	if _host != null and _host.has_method(&"wall_front_y"):
+		return _host.wall_front_y()
+	return INF
 
 func _steer_to(vehicle, point: Vector2) -> float:
 	var own: Vector2 = vehicle.global_position

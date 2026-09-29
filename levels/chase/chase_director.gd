@@ -26,13 +26,16 @@ static var PHASES := [
 	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.5, &"sedan": 0.3, &"technical": 0.2}, "pace": 1.00},
 ]
 
-static var SPAWN_BEHIND := 1100.0   # off-screen even at the 0.42 overview zoom
+static var EMERGE_DEPTH := 90.0     # px inside the dust crest where pursuers are born
+static var ABSORB_DEPTH := 180.0    # px inside the crest where the pack takes one back
+static var SPAWN_BEHIND := 1100.0   # wall-less fallback (bare fixtures): px behind the player
 static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
-static var CULL_BEHIND := 2600.0    # matches the streamer's free line
+static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's free line
 static var RESPAWN_GRACE := 2.5     # seconds of held fire after a player death
 
 ## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70,
-## technical ~90. ahead = enters from the top of the screen, falls back.
+## technical ~90. ahead = enters from the top of the screen, falls back;
+## everyone else boils up out of the dust bank.
 static var CLASS_TABLE := {
 	&"bike": {"stats": null, "hp_scale": 0.55, "ahead": false},
 	&"sedan": {"stats": null, "hp_scale": 0.85, "ahead": false},
@@ -46,7 +49,7 @@ var frozen := false        # finale/win: stop directing, let the field play out
 
 var rng := RandomNumberGenerator.new()
 var _spawn_cd := 3.0       # first contact a breath after launch
-var _cull_t := 0.5
+var _cull_t := 0.25
 var _lane_flip := 1.0
 
 func _ready() -> void:
@@ -70,8 +73,8 @@ func _physics_process(delta: float) -> void:
 		wall.pace_frac = ph["pace"]
 	_cull_t -= delta
 	if _cull_t <= 0.0:
-		_cull_t = 0.5
-		_cull()
+		_cull_t = 0.25
+		_absorb()
 	_spawn_cd -= delta
 	if _spawn_cd <= 0.0:
 		_spawn_cd = ph["interval"]
@@ -111,7 +114,7 @@ func spawn(kind: StringName) -> Node:
 	_lane_flip = -_lane_flip
 	driver.phase = rng.randf_range(0.0, 6.0)
 	var ahead: bool = row.get("ahead", false)
-	var spawn_y: float = target.global_position.y + (-SPAWN_AHEAD if ahead else SPAWN_BEHIND)
+	var spawn_y: float = target.global_position.y - SPAWN_AHEAD if ahead else _emerge_y()
 	var road_x := 0.0
 	var half := 300.0
 	if host != null and host.course != null:
@@ -174,7 +177,23 @@ func _release_grace() -> void:
 		if driver != null and "hold_fire" in driver:
 			driver.hold_fire = false
 
-func _cull() -> void:
+## Where a pursuer is born: just inside the dust crest, so it boils up out of
+## the pack in plain sight instead of arriving from nowhere.
+func _emerge_y() -> float:
+	if wall != null and is_instance_valid(wall):
+		return wall.front_y + EMERGE_DEPTH
+	return target.global_position.y + SPAWN_BEHIND
+
+## The line a straggler crosses to be taken back by the pack.
+func _absorb_y() -> float:
+	if wall != null and is_instance_valid(wall):
+		return wall.front_y + ABSORB_DEPTH
+	return target.global_position.y + CULL_BEHIND
+
+## Outrun a Buzzard and it fades back into the dust: freed quietly, no wreck,
+## no bounty, no bell — the kill tally only counts what you actually killed.
+func _absorb() -> void:
+	var line := _absorb_y()
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):
-		if enemy is Node2D and enemy.global_position.y > target.global_position.y + CULL_BEHIND:
+		if enemy is Node2D and enemy.global_position.y > line:
 			enemy.queue_free()
