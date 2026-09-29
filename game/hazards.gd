@@ -60,21 +60,22 @@ static func point_inside(tree: SceneTree, p: Vector2, margin := 0.0) -> bool:
 			return true
 	return false
 
-## Liang-Barsky slab test of one segment against one (margin-grown) rect.
-## Returns the entry fraction t in [0, 1] (0 = `from` already inside), or
-## CLEAR (2.0) when the segment misses.
-static func segment_entry_t(rect: Rect2, from: Vector2, to: Vector2, margin := 0.0) -> float:
+# One shared slab pass keeps this per-frame path allocation-free. Returns the
+# entry fraction, or the entry axis when `axis_only` is true.
+static func _segment_entry(rect: Rect2, from: Vector2, to: Vector2,
+		margin: float, axis_only: bool) -> float:
 	var r := rect.grow(margin)
 	var d := to - from
 	var t0 := 0.0
 	var t1 := 1.0
+	var entry_axis := -1
 	for axis in 2:
 		var p: float = d[axis]
 		var lo: float = r.position[axis] - from[axis]
 		var hi: float = lo + r.size[axis]
 		if absf(p) < 0.0001:
 			if lo > 0.0 or hi < 0.0:
-				return CLEAR
+				return -1.0 if axis_only else CLEAR
 		else:
 			var ta := lo / p
 			var tb := hi / p
@@ -82,11 +83,24 @@ static func segment_entry_t(rect: Rect2, from: Vector2, to: Vector2, margin := 0
 				var tmp := ta
 				ta = tb
 				tb = tmp
+			if ta > t0:
+				entry_axis = axis
 			t0 = maxf(t0, ta)
 			t1 = minf(t1, tb)
 			if t0 > t1:
-				return CLEAR
-	return t0
+				return -1.0 if axis_only else CLEAR
+	return float(entry_axis) if axis_only else t0
+
+## Liang-Barsky slab test of one segment against one (margin-grown) rect.
+## Returns the entry fraction t in [0, 1] (0 = `from` already inside), or
+## CLEAR (2.0) when the segment misses.
+static func segment_entry_t(rect: Rect2, from: Vector2, to: Vector2, margin := 0.0) -> float:
+	return _segment_entry(rect, from, to, margin, false)
+
+## Axis of the face crossed on entry: 0 = west/east, 1 = north/south.
+## Returns -1 on a miss or when `from` is already inside the grown rect.
+static func segment_entry_axis(rect: Rect2, from: Vector2, to: Vector2, margin := 0.0) -> int:
+	return int(_segment_entry(rect, from, to, margin, true))
 
 ## Index (into rects()) of the FIRST rect the segment enters, or -1.
 static func segment_hit(tree: SceneTree, from: Vector2, to: Vector2, margin := 0.0) -> int:

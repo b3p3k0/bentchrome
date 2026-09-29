@@ -88,6 +88,17 @@ func test_segment_geometry() -> void:
 	t.check(Hazards.segment_entry_t(rect, Vector2(-300, 0), Vector2(-150, 0)) > 1.0,
 		"hazards: segment ending short of the rect is clear")
 
+func test_entry_axis_reports_the_face() -> void:
+	var rect := Rect2(-100, -100, 200, 200)
+	t.check(Hazards.segment_entry_axis(rect, Vector2(-300, 0), Vector2(300, 0)) == 0,
+		"hazards: west-face entry reports a Y-running rim")
+	t.check(Hazards.segment_entry_axis(rect, Vector2(0, -300), Vector2(0, 300)) == 1,
+		"hazards: north-face entry reports an X-running rim")
+	t.check(Hazards.segment_entry_axis(rect, Vector2(-300, 200), Vector2(300, 200)) == -1,
+		"hazards: a miss has no entry face")
+	t.check(Hazards.segment_entry_axis(rect, Vector2.ZERO, Vector2(300, 0)) == -1,
+		"hazards: a segment starting inside has no entry face")
+
 func test_segment_hit_first_blocker() -> void:
 	var container := Node2D.new()
 	t.root.add_child(container)
@@ -167,6 +178,71 @@ func _guarded_car(container: Node2D, pos: Vector2, vel: Vector2, heading: float)
 	car.real_velocity = vel
 	car.heading = heading
 	return car
+
+func _steered_aim(car: FakeCar, intent: Dictionary) -> Vector2:
+	var aimed_heading := car.heading + float(intent["steer"]) * PI * 0.5
+	return Vector2.RIGHT.rotated(aimed_heading)
+
+func _check_guard_west_face(size: Vector2, label: String) -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var pit: Variant = PitScene.instantiate()
+	pit.size = size
+	container.add_child(pit)
+	var car := _guarded_car(container, Vector2(-size.x * 0.5 - 140.0, 0),
+		Vector2(500, 0), 0.0)
+	var driver: Variant = DriverScript.new()
+	var intent: Dictionary = driver._apply_hazard_guard(car,
+		{"throttle": 1.0, "steer": 0.0, "boost": true})
+	t.check(driver._guard_active, "%s: guard fires" % label)
+	var aim := _steered_aim(car, intent)
+	t.check(absf(aim.y) > absf(aim.x), "%s: steer turns along Y, not into the pit" % label)
+	driver.free()
+	t.root.remove_child(container)
+	container.free()
+
+func test_guard_short_face_of_wide_rect() -> void:
+	_check_guard_west_face(Vector2(896, 128), "guard wide west face")
+
+func test_guard_square_rect_west_face() -> void:
+	_check_guard_west_face(Vector2(128, 128), "guard square west face")
+
+func test_guard_pushes_out_through_nearest_face() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var pit: Variant = PitScene.instantiate()
+	pit.size = Vector2(896, 128)
+	container.add_child(pit)
+	var car := _guarded_car(container, Vector2(-458, 0), Vector2(500, 0), PI * 0.5)
+	var driver: Variant = DriverScript.new()
+	var intent: Dictionary = driver._apply_hazard_guard(car,
+		{"throttle": 1.0, "steer": 0.0, "boost": true})
+	t.check(driver._guard_active, "guard forgiveness band: guard fires")
+	var aim := _steered_aim(car, intent)
+	t.check(aim.x < 0.0, "guard forgiveness band: nearest west face pushes west")
+	driver.free()
+	t.root.remove_child(container)
+	container.free()
+
+func test_guard_axis_change_follows_travel_not_stale_slide() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var pit: Variant = PitScene.instantiate()
+	pit.size = Vector2(896, 128)
+	container.add_child(pit)
+	var velocity := Vector2(-300, 300)
+	var car := _guarded_car(container, Vector2(0, -200), velocity, velocity.angle())
+	var driver: Variant = DriverScript.new()
+	driver._guard_active = true
+	driver._guard_tangent = Vector2.DOWN
+	var intent: Dictionary = driver._apply_hazard_guard(car,
+		{"throttle": 1.0, "steer": 0.0, "boost": true})
+	t.check(driver._guard_active, "guard axis change: guard fires")
+	var aim := _steered_aim(car, intent)
+	t.check(aim.x < 0.0, "guard axis change: current travel keeps the slide west")
+	driver.free()
+	t.root.remove_child(container)
+	container.free()
 
 func test_guard_overrides_toward_rim_tangent() -> void:
 	var container := Node2D.new()

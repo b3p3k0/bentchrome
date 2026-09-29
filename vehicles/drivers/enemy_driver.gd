@@ -508,8 +508,8 @@ func _intent_ladder(vehicle, delta: float) -> Dictionary:
 	return intent
 
 ## The hazard guard: a rect lookahead along REAL travel vs the lethal-hazard
-## registry. Dominant by design — steering is overridden toward the blocking
-## rect's rim tangent, throttle stages down by time-to-impact, boost is
+## registry. Dominant by design — steering follows the entry face's rim
+## tangent, throttle stages down by time-to-impact, boost is
 ## vetoed; fire flags stay untouched (shooting across the river is legal).
 ## Exemptions: airborne (jumps over water are gameplay), the NAVIGATE jump
 ## commit (the runway points at the launch by design), and any level without
@@ -569,16 +569,24 @@ func _apply_hazard_guard(vehicle, intent: Dictionary) -> Dictionary:
 			intent["throttle"] = throttle * 0.4
 		intent["boost"] = false
 		return intent
-	# Rim tangent along the rect's long axis. Sign: an active DETOUR's
-	# committed bridgehead first (a near-perpendicular approach makes every
-	# other reference a coin flip, and a wrong flip slides the whole rim the
-	# wrong way), then the committed slide (no frame-to-frame flips), then the
-	# live target's side, then current travel.
-	var tangent := Vector2.RIGHT if rect.size.x >= rect.size.y else Vector2.DOWN
+	# Rim tangent along the entry face. Sign: an active DETOUR's committed
+	# bridgehead first (a near-perpendicular approach makes every other
+	# reference a coin flip, and a wrong flip slides the whole rim the wrong
+	# way), then a same-axis committed slide (no frame-to-frame flips), then
+	# the live target's side, then current travel.
+	var face_axis := Hazards.segment_entry_axis(rect, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
+	var out_normal := Vector2.ZERO
+	if entry <= 0.0:
+		var offset := pos - rect.get_center()
+		face_axis = 0 if absf(absf(offset.x) - rect.size.x * 0.5) \
+			<= absf(absf(offset.y) - rect.size.y * 0.5) else 1
+		out_normal[face_axis] = 1.0 if offset[face_axis] >= 0.0 else -1.0
+	var tangent := Vector2.DOWN if face_axis == 0 else Vector2.RIGHT
 	var ref := dir
 	if _mode == Mode.DETOUR and goal != Vector2.INF and goal != pos:
 		ref = (goal - pos).normalized()
-	elif was_active and _guard_tangent != Vector2.ZERO:
+	elif was_active and _guard_tangent != Vector2.ZERO \
+			and absf(tangent.dot(_guard_tangent)) > 0.5:
 		ref = _guard_tangent
 	elif _target_is_live(vehicle, _target):
 		ref = ((_target as Node2D).global_position - pos).normalized()
@@ -588,8 +596,6 @@ func _apply_hazard_guard(vehicle, intent: Dictionary) -> Dictionary:
 	var aim := tangent
 	if entry <= 0.0:
 		# Already on the forgiveness band: angle OUT of it, don't stall on it.
-		var short_dir := Vector2.DOWN if rect.size.x >= rect.size.y else Vector2.RIGHT
-		var out_normal := short_dir * signf(short_dir.dot(pos - rect.get_center()))
 		aim = (tangent + out_normal * 1.2).normalized()
 		intent["throttle"] = 0.5
 	elif tti < HAZARD_BRAKE_TTI:
