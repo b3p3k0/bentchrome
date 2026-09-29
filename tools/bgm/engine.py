@@ -230,10 +230,11 @@ def bake_loop(x2, bar_samples, bars):
     return out
 
 
-def write_stereo(name, x2, wav_only=False):
-    """(2, N) float -> stereo wav -> ogg into assets/bgm/. No declick fade —
-    a fade would dip every loop pass; the wrap-crossfade owns the seam."""
-    os.makedirs(BGM_DIR, exist_ok=True)
+def write_stereo(name, x2, wav_only=False, out_dir=BGM_DIR):
+    """(2, N) float -> stereo wav -> ogg into assets/bgm/ (or out_dir — the
+    boot sting lands in assets/boot/). No declick fade — a fade would dip
+    every loop pass; the wrap-crossfade owns the seam."""
+    os.makedirs(out_dir, exist_ok=True)
     peak = float(np.max(np.abs(x2)))
     if peak > 0.985:
         x2 = x2 * (0.985 / peak)
@@ -247,7 +248,7 @@ def write_stereo(name, x2, wav_only=False):
         w.setframerate(SR)
         w.writeframes(inter.tobytes())
     if not wav_only:
-        ogg_path = f"{BGM_DIR}/{name}.ogg"
+        ogg_path = f"{out_dir}/{name}.ogg"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_path,
             "-c:a", "libvorbis", "-q:a", "5", "-ac", "2", "-ar", str(SR),
             ogg_path], check=True)

@@ -44,6 +44,7 @@ static var LEAD_IN := 0.3      # black before the first card
 static var GAP := 0.3          # black between cards
 static var INPUT_LOCK := 0.5   # a launch keypress can't skip by accident
 static var SKIP_FADE := 0.3    # curtain + sting fade on a skip
+static var STING_DB := 0.0     # sting trim on top of the SFX bus slider
 static var ART_FILTER := CanvasItem.TEXTURE_FILTER_LINEAR  # soft, not crunchy
 
 var autoplay := true  # tests flip both off before add_child and drive the
@@ -172,7 +173,7 @@ func _play_sting() -> void:
 	if stream == null:
 		return
 	_player.stream = stream
-	_player.volume_db = 0.0
+	_player.volume_db = STING_DB
 	_player.play()
 
 ## Imported resource first (what exported builds ship); raw file-load fallback
