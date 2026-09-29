@@ -31,7 +31,6 @@ static var ABSORB_DEPTH := 180.0    # px inside the crest where the pack takes o
 static var SPAWN_BEHIND := 1100.0   # wall-less fallback (bare fixtures): px behind the player
 static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
 static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's free line
-static var RESPAWN_GRACE := 2.5     # seconds of held fire after a player death
 
 ## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70,
 ## technical ~90. ahead = enters from the top of the screen, falls back;
@@ -183,20 +182,15 @@ func _tumble(b: Node) -> void:
 	host.add_child(tumble)
 	tumble.setup(b.global_position, b.velocity * 0.7, hull, tint)
 
-## Player respawned: the pack breaks off the trigger for a beat.
-func on_player_respawn() -> void:
-	_spawn_cd = maxf(_spawn_cd, RESPAWN_GRACE)
+## The run is over (caught, wrecked, or won): no more spawns, no more
+## absorbing, and every live Buzzard comes off the trigger — they have what
+## they came for. Nobody respawns on Route 666, so this never lifts.
+func stand_down() -> void:
+	frozen = true
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):
 		var driver = enemy.get_node_or_null(^"Driver")
 		if driver != null and "hold_fire" in driver:
 			driver.hold_fire = true
-	get_tree().create_timer(RESPAWN_GRACE).timeout.connect(_release_grace, CONNECT_ONE_SHOT)
-
-func _release_grace() -> void:
-	for enemy in get_tree().get_nodes_in_group(&"enemies"):
-		var driver = enemy.get_node_or_null(^"Driver")
-		if driver != null and "hold_fire" in driver:
-			driver.hold_fire = false
 
 ## Where a pursuer is born: just inside the dust crest, so it boils up out of
 ## the pack in plain sight instead of arriving from nowhere.

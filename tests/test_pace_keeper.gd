@@ -132,6 +132,7 @@ func test_player_comes_off_a_pillar_hands_off() -> void:
 		gs.lives = 3
 		gs.devgod = false
 	var scene = load("res://levels/chase/buzzard_run.tscn").instantiate()
+	scene.catch_enabled = false  # this test is about the pillar, not the pack
 	t.root.add_child(scene)
 	t.current_scene = scene
 	var player = scene.get_node(^"Vehicle")

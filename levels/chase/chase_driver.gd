@@ -63,7 +63,7 @@ static var YOYO_CAP := 1.15      # of the honest ceiling: the most the cheat may
 @export var role: StringName = &"bike"
 @export var lane_offset := 0.0    # director deals lanes so the pack spreads
 @export var phase := 0.0          # per-driver desync for swoop/burst rhythms
-@export var hold_fire := false    # director's respawn grace
+@export var hold_fire := false    # the director's stand-down: off the trigger
 
 var _t := 0.0
 var _aim_t := 0.0

@@ -11,15 +11,16 @@ extends Node2D
 ## costs ground. The rubberband pulls both ways — a boost only buys a couple
 ## of seconds before the surge drags the pack back into frame (MAX_GAP), and
 ## inside MERCY_GAP the closing speed is capped so the last stretch always
-## takes a beat: close calls last long enough to be escaped. Contact eats a
-## life (through Health, so the respawn blink-shield and DEVGOD are
-## respected). A road-spanning backstop rides 250px inside it — you cannot
-## reverse through the horde.
+## takes a beat: close calls last long enough to be escaped.
+##
+## The wall never touches Health. It only REPORTS the catch (caught()); the
+## host decides what a catch costs — on Route 666 that's a robbery, not a
+## life. Nothing here blocks the road either: the pedal has no reverse and the
+## pace keeper owns the floor, so the old backstop has nothing left to stop.
 
 static var MAX_GAP := 760.0       # px the pack trails at best — off screen only briefly
 static var START_GAP := 600.0     # where the pack sits at the green flag
-static var KILL_MARGIN := 50.0    # gap at which the swarm takes you
-static var RESPAWN_GAP := 600.0   # reset distance after a death
+static var CATCH_MARGIN := 50.0   # gap at which the swarm has you
 static var LEASH_GAP := 210.0     # the rubberband pivot: past this, the horde surges
 static var SURGE_PER_PX := 0.0008 # extra pace (fraction of top) per px past the leash
 static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
@@ -34,24 +35,13 @@ const FALLBACK_TOP := 484.0       # mid-roster top: bare fixtures, freed targets
 var target: Node2D = null   # the player, set by the host
 var course = null           # chase_course.gd, set by the host (centers the band)
 var pace_frac := 0.80       # fraction of the target's top; the director's phase drives this
-var front_y := 0.0          # world y of the kill line
+var front_y := 0.0          # world y of the dust crest
+var no_mercy := false       # the host sets this once the run is lost: swallow the car
 
-var _backstop: StaticBody2D = null
 var _dust: CPUParticles2D = null
 
 func _ready() -> void:
 	z_index = 1  # the dust looms over cars it swallows
-	_backstop = StaticBody2D.new()
-	_backstop.name = "Backstop"
-	_backstop.collision_layer = 2
-	_backstop.collision_mask = 0
-	var col := CollisionShape2D.new()
-	var shape := RectangleShape2D.new()
-	shape.size = Vector2(3600.0, 60.0)
-	col.shape = shape
-	col.position = Vector2(0.0, 250.0)
-	_backstop.add_child(col)
-	add_child(_backstop)
 	# The rolling dust bank (snowfall-pattern CPUParticles; world-space so the
 	# cloud trails as the front advances).
 	_dust = CPUParticles2D.new()
@@ -95,7 +85,7 @@ static func mercy_cap(speed: float, gap_px: float, target_vn: float) -> float:
 
 ## 0 = the pack at its farthest, 1 = contact. The HUD meter and the GPS band.
 static func pressure_at(gap_px: float) -> float:
-	return clampf(1.0 - (gap_px - KILL_MARGIN) / (MAX_GAP - KILL_MARGIN), 0.0, 1.0)
+	return clampf(1.0 - (gap_px - CATCH_MARGIN) / (MAX_GAP - CATCH_MARGIN), 0.0, 1.0)
 
 func pressure() -> float:
 	return pressure_at(gap())
@@ -103,6 +93,10 @@ func pressure() -> float:
 ## Pack on the bumper — the rumble, the HUD alarm, the GPS pulse.
 func in_danger() -> bool:
 	return gap() < DANGER_GAP
+
+## The swarm has the car. Reported, never enforced: the host owns the cost.
+func caught() -> bool:
+	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
 
 ## The chased car's honest top speed (garage build included, boost excluded),
 ## read live and duck-typed so bare test fixtures ride the fallback.
@@ -123,11 +117,6 @@ func _target_alive() -> bool:
 	var health := target.get_node_or_null(^"Health")
 	return health == null or health.hp > 0.0
 
-## Death reset: the swarm regroups a fair distance back (maxf — if it was
-## already trailing farther, it doesn't leap forward to punish the respawn).
-func reset_behind(y: float) -> void:
-	front_y = maxf(front_y, y)
-
 func _physics_process(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
 		return
@@ -136,7 +125,7 @@ func _physics_process(delta: float) -> void:
 	# — no car outruns the horde globally; skill holds it at arm's length.
 	var gap_now := front_y - player_y
 	var speed := pack_speed(base_top(), pace_frac, gap_now)
-	if _target_alive():
+	if not no_mercy and _target_alive():
 		speed = mercy_cap(speed, gap_now, _target_vn())
 	front_y -= speed * delta                         # north is -y
 	front_y = minf(front_y, player_y + MAX_GAP)      # never out of the mirrors
@@ -147,10 +136,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		road_x = target.global_position.x
 	global_position = Vector2(road_x, front_y)
-	if front_y - player_y <= KILL_MARGIN:
-		var health := target.get_node_or_null(^"Health")
-		if health and health.hp > 0.0:
-			health.take_damage(100000.0)  # shield/DEVGOD respected — Health decides
 	# Ground shudder once the pack is on the bumper — a sub-pixel rumble that
 	# grows to a rattle at contact range (screen_shake toggle respected inside
 	# add_shake). The pack rides in frame all run; only DANGER shakes.

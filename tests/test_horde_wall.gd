@@ -1,7 +1,7 @@
 extends RefCounted
-## The horde wall's pressure math (advance, clamp, kill, shield, reset), the
-## end screen's chase-mode group-win suppression, and the full rolling-start
-## respawn loop through a booted buzzard_run scene.
+## The horde wall's pressure math (pace, surge, clamp, mercy, the catch it
+## reports but never enforces) and the end screen's chase-mode suppressions.
+## The run's end-to-end flow lives in test_chase_flow.gd.
 
 const WallScript := preload("res://levels/chase/horde_wall.gd")
 const HealthScript := preload("res://vehicles/health.gd")
@@ -63,21 +63,27 @@ func test_wall_pressure_math() -> void:
 	player.position.y = -30000.0
 	wall._physics_process(0.016)
 	t.check(is_equal_approx(wall.gap(), WallScript.MAX_GAP), "wall: clamps to MAX_GAP when outrun")
-	t.check(health.hp > 0.0, "wall: distant player untouched")
-	wall.front_y = player.position.y + WallScript.KILL_MARGIN - 10.0
+	t.check(not wall.caught(), "wall: a distant car is not caught")
+	# The catch is REPORTED, never enforced: the wall doesn't touch Health —
+	# what a catch costs is the host's call (a robbery, not a life).
+	var hp_before: float = health.hp
+	wall.front_y = player.position.y + WallScript.CATCH_MARGIN - 10.0
 	wall._physics_process(0.016)
-	t.check(health.hp <= 0.0, "wall: contact takes the life")
-	health.hp = 100.0
-	health.invulnerable = true
-	wall.front_y = player.position.y + 10.0
-	wall._physics_process(0.016)
-	t.check(health.hp == 100.0, "wall: respawn shield holds the line")
-	health.invulnerable = false
+	t.check(wall.caught(), "wall: inside the catch margin the swarm has the car")
+	t.check(health.hp == hp_before, "wall: contact never touches Health")
+	wall.front_y = player.position.y + WallScript.CATCH_MARGIN + 30.0
+	t.check(not wall.caught(), "wall: a hair outside the margin is still a close call")
+	# Once the run is lost the host drops the mercy: the pack rolls over the car.
 	wall.front_y = player.position.y + 100.0
-	wall.reset_behind(player.position.y + WallScript.RESPAWN_GAP)
-	t.check(is_equal_approx(wall.gap(), WallScript.RESPAWN_GAP), "wall: death reset regroups it")
-	wall.reset_behind(player.position.y + 500.0)
-	t.check(is_equal_approx(wall.gap(), WallScript.RESPAWN_GAP), "wall: reset never pulls it closer")
+	wall._physics_process(0.1)
+	var merciful: float = 100.0 - wall.gap()
+	wall.front_y = player.position.y + 100.0
+	wall.no_mercy = true
+	wall._physics_process(0.1)
+	var merciless: float = 100.0 - wall.gap()
+	t.check(merciless > merciful * 3.0,
+		"wall: no_mercy swallows the car (%d px vs %d px in a tenth)" % [int(merciless), int(merciful)])
+	t.check(wall.get_node_or_null(^"Backstop") == null, "wall: nothing blocks the road — the pedal has no reverse")
 	t.root.remove_child(container)
 	container.free()
 
@@ -164,11 +170,11 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 	t.check(lifted < rest - 30.0, "wall: a one-second lift visibly costs gap (%d -> %d)" % [int(rest), int(lifted)])
 	# A car pinned dead on a pillar at the mercy line: the pack may close no
 	# faster than MERCY_CLOSE, so contact is at least two seconds away.
-	var span: float = WallScript.MERCY_GAP - WallScript.KILL_MARGIN
+	var span: float = WallScript.MERCY_GAP - WallScript.CATCH_MARGIN
 	var floor_s: float = span / WallScript.MERCY_CLOSE
 	t.check(floor_s >= 2.0, "wall: the mercy stretch is at least two seconds (%.1f)" % floor_s)
 	var pinned := _chase(TOP, 1.0, 0.0, WallScript.MERCY_GAP - 1.0, floor_s - 0.2)
-	t.check(pinned > WallScript.KILL_MARGIN,
+	t.check(pinned > WallScript.CATCH_MARGIN,
 		"wall: a pinned car still has its beat to escape (gap %d)" % int(pinned))
 	t.check(is_equal_approx(WallScript.mercy_cap(900.0, WallScript.MERCY_GAP + 1.0, 0.0), 900.0),
 		"wall: no mercy outside the mercy gap")
@@ -179,10 +185,10 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 
 func test_pressure_meter_and_danger_line() -> void:
 	t.check(is_equal_approx(WallScript.pressure_at(WallScript.MAX_GAP), 0.0), "wall: farthest = no pressure")
-	t.check(is_equal_approx(WallScript.pressure_at(WallScript.KILL_MARGIN), 1.0), "wall: contact = full pressure")
+	t.check(is_equal_approx(WallScript.pressure_at(WallScript.CATCH_MARGIN), 1.0), "wall: contact = full pressure")
 	t.check(is_equal_approx(WallScript.pressure_at(-40.0), 1.0), "wall: pressure clamps past contact")
 	t.check(WallScript.pressure_at(300.0) > WallScript.pressure_at(500.0), "wall: closer = more pressure")
-	t.check(WallScript.DANGER_GAP > WallScript.KILL_MARGIN and WallScript.DANGER_GAP < WallScript.LEASH_GAP,
+	t.check(WallScript.DANGER_GAP > WallScript.CATCH_MARGIN and WallScript.DANGER_GAP < WallScript.LEASH_GAP,
 		"wall: the danger zone sits between contact and the leash")
 	t.check(WallScript.START_GAP <= WallScript.MAX_GAP, "wall: the green flag drops inside the clamp")
 
@@ -258,47 +264,3 @@ func test_group_win_still_default_elsewhere() -> void:
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
-
-func test_rolling_start_respawn() -> void:
-	var gs = t.root.get_node_or_null(^"/root/GameState")
-	t.check(gs != null, "chase: GameState autoload present")
-	if gs == null:
-		return
-	gs.lives = 3
-	gs.devgod = false
-	var scene = load("res://levels/chase/buzzard_run.tscn").instantiate()
-	t.root.add_child(scene)
-	t.current_scene = scene
-	for i in 5:
-		await t.physics_frame
-	var player = scene.get_node(^"Vehicle")
-	var driver = player.get_node(^"Driver")
-	var intent: Dictionary = driver.get_intent(player, 0.016)
-	t.check(intent["throttle"] > 0.0, "chase: hands off under cruise keeps the gas on")
-	var health = player.get_node(^"Health")
-	health.kill()
-	var respawned := false
-	for i in 200:
-		await t.physics_frame
-		if health.hp > 0.0:
-			respawned = true
-			break
-	t.check(respawned, "chase: lives loop rolls a respawn")
-	t.check(gs.lives == 2, "chase: the death cost a life")
-	t.check(player.velocity.y < -200.0, "chase: rolling start — already moving north (vy %d)" % int(player.velocity.y))
-	var gap: float = scene.wall_gap()
-	t.check(gap >= WallScript.RESPAWN_GAP - 50.0 and gap <= WallScript.MAX_GAP + 1.0,
-		"chase: wall regrouped behind the respawn (gap %d)" % int(gap))
-	scene.clock = scene.RUN_SECONDS - 0.05
-	var won := false
-	for i in 30:
-		await t.physics_frame
-		if scene._won:
-			won = true
-			break
-	t.check(won, "chase: the clock calls the win")
-	t.paused = false
-	gs.lives = 3
-	t.current_scene = null
-	t.root.remove_child(scene)
-	scene.free()

@@ -1,7 +1,7 @@
 extends RefCounted
 ## The wave director: phase table shape, phase lookup, the runtime spawn
 ## recipe (stats/driver/palette/position land before add_child), cap respect,
-## pack-pace handoff, cull line, respawn grace, and the kill tally.
+## pack-pace handoff, absorb line, the stand-down, and the kill tally.
 
 const DirectorScript := preload("res://levels/chase/chase_director.gd")
 const RunScript := preload("res://levels/chase/buzzard_run.gd")
@@ -41,6 +41,7 @@ func test_spawn_cull_grace_and_kills() -> void:
 		gs.lives = 3
 		gs.devgod = false
 	var scene = load("res://levels/chase/buzzard_run.tscn").instantiate()
+	scene.catch_enabled = false  # this suite is about the director, not the catch
 	t.root.add_child(scene)
 	t.current_scene = scene
 	for i in 3:
@@ -96,15 +97,9 @@ func test_spawn_cull_grace_and_kills() -> void:
 	await t.physics_frame
 	t.check(is_equal_approx(wall.pace_frac, 0.97), "director: all-in drives the pack's pace")
 	scene.clock = 20.0  # back off the crescendo for the rest of the test
-	# Park the dust front: the long wait below tests the grace, not the chase
-	# (a surging front rolls over its own outriders and absorbs them).
+	# Park the dust front: the rest of this test is about the director, not
+	# the chase (a surging front rolls over its own outriders and absorbs them).
 	wall.set_physics_process(false)
-	# Respawn grace: the pack holds fire, then releases.
-	director.on_player_respawn()
-	t.check(bike.get_node(^"Driver").hold_fire, "director: grace holds the pack's fire")
-	for i in 170:
-		await t.physics_frame
-	t.check(not bike.get_node(^"Driver").hold_fire, "director: grace lifts")
 	# Kill tally.
 	var kills_before: int = scene.kills
 	bike.get_node(^"Health").kill()
@@ -116,10 +111,15 @@ func test_spawn_cull_grace_and_kills() -> void:
 		if script and script.resource_path.ends_with("death_tumble.gd"):
 			tumbling = true
 	t.check(tumbling, "director: the wreck tumbles out")
-	# Absorb: freeze new spawns, leave the field far behind, let the dust
-	# front catch up (one tick clamps it to MAX_GAP), sweep. The pack takes
-	# its own back quietly — no wreck, no bell, no bounty.
-	director.frozen = true
+	# Stand-down (the run is over): spawns freeze and every live Buzzard
+	# comes off the trigger — and stays off it. Nobody respawns on Route 666.
+	t.check(not sedan.get_node(^"Driver").hold_fire, "director: the pack fights until the run ends")
+	director.stand_down()
+	t.check(director.frozen, "director: stand-down freezes the director")
+	t.check(sedan.get_node(^"Driver").hold_fire, "director: stand-down takes the pack off the trigger")
+	# Absorb: leave the field far behind, let the dust front catch up (one
+	# tick clamps it to MAX_GAP), sweep. The pack takes its own back
+	# quietly — no wreck, no bell, no bounty.
 	wall.set_physics_process(true)
 	var straggler = director.spawn(&"bike")
 	await t.physics_frame
