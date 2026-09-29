@@ -4,9 +4,13 @@ extends Driver
 ## on the player and lay back out on a personal rhythm; sedans hold a wobbly
 ## station behind and lob lazy rockets at a STALE snapshot of where you were
 ## (aim_delay — the "poor driver" tell). Course-guided steering keeps them
-## inside the embankments by construction; throttle pace-holds against the
-## player and never stops. Glass cannons: the fairness lives in the burst
-## windows, not in aim assists.
+## inside the embankments by construction; the pedal holds a STATION off the
+## player through the shared speed band (speed_band.gd) — match the mark's
+## pace, faster when behind the station, brake when ahead of it, never under
+## the pace floor. Glass cannons: the fairness lives in the burst windows,
+## not in aim assists.
+
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 ## Per-role tuning (F2-era knobs — static var, not frozen const).
 static var ROLES := {
@@ -42,12 +46,19 @@ const LOOKAHEAD := 240.0    # steer at a point this far up the road
 const STEER_GAIN := 2.2
 const CREST_CLEAR := 70.0   # a hold mark never sits closer than this to the dust crest
 
-## Yo-yo catch-up: far behind, a Buzzard's engine finds whatever it takes to
-## keep up (max_speed rides the player's + margin); back in the knife-fight
-## range it honors its stats again — always relevant, never unshakeable.
-static var YOYO_FAR := 600.0     # px behind the player where the cheat kicks in
-static var YOYO_NEAR := 250.0    # px behind where honest stats resume
+## Station keeping: the pedal asks for the player's own pace plus this much
+## per px of station error, and never less than MIN_PACE of the Buzzard's top.
+static var HOLD_GAIN := 1.2      # px/s of closing speed asked per px behind the mark
+static var MIN_PACE := 0.35      # of own top: a Buzzard never parks
+
+## Yo-yo catch-up: far behind, a Buzzard's engine finds a little extra to
+## keep up (max_speed rides the player's + margin, capped at YOYO_CAP of its
+## honest ceiling); back in the knife-fight range it honors its stats again —
+## always relevant, never unshakeable: the cap sits under a boost's 1.5x.
+static var YOYO_FAR := 380.0     # px behind the player where the cheat kicks in
+static var YOYO_NEAR := 180.0    # px behind where honest stats resume
 static var YOYO_MARGIN := 80.0   # px/s over the player's speed while catching up
+static var YOYO_CAP := 1.15      # of the honest ceiling: the most the cheat may find
 
 @export var role: StringName = &"bike"
 @export var lane_offset := 0.0    # director deals lanes so the pack spreads
@@ -89,8 +100,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_yoyo(vehicle, player, own, delta)
 	var steer: float = _steer_to(vehicle, Vector2(target_x, own.y - LOOKAHEAD)) \
 		+ p["wobble"] * sin(_t * 2.6 + phase)
-	# Pace-hold: behind the mark = full gas, ahead = ease off. Never stop.
-	var throttle := clampf(0.6 + (own.y - target_y) / 320.0, 0.35, 1.0)
+	var throttle := _station_throttle(vehicle, player, own.y - target_y)
 	var fire := false
 	var fire_sec := false
 	if not hold_fire:
@@ -113,6 +123,25 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		"fire_selected": fire_sec,
 	}
 
+## The speed a station asks for: the mark's own pace, plus closing speed for
+## every px behind the station (negative error = ahead of it = slower).
+static func station_speed(mark_vn: float, behind_px: float, own_top: float) -> float:
+	return maxf(mark_vn + behind_px * HOLD_GAIN, own_top * MIN_PACE)
+
+## Pace-hold through the speed band: gas when under the asked speed, a real
+## brake when well over it (they can finally fall back), never under the floor.
+func _station_throttle(vehicle, player: Node2D, behind_px: float) -> float:
+	var pv: Variant = player.get("velocity")
+	var mark_vn: float = -pv.y if pv is Vector2 else 0.0
+	var own_top := 500.0
+	if vehicle.has_method(&"get_controller") and vehicle.get_controller() != null:
+		own_top = vehicle.get_controller().max_speed
+	var vv: Variant = vehicle.get("velocity")
+	var fwd_speed := 0.0
+	if vv is Vector2:
+		fwd_speed = vv.dot(Vector2.RIGHT.rotated(vehicle.heading))
+	return SpeedBand.toward(fwd_speed, station_speed(mark_vn, behind_px, own_top), true)
+
 func _yoyo(vehicle, player: Node2D, own: Vector2, delta: float) -> void:
 	if not vehicle.has_method(&"get_controller"):
 		return  # bare test fixtures
@@ -126,7 +155,7 @@ func _yoyo(vehicle, player: Node2D, own: Vector2, delta: float) -> void:
 	var pspeed: float = pv.length() if pv is Vector2 else 0.0
 	var want: float = _base_speed
 	if behind > YOYO_FAR:
-		want = maxf(_base_speed, pspeed + YOYO_MARGIN)
+		want = clampf(pspeed + YOYO_MARGIN, _base_speed, _base_speed * YOYO_CAP)
 	elif behind > YOYO_NEAR:
 		return  # hysteresis band — hold whatever it's doing
 	ctrl.max_speed = lerpf(ctrl.max_speed, want, minf(delta * 2.0, 1.0))

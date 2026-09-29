@@ -42,6 +42,15 @@ static var CLASS_TABLE := {
 	&"technical": {"stats": null, "hp_scale": 0.95, "ahead": true},
 }
 
+## What a Buzzard's engine is worth, as a fraction of the PLAYER'S top speed —
+## the pack is priced against the ride it chases, like the dust front. Bikes
+## and sedans can always catch an honest car; a boost (1.5x) always shakes
+## them; ahead-spawns are slow by design and fall back through the field.
+## The .tres top_speed stats still shape acceleration and the garage card;
+## this overrides the ceiling at spawn.
+static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62}
+const FALLBACK_TOP := 484.0  # wall-less fixtures with a controller-less target
+
 var host = null            # buzzard_run host: clock, course, kills
 var target: Node2D = null  # the player
 var wall = null            # horde_wall: the phase pace lands here
@@ -141,7 +150,19 @@ func spawn(kind: StringName) -> Node:
 		if is_instance_valid(b):
 			_tumble(b))
 	host.add_child(b)
+	# _ready applied the stat curves; now the ceiling is re-priced against the
+	# chased car (before the first tick, so the driver's yo-yo captures it).
+	if b.has_method(&"get_controller") and b.get_controller() != null:
+		b.get_controller().max_speed = _player_top() * float(ROLE_PACE.get(kind, 1.0))
 	return b
+
+## The chased car's honest top speed (garage build included, boost excluded).
+func _player_top() -> float:
+	if wall != null and is_instance_valid(wall):
+		return wall.base_top()
+	if target != null and target.has_method(&"get_controller") and target.get_controller() != null:
+		return target.get_controller().max_speed
+	return FALLBACK_TOP
 
 ## The kill read: a dark hull spinning off with the wreck's momentum while the
 ## explosion pops. Director-side — arenas keep their untouched death path.

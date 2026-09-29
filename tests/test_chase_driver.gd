@@ -52,7 +52,7 @@ func test_intent_contract() -> void:
 	var intent: Dictionary = r[2].get_intent(r[1], 0.016)
 	for key in ["throttle", "steer", "fire_mg", "fire_selected"]:
 		t.check(intent.has(key), "chase-ai: intent carries %s" % key)
-	t.check(intent["throttle"] >= 0.35 and intent["throttle"] <= 1.0, "chase-ai: throttle in the pace band")
+	t.check(intent["throttle"] >= -1.0 and intent["throttle"] <= 1.0, "chase-ai: throttle is a legal pedal")
 	t.check(intent["steer"] >= -1.0 and intent["steer"] <= 1.0, "chase-ai: steer clamped")
 	_done(r[0])
 
@@ -74,16 +74,33 @@ func test_steer_converges_on_target() -> void:
 
 func test_pace_hold_never_stops() -> void:
 	var r := _rig()
-	var vehicle: FakeVehicle = r[1]
+	var vehicle: FakeVehicle = r[1]   # ctrl.max_speed 500, nose north
 	var player: Node2D = r[3]
+	var pace_floor: float = vehicle.ctrl.max_speed * DriverScript.MIN_PACE
 	player.global_position = Vector2(0, -3000)
 	vehicle.global_position = Vector2(0, 0)        # far behind the pack
 	var behind: Dictionary = r[2].get_intent(vehicle, 0.016)
 	t.check(is_equal_approx(behind["throttle"], 1.0), "chase-ai: far behind = full gas")
-	vehicle.global_position = Vector2(0, -6000)    # overshot far ahead
+	# Overshot far ahead and still carrying speed: a real brake — a Buzzard
+	# can finally fall BACK to its station instead of sailing off the top.
+	vehicle.global_position = Vector2(0, -6000)
+	vehicle.velocity = Vector2(0, -400.0)
 	var ahead: Dictionary = r[2].get_intent(vehicle, 0.016)
-	t.check(is_equal_approx(ahead["throttle"], 0.35), "chase-ai: ahead eases to the floor, never stops")
+	t.check(ahead["throttle"] < -0.5, "chase-ai: ahead of the station brakes (%.2f)" % ahead["throttle"])
+	# ...but never under the pace floor: no Buzzard parks on the road.
+	vehicle.velocity = Vector2(0, -(pace_floor - 20.0))
+	var crawling: Dictionary = r[2].get_intent(vehicle, 0.016)
+	t.check(crawling["throttle"] > 0.0, "chase-ai: under the pace floor the gas comes back — never stops")
 	_done(r[0])
+
+func test_station_speed_tracks_the_mark() -> void:
+	const TOP := 500.0
+	t.check(is_equal_approx(DriverScript.station_speed(400.0, 0.0, TOP), 400.0),
+		"chase-ai: on station = the mark's own pace")
+	t.check(DriverScript.station_speed(400.0, 100.0, TOP) > 400.0, "chase-ai: behind the station asks for more")
+	t.check(DriverScript.station_speed(400.0, -100.0, TOP) < 400.0, "chase-ai: ahead of it asks for less")
+	t.check(is_equal_approx(DriverScript.station_speed(0.0, -2000.0, TOP), TOP * DriverScript.MIN_PACE),
+		"chase-ai: the ask never drops under the pace floor")
 
 ## A hold mark never sits in the murk: the pack rides close now, and a sedan
 ## station of 430px would park it inside the dust to be absorbed.
@@ -169,21 +186,30 @@ func test_yoyo_catchup() -> void:
 	container.add_child(vehicle)
 	var player := FakeVehicle.new()   # has velocity — the sprinting mark
 	player.add_to_group(&"player")
-	player.velocity = Vector2(0, -600)
+	player.velocity = Vector2(0, -520)
 	player.global_position = Vector2(0, -2000)
 	container.add_child(player)
 	var driver = DriverScript.new()
 	container.add_child(driver)
+	var honest: float = vehicle.ctrl.max_speed
 	vehicle.global_position = Vector2(0, -1000)  # 1000px behind — cheat range
 	for i in 40:
 		driver.get_intent(vehicle, 0.1)
-	t.check(vehicle.ctrl.max_speed > 600.0,
+	t.check(vehicle.ctrl.max_speed > 520.0,
 		"chase-ai: yo-yo finds the pace when trailing (%d)" % int(vehicle.ctrl.max_speed))
+	# A boost (1.5x) is the one thing the cheat can't answer: the ceiling
+	# is capped, so the player can always shake the pack off its bumper.
+	player.velocity = Vector2(0, -900)
+	for i in 40:
+		driver.get_intent(vehicle, 0.1)
+	t.check(vehicle.ctrl.max_speed <= honest * DriverScript.YOYO_CAP + 0.01,
+		"chase-ai: the cheat is capped — a boost shakes them (%d)" % int(vehicle.ctrl.max_speed))
+	t.check(DriverScript.YOYO_CAP * 1.10 < 1.5, "chase-ai: even a bike's capped cheat sits under a boost")
 	vehicle.global_position = Vector2(0, -1900)  # 100px behind — knife range
 	for i in 40:
 		driver.get_intent(vehicle, 0.1)
-	t.check(vehicle.ctrl.max_speed < 560.0,
-		"chase-ai: honest stats resume up close (%d)" % int(vehicle.ctrl.max_speed))
+	t.check(absf(vehicle.ctrl.max_speed - honest) < 1.0,
+		"chase-ai: honest stats resume up close (%.2f)" % vehicle.ctrl.max_speed)
 	t.root.remove_child(container)
 	container.free()
 
