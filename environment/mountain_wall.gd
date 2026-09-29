@@ -15,8 +15,9 @@ const EPSILON := 0.01
 
 static var CREST_WIDTH := 3.0
 static var STRIATION_WIDTH := 1.25
-static var PINE_RADIUS := 36.0
-static var PINE_INSET := 14.0
+static var PINE_GROVE_THRESHOLD := 0.40
+static var PINE_RADIUS_MIN := 26.0
+static var PINE_RADIUS_MAX := 40.0
 static var MAX_PINES := 220
 
 @export var bounds := Rect2()
@@ -30,6 +31,10 @@ static var MAX_PINES := 220
 @export var pine_spacing := 150.0
 @export var rim_step := 56.0
 @export var paint_seed := 0
+@export var substrate_material: Material
+@export var terrain_material: Material
+@export_range(0.0, 1.0, 0.01) var top_snow_opacity := 0.82
+@export var chamfer_exclusions: Array[Rect2] = []
 
 var _block_local_rects: Array[Rect2] = []
 var _raw_loops: Array[PackedVector2Array] = []
@@ -38,15 +43,24 @@ var _base_rim_loops: Array[PackedVector2Array] = []
 var _paint_loops: Array[PackedVector2Array] = []
 var _snow_loops: Array[PackedVector2Array] = []
 var _chamfers: Array[PackedVector2Array] = []
+var _striations: Array[PackedVector2Array] = []
 var _pine_points := PackedVector2Array()
 var _pine_seeds: Array[int] = []
+var _pine_radii := PackedFloat32Array()
 
-class PaintLayer:
+class RockPaint:
 	extends Node2D
 	func _draw() -> void:
 		var wall := get_parent().get_parent() as MountainWall
 		if wall != null:
-			wall._paint(self)
+			wall._paint_rock(self)
+
+class DetailPaint:
+	extends Node2D
+	func _draw() -> void:
+		var wall := get_parent().get_parent() as MountainWall
+		if wall != null:
+			wall._paint_details(self)
 
 func _ready() -> void:
 	if bleed <= face_width:
@@ -91,6 +105,12 @@ func chamfer_triangles() -> Array[PackedVector2Array]:
 func pine_points() -> PackedVector2Array:
 	return _pine_points.duplicate()
 
+func pine_radii() -> PackedFloat32Array:
+	return _pine_radii.duplicate()
+
+func face_striations() -> Array[PackedVector2Array]:
+	return UnionSkin.copy_loops(_striations)
+
 func _build() -> void:
 	var world_rects: Array[Rect2] = block_rects()
 	_block_local_rects.clear()
@@ -106,6 +126,7 @@ func _build() -> void:
 	_raw_loops = RectUnion.outline(_block_local_rects)
 	_build_chamfers()
 	_build_skin(extended_blocks)
+	_build_striations()
 	_build_pines()
 	_build_generated()
 
@@ -148,6 +169,8 @@ func _build_chamfers() -> void:
 			var before: Vector2 = loop[(i - 1 + loop.size()) % loop.size()]
 			var point: Vector2 = loop[i]
 			var after: Vector2 = loop[(i + 1) % loop.size()]
+			if _corner_excluded(point):
+				continue
 			var incoming: Vector2 = point - before
 			var outgoing: Vector2 = after - point
 			if incoming.cross(outgoing) >= 0.0:
@@ -157,6 +180,16 @@ func _build_chamfers() -> void:
 				point, point + (before - point).normalized() * leg,
 				point + (after - point).normalized() * leg])
 			_add_chamfer(triangle)
+
+func _corner_excluded(point: Vector2) -> bool:
+	var world := to_global(point)
+	for rect: Rect2 in chamfer_exclusions:
+		if world.x >= rect.position.x - EPSILON \
+				and world.x <= rect.end.x + EPSILON \
+				and world.y >= rect.position.y - EPSILON \
+				and world.y <= rect.end.y + EPSILON:
+			return true
+	return false
 
 func _add_chamfer(triangle: PackedVector2Array) -> void:
 	if triangle.size() != 3 or _triangle_touches_closed_side(triangle):
@@ -178,53 +211,35 @@ func _triangle_touches_closed_side(triangle: PackedVector2Array) -> bool:
 func _build_pines() -> void:
 	_pine_points.clear()
 	_pine_seeds.clear()
+	_pine_radii.clear()
 	if pine_spacing <= 0.0 or _snow_loops.is_empty():
 		return
+	var candidates := UnionSkin.scatter(_snow_loops, pine_spacing, 0.42,
+		paint_seed + 104729)
+	var kept := PackedVector2Array()
+	for point: Vector2 in candidates:
+		if UnionSkin.value_noise(point, 420.0, paint_seed + 65537) \
+				<= PINE_GROVE_THRESHOLD:
+			continue
+		var radius := _pine_radius(point)
+		if _distance_to_snow_edge(point) + EPSILON >= radius + 8.0:
+			kept.append(point)
+	kept = UnionSkin.thin_uniform(kept, MAX_PINES, paint_seed + 130363)
+	var ordered: Array[Vector2] = []
+	for point: Vector2 in kept:
+		ordered.append(point)
+	ordered.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		return a.y < b.y if not is_equal_approx(a.y, b.y) else a.x < b.x)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = paint_seed + 104729
-	for loop: PackedVector2Array in _solid_loops:
-		if UnionSkin.signed_area(loop) <= 0.0:
-			continue
-		for i in loop.size():
-			var a: Vector2 = loop[i]
-			var b: Vector2 = loop[(i + 1) % loop.size()]
-			if UnionSkin.segment_on_closed_side(a, b, bounds,
-					global_transform, EPSILON):
-				continue
-			var edge := b - a
-			var count := int(floor(edge.length() / pine_spacing))
-			var inward := -UnionSkin.exterior_normal(edge)
-			for k in count:
-				var along := (float(k) + 0.5) / float(count)
-				along += rng.randf_range(-0.12, 0.12) / float(count)
-				var point := a.lerp(b, along)
-				point += inward * (face_width + PINE_INSET + 1.0)
-				_try_pine(point, rng)
-	var lo := Vector2(INF, INF)
-	var hi := Vector2(-INF, -INF)
-	for loop: PackedVector2Array in _snow_loops:
-		for point: Vector2 in loop:
-			lo = lo.min(point)
-			hi = hi.max(point)
-	var columns := maxi(1, int(ceil((hi.x - lo.x) / pine_spacing)))
-	var rows := maxi(1, int(ceil((hi.y - lo.y) / pine_spacing)))
-	var grid_jitter := pine_spacing * 0.04
-	for y in rows:
-		for x in columns:
-			var point := lo + Vector2(x + 0.5, y + 0.5) * pine_spacing
-			point += Vector2(rng.randf_range(-grid_jitter, grid_jitter),
-				rng.randf_range(-grid_jitter, grid_jitter))
-			_try_pine(point, rng)
-			if _pine_points.size() >= MAX_PINES:
-				return
+	for point: Vector2 in ordered:
+		_pine_points.append(point)
+		_pine_radii.append(_pine_radius(point))
+		_pine_seeds.append(int(rng.randi()))
 
-func _try_pine(point: Vector2, rng: RandomNumberGenerator) -> void:
-	if _pine_points.size() >= MAX_PINES or not _point_in_snow(point):
-		return
-	if _distance_to_snow_edge(point) + EPSILON < PINE_INSET:
-		return
-	_pine_points.append(point)
-	_pine_seeds.append(int(rng.randi()))
+func _pine_radius(point: Vector2) -> float:
+	return lerpf(PINE_RADIUS_MIN, PINE_RADIUS_MAX,
+		UnionSkin.value_noise(point + Vector2(37, 91), 97.0, paint_seed + 31337))
 
 func _point_in_snow(point: Vector2) -> bool:
 	for loop: PackedVector2Array in _snow_loops:
@@ -250,9 +265,13 @@ func _build_generated() -> void:
 	generated.name = GENERATED_NAME
 	add_child(generated)
 	move_child(generated, 0)
-	var paint := PaintLayer.new()
-	paint.name = "Paint"
-	generated.add_child(paint)
+	var rock := RockPaint.new()
+	rock.name = "RockPaint"
+	generated.add_child(rock)
+	_build_top_polygons(generated)
+	var details := DetailPaint.new()
+	details.name = "DetailPaint"
+	generated.add_child(details)
 	if _chamfers.is_empty():
 		return
 	var body := StaticBody2D.new()
@@ -272,38 +291,65 @@ func _first_block_layer() -> int:
 			return child.collision_layer
 	return 0
 
-func _paint(canvas: Node2D) -> void:
+func _build_top_polygons(parent: Node2D) -> void:
+	if terrain_material == null:
+		return
+	for i in _snow_loops.size():
+		var substrate := Polygon2D.new()
+		substrate.name = "TopSubstrate" if i == 0 else "TopSubstrate%d" % (i + 1)
+		substrate.polygon = _snow_loops[i]
+		substrate.material = _material_copy(substrate_material, false)
+		parent.add_child(substrate)
+		var surface := Polygon2D.new()
+		surface.name = "TopSurface" if i == 0 else "TopSurface%d" % (i + 1)
+		surface.polygon = _snow_loops[i]
+		surface.material = _material_copy(terrain_material, true)
+		parent.add_child(surface)
+
+func _material_copy(source: Material, snow_surface: bool) -> Material:
+	if source == null:
+		return null
+	var copy := source.duplicate() as Material
+	if copy is ShaderMaterial:
+		var shader_mat := copy as ShaderMaterial
+		shader_mat.set_shader_parameter("relief_enabled", false)
+		if snow_surface:
+			var base: Variant = shader_mat.get_shader_parameter("base_color")
+			if base is Color:
+				var color := base as Color
+				color.a = top_snow_opacity
+				shader_mat.set_shader_parameter("base_color", color)
+	return copy
+
+func _paint_rock(canvas: Node2D) -> void:
 	for loop: PackedVector2Array in _paint_loops:
 		canvas.draw_colored_polygon(UnionSkin.offset_loop(loop, shadow_offset),
 			Color(0.0, 0.0, 0.0, shadow_alpha))
 	for loop: PackedVector2Array in _paint_loops:
 		canvas.draw_colored_polygon(loop, PitPaint.CLIFF_FACE)
-	_draw_striations(canvas)
+	for i in _striations.size():
+		var stripe := _striations[i]
+		canvas.draw_line(stripe[0], stripe[1],
+			PitPaint.CRACK if i % 4 == 0 else PitPaint.CLIFF_STRIPE,
+			STRIATION_WIDTH)
+	if terrain_material == null:
+		for loop: PackedVector2Array in _snow_loops:
+			canvas.draw_colored_polygon(loop, PitPaint.SNOW_CAP)
+
+func _build_striations() -> void:
+	_striations.clear()
+	var closed := func(a: Vector2, b: Vector2) -> bool:
+		return UnionSkin.segment_on_closed_side(a, b, bounds,
+			global_transform, EPSILON)
+	for loop: PackedVector2Array in _paint_loops:
+		_striations.append_array(UnionSkin.fan_striations(loop, _snow_loops,
+			maxf(PitPaint.STRIATION_GAP, 3.0), face_width + overhang, closed))
+
+func _paint_details(canvas: Node2D) -> void:
 	for loop: PackedVector2Array in _snow_loops:
-		canvas.draw_colored_polygon(loop, PitPaint.SNOW_CAP)
 		_draw_crest(canvas, loop)
 	for i in _pine_points.size():
-		PinePaint.paint(canvas, _pine_points[i], PINE_RADIUS, _pine_seeds[i])
-
-func _draw_striations(canvas: Node2D) -> void:
-	var gap: float = maxf(PitPaint.STRIATION_GAP, 3.0)
-	for loop: PackedVector2Array in _solid_loops:
-		if UnionSkin.signed_area(loop) <= 0.0:
-			continue
-		for i in loop.size():
-			var a: Vector2 = loop[i]
-			var b: Vector2 = loop[(i + 1) % loop.size()]
-			if UnionSkin.segment_on_closed_side(a, b, bounds,
-					global_transform, EPSILON):
-				continue
-			var edge := b - a
-			var outward := UnionSkin.exterior_normal(edge)
-			var count := maxi(1, int(floor(edge.length() / gap)))
-			for k in count:
-				var at := a.lerp(b, (float(k) + 0.5) / float(count))
-				var color: Color = PitPaint.CRACK if k % 4 == 0 else PitPaint.CLIFF_STRIPE
-				canvas.draw_line(at + outward * maxf(overhang - jitter, 0.0),
-					at - outward * face_width, color, STRIATION_WIDTH)
+		PinePaint.paint(canvas, _pine_points[i], _pine_radii[i], _pine_seeds[i])
 
 func _draw_crest(canvas: Node2D, loop: PackedVector2Array) -> void:
 	var light := Vector2(-1, -1).normalized()

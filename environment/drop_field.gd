@@ -18,13 +18,16 @@ const CRACK := PitPaint.CRACK
 const GENERATED_NAME := &"_Generated"
 const EPSILON := 0.01
 const GAP_EROSION := 32.0
-const MAX_RIM_INSET := 12.0
+const MAX_RIM_INSET := 20.0
 const MAX_PINES := 280
-
+static var FLOOR_GROVE_THRESHOLD := 0.45
+static var DEPTH_BAND_INSETS := PackedFloat32Array([100.0, 220.0, 380.0, 580.0])
+static var DEPTH_BAND_DARKENING := PackedFloat32Array([0.05, 0.10, 0.15, 0.20])
 @export var bounds := Rect2()
 @export var bleed := 96.0
 @export var rim_step := 56.0
-@export var rim_jitter := 6.0
+@export var rim_jitter := 14.0
+@export var corner_round := 40.0
 @export var paint_seed := 0
 
 var _pits: Array[Node2D] = []
@@ -35,6 +38,7 @@ var _rim_loops: Array[PackedVector2Array] = []
 var _face_loops: Array[PackedVector2Array] = []
 var _void_base_loops: Array[PackedVector2Array] = []
 var _void_loops: Array[PackedVector2Array] = []
+var _depth_loops: Array[Array] = []
 var _occlusion_loops: Array[PackedVector2Array] = []
 var _gap_loops: Array[PackedVector2Array] = []
 var _rim_segments: Array[PackedVector2Array] = []
@@ -70,6 +74,12 @@ func face_loops() -> Array[PackedVector2Array]:
 
 func void_loops() -> Array[PackedVector2Array]:
 	return UnionSkin.copy_loops(_void_loops)
+
+func depth_bands() -> Array[Array]:
+	var result: Array[Array] = []
+	for band: Array in _depth_loops:
+		result.append(UnionSkin.copy_loops(band))
+	return result
 
 func rim_line_segments() -> Array[PackedVector2Array]:
 	return UnionSkin.copy_loops(_rim_segments)
@@ -161,10 +171,16 @@ func _build_bands() -> void:
 	rng.seed = paint_seed
 	var inward_jitter := minf(maxf(rim_jitter, 0.0), MAX_RIM_INSET)
 	for loop: PackedVector2Array in _solid_loops:
-		var organic := UnionSkin.subdivide_displaced(loop, rim_step,
+		var rounded := _round_convex_corners(loop)
+		var organic := UnionSkin.subdivide_displaced(rounded, rim_step,
 			-inward_jitter, 0.0, rng, bounds, global_transform, EPSILON)
-		_rim_loops.append(organic if UnionSkin.triangulates(organic) else loop)
-	_face_loops = _offset_valid(_solid_loops, -PitPaint.SNOW_CAP_WIDTH)
+		organic = _clamp_rim(organic, loop)
+		_rim_loops.append(organic if UnionSkin.triangulates(organic) else rounded)
+	# The face begins at an inset of the same organic boundary as the lip, so
+	# rock can never poke across the wandering hazard line onto driveable snow.
+	_face_loops = _offset_valid(_rim_loops, -PitPaint.SNOW_CAP_WIDTH)
+	if _face_loops.is_empty():
+		_face_loops = _offset_valid(_solid_loops, -PitPaint.SNOW_CAP_WIDTH)
 	_void_base_loops = _offset_valid(_solid_loops,
 		-(PitPaint.SNOW_CAP_WIDTH + PitPaint.CLIFF_FACE_WIDTH))
 	_gap_loops = _offset_valid(_solid_loops, -GAP_EROSION)
@@ -173,13 +189,69 @@ func _build_bands() -> void:
 	var occ_base := _offset_valid(_solid_loops, occ_delta)
 	_occlusion_loops = _move_loops(occ_base, PitPaint.OCCLUSION_OFFSET * 0.35)
 	_void_loops = _move_loops(_void_base_loops, PitPaint.OCCLUSION_OFFSET)
+	_depth_loops.clear()
+	for inset: float in DEPTH_BAND_INSETS:
+		var band := _offset_valid(_void_loops, -inset, Geometry2D.JOIN_ROUND)
+		if band.is_empty(): break
+		_depth_loops.append(band)
+
+func _round_convex_corners(loop: PackedVector2Array) -> PackedVector2Array:
+	if corner_round <= 0.0 or loop.size() < 3:
+		return loop.duplicate()
+	var result := PackedVector2Array()
+	var winding := signf(UnionSkin.signed_area(loop))
+	for i in loop.size():
+		var before: Vector2 = loop[(i - 1 + loop.size()) % loop.size()]
+		var point: Vector2 = loop[i]
+		var after: Vector2 = loop[(i + 1) % loop.size()]
+		var to_before := before - point
+		var to_after := after - point
+		if to_before.is_zero_approx() or to_after.is_zero_approx() \
+				or absf(to_before.normalized().dot(to_after.normalized())) > EPSILON \
+				or (point - before).cross(after - point) * winding <= 0.0:
+			result.append(point)
+			continue
+		var radius := minf(corner_round,
+			minf(to_before.length(), to_after.length()) * 0.4)
+		var toward_before := to_before.normalized()
+		var toward_after := to_after.normalized()
+		var center := point + (toward_before + toward_after) * radius
+		var start_angle := (point + toward_before * radius - center).angle()
+		var end_angle := (point + toward_after * radius - center).angle()
+		var sweep := fposmod((end_angle - start_angle) * winding, TAU)
+		var steps := maxi(4, ceili(radius * sweep / maxf(rim_step * 0.5, 8.0)))
+		for k in steps + 1:
+			var angle := start_angle + winding * sweep * float(k) / float(steps)
+			result.append(center + Vector2.RIGHT.rotated(angle) * radius)
+	return result
+
+func _clamp_rim(rim: PackedVector2Array,
+		solid: PackedVector2Array) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	for point: Vector2 in rim:
+		var nearest := point
+		var best := INF
+		for i in solid.size():
+			var candidate := Geometry2D.get_closest_point_to_segment(
+				point, solid[i], solid[(i + 1) % solid.size()])
+			var distance := point.distance_to(candidate)
+			if distance < best:
+				best = distance
+				nearest = candidate
+		if not Geometry2D.is_point_in_polygon(point, solid):
+			result.append(nearest)
+		elif best > MAX_RIM_INSET:
+			result.append(nearest + nearest.direction_to(point) * MAX_RIM_INSET)
+		else:
+			result.append(point)
+	return result
 
 func _offset_valid(source: Array[PackedVector2Array],
-		delta: float) -> Array[PackedVector2Array]:
+		delta: float, join_type := Geometry2D.JOIN_MITER) -> Array[PackedVector2Array]:
 	var result: Array[PackedVector2Array] = []
 	for loop: PackedVector2Array in source:
 		var polygons: Array[PackedVector2Array] = Geometry2D.offset_polygon(
-			loop, delta, Geometry2D.JOIN_MITER)
+			loop, delta, join_type)
 		for polygon: PackedVector2Array in polygons:
 			if UnionSkin.triangulates(polygon):
 				result.append(polygon)
@@ -204,6 +276,10 @@ func _build_details() -> void:
 				_rim_segments.append(PackedVector2Array([a, b]))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = paint_seed + 8191
+	var closed := func(a: Vector2, b: Vector2) -> bool: return _closed(a, b)
+	for loop: PackedVector2Array in _face_loops:
+		_striations.append_array(UnionSkin.fan_striations(loop, _void_base_loops,
+			maxf(PitPaint.STRIATION_GAP, 3.0), PitPaint.CLIFF_FACE_WIDTH, closed))
 	for loop: PackedVector2Array in _solid_loops:
 		if UnionSkin.signed_area(loop) <= 0.0:
 			continue
@@ -214,14 +290,6 @@ func _build_details() -> void:
 				continue
 			var edge := b - a
 			var inward := -UnionSkin.exterior_normal(edge)
-			var stripes := maxi(1, int(floor(edge.length()
-				/ maxf(PitPaint.STRIATION_GAP, 3.0))))
-			for k in stripes:
-				var at := a.lerp(b, (float(k) + 0.5) / float(stripes))
-				_striations.append(PackedVector2Array([
-					at + inward * PitPaint.SNOW_CAP_WIDTH,
-					at + inward * (PitPaint.SNOW_CAP_WIDTH
-						+ PitPaint.CLIFF_FACE_WIDTH)]))
 			var crack_count := maxi(1, int(floor(edge.length() / 190.0)))
 			for k in crack_count:
 				var along := (float(k) + 0.5) / float(crack_count)
@@ -243,22 +311,22 @@ func _build_pines() -> void:
 		return
 	var spacing := maxf(PitPaint.BOTTOM_PINE_SPACING,
 		sqrt(limits.size.x * limits.size.y / float(MAX_PINES)))
+	var candidates := UnionSkin.scatter(_void_loops, spacing, 0.42,
+		paint_seed + 104729)
+	var clustered := PackedVector2Array()
+	for point: Vector2 in candidates:
+		if UnionSkin.value_noise(point, 520.0, paint_seed + 65537) \
+				> FLOOR_GROVE_THRESHOLD:
+			clustered.append(point)
+	clustered = UnionSkin.thin_uniform(clustered, MAX_PINES,
+		paint_seed + 130363)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = paint_seed + 104729
-	var y := limits.position.y + spacing * 0.5
-	while y < limits.end.y and _pine_points.size() < MAX_PINES:
-		var x := limits.position.x + spacing * 0.5
-		while x < limits.end.x and _pine_points.size() < MAX_PINES:
-			var point := Vector2(x, y) + Vector2(
-				rng.randf_range(-spacing * 0.08, spacing * 0.08),
-				rng.randf_range(-spacing * 0.08, spacing * 0.08))
-			if _point_in_loops(point, _void_loops):
-				_pine_points.append(point)
-				_pine_seeds.append(int(rng.randi()))
-				_pine_radii.append(rng.randf_range(PitPaint.BOTTOM_PINE_MIN_RADIUS,
-					PitPaint.BOTTOM_PINE_MAX_RADIUS))
-			x += spacing
-		y += spacing
+	for point: Vector2 in clustered:
+		_pine_points.append(point)
+		_pine_seeds.append(int(rng.randi()))
+		_pine_radii.append(rng.randf_range(PitPaint.BOTTOM_PINE_MIN_RADIUS,
+			PitPaint.BOTTOM_PINE_MAX_RADIUS))
 
 func _build_generated() -> void:
 	var generated := Node2D.new()
@@ -270,7 +338,7 @@ func _build_generated() -> void:
 	generated.add_child(paint)
 
 func _paint(canvas: Node2D) -> void:
-	for loop: PackedVector2Array in _solid_loops:
+	for loop: PackedVector2Array in _rim_loops:
 		canvas.draw_colored_polygon(loop, SNOW_CAP)
 	for segment: PackedVector2Array in _rim_segments:
 		if UnionSkin.exterior_normal(segment[1] - segment[0]).dot(
@@ -286,6 +354,10 @@ func _paint(canvas: Node2D) -> void:
 		canvas.draw_colored_polygon(loop, OCCLUSION)
 	for loop: PackedVector2Array in _void_loops:
 		canvas.draw_colored_polygon(loop, PitPaint.BOTTOM_SNOW_COLOR)
+	for i in _depth_loops.size():
+		for loop: PackedVector2Array in _depth_loops[i]:
+			canvas.draw_colored_polygon(loop,
+				PitPaint.BOTTOM_SNOW_COLOR.darkened(DEPTH_BAND_DARKENING[i]))
 	_draw_bottom_specks(canvas)
 	for i in _pine_points.size():
 		PinePaint.paint(canvas, _pine_points[i], _pine_radii[i], _pine_seeds[i], true)

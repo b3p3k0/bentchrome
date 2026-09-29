@@ -4,10 +4,12 @@ extends RefCounted
 
 const MountainWallScript := preload("res://environment/mountain_wall.gd")
 const DropFieldScript := preload("res://environment/drop_field.gd")
+const UnionSkin := preload("res://environment/union_skin.gd")
 const PitScene := preload("res://environment/pit_zone.tscn")
 const PitPaint := preload("res://environment/pit_zone.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const RadarScript := preload("res://ui/radar.gd")
+const TerrainShader := preload("res://shaders/terrain_speckle.gdshader")
 
 const BLOCK_SIZE := Vector2(256, 256)
 const BLOCK_LAYER := 54
@@ -22,7 +24,6 @@ const PRE_REFACTOR_GEOMETRY := {
 		"outline": "dd7589c58a87c0760b4f87be56da3119a8148eaf8bd01ba25c1189d630afd0b4",
 		"snow": "778568990f99c0c70dea3432e41b4d152be53c0fef2d971dbbc3ae1a84bea8d6",
 		"chamfers": "02ee7b28eb0009606a5118af8afdbe4bc1feb0f6f2cc3b816fec72643815e969",
-		"pines": "8128679620f0938a1993e7b425f1ec7c86230d04cba42b82ef8a80ed4967f3f4",
 	},
 	"real_scale": {
 		"solid": "1304d365f0b354405924eb84f73f9dddbb83bd3369f3e6fac41cff12d3f17434",
@@ -30,7 +31,6 @@ const PRE_REFACTOR_GEOMETRY := {
 		"outline": "d163e9c3ff7853a4d68a1a2e5da84205e1389aad30e2b2e1490362adeeac7ee6",
 		"snow": "1204209ea75e4c809a548541ba05d32a6bad6d573595f2c06477888d27864388",
 		"chamfers": "9ebafee6d73025bdfc57a04da78662d13d79a6333daebc1d47d890c2b141ec8a",
-		"pines": "0d38239e39d0f8acf00c265d9eb33c39a2aee5054315cc4277235d117618147d",
 	},
 }
 
@@ -53,11 +53,16 @@ func _block(at: Vector2, body_size := BLOCK_SIZE,
 	body.add_child(col)
 	return body
 
-func _fixture(seed := 173, closed_west := false, leg := 128.0) -> Dictionary:
+func _fixture(seed := 173, closed_west := false, leg := 128.0,
+		exclusions: Array[Rect2] = [], substrate: Material = null,
+		terrain: Material = null) -> Dictionary:
 	var wall := MountainWallScript.new() as MountainWall
 	wall.position = Vector2(100, 200)
 	wall.paint_seed = seed
 	wall.chamfer_leg = leg
+	wall.chamfer_exclusions = exclusions
+	wall.substrate_material = substrate
+	wall.terrain_material = terrain
 	var bands := [
 		[Vector2(384, -384), Vector2(768, 256)],
 		[Vector2(256, -128), Vector2(512, 256)],
@@ -158,6 +163,14 @@ func _distance_to_loops(point: Vector2,
 			best = minf(best, point.distance_to(closest))
 	return best
 
+func _distance_to_vertices(point: Vector2,
+		loops: Array[PackedVector2Array]) -> float:
+	var best := INF
+	for loop: PackedVector2Array in loops:
+		for candidate: Vector2 in loop:
+			best = minf(best, point.distance_to(candidate))
+	return best
+
 func _outside_bounds(wall: MountainWall, a: Vector2, b: Vector2) -> bool:
 	if not wall.bounds.has_area():
 		return false
@@ -233,6 +246,21 @@ func _same_loops(a: Array[PackedVector2Array], b: Array[PackedVector2Array]) -> 
 			return false
 	return true
 
+func _loop_bounds(loops: Array[PackedVector2Array]) -> Rect2:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for loop: PackedVector2Array in loops:
+		for point: Vector2 in loop:
+			lo = lo.min(point)
+			hi = hi.max(point)
+	return Rect2() if lo.x == INF else Rect2(lo, hi - lo)
+
+func _axis_distinct(points: PackedVector2Array, x_axis: bool) -> float:
+	var values := {}
+	for point: Vector2 in points:
+		values[roundf((point.x if x_axis else point.y) / 8.0) * 8.0] = true
+	return 0.0 if points.is_empty() else float(values.size()) / float(points.size())
+
 func _geometry_fingerprints(wall: MountainWall) -> Dictionary:
 	return {
 		"solid": var_to_str(wall.solid_loops()).sha256_text(),
@@ -240,7 +268,6 @@ func _geometry_fingerprints(wall: MountainWall) -> Dictionary:
 		"outline": var_to_str(wall.outline_loops()).sha256_text(),
 		"snow": var_to_str(wall.snow_loops()).sha256_text(),
 		"chamfers": var_to_str(wall.chamfer_triangles()).sha256_text(),
-		"pines": var_to_str(wall.pine_points()).sha256_text(),
 	}
 
 func test_shared_geometry_refactor_preserves_exact_fixture_outputs() -> void:
@@ -252,6 +279,47 @@ func test_shared_geometry_refactor_preserves_exact_fixture_outputs() -> void:
 		"mountain wall refactor: real-scale geometry exactly matches the captured baseline")
 	_done(staircase)
 	_done(real_scale)
+
+func test_mountain_top_duplicates_terrain_materials_without_relief() -> void:
+	var substrate := ShaderMaterial.new()
+	substrate.shader = TerrainShader
+	substrate.set_shader_parameter("base_color", Color(0.18, 0.2, 0.24, 1.0))
+	var terrain := ShaderMaterial.new()
+	terrain.shader = TerrainShader
+	var source_color := Color(0.76, 0.82, 0.91, 0.57)
+	terrain.set_shader_parameter("base_color", source_color)
+	terrain.set_shader_parameter("relief_enabled", true)
+	var f := _fixture(173, false, 128.0, [], substrate, terrain)
+	var wall: MountainWall = f.wall
+	var top_substrate := wall.get_node(^"_Generated/TopSubstrate") as Polygon2D
+	var top_surface := wall.get_node(^"_Generated/TopSurface") as Polygon2D
+	var surface_copy := top_surface.material as ShaderMaterial
+	var copied_color: Color = surface_copy.get_shader_parameter("base_color")
+	var generated := wall.get_node(^"_Generated")
+	t.check(top_substrate.material != substrate and top_surface.material != terrain,
+		"mountain wall: top polygons duplicate both source materials")
+	t.check(top_substrate.polygon == wall.snow_loops()[0]
+			and top_surface.polygon == wall.snow_loops()[0],
+		"mountain wall: material polygons use the retained snow loop")
+	t.check(surface_copy.get_shader_parameter("relief_enabled") == false
+			and is_equal_approx(copied_color.a, wall.top_snow_opacity),
+		"mountain wall: top snow disables relief and applies authored opacity")
+	t.check(terrain.get_shader_parameter("base_color") == source_color
+			and terrain.get_shader_parameter("relief_enabled") == true,
+		"mountain wall: source terrain material remains unchanged")
+	t.check(generated.get_node(^"RockPaint").get_index() < top_substrate.get_index()
+			and top_surface.get_index() < generated.get_node(^"DetailPaint").get_index(),
+		"mountain wall: rock, top materials, crest, and pines keep painter order")
+	_done(f)
+
+func test_mountain_top_without_materials_keeps_flat_fallback() -> void:
+	var f := _fixture()
+	var wall: MountainWall = f.wall
+	t.check(wall.get_node_or_null(^"_Generated/TopSurface") == null
+			and not wall.snow_loops().is_empty()
+			and wall.get_node_or_null(^"_Generated/RockPaint") != null,
+		"mountain wall: null materials retain the flat snow-cap paint path")
+	_done(f)
 
 func test_staircase_builds_one_painted_loop() -> void:
 	var f := _fixture()
@@ -337,6 +405,19 @@ func test_chamfers_fill_each_road_side_notch_on_the_authored_layer() -> void:
 		"mountain wall: chamfer_leg zero disables generated triangles")
 	_done(zero)
 
+func test_chamfer_exclusion_removes_only_the_named_room_corner() -> void:
+	var baseline := _fixture()
+	var base_wall: MountainWall = baseline.wall
+	var triangles := base_wall.chamfer_triangles()
+	var excluded_corner := base_wall.to_global(triangles[0][0])
+	_done(baseline)
+	var exclusion := Rect2(excluded_corner - Vector2.ONE, Vector2.ONE * 2.0)
+	var f := _fixture(173, false, 128.0, [exclusion])
+	var remaining: Array[PackedVector2Array] = f.wall.chamfer_triangles()
+	t.check(remaining.size() == 1 and remaining[0] == triangles[1],
+		"mountain wall: a world-space room exclusion removes exactly its chamfer")
+	_done(f)
+
 func test_corner_touching_blocks_do_not_get_chamfers() -> void:
 	var wall := MountainWallScript.new() as MountainWall
 	wall.position = Vector2(100, 200)
@@ -388,30 +469,32 @@ func test_same_seed_produces_identical_silhouette() -> void:
 	_done(first)
 	_done(second)
 
-func test_pines_fill_the_snow_cap_without_exceeding_the_cap() -> void:
-	var f := _fixture()
+func test_pines_form_safe_north_to_south_groves_without_a_grid() -> void:
+	var f := _real_scale_fixture()
 	var wall: MountainWall = f.wall
 	var points := wall.pine_points()
+	var radii := wall.pine_radii()
 	var snow := wall.snow_loops()
-	var solids := wall.solid_loops()
-	var all_inside := true
-	var has_deep_pine := false
+	var safe := points.size() == radii.size() and not points.is_empty()
+	var ascending := true
+	for i in points.size():
+		safe = safe and _point_in_loops(points[i], snow) \
+			and _distance_to_loops(points[i], snow) + 0.01 >= radii[i] + 8.0
+		if i > 0:
+			ascending = ascending and points[i - 1].y <= points[i].y
+	var limits := _loop_bounds(snow)
+	var north := false
+	var south := false
 	for point: Vector2 in points:
-		all_inside = all_inside and _point_in_loops(point, snow)
-		var far_from_open_edges := true
-		for loop: PackedVector2Array in solids:
-			for i in loop.size():
-				var a: Vector2 = loop[i]
-				var b: Vector2 = loop[(i + 1) % loop.size()]
-				var closest := Geometry2D.get_closest_point_to_segment(point, a, b)
-				far_from_open_edges = far_from_open_edges \
-					and point.distance_to(closest) > 120.0
-		has_deep_pine = has_deep_pine or far_from_open_edges
-	t.check(has_deep_pine,
-		"mountain wall: the snow-cap grid places at least one deep-interior pine")
-	t.check(all_inside, "mountain wall: every pine lies inside the snow cap")
-	t.check(points.size() <= MountainWallScript.MAX_PINES,
-		"mountain wall: pine count respects MAX_PINES")
+		north = north or point.y <= limits.position.y + limits.size.y / 3.0
+		south = south or point.y >= limits.end.y - limits.size.y / 3.0
+	t.check(safe, "mountain wall: every varied-radius pine clears the snow edge")
+	t.check(points.size() <= MountainWallScript.MAX_PINES and ascending,
+		"mountain wall: uniform thinning respects the cap and paints by ascending y")
+	t.check(_axis_distinct(points, true) > 0.60 and _axis_distinct(points, false) > 0.60,
+		"mountain wall: jittered grove pines do not resolve to an orchard grid")
+	t.check(north and south,
+		"mountain wall: uniform selection plants both north and south thirds")
 	_done(f)
 
 func test_real_scale_mountain_draws_completely() -> void:
@@ -470,7 +553,7 @@ func test_drop_staircase_builds_one_inward_organic_rim() -> void:
 		for point: Vector2 in loop:
 			inside = inside and _point_in_rect_union(point, f.rects)
 			near_edge = near_edge and _distance_to_loops(
-				point, field.solid_loops()) <= 12.0 + 0.01
+				point, field.solid_loops()) <= DropFieldScript.MAX_RIM_INSET + 0.01
 	t.check(outlines.size() == 1,
 		"drop field: three overlapping bands paint as one continuous rim")
 	var rects_match: bool = field.pit_rects().size() == f.rects.size()
@@ -480,9 +563,47 @@ func test_drop_staircase_builds_one_inward_organic_rim() -> void:
 	t.check(field.position != Vector2.ZERO and rects_match,
 		"drop field: non-zero root reports every authored pit rect in world space")
 	t.check(inside, "drop field: every rim vertex stays inside or on the pit union")
-	t.check(near_edge, "drop field: every rim vertex stays within 12px of the union edge")
+	t.check(near_edge, "drop field: every rim vertex stays within 20px of the union edge")
 	t.check(field.kill_gaps().is_empty(),
 		"drop field: 64px band overlaps leave no uncovered kill samples")
+	_done_drop(f)
+
+func test_drop_lip_fill_and_line_share_the_organic_loop() -> void:
+	var f := _drop_fixture()
+	var field: DropField = f.field
+	var outline := field.outline_loops()
+	var same_loop := outline.size() == 1
+	for segment: PackedVector2Array in field.rim_line_segments():
+		same_loop = same_loop and _is_loop_vertex(segment[0], outline) \
+			and _is_loop_vertex(segment[1], outline)
+	t.check(same_loop and field.rim_line_segments().size() == outline[0].size(),
+		"drop field: snow lip and hazard line use the same organic boundary")
+	_done_drop(f)
+
+func test_drop_rounds_convex_corners_but_keeps_reflex_notches() -> void:
+	var f := _drop_fixture()
+	var field: DropField = f.field
+	var solid := field.solid_loops()[0]
+	var rim := field.outline_loops()
+	var convex_count := 0
+	var reflex_count := 0
+	var rounded := true
+	var retained := true
+	for i in solid.size():
+		var before := solid[(i - 1 + solid.size()) % solid.size()]
+		var point := solid[i]
+		var after := solid[(i + 1) % solid.size()]
+		var turn := (point - before).cross(after - point)
+		if turn > 0.0:
+			convex_count += 1
+			rounded = rounded and _distance_to_vertices(point, rim) > 8.0
+		elif turn < 0.0:
+			reflex_count += 1
+			retained = retained and _distance_to_vertices(point, rim) <= 20.0
+	t.check(convex_count > 0 and rounded,
+		"drop field: every convex stair corner is rounded away from its vertex")
+	t.check(reflex_count > 0 and retained,
+		"drop field: every driveable reflex notch retains a nearby rim vertex")
 	_done_drop(f)
 
 func test_drop_abutting_bands_report_kill_gaps() -> void:
@@ -591,12 +712,22 @@ func test_real_scale_drop_draws_one_valid_closed_edge_cliff() -> void:
 	var pines_valid := not pines.is_empty()
 	for point: Vector2 in pines:
 		pines_valid = pines_valid and _point_in_loops(point, void_regions)
+	var rim_safe := true
+	for loop: PackedVector2Array in rim:
+		for point: Vector2 in loop:
+			var edge_distance := _distance_to_loops(point, solid)
+			rim_safe = rim_safe \
+				and (_point_in_loops(point, solid) or edge_distance <= 0.01) \
+				and edge_distance <= DropFieldScript.MAX_RIM_INSET + 0.01
 	t.check(solid_valid and rim_valid,
 		"drop field: real-scale chain has one triangulating solid and rim")
 	t.check(rim[0].size() > solid[0].size(),
 		"drop field: real-scale rim retains inserted organic vertices")
 	t.check(void_valid, "drop field: real-scale distant void exists and triangulates")
-	t.check(pines_valid, "drop field: miniature pines exist inside the distant void")
+	t.check(rim_safe, "drop field: real-scale rounded rim stays inside its 20px envelope")
+	t.check(pines_valid and _axis_distinct(pines, true) > 0.60
+			and _axis_distinct(pines, false) > 0.60,
+		"drop field: clustered miniature pines stay in the void without a grid")
 	t.check(field.kill_gaps().is_empty(),
 		"drop field: real-scale overlapping chain has no uncovered kill samples")
 	t.check(not _has_closed_east_rim(field, field.rim_line_segments())
@@ -605,6 +736,66 @@ func test_real_scale_drop_draws_one_valid_closed_edge_cliff() -> void:
 			and not _has_edge_on_world_x(field, field.face_loops(), field.bounds.end.x),
 		"drop field: real-scale closed east side draws no edge details")
 	_done_drop(f)
+
+func test_drop_depth_bands_are_valid_and_strictly_nested() -> void:
+	var f := _real_scale_drop()
+	var bands: Array[Array] = f.field.depth_bands()
+	var valid := not bands.is_empty() and bands.size() <= 4
+	for i in bands.size():
+		var earlier: Array[PackedVector2Array] = []
+		if i > 0:
+			for loop: PackedVector2Array in bands[i - 1]:
+				earlier.append(loop)
+		for loop: PackedVector2Array in bands[i]:
+			valid = valid and UnionSkin.triangulates(loop)
+			for point: Vector2 in loop:
+				valid = valid and (i == 0 or _point_in_loops(point, earlier))
+	t.check(valid, "drop field: up to four rounded depth bands triangulate and nest")
+	_done_drop(f)
+
+func _striations_fit_skin(segments: Array[PackedVector2Array], band_width: float,
+		skin: Array[PackedVector2Array]) -> bool:
+	if segments.is_empty():
+		return false
+	for segment: PackedVector2Array in segments:
+		if segment.size() != 2 \
+				or segment[0].distance_to(segment[1]) > band_width * 1.6 + 0.01:
+			return false
+		for point: Vector2 in segment:
+			if not _point_in_loops(point, skin) \
+					and _distance_to_loops(point, skin) > 0.01:
+				return false
+	return true
+
+func test_real_scale_striations_stay_within_their_own_skin() -> void:
+	var drop := _real_scale_drop()
+	var field: DropField = drop.field
+	t.check(_striations_fit_skin(field.face_striations(),
+			PitPaint.CLIFF_FACE_WIDTH, field.outline_loops()),
+		"drop field: real-scale striations stay inside the face band")
+	_done_drop(drop)
+	var mountain := _real_scale_fixture()
+	var wall: MountainWall = mountain.wall
+	t.check(_striations_fit_skin(wall.face_striations(),
+			wall.face_width + wall.overhang, wall.outline_loops()),
+		"mountain wall: real-scale striations stay inside the face band")
+	_done(mountain)
+
+func test_real_scale_skin_builds_finish_under_150_ms_each() -> void:
+	var started := Time.get_ticks_usec()
+	var drop := _real_scale_drop()
+	var drop_usec := Time.get_ticks_usec() - started
+	_done_drop(drop)
+	started = Time.get_ticks_usec()
+	var mountain := _real_scale_fixture()
+	var mountain_usec := Time.get_ticks_usec() - started
+	_done(mountain)
+	print("mountain skins performance: drop %.3f ms, mountain %.3f ms" % [
+		float(drop_usec) / 1000.0, float(mountain_usec) / 1000.0])
+	t.check(drop_usec < 150000,
+		"drop field: real-scale _ready completes under 150 ms")
+	t.check(mountain_usec < 150000,
+		"mountain wall: real-scale _ready completes under 150 ms")
 
 func _radar_body(parent: Node, at: Vector2, body_size: Vector2, layer: int) -> StaticBody2D:
 	var body := StaticBody2D.new()
