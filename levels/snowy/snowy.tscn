@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -21,6 +21,8 @@
 [ext_resource type="Script" path="res://environment/ramp.gd" id="34_grade"]
 [ext_resource type="Script" path="res://environment/terrain_zone.gd" id="35_terrain"]
 [ext_resource type="Script" path="res://environment/floor_connector.gd" id="36_connector"]
+[ext_resource type="PackedScene" path="res://levels/snowy/pass_snow.tscn" id="37_snow"]
+[ext_resource type="Script" path="res://environment/road_marks.gd" id="38_marks"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -40,6 +42,15 @@ shader_parameter/intensity = 0.5
 shader_parameter/scale = 9.0
 shader_parameter/shimmer = 0.0
 
+[sub_resource type="ShaderMaterial" id="SM_ice"]
+shader = ExtResource("11_speck")
+shader_parameter/base_color = Color(0.6, 0.8, 0.95, 0.5)
+shader_parameter/speckle_color = Color(0.85, 0.95, 1, 1)
+shader_parameter/density = 0.18
+shader_parameter/intensity = 0.5
+shader_parameter/scale = 12.0
+shader_parameter/shimmer = 0.0
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(4176, 40)
 
@@ -50,6 +61,9 @@ size = Vector2(40, 4176)
 size = Vector2(224, 224)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ledge"]
+size = Vector2(256, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ice"]
 size = Vector2(256, 256)
 
 [node name="Snowy" type="Node2D"]
@@ -63,11 +77,59 @@ polygon = PackedVector2Array(-2048, -2048, 2048, -2048, 2048, 2048, -2048, 2048)
 script = ExtResource("1_grid")
 extent = Vector2(2655, 2655)
 
+[node name="SnowCover" parent="." instance=ExtResource("37_snow")]
+terrain_material = SubResource("SM_snow")
+
 [node name="Drop" parent="." instance=ExtResource("30_drop")]
 
 [node name="Mountain" parent="." instance=ExtResource("31_mountain")]
 substrate_material = SubResource("SM_asphalt")
 terrain_material = SubResource("SM_snow")
+
+[node name="IceBendLow" type="Area2D" parent="."]
+position = Vector2(-896, 1024)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("35_terrain")
+terrain_type = &"ice"
+
+[node name="Vis" type="Polygon2D" parent="IceBendLow"]
+material = SubResource("SM_ice")
+color = Color(0.6, 0.8, 0.95, 0.5)
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+
+[node name="Col" type="CollisionShape2D" parent="IceBendLow"]
+shape = SubResource("RectangleShape2D_ice")
+
+[node name="IceBendMid" type="Area2D" parent="."]
+position = Vector2(256, -1024)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("35_terrain")
+terrain_type = &"ice"
+
+[node name="Vis" type="Polygon2D" parent="IceBendMid"]
+material = SubResource("SM_ice")
+color = Color(0.6, 0.8, 0.95, 0.5)
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+
+[node name="Col" type="CollisionShape2D" parent="IceBendMid"]
+shape = SubResource("RectangleShape2D_ice")
+
+[node name="IceBendTop" type="Area2D" parent="."]
+position = Vector2(1024, -1664)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("35_terrain")
+terrain_type = &"ice"
+
+[node name="Vis" type="Polygon2D" parent="IceBendTop"]
+material = SubResource("SM_ice")
+color = Color(0.6, 0.8, 0.95, 0.5)
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+
+[node name="Col" type="CollisionShape2D" parent="IceBendTop"]
+shape = SubResource("RectangleShape2D_ice")
 
 [node name="BridgeDeck" type="Node2D" parent="."]
 position = Vector2(320, -384)
@@ -78,6 +140,36 @@ size = Vector2(384, 256)
 [node name="Rails" parent="." instance=ExtResource("33_rails")]
 
 [node name="RoadMarks" type="Node2D" parent="."]
+
+[node name="Trailhead" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(-1792, 1536, -896, 1536, -896, 1152)
+style = &"dashed_yellow"
+
+[node name="Saddle" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(-608, 1024, 128, 1024, 128, 256)
+style = &"dashed_yellow"
+
+[node name="Bridge" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(320, 0, 320, -896)
+style = &"dashed_yellow"
+
+[node name="Upper" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(384, -1024, 1024, -1024, 1024, -1536)
+style = &"dashed_yellow"
+
+[node name="OverlookWest" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(512, -1664, 896, -1664)
+style = &"dashed_yellow"
+
+[node name="OverlookEast" type="Node2D" parent="RoadMarks"]
+script = ExtResource("38_marks")
+points = PackedVector2Array(1152, -1664, 1664, -1664)
+style = &"dashed_yellow"
 
 [node name="FZPlate" parent="." instance=ExtResource("24_fzone")]
 floor_index = 2

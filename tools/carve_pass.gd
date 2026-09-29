@@ -3,15 +3,17 @@ extends SceneTree
 ## Run: godot --headless --path . -s res://tools/carve_pass.gd [-- --check]
 
 const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
+const SNOW_PATH := "res://levels/snowy/pass_snow.tscn"
 const MOUNTAIN_PATH := "res://levels/snowy/pass_mountain.tscn"
 const DROP_PATH := "res://levels/snowy/pass_drop.tscn"
 const RAILS_PATH := "res://levels/snowy/pass_rails.tscn"
 
 func _init() -> void:
 	var roots: Array[Node2D] = [
-		PassBuilder.build_mountain(), PassBuilder.build_drop(), PassBuilder.build_rails(),
+		PassBuilder.build_snow(), PassBuilder.build_mountain(), PassBuilder.build_drop(),
+		PassBuilder.build_rails(),
 	]
-	var paths := PackedStringArray([MOUNTAIN_PATH, DROP_PATH, RAILS_PATH])
+	var paths := PackedStringArray([SNOW_PATH, MOUNTAIN_PATH, DROP_PATH, RAILS_PATH])
 	var checking := OS.get_cmdline_user_args().has("--check")
 	var failed := false
 	for i in roots.size():
@@ -75,11 +77,13 @@ func _signature(root: Node2D) -> Array:
 		if node is CollisionObject2D:
 			var collision := node as CollisionObject2D
 			row.append_array([collision.collision_layer, collision.collision_mask])
-		if node.name.begins_with("Block"):
+		if node.name.begins_with("Block") or node.name.begins_with("Snow"):
 			var col := node.get_node_or_null(^"Col") as CollisionShape2D
 			var shape := col.shape as RectangleShape2D if col != null else null
 			row.append(col.name if col != null else &"")
 			row.append(shape.size if shape != null else Vector2.ZERO)
+			if node.name.begins_with("Snow"):
+				row.append(node.get("terrain_type"))
 		else:
 			row.append(node.get("size"))
 			if node.name.begins_with("Pit"):

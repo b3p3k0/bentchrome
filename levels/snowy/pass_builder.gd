@@ -4,9 +4,36 @@ extends RefCounted
 const PassGrid := preload("res://levels/snowy/pass_grid.gd")
 const MountainWall := preload("res://environment/mountain_wall.gd")
 const DropField := preload("res://environment/drop_field.gd")
+const TerrainFieldScript := preload("res://environment/terrain_field.gd")
+const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 const PitScene := preload("res://environment/pit_zone.tscn")
 const CurbScene := preload("res://environment/hazard_curb.tscn")
 const DestructibleBlockScene := preload("res://environment/destructible_block.tscn")
+
+static func build_snow() -> Node2D:
+	var root := TerrainFieldScript.new() as Node2D
+	root.name = "SnowCover"
+	root.set("bounds", PassGrid.ARENA_RECT)
+	root.set("paint_seed", 4096)
+	var tiles := PassGrid.snow_tiles()
+	for i in tiles.size():
+		var rect: Rect2 = tiles[i]
+		var zone := TerrainZoneScript.new() as Area2D
+		zone.name = "Snow%02d" % (i + 1)
+		zone.position = rect.get_center()
+		zone.collision_layer = 128
+		zone.collision_mask = 0
+		zone.set("terrain_type", &"snow")
+		root.add_child(zone)
+		zone.owner = root
+		var col := CollisionShape2D.new()
+		col.name = "Col"
+		var shape := RectangleShape2D.new()
+		shape.size = rect.size
+		col.shape = shape
+		zone.add_child(col)
+		col.owner = root
+	return root
 
 static func build_mountain() -> Node2D:
 	var root := Node2D.new()

@@ -71,6 +71,22 @@ const SPAWNS := {
 }
 const STATION := {"cell": Vector2i(10, 24), "center": Vector2(-704, 1088), "floor": 2}
 
+const ROAD_LEGS := {
+	&"trailhead_ew": Rect2i(2, 27, 8, 2),
+	&"climb_ns": Rect2i(8, 23, 2, 6),
+	&"saddle_ew": Rect2i(8, 23, 10, 2),
+	&"knoll_ns": Rect2i(16, 17, 2, 8),
+	&"apron": Rect2i(15, 9, 5, 8),
+	&"upper_ew": Rect2i(17, 7, 8, 2),
+	&"summit_ns": Rect2i(23, 3, 2, 6),
+	&"overlook_ew": Rect2i(20, 2, 9, 2),
+}
+const ICE := {
+	&"bend_low": Rect2i(8, 23, 2, 2),
+	&"bend_mid": Rect2i(17, 7, 2, 2),
+	&"bend_top": Rect2i(23, 2, 2, 2),
+}
+
 const RAIL_THICKNESS := 12.0
 const RAIL_RIM_INSET := 8.0
 const RAIL_END_CLEARANCE := 16.0
@@ -103,6 +119,22 @@ static func is_driveable(i: int, j: int) -> bool:
 	var kind := kind_at(i, j)
 	return kind == ROAD or kind == BRIDGE
 
+static func is_road(i: int, j: int) -> bool:
+	var cell := Vector2i(i, j)
+	for leg_name in ROAD_LEGS:
+		var cells: Rect2i = ROAD_LEGS[leg_name]
+		if cells.has_point(cell):
+			return true
+	return false
+
+static func is_ice(i: int, j: int) -> bool:
+	var cell := Vector2i(i, j)
+	for bend_name in ICE:
+		var cells: Rect2i = ICE[bend_name]
+		if cells.has_point(cell):
+			return true
+	return false
+
 static func cell_rect(i: int, j: int) -> Rect2:
 	return Rect2(ORIGIN + Vector2(i, j) * CELL, Vector2(CELL, CELL))
 
@@ -113,6 +145,50 @@ static func cell_of(point: Vector2) -> Vector2i:
 	return Vector2i(
 		floori((point.x - ORIGIN.x) / CELL),
 		floori((point.y - ORIGIN.y) / CELL))
+
+static func road_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for leg_name in ROAD_LEGS:
+		rects.append(_cell_span_rect(ROAD_LEGS[leg_name]))
+	return rects
+
+static func ice_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for bend_name in ICE:
+		rects.append(_cell_span_rect(ICE[bend_name]))
+	return rects
+
+## Snow collision tiles merge complete row runs downward only while their
+## horizontal spans remain identical, so the field has no overlap seams.
+static func snow_tiles() -> Array[Rect2]:
+	var tiles: Array[Rect2] = []
+	var open_runs := {}
+	for j in N:
+		var runs: Array[Vector2i] = []
+		var run_start := -1
+		for i in N + 1:
+			var snow := i < N and is_driveable(i, j) and not is_road(i, j)
+			if snow and run_start < 0:
+				run_start = i
+			elif not snow and run_start >= 0:
+				runs.append(Vector2i(run_start, i))
+				run_start = -1
+		var next_runs := {}
+		for run: Vector2i in runs:
+			if open_runs.has(run):
+				var index: int = open_runs[run]
+				var tile: Rect2 = tiles[index]
+				tile.size.y += CELL
+				tiles[index] = tile
+				next_runs[run] = index
+			else:
+				var position := ORIGIN + Vector2(run.x, j) * CELL
+				var size := Vector2((run.y - run.x) * CELL, CELL)
+				tiles.append(Rect2(position, size))
+				next_runs[run] = tiles.size() - 1
+		open_runs = next_runs
+	_sort_rects(tiles)
+	return tiles
 
 ## Mountain collision rectangles, merged first across rows and then down only
 ## while the complete horizontal run remains identical.
@@ -392,8 +468,12 @@ static func render() -> PackedStringArray:
 				line += "XX"
 			elif kind == BRIDGE:
 				line += "]["
+			elif is_ice(i, j):
+				line += "ii"
 			elif features.has(cell):
 				line += String(features[cell])
+			elif is_road(i, j):
+				line += "=="
 			else:
 				line += " |" if kind_at(i + 1, j) == DROP else "  "
 		lines.append(line)

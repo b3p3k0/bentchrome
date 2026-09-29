@@ -1,0 +1,464 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://environment/terrain_field.gd" id="1_rew0q"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="2_t3ti1"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pe75l"]
+size = Vector2(1408, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1px8g"]
+size = Vector2(128, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_na5yp"]
+size = Vector2(256, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6lph2"]
+size = Vector2(640, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vh1sk"]
+size = Vector2(768, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1vghb"]
+size = Vector2(640, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_4uoai"]
+size = Vector2(896, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_s5wos"]
+size = Vector2(384, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vshai"]
+size = Vector2(256, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_u5luv"]
+size = Vector2(256, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_dkqpl"]
+size = Vector2(384, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_67gb6"]
+size = Vector2(128, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_q05js"]
+size = Vector2(128, 384)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lijb2"]
+size = Vector2(512, 384)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_q7yo6"]
+size = Vector2(128, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_kgjhg"]
+size = Vector2(512, 384)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jqq18"]
+size = Vector2(256, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bygvo"]
+size = Vector2(896, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_w0se4"]
+size = Vector2(768, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oy76a"]
+size = Vector2(1024, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hovq4"]
+size = Vector2(1152, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_dw1vs"]
+size = Vector2(640, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_r8stj"]
+size = Vector2(1280, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6370s"]
+size = Vector2(512, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_je0kc"]
+size = Vector2(384, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qxfue"]
+size = Vector2(512, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mr4qi"]
+size = Vector2(128, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fp0xf"]
+size = Vector2(640, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_sbsw3"]
+size = Vector2(768, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ayluy"]
+size = Vector2(640, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rxegt"]
+size = Vector2(896, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2nhvr"]
+size = Vector2(384, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ev64v"]
+size = Vector2(128, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_4v5eq"]
+size = Vector2(128, 256)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_a8wt2"]
+size = Vector2(1280, 256)
+
+[node name="SnowCover" type="Node2D" unique_id=1]
+script = ExtResource("1_rew0q")
+bounds = Rect2(-2048, -2048, 4096, 4096)
+paint_seed = 4096
+
+[node name="Snow01" type="Area2D" parent="." unique_id=2]
+position = Vector2(1216, -1856)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow01" unique_id=3]
+shape = SubResource("RectangleShape2D_pe75l")
+
+[node name="Snow02" type="Area2D" parent="." unique_id=4]
+position = Vector2(448, -1664)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow02" unique_id=5]
+shape = SubResource("RectangleShape2D_1px8g")
+
+[node name="Snow03" type="Area2D" parent="." unique_id=6]
+position = Vector2(1792, -1664)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow03" unique_id=7]
+shape = SubResource("RectangleShape2D_na5yp")
+
+[node name="Snow04" type="Area2D" parent="." unique_id=8]
+position = Vector2(576, -1408)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow04" unique_id=9]
+shape = SubResource("RectangleShape2D_6lph2")
+
+[node name="Snow05" type="Area2D" parent="." unique_id=10]
+position = Vector2(1536, -1472)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow05" unique_id=11]
+shape = SubResource("RectangleShape2D_vh1sk")
+
+[node name="Snow06" type="Area2D" parent="." unique_id=12]
+position = Vector2(1472, -1344)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow06" unique_id=13]
+shape = SubResource("RectangleShape2D_1vghb")
+
+[node name="Snow07" type="Area2D" parent="." unique_id=14]
+position = Vector2(448, -1216)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow07" unique_id=15]
+shape = SubResource("RectangleShape2D_4uoai")
+
+[node name="Snow08" type="Area2D" parent="." unique_id=16]
+position = Vector2(1344, -1216)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow08" unique_id=17]
+shape = SubResource("RectangleShape2D_s5wos")
+
+[node name="Snow09" type="Area2D" parent="." unique_id=18]
+position = Vector2(0, -1088)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow09" unique_id=19]
+shape = SubResource("RectangleShape2D_vshai")
+
+[node name="Snow10" type="Area2D" parent="." unique_id=20]
+position = Vector2(1280, -1088)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow10" unique_id=21]
+shape = SubResource("RectangleShape2D_u5luv")
+
+[node name="Snow11" type="Area2D" parent="." unique_id=22]
+position = Vector2(-64, -960)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow11" unique_id=23]
+shape = SubResource("RectangleShape2D_dkqpl")
+
+[node name="Snow12" type="Area2D" parent="." unique_id=24]
+position = Vector2(1216, -960)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow12" unique_id=25]
+shape = SubResource("RectangleShape2D_67gb6")
+
+[node name="Snow13" type="Area2D" parent="." unique_id=26]
+position = Vector2(-192, -704)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow13" unique_id=27]
+shape = SubResource("RectangleShape2D_q05js")
+
+[node name="Snow14" type="Area2D" parent="." unique_id=28]
+position = Vector2(768, -704)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow14" unique_id=29]
+shape = SubResource("RectangleShape2D_lijb2")
+
+[node name="Snow15" type="Area2D" parent="." unique_id=30]
+position = Vector2(-192, -128)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow15" unique_id=31]
+shape = SubResource("RectangleShape2D_q7yo6")
+
+[node name="Snow16" type="Area2D" parent="." unique_id=32]
+position = Vector2(768, -64)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow16" unique_id=33]
+shape = SubResource("RectangleShape2D_kgjhg")
+
+[node name="Snow17" type="Area2D" parent="." unique_id=34]
+position = Vector2(-256, 64)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow17" unique_id=35]
+shape = SubResource("RectangleShape2D_jqq18")
+
+[node name="Snow18" type="Area2D" parent="." unique_id=36]
+position = Vector2(-448, 192)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow18" unique_id=37]
+shape = SubResource("RectangleShape2D_bygvo")
+
+[node name="Snow19" type="Area2D" parent="." unique_id=38]
+position = Vector2(640, 256)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow19" unique_id=39]
+shape = SubResource("RectangleShape2D_w0se4")
+
+[node name="Snow20" type="Area2D" parent="." unique_id=40]
+position = Vector2(-512, 320)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow20" unique_id=41]
+shape = SubResource("RectangleShape2D_oy76a")
+
+[node name="Snow21" type="Area2D" parent="." unique_id=42]
+position = Vector2(-576, 512)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow21" unique_id=43]
+shape = SubResource("RectangleShape2D_hovq4")
+
+[node name="Snow22" type="Area2D" parent="." unique_id=44]
+position = Vector2(576, 512)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow22" unique_id=45]
+shape = SubResource("RectangleShape2D_dw1vs")
+
+[node name="Snow23" type="Area2D" parent="." unique_id=46]
+position = Vector2(-640, 768)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow23" unique_id=47]
+shape = SubResource("RectangleShape2D_r8stj")
+
+[node name="Snow24" type="Area2D" parent="." unique_id=48]
+position = Vector2(512, 704)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow24" unique_id=49]
+shape = SubResource("RectangleShape2D_6370s")
+
+[node name="Snow25" type="Area2D" parent="." unique_id=50]
+position = Vector2(448, 832)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow25" unique_id=51]
+shape = SubResource("RectangleShape2D_je0kc")
+
+[node name="Snow26" type="Area2D" parent="." unique_id=52]
+position = Vector2(-1280, 960)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow26" unique_id=53]
+shape = SubResource("RectangleShape2D_qxfue")
+
+[node name="Snow27" type="Area2D" parent="." unique_id=54]
+position = Vector2(320, 960)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow27" unique_id=55]
+shape = SubResource("RectangleShape2D_mr4qi")
+
+[node name="Snow28" type="Area2D" parent="." unique_id=56]
+position = Vector2(-1344, 1088)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow28" unique_id=57]
+shape = SubResource("RectangleShape2D_fp0xf")
+
+[node name="Snow29" type="Area2D" parent="." unique_id=58]
+position = Vector2(-1408, 1216)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow29" unique_id=59]
+shape = SubResource("RectangleShape2D_sbsw3")
+
+[node name="Snow30" type="Area2D" parent="." unique_id=60]
+position = Vector2(-448, 1216)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow30" unique_id=61]
+shape = SubResource("RectangleShape2D_ayluy")
+
+[node name="Snow31" type="Area2D" parent="." unique_id=62]
+position = Vector2(-1472, 1344)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow31" unique_id=63]
+shape = SubResource("RectangleShape2D_rxegt")
+
+[node name="Snow32" type="Area2D" parent="." unique_id=64]
+position = Vector2(-576, 1344)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow32" unique_id=65]
+shape = SubResource("RectangleShape2D_2nhvr")
+
+[node name="Snow33" type="Area2D" parent="." unique_id=66]
+position = Vector2(-1856, 1536)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow33" unique_id=67]
+shape = SubResource("RectangleShape2D_ev64v")
+
+[node name="Snow34" type="Area2D" parent="." unique_id=68]
+position = Vector2(-704, 1536)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow34" unique_id=69]
+shape = SubResource("RectangleShape2D_4v5eq")
+
+[node name="Snow35" type="Area2D" parent="." unique_id=70]
+position = Vector2(-1280, 1792)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("2_t3ti1")
+terrain_type = &"snow"
+
+[node name="Col" type="CollisionShape2D" parent="Snow35" unique_id=71]
+shape = SubResource("RectangleShape2D_a8wt2")

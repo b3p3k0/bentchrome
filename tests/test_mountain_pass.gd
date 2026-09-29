@@ -7,38 +7,41 @@ const PassDecoScript := preload("res://levels/snowy/pass_deco.gd")
 const AiNoGoScript := preload("res://environment/ai_no_go.gd")
 const PitZoneScript := preload("res://environment/pit_zone.gd")
 const DestructibleBlockScript := preload("res://environment/destructible_block.gd")
+const TerrainFieldScript := preload("res://environment/terrain_field.gd")
+const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
+const RoadMarksScript := preload("res://environment/road_marks.gd")
 const UnionSkin := preload("res://environment/union_skin.gd")
 
 const GOLDEN := [
 	"################################################################",
 	"########################################                     |..",
-	"######################################                       |..",
-	"######################################            E1         |..",
-	"####################################                         |..",
-	"####################################                       |....",
-	"################################                       |........",
-	"##############################          E2           |..........",
-	"############################                       |............",
-	"############################                   |................",
-	"############################  Jv               |................",
-	"############################                   |................",
+	"######################################  ======iiii========   |..",
+	"######################################  ======iiiiE1======   |..",
+	"####################################          ====           |..",
+	"####################################          ====         |....",
+	"################################              ====     |........",
+	"##############################    iiii==E2========   |..........",
+	"############################      iiii============ |............",
+	"############################  ==========       |................",
+	"############################  Jv========       |................",
+	"############################  ==========       |................",
 	"############################XXXXXX][][][XXXXXXXX................",
 	"############################XXXXXX][][][XXXXXXXX................",
-	"############################                   |................",
-	"############################  J^               |................",
-	"##########################                     |................",
-	"##################                             |................",
-	"################                               |................",
-	"##############          /\\/\\/\\/\\             |..................",
-	"##############          /\\K*/\\/\\      E3     |..................",
-	"##p LL<<<<<<      E4    /\\/\\/\\/\\           |....................",
-	"##LLLL<<<<<<            /\\/\\/\\/\\         |......................",
-	"########                             |..........................",
-	"######              +              |............................",
-	"####                         |..................................",
-	"##                       |......................................",
-	"##                   |..........................................",
-	"##      P            |..........................................",
+	"############################  ==========       |................",
+	"############################  J^========       |................",
+	"##########################    ==========       |................",
+	"##################              ====           |................",
+	"################                ====           |................",
+	"##############          /\\/\\/\\/\\====         |..................",
+	"##############          /\\K*/\\/\\====  E3     |..................",
+	"##p LL<<<<<<      E4    /\\/\\/\\/\\====       |....................",
+	"##LLLL<<<<<<            /\\/\\/\\/\\====     |......................",
+	"########        iiii================ |..........................",
+	"######          iiii+ ==============............................",
+	"####            ====         |..................................",
+	"##              ====     |......................................",
+	"##  ================ |..........................................",
+	"##  ====P ========== |..........................................",
 	"##                   |..........................................",
 	"##                   |..........................................",
 	"######################..........................................",
@@ -89,6 +92,15 @@ func _rect_driveable(rect: Rect2) -> bool:
 				return false
 	return true
 
+func _rect_road(rect: Rect2) -> bool:
+	var first := PassGrid.cell_of(rect.position + Vector2.ONE)
+	var last := PassGrid.cell_of(rect.end - Vector2.ONE)
+	for j in range(first.y, last.y + 1):
+		for i in range(first.x, last.x + 1):
+			if not PassGrid.is_road(i, j):
+				return false
+	return true
+
 func _side_clearance(point: Vector2) -> float:
 	var arena_end := PassGrid.ARENA_RECT.end
 	var best := minf(minf(point.x - PassGrid.ORIGIN.x, arena_end.x - point.x),
@@ -127,6 +139,78 @@ func _colors_equal_approx(a: Color, b: Color, tolerance: float) -> bool:
 		and (is_equal_approx(a.b, b.b) or absf(a.b - b.b) <= tolerance) \
 		and (is_equal_approx(a.a, b.a) or absf(a.a - b.a) <= tolerance)
 
+func _cell_span_rect(cells: Rect2i) -> Rect2:
+	return Rect2(PassGrid.ORIGIN + Vector2(cells.position) * PassGrid.CELL,
+		Vector2(cells.size) * PassGrid.CELL)
+
+func _road_mark_segments(marks: Node2D) -> Array[Dictionary]:
+	var segments: Array[Dictionary] = []
+	for mark: Node2D in marks.get_children():
+		var points: PackedVector2Array = mark.get("points")
+		for i in points.size() - 1:
+			segments.append({"mark": mark.name, "index": i, "a": points[i], "b": points[i + 1]})
+	return segments
+
+func _point_on_road_line(point: Vector2) -> bool:
+	for leg_name in PassGrid.ROAD_LEGS:
+		var cells: Rect2i = PassGrid.ROAD_LEGS[leg_name]
+		for j in range(cells.position.y, cells.end.y):
+			for i in range(cells.position.x, cells.end.x):
+				var rect := PassGrid.cell_rect(i, j)
+				if point.x < rect.position.x or point.x > rect.end.x \
+						or point.y < rect.position.y or point.y > rect.end.y:
+					continue
+				if is_equal_approx(point.x, rect.position.x) \
+						or is_equal_approx(point.x, rect.end.x) \
+						or is_equal_approx(point.y, rect.position.y) \
+						or is_equal_approx(point.y, rect.end.y) \
+						or is_equal_approx(point.x, rect.get_center().x) \
+						or is_equal_approx(point.y, rect.get_center().y):
+					return true
+	return false
+
+func _segment_hits_rect_interior(a: Vector2, b: Vector2, rect: Rect2) -> bool:
+	var interior := rect.grow(-0.01)
+	if is_equal_approx(a.y, b.y):
+		var start := minf(a.x, b.x)
+		var end := maxf(a.x, b.x)
+		return a.y >= interior.position.y and a.y <= interior.end.y \
+			and start < interior.end.x and end > interior.position.x
+	var start := minf(a.y, b.y)
+	var end := maxf(a.y, b.y)
+	return a.x >= interior.position.x and a.x <= interior.end.x \
+		and start < interior.end.y and end > interior.position.y
+
+func _segments_share_endpoint(a: Dictionary, b: Dictionary) -> bool:
+	return a["a"] == b["a"] or a["a"] == b["b"] \
+		or a["b"] == b["a"] or a["b"] == b["b"]
+
+func _axis_segments_conflict(a: Dictionary, b: Dictionary) -> bool:
+	var allowed_endpoint: bool = a["mark"] == b["mark"] and _segments_share_endpoint(a, b)
+	var a_horizontal: bool = is_equal_approx(a["a"].y, a["b"].y)
+	var b_horizontal: bool = is_equal_approx(b["a"].y, b["b"].y)
+	if a_horizontal and b_horizontal:
+		if not is_equal_approx(a["a"].y, b["a"].y):
+			return false
+		var overlap_start := maxf(minf(a["a"].x, a["b"].x), minf(b["a"].x, b["b"].x))
+		var overlap_end := minf(maxf(a["a"].x, a["b"].x), maxf(b["a"].x, b["b"].x))
+		return overlap_start < overlap_end \
+			or is_equal_approx(overlap_start, overlap_end) and not allowed_endpoint
+	if not a_horizontal and not b_horizontal:
+		if not is_equal_approx(a["a"].x, b["a"].x):
+			return false
+		var overlap_start := maxf(minf(a["a"].y, a["b"].y), minf(b["a"].y, b["b"].y))
+		var overlap_end := minf(maxf(a["a"].y, a["b"].y), maxf(b["a"].y, b["b"].y))
+		return overlap_start < overlap_end \
+			or is_equal_approx(overlap_start, overlap_end) and not allowed_endpoint
+	var horizontal: Dictionary = a if a_horizontal else b
+	var vertical: Dictionary = b if a_horizontal else a
+	var intersects: bool = vertical["a"].x >= minf(horizontal["a"].x, horizontal["b"].x) \
+		and vertical["a"].x <= maxf(horizontal["a"].x, horizontal["b"].x) \
+		and horizontal["a"].y >= minf(vertical["a"].y, vertical["b"].y) \
+		and horizontal["a"].y <= maxf(vertical["a"].y, vertical["b"].y)
+	return intersects and not allowed_endpoint
+
 func test_every_cell_has_exactly_one_kind() -> void:
 	var allowed := {
 		PassGrid.MOUNTAIN: true, PassGrid.ROAD: true, PassGrid.DROP: true,
@@ -147,6 +231,74 @@ func test_driveable_grid_is_one_four_connected_region() -> void:
 	var missing: Array = cells.keys().filter(func(cell): return not seen.has(cell))
 	t.check(seen.size() == cells.size(),
 		"pass grid: %d driveable cells are one 4-connected region; missing %s" % [cells.size(), missing])
+
+func test_road_legs_are_the_signed_off_connected_route() -> void:
+	var expected := {
+		&"trailhead_ew": Rect2i(2, 27, 8, 2),
+		&"climb_ns": Rect2i(8, 23, 2, 6),
+		&"saddle_ew": Rect2i(8, 23, 10, 2),
+		&"knoll_ns": Rect2i(16, 17, 2, 8),
+		&"apron": Rect2i(15, 9, 5, 8),
+		&"upper_ew": Rect2i(17, 7, 8, 2),
+		&"summit_ns": Rect2i(23, 3, 2, 6),
+		&"overlook_ew": Rect2i(20, 2, 9, 2),
+	}
+	t.check(PassGrid.ROAD_LEGS == expected,
+		"pass surfaces: road legs retain the reviewer-approved grid rectangles")
+	var road_cells := {}
+	var invalid: Array[Vector2i] = []
+	var knoll: Rect2i = PassGrid.KNOLL["cells"]
+	for leg_name in PassGrid.ROAD_LEGS:
+		var cells: Rect2i = PassGrid.ROAD_LEGS[leg_name]
+		for j in range(cells.position.y, cells.end.y):
+			for i in range(cells.position.x, cells.end.x):
+				var cell := Vector2i(i, j)
+				road_cells[cell] = true
+				var apron_chasm: bool = leg_name == &"apron" \
+					and _is_pit_kind(PassGrid.kind_at(i, j))
+				if (not PassGrid.is_driveable(i, j) and not apron_chasm) \
+						or knoll.has_point(cell):
+					invalid.append(cell)
+	var seen := _component(road_cells, false)
+	t.check(invalid.is_empty() and seen.size() == road_cells.size(),
+		"pass surfaces: road is one 4-connected driveable route off the knoll; bad %s"
+		% [invalid])
+	t.check(PassGrid.road_rects().size() == PassGrid.ROAD_LEGS.size(),
+		"pass surfaces: every road leg has one world rectangle")
+
+func test_ice_cells_are_signed_off_road_bends() -> void:
+	var expected := {
+		&"bend_low": Rect2i(8, 23, 2, 2),
+		&"bend_mid": Rect2i(17, 7, 2, 2),
+		&"bend_top": Rect2i(23, 2, 2, 2),
+	}
+	t.check(PassGrid.ICE == expected,
+		"pass surfaces: ice retains the three reviewer-approved bend rectangles")
+	var invalid: Array[Vector2i] = []
+	for bend_name in PassGrid.ICE:
+		var cells: Rect2i = PassGrid.ICE[bend_name]
+		for j in range(cells.position.y, cells.end.y):
+			for i in range(cells.position.x, cells.end.x):
+				if not PassGrid.is_road(i, j):
+					invalid.append(Vector2i(i, j))
+	t.check(invalid.is_empty() and PassGrid.ice_rects().size() == PassGrid.ICE.size(),
+		"pass surfaces: all ice cells lie on road and every bend has a world rectangle; bad %s"
+		% [invalid])
+
+func test_snow_tiles_exactly_cover_driveable_non_road_cells() -> void:
+	var tiles := PassGrid.snow_tiles()
+	var invalid: Array[Vector3i] = []
+	for j in PassGrid.N:
+		for i in PassGrid.N:
+			var hits := 0
+			for rect: Rect2 in tiles:
+				hits += 1 if rect.has_point(PassGrid.cell_center(i, j)) else 0
+			var want := 1 if PassGrid.is_driveable(i, j) and not PassGrid.is_road(i, j) else 0
+			if hits != want:
+				invalid.append(Vector3i(i, j, hits))
+	t.check(not tiles.is_empty() and invalid.is_empty(),
+		"pass surfaces: snow tiles cover every driveable non-road cell exactly once; bad %s"
+		% [invalid])
 
 func test_non_chasm_rows_are_at_least_1024_wide() -> void:
 	var narrow := []
@@ -235,7 +387,11 @@ func test_jump_pad_routes() -> void:
 		var north: bool = pad["launch"] == &"north"
 		var runup := Rect2(Vector2(center.x - 112.0, center.y + (112.0 if north else -412.0)),
 			Vector2(224, 300))
+		var paved_lane := Rect2(Vector2(center.x - 112.0,
+			center.y + (-412.0 if north else 112.0)), Vector2(224, 300))
 		t.check(_rect_driveable(pad_rect), "pass grid: pad %s square is driveable" % name)
+		t.check(_rect_road(pad_rect) and _rect_road(paved_lane),
+			"pass surfaces: pad %s and its 300px apron lane are asphalt" % name)
 		var side := _side_clearance(center)
 		t.check(side >= 192.0, "pass grid: pad %s side clearance %.1f >=192" % [name, side])
 		t.check(_rect_driveable(runup), "pass grid: pad %s has a driveable 300px run-up" % name)
@@ -488,7 +644,7 @@ func _same_built_tree(a: Node2D, b: Node2D) -> bool:
 			if collision_a.collision_layer != collision_b.collision_layer \
 					or collision_a.collision_mask != collision_b.collision_mask:
 				return false
-		if child_a.name.begins_with("Block"):
+		if child_a.name.begins_with("Block") or child_a.name.begins_with("Snow"):
 			var col_a := child_a.get_node_or_null(^"Col") as CollisionShape2D
 			var col_b := child_b.get_node_or_null(^"Col") as CollisionShape2D
 			if col_a == null or col_b == null \
@@ -498,6 +654,9 @@ func _same_built_tree(a: Node2D, b: Node2D) -> bool:
 			var shape_a := col_a.shape as RectangleShape2D
 			var shape_b := col_b.shape as RectangleShape2D
 			if shape_a.size != shape_b.size:
+				return false
+			if child_a.name.begins_with("Snow") \
+					and child_a.get("terrain_type") != child_b.get("terrain_type"):
 				return false
 		else:
 			if child_a.get("size") != child_b.get("size"):
@@ -711,6 +870,44 @@ func test_built_rails_stay_at_ground_draw_order() -> void:
 		"pass rails: every ground-floor rail stays at z 0; elevated %s" % [elevated])
 	root.free()
 
+func test_built_snow_is_one_field_of_collision_only_tiles() -> void:
+	var root := PassBuilder.build_snow()
+	var rects := PassGrid.snow_tiles()
+	var invalid: Array[StringName] = []
+	for i in root.get_child_count():
+		var zone := root.get_child(i) as Area2D
+		var col := zone.get_node_or_null(^"Col") as CollisionShape2D if zone else null
+		var shape := col.shape as RectangleShape2D if col else null
+		var actual := Rect2(zone.position - shape.size * 0.5, shape.size) \
+			if zone != null and shape != null else Rect2()
+		if zone == null or zone.name != "Snow%02d" % (i + 1) \
+				or zone.get_script() != TerrainZoneScript or zone.collision_layer != 128 \
+				or zone.collision_mask != 0 or zone.get("terrain_type") != &"snow" \
+				or zone.get_node_or_null(^"Vis") != null or actual != rects[i]:
+			invalid.append(root.get_child(i).name)
+	t.check(root.name == &"SnowCover" and root.get_script() == TerrainFieldScript \
+			and root.get("bounds") == PassGrid.ARENA_RECT and root.get("paint_seed") == 4096 \
+			and root.get_child_count() == rects.size() and invalid.is_empty(),
+		"pass snow: TerrainField root owns ordered collision-only snow tiles; bad %s"
+		% [invalid])
+	root.free()
+
+func test_generated_snow_scene_builds_one_valid_skin() -> void:
+	var packed: PackedScene = load("res://levels/snowy/pass_snow.tscn")
+	var snow := packed.instantiate() as Node2D
+	t.root.add_child(snow)
+	await t.process_frame
+	var warnings: PackedStringArray = snow.call("validation_warnings")
+	var loops: Array = snow.call("outline_loops")
+	var valid := not loops.is_empty()
+	for loop: PackedVector2Array in loops:
+		valid = valid and UnionSkin.triangulates(loop)
+	t.check(warnings.is_empty() and valid,
+		"pass snow: generated field has one valid warning-free union skin; warnings %s"
+		% [warnings])
+	t.root.remove_child(snow)
+	snow.free()
+
 func test_generated_mountain_scene_builds_valid_skin() -> void:
 	var packed: PackedScene = load("res://levels/snowy/pass_mountain.tscn")
 	var mountain := packed.instantiate() as Node2D
@@ -736,43 +933,55 @@ func test_generated_mountain_scene_builds_valid_skin() -> void:
 	mountain.free()
 
 func test_generated_scenes_are_up_to_date() -> void:
+	var built_snow := PassBuilder.build_snow()
 	var built_mountain := PassBuilder.build_mountain()
 	var built_drop := PassBuilder.build_drop()
 	var built_rails := PassBuilder.build_rails()
+	var saved_snow: Node2D = load("res://levels/snowy/pass_snow.tscn").instantiate()
 	var saved_mountain: Node2D = load(
 		"res://levels/snowy/pass_mountain.tscn").instantiate()
 	var saved_drop: Node2D = load("res://levels/snowy/pass_drop.tscn").instantiate()
 	var saved_rails: Node2D = load("res://levels/snowy/pass_rails.tscn").instantiate()
-	var same := _same_built_tree(built_mountain, saved_mountain) \
+	var same := _same_built_tree(built_snow, saved_snow) \
+		and _same_built_tree(built_mountain, saved_mountain) \
 		and _same_built_tree(built_drop, saved_drop) \
 		and _same_built_tree(built_rails, saved_rails)
 	t.check(same, "pass carve: generated scenes are current; run tools/carve_pass.gd")
-	for tree: Node2D in [built_mountain, built_drop, built_rails,
-			saved_mountain, saved_drop, saved_rails]:
+	for tree: Node2D in [built_snow, built_mountain, built_drop, built_rails,
+			saved_snow, saved_mountain, saved_drop, saved_rails]:
 		tree.free()
 
 func test_pass_builder_is_deterministic() -> void:
+	var snow_a := PassBuilder.build_snow()
+	var snow_b := PassBuilder.build_snow()
 	var mountain_a := PassBuilder.build_mountain()
 	var mountain_b := PassBuilder.build_mountain()
 	var drop_a := PassBuilder.build_drop()
 	var drop_b := PassBuilder.build_drop()
 	var rails_a := PassBuilder.build_rails()
 	var rails_b := PassBuilder.build_rails()
+	t.check(_same_built_tree(snow_a, snow_b),
+		"pass carve: two snow builds have identical trees")
 	t.check(_same_built_tree(mountain_a, mountain_b),
 		"pass carve: two mountain builds have identical trees")
 	t.check(_same_built_tree(drop_a, drop_b),
 		"pass carve: two drop builds have identical trees")
 	t.check(_same_built_tree(rails_a, rails_b),
 		"pass carve: two rail builds have identical trees")
-	for tree: Node2D in [mountain_a, mountain_b, drop_a, drop_b, rails_a, rails_b]:
+	for tree: Node2D in [snow_a, snow_b, mountain_a, mountain_b, drop_a, drop_b,
+			rails_a, rails_b]:
 		tree.free()
 
 func test_level_instances_generated_geometry_before_gameplay() -> void:
 	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var grid := level.get_node_or_null(^"GridFloor") as Node2D
+	var snow := level.get_node_or_null(^"SnowCover") as Node2D
 	var drop := level.get_node_or_null(^"Drop") as Node2D
 	var mountain := level.get_node_or_null(^"Mountain") as Node2D
 	var bridge := level.get_node_or_null(^"BridgeDeck") as Node2D
 	var rails := level.get_node_or_null(^"Rails") as Node2D
+	t.check(snow != null and snow.scene_file_path == "res://levels/snowy/pass_snow.tscn",
+		"pass level: SnowCover is a direct instance of the generated snow scene")
 	t.check(drop != null and drop.scene_file_path == "res://levels/snowy/pass_drop.tscn",
 		"pass level: Drop is a direct instance of the generated drop scene")
 	t.check(mountain != null
@@ -780,11 +989,15 @@ func test_level_instances_generated_geometry_before_gameplay() -> void:
 		"pass level: Mountain is a direct instance of the generated mountain scene")
 	t.check(rails != null and rails.scene_file_path == "res://levels/snowy/pass_rails.tscn",
 		"pass level: Rails is a direct instance of the generated rail scene")
-	if drop != null and mountain != null and bridge != null and rails != null:
+	if grid != null and snow != null and drop != null and mountain != null \
+			and bridge != null and rails != null:
 		t.check(drop.get_parent() == level and mountain.get_parent() == level
-				and rails.get_parent() == level and drop.get_index() < mountain.get_index()
+				and snow.get_parent() == level and rails.get_parent() == level \
+				and snow.get_index() == grid.get_index() + 1 \
+				and snow.get_index() < drop.get_index() and snow.get_index() < mountain.get_index() \
+				and drop.get_index() < mountain.get_index()
 				and bridge.get_index() < rails.get_index(),
-			"pass level: Rails follows BridgeDeck as direct root geometry")
+			"pass level: generated snow/drop/mountain/rails use the required root order")
 		for child: Node in level.get_children():
 			var scene_path := child.scene_file_path
 			var gameplay := child is Vehicle or String(child.name).begins_with("Jump") \
@@ -947,12 +1160,163 @@ func test_level_runaway_notch_is_clear_and_deco_is_paint_only() -> void:
 func test_level_mountain_uses_level_materials() -> void:
 	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
 	var mountain := level.get_node_or_null(^"Mountain") as MountainWall
+	var snow := level.get_node_or_null(^"SnowCover") as TerrainField
 	var asphalt := level.get_node_or_null(^"Asphalt") as Polygon2D
 	var hill := level.get_node_or_null(^"SnowyHill") as DriveableHill
-	t.check(mountain != null and asphalt != null and hill != null
+	t.check(mountain != null and snow != null and asphalt != null and hill != null
 			and mountain.substrate_material == asphalt.material
-			and mountain.terrain_material == hill.terrain_material,
-		"pass level: Mountain receives the scene asphalt and snow materials")
+			and mountain.terrain_material == hill.terrain_material
+			and snow.terrain_material == hill.terrain_material,
+		"pass level: Mountain and SnowCover receive the scene asphalt/snow materials")
+	level.free()
+
+func test_level_ice_zones_match_the_grid() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var snow := level.get_node_or_null(^"SnowCover") as Node2D
+	var expected := {
+		&"IceBendLow": &"bend_low",
+		&"IceBendMid": &"bend_mid",
+		&"IceBendTop": &"bend_top",
+	}
+	var material: Material
+	var invalid: Array[StringName] = []
+	for node_name: StringName in expected:
+		var zone := level.get_node_or_null(NodePath(node_name)) as Area2D
+		var cells: Rect2i = PassGrid.ICE[expected[node_name]]
+		var rect := Rect2(PassGrid.ORIGIN + Vector2(cells.position) * PassGrid.CELL,
+			Vector2(cells.size) * PassGrid.CELL)
+		var vis := zone.get_node_or_null(^"Vis") as Polygon2D if zone else null
+		var col := zone.get_node_or_null(^"Col") as CollisionShape2D if zone else null
+		var shape := col.shape as RectangleShape2D if col else null
+		if material == null and vis != null:
+			material = vis.material
+		if zone == null or zone.get_script() != TerrainZoneScript \
+				or zone.position != rect.get_center() or zone.collision_layer != 128 \
+				or zone.collision_mask != 0 or zone.get("terrain_type") != &"ice" \
+				or vis == null or vis.material != material or shape == null \
+				or shape.size != Vector2(256, 256) or zone.get_index() < snow.get_index():
+			invalid.append(node_name)
+	t.check(invalid.is_empty(),
+		"pass level: three material-matched 256px ice zones follow snow on ICE cells; bad %s"
+		% [invalid])
+	level.free()
+
+func test_level_road_marks_turn_without_crossing_and_clear_features() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var marks := level.get_node_or_null(^"RoadMarks") as Node2D
+	var trailhead := _cell_span_rect(PassGrid.ROAD_LEGS[&"trailhead_ew"])
+	var climb := _cell_span_rect(PassGrid.ROAD_LEGS[&"climb_ns"])
+	var saddle := _cell_span_rect(PassGrid.ROAD_LEGS[&"saddle_ew"])
+	var knoll := _cell_span_rect(PassGrid.ROAD_LEGS[&"knoll_ns"])
+	var apron := _cell_span_rect(PassGrid.ROAD_LEGS[&"apron"])
+	var upper := _cell_span_rect(PassGrid.ROAD_LEGS[&"upper_ew"])
+	var summit := _cell_span_rect(PassGrid.ROAD_LEGS[&"summit_ns"])
+	var overlook := _cell_span_rect(PassGrid.ROAD_LEGS[&"overlook_ew"])
+	var low_ice := _cell_span_rect(PassGrid.ICE[&"bend_low"])
+	var mid_ice := _cell_span_rect(PassGrid.ICE[&"bend_mid"])
+	var top_ice := _cell_span_rect(PassGrid.ICE[&"bend_top"])
+	var bridge_start := PassGrid.ORIGIN + Vector2(
+		PassGrid.BRIDGE_COLS.x, PassGrid.CHASM_ROWS.x) * PassGrid.CELL
+	var bridge_size := Vector2(
+		(PassGrid.BRIDGE_COLS.y - PassGrid.BRIDGE_COLS.x + 1) * PassGrid.CELL,
+		(PassGrid.CHASM_ROWS.y - PassGrid.CHASM_ROWS.x + 1) * PassGrid.CELL)
+	var bridge := Rect2(bridge_start, bridge_size)
+	var expected := {
+		&"Trailhead": PackedVector2Array([
+			Vector2(trailhead.position.x, trailhead.get_center().y),
+			Vector2(climb.get_center().x, trailhead.get_center().y),
+			Vector2(climb.get_center().x, low_ice.end.y),
+		]),
+		&"Saddle": PackedVector2Array([
+			Vector2(PassGrid.STATION["center"].x + 96.0, saddle.get_center().y),
+			Vector2(knoll.get_center().x, saddle.get_center().y),
+			Vector2(knoll.get_center().x, apron.end.y + PassGrid.CELL),
+		]),
+		&"Bridge": PackedVector2Array([
+			Vector2(bridge.get_center().x, apron.end.y - PassGrid.CELL),
+			Vector2(bridge.get_center().x, mid_ice.end.y),
+		]),
+		&"Upper": PackedVector2Array([
+			Vector2(mid_ice.end.x, upper.get_center().y),
+			Vector2(summit.get_center().x, upper.get_center().y),
+			Vector2(summit.get_center().x, top_ice.end.y),
+		]),
+		&"OverlookWest": PackedVector2Array([
+			Vector2(overlook.position.x, overlook.get_center().y),
+			Vector2(top_ice.position.x, overlook.get_center().y),
+		]),
+		&"OverlookEast": PackedVector2Array([
+			Vector2(top_ice.end.x, overlook.get_center().y),
+			Vector2(overlook.end.x, overlook.get_center().y),
+		]),
+	}
+	var invalid: Array[StringName] = []
+	for mark_name: StringName in expected:
+		var mark := marks.get_node_or_null(NodePath(mark_name)) as Node2D if marks else null
+		var points: PackedVector2Array = mark.get("points") if mark else PackedVector2Array()
+		var valid: bool = mark != null and mark.get_script() == RoadMarksScript \
+			and mark.get("style") == &"dashed_yellow" and points == expected[mark_name]
+		if not valid:
+			invalid.append(mark_name)
+	if marks:
+		for mark: Node2D in marks.get_children():
+			if not expected.has(mark.name):
+				invalid.append(mark.name)
+	t.check(marks != null and marks.get_child_count() == expected.size() and invalid.is_empty(),
+		"pass marks: six dashed polylines match the grid-derived switchback route; bad %s"
+		% [invalid])
+	var segments := _road_mark_segments(marks) if marks else []
+	var bad_vertices := PackedVector2Array()
+	var bad_segments: Array[Dictionary] = []
+	for mark: Node2D in marks.get_children() if marks else []:
+		var points: PackedVector2Array = mark.get("points")
+		for point: Vector2 in points:
+			if not _point_on_road_line(point):
+				bad_vertices.append(point)
+	for segment: Dictionary in segments:
+		var a: Vector2 = segment["a"]
+		var b: Vector2 = segment["b"]
+		if a == b or (not is_equal_approx(a.x, b.x) and not is_equal_approx(a.y, b.y)):
+			bad_segments.append(segment)
+	t.check(bad_vertices.is_empty() and bad_segments.is_empty(),
+		("pass marks: every vertex is on a road-cell line and every segment is "
+		+ "axis-aligned; bad vertices %s segments %s") % [bad_vertices, bad_segments])
+	var conflicts: Array = []
+	for i in segments.size():
+		for j in range(i + 1, segments.size()):
+			if _axis_segments_conflict(segments[i], segments[j]):
+				conflicts.append([segments[i], segments[j]])
+	t.check(conflicts.is_empty(),
+		"pass marks: no two painted segments cross or overlap; conflicts %s" % [conflicts])
+	var unsafe: Array[Dictionary] = []
+	var bridge_segments: Array[Dictionary] = []
+	for segment: Dictionary in segments:
+		var a: Vector2 = segment["a"]
+		var b: Vector2 = segment["b"]
+		var bad := false
+		for ice: Rect2 in PassGrid.ice_rects():
+			bad = bad or _segment_hits_rect_interior(a, b, ice)
+		var station: Vector2 = PassGrid.STATION["center"]
+		bad = bad or station.distance_to(
+			Geometry2D.get_closest_point_to_segment(station, a, b)) < 96.0
+		for pad_name in PassGrid.PADS:
+			var center: Vector2 = PassGrid.PADS[pad_name]["center"]
+			bad = bad or center.distance_to(
+				Geometry2D.get_closest_point_to_segment(center, a, b)) < 96.0
+		if bad:
+			unsafe.append(segment)
+		if _segment_hits_rect_interior(a, b, bridge):
+			bridge_segments.append(segment)
+	t.check(unsafe.is_empty(),
+		"pass marks: segments clear ice, the repair station, and jump pads; bad %s" % [unsafe])
+	var bridge_centered := bridge_segments.size() == 1
+	if bridge_centered:
+		var segment: Dictionary = bridge_segments[0]
+		bridge_centered = is_equal_approx(segment["a"].x, bridge.get_center().x) \
+			and is_equal_approx(segment["b"].x, bridge.get_center().x)
+	t.check(bridge_centered,
+		"pass marks: exactly one segment crosses bridge cells at centre x; got %s"
+		% [bridge_segments])
 	level.free()
 
 func test_level_fields_exactly_five_grid_spawns() -> void:
@@ -1070,6 +1434,6 @@ func test_level_removes_old_snowfield_layout() -> void:
 	var road_marks := level.get_node_or_null(^"RoadMarks")
 	t.check(survivors.is_empty(), "pass level: removed snowfield nodes stay gone; found %s" %
 		[survivors])
-	t.check(road_marks != null and road_marks.get_child_count() == 0,
-		"pass level: RoadMarks survives only as an empty grouping node")
+	t.check(road_marks != null and road_marks.get_child_count() == 6,
+		"pass level: RoadMarks owns the six switchback centerline polylines")
 	level.free()
