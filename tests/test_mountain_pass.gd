@@ -3,6 +3,7 @@ extends RefCounted
 
 const PassGrid := preload("res://levels/snowy/pass_grid.gd")
 const PassBuilder := preload("res://levels/snowy/pass_builder.gd")
+const AiNoGoScript := preload("res://environment/ai_no_go.gd")
 const PitZoneScript := preload("res://environment/pit_zone.gd")
 const UnionSkin := preload("res://environment/union_skin.gd")
 
@@ -22,7 +23,7 @@ const GOLDEN := [
 	"############################XXXXXX][][][XXXXXXXX................",
 	"############################XXXXXX][][][XXXXXXXX................",
 	"############################                   |................",
-	"############################            J^     |................",
+	"############################  J^               |................",
 	"##########################                     |................",
 	"##################                             |................",
 	"################                               |................",
@@ -265,6 +266,54 @@ func test_jump_pad_routes() -> void:
 				if kind != PassGrid.WEST_PIT and kind != PassGrid.EAST_PIT:
 					bad_pits.append(Vector2i(i, j))
 		t.check(bad_pits.is_empty(), "pass grid: pad %s faces pit cells; bad %s" % [name, bad_pits])
+
+func test_no_go_rects_seal_the_west_pit_lane() -> void:
+	var north: Rect2 = PassGrid.NO_GO[&"lane_north"]
+	var south: Rect2 = PassGrid.NO_GO[&"lane_south"]
+	t.check(PassGrid.NO_GO == {
+		&"lane_north": Rect2(-256, -896, 384, 384),
+		&"lane_south": Rect2(-256, -256, 384, 384),
+	}, "pass grid: exactly two west-lane no-go rects have the approved extents")
+	var west_pit := Rect2(PassGrid.cell_rect(14, PassGrid.CHASM_ROWS.x).position,
+		Vector2((PassGrid.BRIDGE_COLS.x - 14) * PassGrid.CELL,
+			(PassGrid.CHASM_ROWS.y - PassGrid.CHASM_ROWS.x + 1) * PassGrid.CELL))
+	var whole_column := Rect2(-256, -896, 384, 1024)
+	t.check(north.position == whole_column.position and north.size.x == whole_column.size.x
+			and north.end.y == west_pit.position.y and west_pit.end.y == south.position.y
+			and south.end == whole_column.end,
+		"pass grid: no-go rects and west pit form one unbroken y -896..128 column")
+	var bad_pit_cells: Array[Vector2i] = []
+	for j in range(PassGrid.CHASM_ROWS.x, PassGrid.CHASM_ROWS.y + 1):
+		for i in range(14, PassGrid.BRIDGE_COLS.x):
+			if PassGrid.kind_at(i, j) != PassGrid.WEST_PIT:
+				bad_pit_cells.append(Vector2i(i, j))
+	t.check(bad_pit_cells.is_empty(),
+		"pass grid: the column's middle is entirely west pit; bad %s" % [bad_pit_cells])
+
+func test_no_go_rects_avoid_bridge_and_authored_gameplay() -> void:
+	var bridge_start := PassGrid.ORIGIN.x + PassGrid.BRIDGE_COLS.x * PassGrid.CELL
+	var bridge_width := (PassGrid.BRIDGE_COLS.y - PassGrid.BRIDGE_COLS.x + 1) \
+		* PassGrid.CELL
+	var bridge_columns := Rect2(Vector2(bridge_start, PassGrid.ORIGIN.y),
+		Vector2(bridge_width, PassGrid.ARENA_SIZE.y))
+	var occupied_cells := {
+		&"crate": PassGrid.LEDGE_DATA["crate"]["cell"],
+		&"station": PassGrid.STATION["cell"],
+	}
+	for spawn_name in PassGrid.SPAWNS:
+		occupied_cells[spawn_name] = PassGrid.SPAWNS[spawn_name]["cell"]
+	var overlaps := []
+	for no_go_name in PassGrid.NO_GO:
+		var rect: Rect2 = PassGrid.NO_GO[no_go_name]
+		if rect.intersects(bridge_columns):
+			overlaps.append({"no_go": no_go_name, "feature": &"bridge"})
+		for feature_name in occupied_cells:
+			var cell: Vector2i = occupied_cells[feature_name]
+			if rect.intersects(PassGrid.cell_rect(cell.x, cell.y)):
+				overlaps.append({"no_go": no_go_name, "feature": feature_name})
+	t.check(overlaps.is_empty(),
+		"pass grid: no-go rects avoid bridge columns, spawns, crate, and station; bad %s"
+		% [overlaps])
 
 func test_spawn_contract() -> void:
 	var knoll := _knoll_rect()
@@ -590,3 +639,156 @@ func test_pass_builder_is_deterministic() -> void:
 		"pass carve: two drop builds have identical trees")
 	for tree: Node2D in [mountain_a, mountain_b, drop_a, drop_b]:
 		tree.free()
+
+func test_level_instances_generated_geometry_before_gameplay() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var drop := level.get_node_or_null(^"Drop") as Node2D
+	var mountain := level.get_node_or_null(^"Mountain") as Node2D
+	t.check(drop != null and drop.scene_file_path == "res://levels/snowy/pass_drop.tscn",
+		"pass level: Drop is a direct instance of the generated drop scene")
+	t.check(mountain != null
+			and mountain.scene_file_path == "res://levels/snowy/pass_mountain.tscn",
+		"pass level: Mountain is a direct instance of the generated mountain scene")
+	if drop != null and mountain != null:
+		t.check(drop.get_parent() == level and mountain.get_parent() == level
+				and drop.get_index() < mountain.get_index(),
+			"pass level: Drop precedes Mountain as direct root geometry")
+		for child: Node in level.get_children():
+			var scene_path := child.scene_file_path
+			var gameplay := child is Vehicle or String(child.name).begins_with("Jump") \
+				or scene_path.ends_with("ammo_pickup.tscn") \
+				or scene_path.ends_with("health_station.tscn")
+			if gameplay:
+				t.check(mountain.get_index() < child.get_index(),
+					"pass level: generated geometry precedes %s" % child.name)
+	level.free()
+
+func test_level_mountain_uses_level_materials() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var mountain := level.get_node_or_null(^"Mountain") as MountainWall
+	var asphalt := level.get_node_or_null(^"Asphalt") as Polygon2D
+	var hill := level.get_node_or_null(^"SnowyHill") as DriveableHill
+	t.check(mountain != null and asphalt != null and hill != null
+			and mountain.substrate_material == asphalt.material
+			and mountain.terrain_material == hill.terrain_material,
+		"pass level: Mountain receives the scene asphalt and snow materials")
+	level.free()
+
+func test_level_fields_exactly_five_grid_spawns() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var expected := {
+		&"Vehicle": PassGrid.SPAWNS[&"P"],
+		&"Enemy1": PassGrid.SPAWNS[&"E1"],
+		&"Enemy2": PassGrid.SPAWNS[&"E2"],
+		&"Enemy3": PassGrid.SPAWNS[&"E3"],
+		&"Enemy4": PassGrid.SPAWNS[&"E4"],
+	}
+	var cars: Array[Node] = []
+	for child: Node in level.get_children():
+		if child is Vehicle:
+			cars.append(child)
+	t.check(cars.size() == 5, "pass level: exactly five vehicles are direct root children")
+	for car_name: StringName in expected:
+		var car := level.get_node_or_null(NodePath(car_name)) as Vehicle
+		var spawn: Dictionary = expected[car_name]
+		t.check(car != null and car.get_parent() == level
+				and car.position == spawn["center"] and car.start_floor == 2,
+			"pass level: %s matches its grid spawn on floor 2" % car_name)
+	level.free()
+
+func test_level_places_pads_no_go_station_and_knoll_on_grid() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var jump_nw := level.get_node_or_null(^"JumpNW") as Area2D
+	var jump_sw := level.get_node_or_null(^"JumpSW") as Area2D
+	var station := level.get_node_or_null(^"HealthStation1") as Node2D
+	var hill := level.get_node_or_null(^"SnowyHill") as DriveableHill
+	t.check(jump_nw != null and jump_nw.position == PassGrid.PADS[&"north_west"]["center"]
+			and int(jump_nw.get("floor_index")) == 2,
+		"pass level: JumpNW matches the floor-2 grid pad")
+	t.check(jump_sw != null and jump_sw.position == PassGrid.PADS[&"south_west"]["center"]
+			and int(jump_sw.get("floor_index")) == 2,
+		"pass level: JumpSW matches the floor-2 grid pad")
+	var no_go_nodes := {
+		&"NoGoLaneNorth": &"lane_north",
+		&"NoGoLaneSouth": &"lane_south",
+	}
+	var scene_no_go_count := 0
+	for child: Node in level.get_children():
+		if child.get_script() == AiNoGoScript:
+			scene_no_go_count += 1
+	t.check(scene_no_go_count == PassGrid.NO_GO.size(),
+		"pass level: exactly two direct no-go nodes match the grid")
+	for node_name in no_go_nodes:
+		var no_go := level.get_node_or_null(NodePath(node_name)) as Node2D
+		var rect: Rect2 = PassGrid.NO_GO[no_go_nodes[node_name]]
+		t.check(no_go != null and no_go.get_parent() == level
+				and no_go.get_script() == AiNoGoScript and no_go.position == rect.get_center()
+				and no_go.get("size") == rect.size,
+			"pass level: %s exactly matches its grid no-go rect" % node_name)
+	t.check(station != null and station.position == PassGrid.STATION["center"],
+		"pass level: repair station matches the grid")
+	t.check(hill != null and hill.position == PassGrid.KNOLL["center"]
+			and hill.summit_size == Vector2.ONE * float(PassGrid.KNOLL["summit"])
+			and is_equal_approx(hill.grade_length, float(PassGrid.KNOLL["grade_length"])),
+		"pass level: SnowyHill matches the signed-off knoll")
+	level.free()
+
+func test_level_boundary_encloses_exactly_4096_square() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var boundary := level.get_node_or_null(^"Boundary") as StaticBody2D
+	var top := boundary.get_node_or_null(^"TopCol") as CollisionShape2D if boundary else null
+	var bottom := boundary.get_node_or_null(^"BottomCol") as CollisionShape2D if boundary else null
+	var left := boundary.get_node_or_null(^"LeftCol") as CollisionShape2D if boundary else null
+	var right := boundary.get_node_or_null(^"RightCol") as CollisionShape2D if boundary else null
+	var all_present := top != null and bottom != null and left != null and right != null
+	t.check(all_present, "pass level: boundary retains all four collision shapes")
+	if all_present:
+		var top_shape := top.shape as RectangleShape2D
+		var bottom_shape := bottom.shape as RectangleShape2D
+		var left_shape := left.shape as RectangleShape2D
+		var right_shape := right.shape as RectangleShape2D
+		var top_rect := Rect2(top.position - top_shape.size * 0.5, top_shape.size)
+		var bottom_rect := Rect2(bottom.position - bottom_shape.size * 0.5,
+			bottom_shape.size)
+		var left_rect := Rect2(left.position - left_shape.size * 0.5, left_shape.size)
+		var right_rect := Rect2(right.position - right_shape.size * 0.5, right_shape.size)
+		t.check(top_shape.size == Vector2(4176, 40)
+				and bottom_shape.size == Vector2(4176, 40)
+				and left_shape.size == Vector2(40, 4176)
+				and right_shape.size == Vector2(40, 4176),
+			"pass level: boundary walls are 40px thick and close the corners")
+		t.check(is_equal_approx(top_rect.end.y, -2048.0)
+				and is_equal_approx(bottom_rect.position.y, 2048.0)
+				and is_equal_approx(left_rect.end.x, -2048.0)
+				and is_equal_approx(right_rect.position.x, 2048.0),
+			"pass level: boundary inner faces enclose exactly +/-2048")
+	var visuals_hidden := boundary != null
+	for visual_name in [&"TopVis", &"BottomVis", &"LeftVis", &"RightVis"]:
+		var visual := boundary.get_node_or_null(NodePath(visual_name)) as CanvasItem \
+			if boundary else null
+		visuals_hidden = visuals_hidden and visual != null and not visual.visible
+	t.check(visuals_hidden, "pass level: all boundary visuals stay hidden")
+	level.free()
+
+func test_level_removes_old_snowfield_layout() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var removed := [
+		&"SnowTop", &"SnowBottom", &"SnowNW", &"SnowN", &"SnowS", &"SnowSE",
+		&"Ice1", &"Ice2", &"Ice3", &"Ice4", &"CliffWest", &"Chasm",
+		&"CurbCliffE", &"CurbCliffN", &"CurbCliffS", &"CurbChasmN",
+		&"CurbChasmS", &"CurbChasmE", &"CurbChasmW", &"Jump", &"Rock1",
+		&"Rock3", &"Rock4", &"Rock5", &"SlopeBuilding", &"CenterN",
+		&"CenterMidW", &"CenterMidE", &"CenterS", &"Drift1", &"Drift2",
+		&"Drift3", &"Drift4", &"Drift5", &"Drift6", &"Drift7", &"PineGroves",
+		&"Cone1", &"Cone2", &"Sign1", &"Enemy5", &"Enemy6", &"AmmoPower2",
+	]
+	var survivors: Array[StringName] = []
+	for old_name: StringName in removed:
+		if level.find_child(String(old_name), true, false) != null:
+			survivors.append(old_name)
+	var road_marks := level.get_node_or_null(^"RoadMarks")
+	t.check(survivors.is_empty(), "pass level: removed snowfield nodes stay gone; found %s" %
+		[survivors])
+	t.check(road_marks != null and road_marks.get_child_count() == 0,
+		"pass level: RoadMarks survives only as an empty grouping node")
+	level.free()

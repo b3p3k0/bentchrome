@@ -88,8 +88,8 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	var snowy := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
 	t.root.add_child(snowy)  # DriveableHill builds its authored recipe at ready.
 	var hill := snowy.get_node_or_null(^"SnowyHill") as DriveableHill
-	t.check(hill != null and hill.summit_size == Vector2(848, 848)
-			and is_equal_approx(hill.grade_length, 240.0)
+	t.check(hill != null and hill.summit_size == Vector2(320, 320)
+			and is_equal_approx(hill.grade_length, 192.0)
 			and is_equal_approx(hill.downhill_pull, DriveableHill.DEFAULT_HILL_PULL)
 			and is_equal_approx(hill.downhill_pull, 180.0),
 		"snowy hill: one reusable authoring root owns summit and grade depth")
@@ -114,20 +114,20 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 	t.check(cardinals.size() == 4 and corners.size() == 4,
 		"snowy hill: four cardinal and four diagonal faces")
 	for ramp in cardinals:
-		t.check(ramp.size == Vector2(848, 240) and not ramp.rails and not ramp.surface_paint
+		t.check(ramp.size == Vector2(320, 192) and not ramp.rails and not ramp.surface_paint
 				and ramp.terrain_type == "snow" and is_equal_approx(ramp.downhill_pull, 180.0),
 			"snowy hill: %s yields paint to the seamless snow skin" % ramp.name)
 	for corner in corners:
-		t.check(is_equal_approx(corner.leg_size, 120.0) and not corner.surface_paint
+		t.check(is_equal_approx(corner.leg_size, 96.0) and not corner.surface_paint
 				and corner.terrain_type == "snow"
 				and is_equal_approx(corner.downhill_pull, 180.0),
-			"snowy hill: %s exactly fills its 120px corner gap" % corner.name)
+			"snowy hill: %s exactly fills its 96px corner gap" % corner.name)
 	var skin := hill.get_node_or_null(^"_Generated/Surface") as Polygon2D
 	var expected_skin := PackedVector2Array([
-		Vector2(-424, -544), Vector2(424, -544),
-		Vector2(544, -424), Vector2(544, 424),
-		Vector2(424, 544), Vector2(-424, 544),
-		Vector2(-544, 424), Vector2(-544, -424),
+		Vector2(-160, -256), Vector2(160, -256),
+		Vector2(256, -160), Vector2(256, 160),
+		Vector2(160, 256), Vector2(-160, 256),
+		Vector2(-256, 160), Vector2(-256, -160),
 	])
 	t.check(skin != null and skin.polygon == expected_skin,
 		"snowy hill: one compact snow-textured octagon owns the complete silhouette")
@@ -163,61 +163,13 @@ func test_snowy_hill_has_eight_driveable_faces() -> void:
 			and hill.get_node_or_null(^"AmmoStandardSummit") != null
 			and hill.get_node_or_null(^"DeerHerd") != null,
 		"snowy hill: summit traversal rewards stay authored")
-	t.check(hill.position == Vector2(896, -672) and hill.outer_size() == Vector2(1088, 1088),
-		"snowy hill: exact-fit root is 1088px at the selected snowfield center")
-	var world_bounds := Rect2(hill.position - hill.outer_size() * 0.5, hill.outer_size())
-	t.check(is_equal_approx(world_bounds.position.y, -1216.0)
-			and is_equal_approx(world_bounds.end.y, -128.0),
-		"snowy hill: north and south edges stop exactly at both road boundaries")
-	var slope_building := snowy.get_node_or_null(^"SlopeBuilding") as StaticBody2D
-	var player := snowy.get_node_or_null(^"Vehicle") as Vehicle
-	t.check(slope_building != null and slope_building.collision_layer == (4 | 16 | 32),
-		"snowy hill: slope structure blocks both adjoining terrace floors")
-	t.check(hill.get_index() < slope_building.get_index()
-			and slope_building.get_index() < player.get_index(),
-		"snowy hill: skin draws before slope structure, which draws before vehicles")
+	t.check(hill.position == Vector2(-256, 640) and hill.outer_size() == Vector2(512, 512),
+		"snowy hill: compact pass knoll owns its signed-off footprint and position")
 	var power := hill.get_node(^"AmmoPowerSummit") as Node2D
 	var standard := hill.get_node(^"AmmoStandardSummit") as Node2D
 	var deer := hill.get_node(^"DeerHerd") as Node2D
-	t.check(power.position == Vector2.ZERO and standard.position == Vector2(204, 196)
+	t.check(power.position == Vector2.ZERO and standard.position == Vector2(88, 80)
 			and deer.position == Vector2.ZERO,
 		"snowy hill: pickups and deer remain hill-relative for future moves")
 	t.root.remove_child(snowy)
-	snowy.free()
-
-func test_snowy_pine_groves_preserve_combat_space() -> void:
-	var snowy := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
-	var groves := snowy.get_node_or_null(^"PineGroves") as Node2D
-	t.check(groves != null and groves.get_child_count() == 29,
-		"snowy pines: five sparse peripheral grove bands carry 29 trees")
-	if groves == null:
-		snowy.free()
-		return
-	var spawns: Array[Node2D] = []
-	for child in snowy.get_children():
-		if child is Node2D and (String(child.name) == "Vehicle"
-				or String(child.name).begins_with("Enemy")):
-			spawns.append(child)
-	var center_lane := Rect2(Vector2(-1450, -180), Vector2(2900, 360))
-	var donut_field := Rect2(Vector2(-800, 250), Vector2(1500, 900))
-	var hill_approaches := Rect2(Vector2(250, -1316), Vector2(1290, 1288))
-	for pine_v in groves.get_children():
-		var pine := pine_v as Node2D
-		t.check(String(pine.get("kind")) == "pine"
-				and is_equal_approx(float(pine.get("footprint")), 36.0)
-				and int(pine.get("floor_index")) == 2,
-			"snowy pines: %s is one-hit floor-2 clutter" % pine.name)
-		for spawn in spawns:
-			t.check(pine.position.distance_to(spawn.position) >= 300.0,
-				"snowy pines: %s stays 300px from %s" % [pine.name, spawn.name])
-		var radius := 18.0
-		t.check(not center_lane.grow(radius).has_point(pine.position),
-			"snowy pines: %s leaves the center east-west lane clear" % pine.name)
-		t.check(not donut_field.grow(radius).has_point(pine.position),
-			"snowy pines: %s leaves the south-central donut field open" % pine.name)
-		t.check(not hill_approaches.grow(radius).has_point(pine.position),
-			"snowy pines: %s leaves all hill approaches open" % pine.name)
-		t.check(absf(pine.position.y - 1344.0) >= 150.0
-				and absf(pine.position.y + 1344.0) >= 150.0,
-			"snowy pines: %s leaves both boundary road bands open" % pine.name)
 	snowy.free()

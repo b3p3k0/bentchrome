@@ -5,10 +5,12 @@ extends RefCounted
 ## these tests lock the substitute senses that keep AI out of the Potomac.
 
 const Hazards := preload("res://game/hazards.gd")
+const AiNoGoScript := preload("res://environment/ai_no_go.gd")
 const WaterScene := preload("res://environment/deep_water_zone.tscn")
 const PitScene := preload("res://environment/pit_zone.tscn")
 const DriverScript := preload("res://vehicles/drivers/enemy_driver.gd")
 const EnemyScene := preload("res://vehicles/enemy_vehicle.tscn")
+const VehicleScene := preload("res://vehicles/vehicle.tscn")
 
 var t
 
@@ -72,6 +74,50 @@ func test_registry_rects_and_cache() -> void:
 	t.root.remove_child(container)
 	container.free()
 	t.check(Hazards.rects(t).is_empty(), "hazards: empty tree yields empty registry")
+
+func test_ai_no_go_registers_without_hurting_a_grounded_vehicle() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var no_go := AiNoGoScript.new() as Node2D
+	no_go.position = Vector2(120, -80)
+	no_go.set("size", Vector2(384, 384))
+	container.add_child(no_go)
+	t.check(not no_go is CollisionObject2D and no_go.get_child_count() == 0,
+		"ai no-go: remains a collisionless Node2D with no child shapes")
+	var car: Vehicle = VehicleScene.instantiate()
+	car.faction = &"enemies"
+	car.global_position = no_go.global_position
+	var died := [false]
+	var health := car.get_node(^"Health") as Health
+	health.died.connect(func() -> void: died[0] = true)
+	container.add_child(car)
+	var found := false
+	for rect: Rect2 in Hazards.rects(t):
+		found = found or rect == Rect2(-72, -272, 384, 384)
+	t.check(found, "ai no-go: exported center and size appear in Hazards.rects()")
+	for _frame in 55:
+		await t.physics_frame
+	t.check(is_instance_valid(car) and not bool(died[0]) and health.hp > 0.0
+			and not bool(car.get("_falling")) and car.height == 0.0,
+		"ai no-go: a grounded vehicle inside remains alive and does not fall")
+	t.root.remove_child(container)
+	container.free()
+
+func test_guard_fires_for_ai_no_go() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var no_go := AiNoGoScript.new() as Node2D
+	no_go.set("size", Vector2(384, 384))
+	container.add_child(no_go)
+	var car := _guarded_car(container, Vector2(-332, 0), Vector2(500, 0), 0.0)
+	var driver: Variant = DriverScript.new()
+	var intent: Dictionary = driver._apply_hazard_guard(car,
+		{"throttle": 1.0, "steer": 0.0, "boost": true})
+	t.check(driver._guard_active and absf(float(intent["steer"])) > 0.9,
+		"ai no-go: guard fires for a FakeCar driving at the rect")
+	driver.free()
+	t.root.remove_child(container)
+	container.free()
 
 func test_segment_geometry() -> void:
 	var rect := Rect2(-100, -100, 200, 200)

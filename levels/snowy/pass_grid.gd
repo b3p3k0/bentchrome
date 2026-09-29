@@ -41,14 +41,18 @@ const KNOLL := {
 	"from_floor": 2, "to_floor": 3,
 }
 const PADS := {
-	&"south_east": {
-		"center": Vector2(640, -64), "size": Vector2(224, 224),
-		"floor": 2, "launch": &"north", "lane_cols": Vector2i(20, 21),
+	&"south_west": {
+		"center": Vector2(0, -64), "size": Vector2(224, 224),
+		"floor": 2, "launch": &"north", "lane_cols": Vector2i(15, 16),
 	},
 	&"north_west": {
 		"center": Vector2(0, -704), "size": Vector2(224, 224),
 		"floor": 2, "launch": &"south", "lane_cols": Vector2i(15, 16),
 	},
+}
+const NO_GO := {
+	&"lane_north": Rect2(-256, -896, 384, 384),
+	&"lane_south": Rect2(-256, -256, 384, 384),
 }
 const SPUR_DATA := {
 	"cells": Rect2i(3, 21, 3, 2), "size": Vector2(384, 256),
