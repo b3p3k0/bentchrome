@@ -3,21 +3,32 @@ extends Node2D
 ## intentions that owns the south edge of the run. Its speed is priced against
 ## the PLAYER'S OWN CAR — the director's pace is a fraction of that ride's top
 ## speed, plus a surge that grows with every px the gap runs past the leash —
-## so a land-yacht and an open-wheeler feel the same squeeze. It never falls
-## farther back than MAX_GAP, and eats a life on contact (through Health, so
-## the respawn blink-shield and DEVGOD are respected). A road-spanning
-## backstop rides 250px inside it — you cannot reverse through the horde.
+## so a land-yacht and an open-wheeler feel the same squeeze.
+##
+## THE GAP IS THE HEALTH BAR, and it lives ON SCREEN: the leash is short
+## enough that clean flat-out driving holds the dust crest just inside the
+## bottom edge of the view, and every lift, crash, or verge excursion visibly
+## costs ground. The rubberband pulls both ways — a boost only buys a couple
+## of seconds before the surge drags the pack back into frame (MAX_GAP), and
+## inside MERCY_GAP the closing speed is capped so the last stretch always
+## takes a beat: close calls last long enough to be escaped. Contact eats a
+## life (through Health, so the respawn blink-shield and DEVGOD are
+## respected). A road-spanning backstop rides 250px inside it — you cannot
+## reverse through the horde.
 
-static var MAX_GAP := 2400.0      # px the wall trails at best (never irrelevant)
+static var MAX_GAP := 760.0       # px the pack trails at best — off screen only briefly
+static var START_GAP := 600.0     # where the pack sits at the green flag
 static var KILL_MARGIN := 50.0    # gap at which the swarm takes you
-static var RESPAWN_GAP := 1400.0  # reset distance after a death
-static var LEASH_GAP := 900.0     # the rubberband pivot: past this, the horde surges
-static var SURGE_PER_PX := 0.0007 # extra pace (fraction of top) per px past the leash
+static var RESPAWN_GAP := 600.0   # reset distance after a death
+static var LEASH_GAP := 210.0     # the rubberband pivot: past this, the horde surges
+static var SURGE_PER_PX := 0.0008 # extra pace (fraction of top) per px past the leash
+static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
+static var MERCY_GAP := 170.0     # inside this the closing speed is capped...
+static var MERCY_CLOSE := 60.0    # ...to this many px/s: the last 120px take >= 2s
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DUST_AMOUNT := 140          # particle budget: one system, under 200
-const RUMBLE_GAP := 500.0         # ground shudder starts here, grows to contact
 const FALLBACK_TOP := 484.0       # mid-roster top: bare fixtures, freed targets
 
 var target: Node2D = null   # the player, set by the host
@@ -74,6 +85,25 @@ func gap() -> float:
 static func pack_speed(top: float, pace: float, gap_px: float) -> float:
 	return top * (pace + SURGE_PER_PX * maxf(gap_px - LEASH_GAP, 0.0))
 
+## The mercy cap: inside MERCY_GAP the pack may close no faster than
+## MERCY_CLOSE over the chased car's own northward speed — a pinned or
+## crawling car still gets its two seconds to find a way out.
+static func mercy_cap(speed: float, gap_px: float, target_vn: float) -> float:
+	if gap_px >= MERCY_GAP:
+		return speed
+	return minf(speed, target_vn + MERCY_CLOSE)
+
+## 0 = the pack at its farthest, 1 = contact. The HUD meter and the GPS band.
+static func pressure_at(gap_px: float) -> float:
+	return clampf(1.0 - (gap_px - KILL_MARGIN) / (MAX_GAP - KILL_MARGIN), 0.0, 1.0)
+
+func pressure() -> float:
+	return pressure_at(gap())
+
+## Pack on the bumper — the rumble, the HUD alarm, the GPS pulse.
+func in_danger() -> bool:
+	return gap() < DANGER_GAP
+
 ## The chased car's honest top speed (garage build included, boost excluded),
 ## read live and duck-typed so bare test fixtures ride the fallback.
 func base_top() -> float:
@@ -82,6 +112,16 @@ func base_top() -> float:
 		if ctrl != null:
 			return ctrl.max_speed
 	return FALLBACK_TOP
+
+## The chased car's speed up the road (north = +), 0 for bare fixtures.
+func _target_vn() -> float:
+	var v: Variant = target.get("velocity")
+	return -v.y if v is Vector2 else 0.0
+
+## A wrecked car gets no mercy — the pack rolls straight over the wreck.
+func _target_alive() -> bool:
+	var health := target.get_node_or_null(^"Health")
+	return health == null or health.hp > 0.0
 
 ## Death reset: the swarm regroups a fair distance back (maxf — if it was
 ## already trailing farther, it doesn't leap forward to punish the respawn).
@@ -94,7 +134,11 @@ func _physics_process(delta: float) -> void:
 	var player_y: float = target.global_position.y
 	# Rubberband: cruise inside the leash, surge harder the farther it trails
 	# — no car outruns the horde globally; skill holds it at arm's length.
-	front_y -= pack_speed(base_top(), pace_frac, front_y - player_y) * delta  # north is -y
+	var gap_now := front_y - player_y
+	var speed := pack_speed(base_top(), pace_frac, gap_now)
+	if _target_alive():
+		speed = mercy_cap(speed, gap_now, _target_vn())
+	front_y -= speed * delta                         # north is -y
 	front_y = minf(front_y, player_y + MAX_GAP)      # never out of the mirrors
 	var road_x := 0.0
 	if course != null:
@@ -107,11 +151,12 @@ func _physics_process(delta: float) -> void:
 		var health := target.get_node_or_null(^"Health")
 		if health and health.hp > 0.0:
 			health.take_damage(100000.0)  # shield/DEVGOD respected — Health decides
-	# Ground shudder as the horde closes — a sub-pixel rumble that grows to a
-	# rattle at contact range (screen_shake toggle respected inside add_shake).
+	# Ground shudder once the pack is on the bumper — a sub-pixel rumble that
+	# grows to a rattle at contact range (screen_shake toggle respected inside
+	# add_shake). The pack rides in frame all run; only DANGER shakes.
 	var g := front_y - player_y
-	if g < RUMBLE_GAP and target.has_method(&"add_shake"):
-		target.add_shake(minf((RUMBLE_GAP - g) * 0.002, 0.9))
+	if g < DANGER_GAP and target.has_method(&"add_shake"):
+		target.add_shake(minf((DANGER_GAP - g) * 0.006, 0.9))
 	queue_redraw()
 
 func _draw() -> void:

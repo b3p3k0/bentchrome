@@ -2,10 +2,11 @@ extends Control
 ## The dashboard GPS: a scrolling north-up ribbon of the pre-rolled course
 ## from just behind the player to a few turns ahead — never the whole map.
 ## Draws the road strip (widths included, so narrows read before they arrive),
-## Buzzard blips near the player, pickup markers, a next-turn arrow, and a
-## wall-proximity band rising from the south edge. Redraws at ~10Hz.
+## Buzzard blips near the player, pickup markers, a next-turn arrow, and the
+## horde itself: a band filling the ribbon from the dust crest's TRUE course
+## position south, pulsing once the pack is on the bumper. Redraws at ~10Hz.
 
-const BACK := 500.0     # course px shown behind the player
+const BACK := 800.0     # course px shown behind the player — room for the pack
 const AHEAD := 3500.0   # course px shown ahead — "a few turns"
 const SAMPLE := 150.0
 const BLIP_RANGE := 1500.0
@@ -84,7 +85,7 @@ func _draw() -> void:
 			]), TECH)
 		else:
 			draw_rect(Rect2(ep - Vector2(3, 3), Vector2(6, 6)), ENEMY)
-	# The player chevron (fixed 87.5% down by construction).
+	# The player chevron (fixed BACK / (BACK + AHEAD) up from the south edge).
 	var me := _panel(player.global_position, player_d, center_x, sy)
 	draw_colored_polygon(PackedVector2Array([
 		me + Vector2(0, -7), me + Vector2(5, 5), me + Vector2(-5, 5),
@@ -102,16 +103,15 @@ func _draw() -> void:
 		var font := ThemeDB.fallback_font
 		draw_string(font, Vector2(cx - 32.0, 42.0),
 			"TURN %dm" % int(turn["dist"] * 0.1), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PLAYER)
-	# Wall pressure band rising from the south edge.
-	var gap: float = host.wall_gap()
-	var max_gap: float = 2400.0
-	var press := clampf(1.0 - gap / max_gap, 0.0, 1.0)
-	if press > 0.02:
-		var h := 8.0 + press * 52.0
+	# The horde: everything south of the dust crest, drawn where it really is.
+	var crest_y := clampf(size.y - (BACK - host.wall_gap()) * sy, 0.0, size.y)
+	if crest_y < size.y:
 		var col := WALL
-		if gap < 600.0:
+		col.a = 0.7
+		if host.in_danger():
 			col.a = 0.55 + 0.45 * absf(sin(Time.get_ticks_msec() * 0.012))
-		draw_rect(Rect2(0, size.y - h, size.x, h), col)
+		draw_rect(Rect2(0, crest_y, size.x, size.y - crest_y), col)
+		draw_line(Vector2(0, crest_y), Vector2(size.x, crest_y), WALL.lightened(0.35), 2.0)
 
 func _panel(world: Vector2, player_d: float, center_x: float, sy: float) -> Vector2:
 	var d := -world.y

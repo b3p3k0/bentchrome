@@ -126,9 +126,29 @@ func test_chase_exception_and_lan_puppet_lead() -> void:
 	chase._process(0.25)
 	t.check(not chase.camera_look_ahead_enabled,
 		"camera lead: Route 666 explicitly disables ordinary look-ahead")
-	t.check(chase_camera.position.is_equal_approx(Vector2(0, -260)),
+	t.check(chase_camera.position.is_equal_approx(Vector2(0, -140)),
 		"camera lead: Route 666 keeps its authored chase offset")
+	# The chase frames the pursuing pack against the bottom edge of the view,
+	# so its combat depth is pinned — a player zoom preference can't unframe it.
+	var keep_zoom: float = gs.zoom_combat
+	var keep_overview: bool = gs.overview
+	gs.overview = false
+	gs.zoom_combat = 0.72
+	chase._process(1.0)
+	t.check(chase_camera.zoom.is_equal_approx(Vector2.ONE * chase.camera_zoom_lock)
+		and is_equal_approx(chase.camera_zoom_lock, 0.55),
+		"camera zoom: Route 666 pins its combat depth (%.2f)" % chase_camera.zoom.x)
+	gs.overview = true
+	chase._process(1.0)
+	t.check(chase_camera.zoom.is_equal_approx(Vector2.ONE * gs.zoom_overview),
+		"camera zoom: the overview toggle still works under the pin")
+	gs.overview = keep_overview
+	gs.zoom_combat = keep_zoom
 	_done(chase)
+	var plain := _vehicle()
+	t.check(is_equal_approx(plain.camera_zoom_lock, 0.0),
+		"camera zoom: ordinary cars follow the player's setting")
+	_done(plain)
 
 	var puppet := _vehicle()
 	puppet.set_net_puppet(true)

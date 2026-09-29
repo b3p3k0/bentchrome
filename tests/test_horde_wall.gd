@@ -31,31 +31,32 @@ func test_wall_pressure_math() -> void:
 	container.add_child(player)
 	var wall = WallScript.new()
 	wall.target = player
-	wall.pace_frac = 0.7
-	wall.front_y = player.position.y + 2000.0
+	wall.pace_frac = 0.8
+	var trailing: float = WallScript.MAX_GAP - 60.0
+	wall.front_y = player.position.y + trailing
 	container.add_child(wall)
 	# A bare fixture has no controller: the pack prices itself off the fallback.
 	var top: float = wall.base_top()
 	t.check(is_equal_approx(top, WallScript.FALLBACK_TOP), "wall: bare targets ride the fallback top")
 	# Rubberband: past the leash the surge stacks on the phase pace.
-	var cruise: float = top * 0.7
-	var surged: float = WallScript.pack_speed(top, 0.7, 2000.0)
+	var cruise: float = top * 0.8
+	var surged: float = WallScript.pack_speed(top, 0.8, trailing)
 	t.check(surged > cruise, "wall: trailing past the leash surges (%d > %d)" % [int(surged), int(cruise)])
 	wall._physics_process(0.5)
-	t.check(is_equal_approx(wall.gap(), 2000.0 - surged * 0.5),
+	t.check(is_equal_approx(wall.gap(), trailing - surged * 0.5),
 		"wall: surges when trailing (gap %d)" % int(wall.gap()))
 	# At the leash the surge is zero — pure phase cruise.
 	wall.front_y = player.position.y + WallScript.LEASH_GAP
-	wall._physics_process(0.5)
-	t.check(is_equal_approx(wall.gap(), WallScript.LEASH_GAP - cruise * 0.5),
+	wall._physics_process(0.05)
+	t.check(is_equal_approx(wall.gap(), WallScript.LEASH_GAP - cruise * 0.05),
 		"wall: eases to cruise inside the leash")
-	# From the max clamp, closure outruns the chased car even on the boost
-	# (boost_top_factor 1.5) — at the slowest phase pace on the books.
+	# From the max clamp the pack beats the chased car's honest top at the
+	# slowest pace on the books — a boost only ever buys a few seconds.
 	wall.front_y = player.position.y + WallScript.MAX_GAP
 	var gap_before: float = wall.gap()
-	wall._physics_process(1.0)
-	t.check(gap_before - wall.gap() > top * 1.5,
-		"wall: nothing outruns the horde globally (closed %d/s)" % int(gap_before - wall.gap()))
+	wall._physics_process(0.5)
+	t.check((gap_before - wall.gap()) / 0.5 > top,
+		"wall: nothing outruns the horde globally (closing %d/s)" % int((gap_before - wall.gap()) / 0.5))
 	player.position.y = -30000.0
 	wall._physics_process(0.016)
 	t.check(is_equal_approx(wall.gap(), WallScript.MAX_GAP), "wall: clamps to MAX_GAP when outrun")
@@ -107,6 +108,80 @@ func test_pack_is_priced_against_the_car() -> void:
 	t.check(is_equal_approx(wall.base_top(), SLOW), "wall: the read is live, never cached")
 	t.root.remove_child(container)
 	container.free()
+
+## Drives a fixture car north at a fixed fraction of its top and steps the
+## wall beside it; returns the gap after `seconds`.
+func _chase(top: float, pace: float, speed_frac: float, start_gap: float, seconds: float) -> float:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var car := FakeCar.new()
+	car.ctrl.max_speed = top
+	car.velocity = Vector2(0.0, -top * speed_frac)
+	container.add_child(car)
+	var wall = WallScript.new()
+	wall.target = car
+	wall.pace_frac = pace
+	wall.front_y = car.position.y + start_gap
+	container.add_child(wall)
+	wall.set_physics_process(false)  # the test owns the clock
+	# Wall first, then the car: the gap read after each full tick is the gap
+	# the wall prices its NEXT step on (no half-step measuring artifact).
+	const DT := 1.0 / 60.0
+	for i in int(seconds / DT):
+		wall._physics_process(DT)
+		car.position += car.velocity * DT
+	var out: float = wall.gap()
+	t.root.remove_child(container)
+	container.free()
+	return out
+
+## THE GAP IS THE HEALTH BAR: clean flat-out driving parks the dust crest at
+## the same resting gap for every ride — on screen — and each beat of the
+## arc tightens it.
+func test_flat_out_gap_rests_on_screen_for_every_car() -> void:
+	# View behind the player at the pinned chase framing: half the 720px play
+	# square at zoom 0.55, plus the camera's 140px northward lead spent.
+	const VIEW_BEHIND := 720.0 / 0.55 / 2.0 - 140.0
+	for top in [453.0, 484.0, 640.0]:
+		for pace in [0.80, 0.90, 1.00]:
+			var want: float = WallScript.LEASH_GAP + (1.0 - pace) / WallScript.SURGE_PER_PX
+			var got := _chase(top, pace, 1.0, WallScript.START_GAP, 30.0)
+			t.check(absf(got - want) < 3.0,
+				"wall: top %d pace %.2f rests at %d px (got %d)" % [int(top), pace, int(want), int(got)])
+			t.check(want < VIEW_BEHIND,
+				"wall: the resting crest is on screen at pace %.2f (%d < %d)" % [pace, int(want), int(VIEW_BEHIND)])
+			t.check(want > WallScript.DANGER_GAP,
+				"wall: clean driving never rests in the danger zone (pace %.2f)" % pace)
+
+## Mistakes cost ground, and the last stretch always takes a beat.
+func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
+	const TOP := 484.0
+	var rest: float = WallScript.LEASH_GAP + (1.0 - 0.9) / WallScript.SURGE_PER_PX
+	var lifted := _chase(TOP, 0.9, 0.8, rest, 1.0)
+	t.check(lifted < rest - 30.0, "wall: a one-second lift visibly costs gap (%d -> %d)" % [int(rest), int(lifted)])
+	# A car pinned dead on a pillar at the mercy line: the pack may close no
+	# faster than MERCY_CLOSE, so contact is at least two seconds away.
+	var span: float = WallScript.MERCY_GAP - WallScript.KILL_MARGIN
+	var floor_s: float = span / WallScript.MERCY_CLOSE
+	t.check(floor_s >= 2.0, "wall: the mercy stretch is at least two seconds (%.1f)" % floor_s)
+	var pinned := _chase(TOP, 1.0, 0.0, WallScript.MERCY_GAP - 1.0, floor_s - 0.2)
+	t.check(pinned > WallScript.KILL_MARGIN,
+		"wall: a pinned car still has its beat to escape (gap %d)" % int(pinned))
+	t.check(is_equal_approx(WallScript.mercy_cap(900.0, WallScript.MERCY_GAP + 1.0, 0.0), 900.0),
+		"wall: no mercy outside the mercy gap")
+	t.check(is_equal_approx(WallScript.mercy_cap(900.0, 100.0, 250.0), 250.0 + WallScript.MERCY_CLOSE),
+		"wall: inside it, closing is capped over the car's own speed")
+	t.check(is_equal_approx(WallScript.mercy_cap(200.0, 100.0, 400.0), 200.0),
+		"wall: mercy never speeds the pack up")
+
+func test_pressure_meter_and_danger_line() -> void:
+	t.check(is_equal_approx(WallScript.pressure_at(WallScript.MAX_GAP), 0.0), "wall: farthest = no pressure")
+	t.check(is_equal_approx(WallScript.pressure_at(WallScript.KILL_MARGIN), 1.0), "wall: contact = full pressure")
+	t.check(is_equal_approx(WallScript.pressure_at(-40.0), 1.0), "wall: pressure clamps past contact")
+	t.check(WallScript.pressure_at(300.0) > WallScript.pressure_at(500.0), "wall: closer = more pressure")
+	t.check(WallScript.DANGER_GAP > WallScript.KILL_MARGIN and WallScript.DANGER_GAP < WallScript.LEASH_GAP,
+		"wall: the danger zone sits between contact and the leash")
+	t.check(WallScript.START_GAP <= WallScript.MAX_GAP, "wall: the green flag drops inside the clamp")
 
 func test_end_screen_suppression() -> void:
 	var container := Node2D.new()

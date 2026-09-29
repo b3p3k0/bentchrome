@@ -68,6 +68,10 @@ signal combat_hit(attacker: Node2D)
 
 @export_group("Camera")
 @export var camera_look_ahead_enabled := true
+## > 0 pins the COMBAT depth to this zoom whatever the player's setting (the
+## G overview toggle still works). Route 666 frames the pursuing pack against
+## the bottom edge of the view, so its framing can't ride a preference.
+@export var camera_zoom_lock := 0.0
 
 @export_group("Depth")
 @export var gravity_z := 1300.0
@@ -274,7 +278,7 @@ func _ready() -> void:
 		_zoom_was_pressed = Input.is_action_pressed(IR.ACTION_ZOOM)
 		if boot_gs:
 			boot_cam.zoom = Vector2.ONE * (boot_gs.zoom_overview \
-				if boot_gs.overview else boot_gs.zoom_combat)
+				if boot_gs.overview else _combat_zoom(boot_gs))
 
 func _exit_tree() -> void:
 	_reset_locator_pulse()
@@ -323,7 +327,7 @@ func _process(delta: float) -> void:
 	if zoom_pressed and not _zoom_was_pressed:
 		gs.toggle_overview()
 	_zoom_was_pressed = zoom_pressed
-	var target_zoom: float = gs.zoom_overview if gs.overview else gs.zoom_combat
+	var target_zoom: float = gs.zoom_overview if gs.overview else _combat_zoom(gs)
 	camera.zoom = camera.zoom.lerp(Vector2.ONE * target_zoom, minf(8.0 * delta, 1.0))
 	if _pit_camera_held:
 		# Top-level mode keeps the body tween out of this transform entirely; the
@@ -331,6 +335,10 @@ func _process(delta: float) -> void:
 		camera.global_position = _pit_camera_world_position
 	else:
 		_update_camera_look_ahead(camera, delta, gs)
+
+## The combat depth: the player's setting, unless the scene pinned its own.
+func _combat_zoom(gs: Node) -> float:
+	return camera_zoom_lock if camera_zoom_lock > 0.0 else float(gs.zoom_combat)
 
 ## World-velocity lead: preserve object scale and spend some trailing view to
 ## show the road the car is actually eating. The vehicle node never rotates, so

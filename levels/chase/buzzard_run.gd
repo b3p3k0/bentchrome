@@ -30,6 +30,10 @@ func _ready() -> void:
 	add_to_group(&"chase_host")
 	if _player:
 		_player.weapon_lock_exempt = true  # Route 666 self-limits fire in its drivers
+		# The green flag drops on a ROLLING start (the level-start respawn in
+		# super() zeroed velocity): the pack rides a short leash now, and a
+		# standing launch would hand it the first hundred pixels for free.
+		_player.velocity = Vector2(0.0, -ROLL_SPEED)
 	var seed_val := randi() & 0x7FFFFFFF
 	course = CourseScript.new()
 	course.pre_roll(seed_val)
@@ -43,7 +47,7 @@ func _ready() -> void:
 	_wall.name = "HordeWall"
 	_wall.target = _player
 	_wall.course = course
-	_wall.front_y = _player.global_position.y + WallScript.RESPAWN_GAP
+	_wall.front_y = _player.global_position.y + WallScript.START_GAP
 	add_child(_wall)
 	_director = DirectorScript.new()
 	_director.name = "ChaseDirector"
@@ -77,6 +81,18 @@ func wall_gap() -> float:
 ## World y of the dust crest — Buzzard drivers keep their marks north of it.
 func wall_front_y() -> float:
 	return _wall.front_y if _wall else INF
+
+## 0 = the pack at its farthest, 1 = contact (the HUD meter, the GPS band).
+func pressure() -> float:
+	return _wall.pressure() if _wall else 0.0
+
+## Pack on the bumper.
+func in_danger() -> bool:
+	return _wall != null and _wall.in_danger()
+
+## The pack's live pace as a fraction of the player's top (dev readout).
+func pack_pace() -> float:
+	return _wall.pace_frac if _wall else 0.0
 
 ## Rolling-start respawn: same course position (x clamped onto the asphalt),
 ## nose north, shield up, already rolling — the run never stops. Nearby
