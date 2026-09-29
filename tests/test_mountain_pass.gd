@@ -121,6 +121,12 @@ func _base_kind_at(i: int, j: int) -> StringName:
 		return PassGrid.DROP
 	return PassGrid.ROAD
 
+func _colors_equal_approx(a: Color, b: Color, tolerance: float) -> bool:
+	return (is_equal_approx(a.r, b.r) or absf(a.r - b.r) <= tolerance) \
+		and (is_equal_approx(a.g, b.g) or absf(a.g - b.g) <= tolerance) \
+		and (is_equal_approx(a.b, b.b) or absf(a.b - b.b) <= tolerance) \
+		and (is_equal_approx(a.a, b.a) or absf(a.a - b.a) <= tolerance)
+
 func test_every_cell_has_exactly_one_kind() -> void:
 	var allowed := {
 		PassGrid.MOUNTAIN: true, PassGrid.ROAD: true, PassGrid.DROP: true,
@@ -831,6 +837,111 @@ func test_level_bridge_deck_matches_grid_and_stays_paint_only() -> void:
 		t.check(bridge.is_inside_tree(), "pass level: BridgeDeck draws for one frame")
 		t.root.remove_child(bridge)
 		bridge.free()
+	level.free()
+
+func test_level_runaway_ramp_and_reward_ledge_match_grid() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var ramp := level.get_node_or_null(^"RunawayRamp") as Ramp
+	var floor_zone := level.get_node_or_null(^"FZLedge") as Area2D
+	var terrain := level.get_node_or_null(^"LedgeTerrain") as TerrainZone
+	var bed := level.get_node_or_null(^"RunawayBed") as Node2D
+	var crate := level.get_node_or_null(^"AmmoPowerLedge") as Area2D
+	var up := level.get_node_or_null(^"ConRunawayUp") as FloorConnector
+	var down := level.get_node_or_null(^"ConRunawayDown") as FloorConnector
+	var spur: Rect2i = PassGrid.SPUR_DATA["cells"]
+	var ledge: Rect2i = PassGrid.LEDGE_DATA["cells"]
+	var spur_rect := Rect2(PassGrid.ORIGIN + Vector2(spur.position) * PassGrid.CELL,
+		Vector2(spur.size) * PassGrid.CELL)
+	var ledge_rect := Rect2(PassGrid.ORIGIN + Vector2(ledge.position) * PassGrid.CELL,
+		Vector2(ledge.size) * PassGrid.CELL)
+	t.check(ramp != null and ramp.get_parent() == level
+			and ramp.position == spur_rect.get_center()
+			and is_equal_approx(ramp.rotation, -PI * 0.5)
+			and ramp.size == Vector2(spur_rect.size.y, spur_rect.size.x)
+			and ramp.low_floor == int(PassGrid.SPUR_DATA["from_floor"])
+			and ramp.high_floor == int(PassGrid.SPUR_DATA["to_floor"])
+			and ramp.terrain_type == "mud" and is_equal_approx(ramp.downhill_pull, 120.0)
+			and not ramp.rails and ramp.surface_color == Color(0.36, 0.33, 0.30),
+		"pass runaway: ramp exactly fills the west-climbing signed-off spur")
+	t.check(floor_zone != null and floor_zone.scene_file_path.ends_with("floor_zone.tscn")
+			and floor_zone.position == ledge_rect.get_center()
+			and floor_zone.get("size") == ledge_rect.size
+			and int(floor_zone.get("floor_index")) == int(PassGrid.LEDGE_DATA["floor"]),
+		"pass runaway: floor-3 zone exactly fills the signed-off ledge")
+	var vis := terrain.get_node_or_null(^"Vis") as Polygon2D if terrain else null
+	var col := terrain.get_node_or_null(^"Col") as CollisionShape2D if terrain else null
+	var shape := col.shape as RectangleShape2D if col else null
+	var expected_ledge_color := ramp.surface_color.blend(
+		Color(1.0, 1.0, 1.0, Ramp.HILITE_A)) if ramp else Color()
+	t.check(terrain != null and terrain.position == ledge_rect.get_center()
+			and terrain.terrain_type == &"mud" and not terrain.soften_visual
+			and vis != null
+			and shape != null and shape.size == ledge_rect.size,
+		"pass runaway: ledge gravel paint and mud handling share one footprint")
+	var got_ledge_color := vis.color if vis else Color()
+	t.check(vis != null and _colors_equal_approx(got_ledge_color, expected_ledge_color, 0.002),
+		"pass runaway: ledge color %s matches ramp high-end %s within 0.002 per channel"
+		% [got_ledge_color, expected_ledge_color])
+	var crate_cell: Vector2i = PassGrid.LEDGE_DATA["crate"]["cell"]
+	t.check(crate != null and crate.position == PassGrid.cell_center(crate_cell.x, crate_cell.y)
+			and crate.get("kind") == "power" and int(crate.get("amount")) == 1
+			and int(crate.get("floor_index")) == 3,
+		"pass runaway: one power crate is floor-gated at the signed-off ledge cell")
+	var routes := [
+		{"node": up, "from": 2, "to": 3, "approach": Vector2.LEFT},
+		{"node": down, "from": 3, "to": 2, "approach": Vector2.RIGHT},
+	]
+	for route in routes:
+		var connector := route["node"] as FloorConnector
+		t.check(connector != null and connector.position == spur_rect.get_center()
+				and connector.from_floor == route["from"] and connector.to_floor == route["to"]
+				and connector.approach_dir == route["approach"]
+				and connector.kind == &"grade",
+			"pass runaway: paired grade connector matches %s->%s route" %
+				[route["from"], route["to"]])
+	t.check(bed != null and bed.get_script() == PassDecoScript
+			and bed.position == (spur_rect.merge(ledge_rect)).get_center()
+			and bed.get("size") == spur_rect.merge(ledge_rect).size
+			and bed.get("kind") == &"runaway_bed",
+		"pass runaway: paint-only bed exactly spans the ledge and spur")
+	if ramp != null and terrain != null and bed != null and crate != null:
+		t.check(ramp.get_index() < bed.get_index() and terrain.get_index() < bed.get_index()
+				and bed.get_index() < crate.get_index(),
+			"pass runaway: gravel detail draws over both surfaces and below the crate")
+	level.free()
+
+func test_level_runaway_notch_is_clear_and_deco_is_paint_only() -> void:
+	var level := (load("res://levels/snowy/snowy.tscn") as PackedScene).instantiate()
+	var mountain := level.get_node_or_null(^"Mountain") as Node2D
+	var bed := level.get_node_or_null(^"RunawayBed") as Node2D
+	var occupied: Array[Vector2i] = []
+	for area in [PassGrid.SPUR_DATA["cells"], PassGrid.LEDGE_DATA["cells"]]:
+		var cells: Rect2i = area
+		for j in range(cells.position.y, cells.end.y):
+			for i in range(cells.position.x, cells.end.x):
+				var interior := PassGrid.cell_rect(i, j).grow(-0.01)
+				for block: Node2D in mountain.get_children() if mountain else []:
+					if not block is StaticBody2D:
+						continue
+					var col := block.get_node_or_null(^"Col") as CollisionShape2D
+					var shape := col.shape as RectangleShape2D if col else null
+					if shape and Rect2(block.position - shape.size * 0.5,
+							shape.size).intersects(interior):
+						occupied.append(Vector2i(i, j))
+	t.check(mountain != null and occupied.is_empty(),
+		"pass runaway: instanced mountain blocks leave every spur and ledge cell clear; bad %s"
+		% [occupied])
+	var collisions := bed.find_children("*", "CollisionObject2D", true, false) if bed else []
+	t.check(bed != null and not bed is CollisionObject2D and collisions.is_empty(),
+		"pass runaway: RunawayBed and all descendants stay paint-only")
+	if bed != null:
+		level.remove_child(bed)
+		bed.owner = null
+		t.root.add_child(bed)
+		await t.process_frame
+		t.check(bed.is_inside_tree(), "pass runaway: RunawayBed draws for one frame")
+		t.root.remove_child(bed)
+		bed.free()
 	level.free()
 
 func test_level_mountain_uses_level_materials() -> void:

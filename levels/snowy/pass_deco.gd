@@ -18,6 +18,10 @@ const ABUTMENT_OVERLAP := 10.0
 const SIDE_SHADOW_OFFSET := Vector2(8.0, 0.0)
 const SIDE_SHADOW_WIDTH := 18.0
 const GIRDER_WIDTH := 9.0
+const GRAVEL_DARK := Color(0.18, 0.16, 0.14, 0.58)
+const GRAVEL_LIGHT := Color(0.62, 0.58, 0.52, 0.44)
+const TYRE_RUT := Color(0.11, 0.10, 0.09, 0.24)
+const WORN_YELLOW := Color(0.82, 0.66, 0.22, 0.58)
 
 @export var kind: StringName = &"bridge_deck"
 @export var size := Vector2(384, 256)
@@ -34,6 +38,8 @@ func _draw() -> void:
 	match kind:
 		&"bridge_deck":
 			_draw_bridge_deck()
+		&"runaway_bed":
+			_draw_runaway_bed()
 
 func _draw_bridge_deck() -> void:
 	var half := size * 0.5
@@ -91,3 +97,40 @@ func _draw_snow(half: Vector2) -> void:
 			rng.randf_range(-half.y + 16.0, half.y - 34.0))
 		var streak := Vector2(rng.randf_range(-5.0, 5.0), rng.randf_range(12.0, 26.0))
 		draw_line(point, point + streak, SNOW_DUST, rng.randf_range(2.0, 4.0))
+
+func _draw_runaway_bed() -> void:
+	var half := size * 0.5
+	var rng := _rng()
+	var pebble_count := maxi(int(size.x * size.y / 2400.0), 24)
+	for i in pebble_count:
+		var point := Vector2(
+			rng.randf_range(-half.x + 8.0, half.x - 8.0),
+			rng.randf_range(-half.y + 8.0, half.y - 8.0))
+		var tangent := Vector2.RIGHT.rotated(rng.randf_range(0.0, TAU))
+		var length := rng.randf_range(2.0, 6.0)
+		var color := GRAVEL_LIGHT if rng.randf() < 0.38 else GRAVEL_DARK
+		draw_line(point - tangent * length * 0.5, point + tangent * length * 0.5,
+			color, rng.randf_range(1.0, 2.2))
+	_draw_tyre_ruts(half, rng)
+	var mouth_x := half.x - 30.0
+	for y: float in [-size.y * 0.28, 0.0, size.y * 0.28]:
+		_draw_worn_chevron(Vector2(mouth_x, y))
+
+func _draw_tyre_ruts(half: Vector2, rng: RandomNumberGenerator) -> void:
+	var steps := maxi(int(size.x / 40.0), 2)
+	for side: float in [-1.0, 1.0]:
+		var points := PackedVector2Array()
+		for i in steps + 1:
+			var x := lerpf(-half.x + 12.0, half.x - 12.0, float(i) / steps)
+			var y := side * size.y * 0.22 + rng.randf_range(-2.5, 2.5)
+			points.append(Vector2(x, y))
+		draw_polyline(points, TYRE_RUT, 5.0, true)
+
+func _draw_worn_chevron(center: Vector2) -> void:
+	var tip := center + Vector2(-12.0, 0.0)
+	for side: float in [-1.0, 1.0]:
+		var outer := center + Vector2(12.0, side * 15.0)
+		var gap_outer := center + Vector2(2.0, side * 5.2)
+		var gap_inner := center + Vector2(-1.0, side * 2.7)
+		draw_line(outer, gap_outer, WORN_YELLOW, 4.0)
+		draw_line(gap_inner, tip, WORN_YELLOW, 4.0)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -18,6 +18,9 @@
 [ext_resource type="PackedScene" path="res://levels/snowy/pass_mountain.tscn" id="31_mountain"]
 [ext_resource type="Script" path="res://levels/snowy/pass_deco.gd" id="32_pass_deco"]
 [ext_resource type="PackedScene" path="res://levels/snowy/pass_rails.tscn" id="33_rails"]
+[ext_resource type="Script" path="res://environment/ramp.gd" id="34_grade"]
+[ext_resource type="Script" path="res://environment/terrain_zone.gd" id="35_terrain"]
+[ext_resource type="Script" path="res://environment/floor_connector.gd" id="36_connector"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -45,6 +48,9 @@ size = Vector2(40, 4176)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ramp"]
 size = Vector2(224, 224)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ledge"]
+size = Vector2(256, 256)
 
 [node name="Snowy" type="Node2D"]
 script = ExtResource("1_lvl")
@@ -76,6 +82,66 @@ size = Vector2(384, 256)
 [node name="FZPlate" parent="." instance=ExtResource("24_fzone")]
 floor_index = 2
 size = Vector2(4096, 4096)
+
+[node name="RunawayRamp" type="Node2D" parent="."]
+position = Vector2(-1472, 768)
+rotation = -1.5707963267949
+script = ExtResource("34_grade")
+low_floor = 2
+high_floor = 3
+size = Vector2(256, 384)
+surface_color = Color(0.36, 0.33, 0.3, 1)
+rails = false
+terrain_type = "mud"
+downhill_pull = 120.0
+
+[node name="FZLedge" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(-1792, 768)
+floor_index = 3
+size = Vector2(256, 256)
+
+[node name="LedgeTerrain" type="Area2D" parent="."]
+position = Vector2(-1792, 768)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("35_terrain")
+terrain_type = &"mud"
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="LedgeTerrain"]
+color = Color(0.45, 0.424, 0.398, 1)
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+
+[node name="Col" type="CollisionShape2D" parent="LedgeTerrain"]
+shape = SubResource("RectangleShape2D_ledge")
+
+[node name="RunawayBed" type="Node2D" parent="."]
+position = Vector2(-1600, 768)
+script = ExtResource("32_pass_deco")
+kind = &"runaway_bed"
+size = Vector2(640, 256)
+
+[node name="AmmoPowerLedge" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(-1856, 704)
+kind = "power"
+amount = 1
+floor_index = 3
+
+[node name="ConRunawayUp" type="Node2D" parent="."]
+position = Vector2(-1472, 768)
+script = ExtResource("36_connector")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConRunawayDown" type="Node2D" parent="."]
+position = Vector2(-1472, 768)
+script = ExtResource("36_connector")
+from_floor = 3
+to_floor = 2
+approach_dir = Vector2(1, 0)
+kind = &"grade"
 
 [node name="SnowyHill" parent="." instance=ExtResource("25_hill")]
 position = Vector2(-256, 640)
