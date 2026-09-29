@@ -48,7 +48,7 @@ static var CLASS_TABLE := {
 ## The .tres top_speed stats still shape acceleration and the garage card;
 ## this overrides the ceiling at spawn.
 static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62}
-const FALLBACK_TOP := 484.0  # wall-less fixtures with a controller-less target
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 var host = null            # buzzard_run host: clock, course, kills
 var target: Node2D = null  # the player
@@ -155,13 +155,10 @@ func spawn(kind: StringName) -> Node:
 		b.get_controller().max_speed = _player_top() * float(ROLE_PACE.get(kind, 1.0))
 	return b
 
-## The chased car's honest top speed (garage build included, boost excluded).
+## The chased car's honest top speed on asphalt — the same number the dust
+## front prices itself against.
 func _player_top() -> float:
-	if wall != null and is_instance_valid(wall):
-		return wall.base_top()
-	if target != null and target.has_method(&"get_controller") and target.get_controller() != null:
-		return target.get_controller().max_speed
-	return FALLBACK_TOP
+	return SpeedBand.road_top(target)
 
 ## The kill read: a dark hull spinning off with the wreck's momentum while the
 ## explosion pops. Director-side — arenas keep their untouched death path.

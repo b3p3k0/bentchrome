@@ -52,16 +52,20 @@ var _jacked := false
 func _ready() -> void:
 	super()
 	add_to_group(&"chase_host")
-	if _player:
-		_player.weapon_lock_exempt = true  # Route 666 self-limits fire in its drivers
-		# The green flag drops on a ROLLING start (the level-start respawn in
-		# super() zeroed velocity): the pack rides a short leash now, and a
-		# standing launch would hand it the first hundred pixels for free.
-		_player.velocity = Vector2(0.0, -_roll_speed())
 	var seed_val := randi() & 0x7FFFFFFF
 	course = CourseScript.new()
 	course.pre_roll(seed_val)
 	print("[chase] course seed %d, %d chunks" % [seed_val, course.plan.size()])
+	if _player == null or not is_instance_valid(_player):
+		# No car to chase (mp_managed strips the baked cars — the level-shot
+		# probe boots scenes that way): the plan is rolled, the run stands down.
+		set_process(false)
+		return
+	_player.weapon_lock_exempt = true  # Route 666 self-limits fire in its drivers
+	# The green flag drops on a ROLLING start (the level-start respawn in
+	# super() zeroed velocity): the pack rides a short leash now, and a
+	# standing launch would hand it the first hundred pixels for free.
+	_player.velocity = Vector2(0.0, -_roll_speed())
 	_streamer = StreamerScript.new()
 	_streamer.name = "CourseStreamer"
 	_streamer.course = course
@@ -191,8 +195,4 @@ func _roll_on(next: int) -> void:
 ## Rolling starts land at the player's own cruise — the speed the pedal would
 ## settle at hands-off, so the first input is a choice, not a rescue.
 func _roll_speed() -> float:
-	if _player != null and _player.has_method(&"get_controller"):
-		var ctrl = _player.get_controller()
-		if ctrl != null:
-			return ctrl.max_speed * SpeedBand.CRUISE_FRAC
-	return ROLL_SPEED
+	return SpeedBand.road_top(_player, ROLL_SPEED / SpeedBand.CRUISE_FRAC) * SpeedBand.CRUISE_FRAC

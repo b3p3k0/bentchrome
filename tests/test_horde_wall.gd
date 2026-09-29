@@ -4,6 +4,7 @@ extends RefCounted
 ## The run's end-to-end flow lives in test_chase_flow.gd.
 
 const WallScript := preload("res://levels/chase/horde_wall.gd")
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const HealthScript := preload("res://vehicles/health.gd")
 
 var t
@@ -104,6 +105,9 @@ func test_pack_is_priced_against_the_car() -> void:
 		and is_equal_approx(WallScript.pack_speed(FAST, 0.9, rest), FAST),
 		"wall: the flat-out resting gap is the same for every car (%d px)" % int(rest))
 	# A fixture with a controller prices the pack off ITS top, read live.
+	t.check(is_equal_approx(SpeedBand.road_top(null), SpeedBand.FALLBACK_TOP),
+		"band: no car = the fallback top")
+	t.check(is_equal_approx(SpeedBand.road_top(null, 300.0), 300.0), "band: the fallback is the caller's to choose")
 	var container := Node2D.new()
 	t.root.add_child(container)
 	var car := FakeCar.new()
@@ -169,10 +173,14 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 	var lifted := _chase(TOP, 0.9, 0.8, rest, 1.0)
 	t.check(lifted < rest - 30.0, "wall: a one-second lift visibly costs gap (%d -> %d)" % [int(rest), int(lifted)])
 	# A car pinned dead on a pillar at the mercy line: the pack may close no
-	# faster than MERCY_CLOSE, so contact is at least two seconds away.
+	# faster than MERCY_CLOSE. The stretch is sized so ONE dead-stop crash is
+	# survivable in every car at every beat (probe-measured: a heavy ride
+	# needs ~4.3s from impact to pull clear in the last mile).
 	var span: float = WallScript.MERCY_GAP - WallScript.CATCH_MARGIN
 	var floor_s: float = span / WallScript.MERCY_CLOSE
-	t.check(floor_s >= 2.0, "wall: the mercy stretch is at least two seconds (%.1f)" % floor_s)
+	t.check(floor_s >= 4.5, "wall: the mercy stretch covers a heavy car's recovery (%.1fs)" % floor_s)
+	t.check(WallScript.MERCY_GAP < WallScript.LEASH_GAP,
+		"wall: clean driving never rests inside the mercy zone")
 	var pinned := _chase(TOP, 1.0, 0.0, WallScript.MERCY_GAP - 1.0, floor_s - 0.2)
 	t.check(pinned > WallScript.CATCH_MARGIN,
 		"wall: a pinned car still has its beat to escape (gap %d)" % int(pinned))

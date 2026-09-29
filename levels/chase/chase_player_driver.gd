@@ -9,12 +9,10 @@ extends PlayerDriver
 
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
-const FALLBACK_TOP := 484.0  # bare fixtures with no controller
-
 func get_intent(vehicle, delta: float) -> Dictionary:
 	var intent := super(vehicle, delta)
 	var ctrl = vehicle.get_controller() if vehicle.has_method(&"get_controller") else null
-	var top: float = ctrl.max_speed if ctrl != null else FALLBACK_TOP
+	var top := SpeedBand.road_top(vehicle)
 	var boosting: bool = intent.get("boost", false) and ctrl != null \
 		and "boost_fuel" in ctrl and ctrl.boost_fuel > 0.0
 	var forward := Vector2.RIGHT.rotated(vehicle.heading)

@@ -10,16 +10,17 @@ extends Node
 ##
 ## Pinned dead against something solid, the shove alone goes nowhere. After
 ## PIN_TIME of that the keeper leans the car toward the free side, so a
-## head-on pillar costs gap instead of the run.
+## head-on pillar costs gap instead of the run. Tuned against a hands-off car
+## burying its nose dead-centre in a 200px obstacle: off it in ~1.7s.
 
 static var KEEP_FRAC := 0.45     # of the car's top: the floor physics may not go under
 static var KEEP_PUSH := 1400.0   # px/s^2 northward while under the floor
-static var PIN_TIME := 0.25      # seconds of no real progress before the side lean
+static var PIN_TIME := 0.15      # seconds of no real progress before the side lean
 static var PIN_FRAC := 0.25      # "no real progress" = under this fraction of the floor
-static var NUDGE_PUSH := 900.0   # px/s^2 sideways while pinned
-static var NUDGE_MAX := 220.0    # px/s sideways ceiling from the lean
+static var NUDGE_PUSH := 1800.0  # px/s^2 sideways while pinned (lateral grip eats ~half)
+static var NUDGE_MAX := 260.0    # px/s sideways ceiling from the lean
 
-const FALLBACK_TOP := 484.0      # bare fixtures with no controller
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 var target = null     # the player's car, set by the host
 var course = null     # chase_course.gd, set by the host (picks the wide side)
@@ -47,12 +48,7 @@ static func free_side(hit_dx: float, road_offset: float) -> float:
 	return 1.0
 
 func floor_speed() -> float:
-	var top := FALLBACK_TOP
-	if target != null and is_instance_valid(target) and target.has_method(&"get_controller"):
-		var ctrl = target.get_controller()
-		if ctrl != null:
-			top = ctrl.max_speed
-	return top * KEEP_FRAC
+	return SpeedBand.road_top(target) * KEEP_FRAC
 
 func is_pinned() -> bool:
 	return _blocked_t >= PIN_TIME

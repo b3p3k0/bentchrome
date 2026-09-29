@@ -9,6 +9,7 @@ extends RefCounted
 const WallScript := preload("res://levels/chase/horde_wall.gd")
 const Economy := preload("res://game/economy.gd")
 const Robbery := preload("res://game/robbery.gd")
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const CHASE_SCENE := "res://levels/chase/buzzard_run.tscn"
 
 var t
@@ -74,6 +75,46 @@ func test_rolling_start_and_the_clock_win() -> void:
 	t.check(not scene.is_jacked() and gs.lives == 3, "chase: a win costs nothing")
 	t.check(scene.get_node(^"ChaseDirector").frozen, "chase: the pack stands down at the line")
 	_close(scene)
+
+## The pack, the pedal, the keeper and the Buzzardz all price off ONE number:
+## the car's honest top on asphalt — its road profile included.
+func test_everything_prices_off_the_asphalt_top() -> void:
+	var scene = await _boot()
+	var player = scene.get_node(^"Vehicle")
+	var wall = scene.get_node(^"HordeWall")
+	var keeper = scene.get_node(^"PaceKeeper")
+	var listed: float = player.get_controller().max_speed
+	var road: float = float(DrivingController.effective_terrain(player, &"road")["top"])
+	var want: float = listed * road
+	t.check(is_equal_approx(SpeedBand.road_top(player), want),
+		"chase: the honest top is the ceiling on asphalt (%d x %.2f)" % [int(listed), road])
+	t.check(is_equal_approx(wall.base_top(), want), "chase: the pack prices off it")
+	t.check(is_equal_approx(keeper.floor_speed(), want * keeper.KEEP_FRAC), "chase: the pace floor prices off it")
+	t.check(is_equal_approx(-player.velocity.y, want * SpeedBand.CRUISE_FRAC)
+		or absf(-player.velocity.y - want * SpeedBand.CRUISE_FRAC) < want * 0.2,
+		"chase: the rolling start lands near the car's own cruise (vy %d)" % int(player.velocity.y))
+	_close(scene)
+
+## A scene booted with no car to chase (mp_managed strips the baked cars —
+## the level-shot probe does this) must stand down, not crash.
+func test_no_car_no_run() -> void:
+	var scene = load(CHASE_SCENE).instantiate()
+	scene.mp_managed = true
+	t.root.add_child(scene)
+	t.current_scene = scene
+	for i in 3:
+		await t.physics_frame
+	t.check(scene.course != null and scene.course.plan.size() > 0, "chase: the plan is still rolled")
+	t.check(scene.get_node_or_null(^"HordeWall") == null, "chase: no car, no pack")
+	t.check(is_equal_approx(scene.wall_gap(), WallScript.MAX_GAP) and not scene.in_danger()
+		and is_equal_approx(scene.pressure(), 0.0), "chase: the HUD surface stays safe to poll")
+	t.check(not scene.is_jacked(), "chase: nobody to rob")
+	t.paused = false
+	Economy.enabled = false
+	Economy.reset_run()
+	t.current_scene = null
+	t.root.remove_child(scene)
+	scene.free()
 
 func test_caught_is_a_robbery_not_a_life() -> void:
 	var scene = await _boot()

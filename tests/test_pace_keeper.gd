@@ -111,7 +111,8 @@ func test_pinned_car_leans_out() -> void:
 	var car: FakeCar = r[1]   # never moved: the nose is buried in something
 	var keeper = r[2]
 	const DT := 1.0 / 60.0
-	for i in 10:
+	var pin_ticks := int(ceil(KeeperScript.PIN_TIME / DT))
+	for i in pin_ticks - 3:
 		keeper._physics_process(DT)
 		car.velocity.y = 0.0   # the slide ate the shove
 	t.check(not keeper.is_pinned(), "keeper: a brief bump is not a pin")
@@ -119,7 +120,8 @@ func test_pinned_car_leans_out() -> void:
 	for i in 30:
 		keeper._physics_process(DT)
 		car.velocity.y = 0.0
-	t.check(keeper.is_pinned(), "keeper: a quarter second buried = pinned")
+	t.check(keeper.is_pinned(), "keeper: buried past the pin clock = pinned")
+	t.check(KeeperScript.PIN_TIME <= 0.25, "keeper: the pin clock is quick — the pack is right there")
 	t.check(absf(car.velocity.x) > 50.0, "keeper: pinned cars lean sideways (vx %d)" % int(car.velocity.x))
 	t.check(absf(car.velocity.x) <= KeeperScript.NUDGE_MAX + 0.01, "keeper: the lean has a ceiling")
 	_done(r[0])
@@ -154,16 +156,18 @@ func test_player_comes_off_a_pillar_hands_off() -> void:
 	var pillar_y: float = pillar.position.y
 	var start_x: float = player.global_position.x
 	var cleared := false
-	var slowest := INF
+	var frames := 0
 	for i in 300:  # 5 seconds
 		await t.physics_frame
-		if i > 30:
-			slowest = minf(slowest, -player.velocity.y)
+		frames += 1
 		if player.global_position.y < pillar_y - 120.0:
 			cleared = true
 			break
 	t.check(cleared, "keeper: the car comes off a dead-ahead pillar on its own (y %d, pillar %d)"
 		% [int(player.global_position.y), int(pillar_y)])
+	# Hands off, from the green flag's cruise: reach it, bury the nose, lean
+	# out, pull away. The pack's mercy stretch is sized around this number.
+	t.check(frames < 210, "keeper: a head-on pillar costs about two seconds, not the run (%d frames)" % frames)
 	t.check(absf(player.global_position.x - start_x) > 40.0,
 		"keeper: it got out sideways (dx %d)" % int(player.global_position.x - start_x))
 	t.check(player.get_hp() > 0.0, "keeper: a pillar costs ground, not the car")

@@ -61,7 +61,7 @@ func test_spawn_cull_grace_and_kills() -> void:
 		"director: the pack spawns behind the player")
 	t.check(bike.get_node(^"Driver").role == &"bike", "director: driver role set")
 	# Every Buzzard's ceiling is priced against the car it chases.
-	var player_top: float = player.get_controller().max_speed
+	var player_top: float = wall.base_top()
 	t.check(is_equal_approx(bike.get_controller().max_speed, player_top * DirectorScript.ROLE_PACE[&"bike"]),
 		"director: a bike tops out at %.2f of the player's top" % DirectorScript.ROLE_PACE[&"bike"])
 	t.check(DirectorScript.ROLE_PACE[&"bike"] > 1.0 and DirectorScript.ROLE_PACE[&"sedan"] > 1.0,

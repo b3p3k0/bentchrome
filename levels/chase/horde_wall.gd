@@ -11,7 +11,10 @@ extends Node2D
 ## costs ground. The rubberband pulls both ways — a boost only buys a couple
 ## of seconds before the surge drags the pack back into frame (MAX_GAP), and
 ## inside MERCY_GAP the closing speed is capped so the last stretch always
-## takes a beat: close calls last long enough to be escaped.
+## takes a beat: close calls last long enough to be escaped. The mercy
+## stretch is sized so ONE dead-stop crash is survivable in every car at every
+## beat of the arc (the heavy rides re-accelerate slowest) — and leaves the
+## pack on the bumper, so the second one isn't.
 ##
 ## The wall never touches Health. It only REPORTS the catch (caught()); the
 ## host decides what a catch costs — on Route 666 that's a robbery, not a
@@ -24,13 +27,14 @@ static var CATCH_MARGIN := 50.0   # gap at which the swarm has you
 static var LEASH_GAP := 210.0     # the rubberband pivot: past this, the horde surges
 static var SURGE_PER_PX := 0.0008 # extra pace (fraction of top) per px past the leash
 static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
-static var MERCY_GAP := 170.0     # inside this the closing speed is capped...
-static var MERCY_CLOSE := 60.0    # ...to this many px/s: the last 120px take >= 2s
+static var MERCY_GAP := 200.0     # inside this the closing speed is capped...
+static var MERCY_CLOSE := 30.0    # ...to this many px/s: the last 150px take >= 5s
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DUST_AMOUNT := 140          # particle budget: one system, under 200
-const FALLBACK_TOP := 484.0       # mid-roster top: bare fixtures, freed targets
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
+const FALLBACK_TOP := SpeedBand.FALLBACK_TOP  # bare fixtures, freed targets
 
 var target: Node2D = null   # the player, set by the host
 var course = null           # chase_course.gd, set by the host (centers the band)
@@ -77,7 +81,7 @@ static func pack_speed(top: float, pace: float, gap_px: float) -> float:
 
 ## The mercy cap: inside MERCY_GAP the pack may close no faster than
 ## MERCY_CLOSE over the chased car's own northward speed — a pinned or
-## crawling car still gets its two seconds to find a way out.
+## crawling car still gets its beat to find a way out.
 static func mercy_cap(speed: float, gap_px: float, target_vn: float) -> float:
 	if gap_px >= MERCY_GAP:
 		return speed
@@ -98,14 +102,10 @@ func in_danger() -> bool:
 func caught() -> bool:
 	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
 
-## The chased car's honest top speed (garage build included, boost excluded),
-## read live and duck-typed so bare test fixtures ride the fallback.
+## The chased car's honest top speed on asphalt (SpeedBand.road_top), read
+## live and duck-typed so bare test fixtures ride the fallback.
 func base_top() -> float:
-	if target != null and is_instance_valid(target) and target.has_method(&"get_controller"):
-		var ctrl = target.get_controller()
-		if ctrl != null:
-			return ctrl.max_speed
-	return FALLBACK_TOP
+	return SpeedBand.road_top(target)
 
 ## The chased car's speed up the road (north = +), 0 for bare fixtures.
 func _target_vn() -> float:

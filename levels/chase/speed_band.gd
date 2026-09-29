@@ -6,13 +6,32 @@ extends RefCounted
 ## reverse gear — so a speed BAND has to be governed from the driver's seat.
 ## Route 666 runs on it: you can speed up or slow down, never stop, never
 ## back up. Shared by the player's pedal and the Buzzard brain; pure statics,
-## dependency-free, preloaded by path.
+## preloaded by path.
 
 static var CRUISE_FRAC := 0.80   # hands off: the car settles at this fraction of top
 static var FLOOR_FRAC := 0.55    # S held: eases down to this fraction and holds
 static var BAND := 40.0          # px/s under a target over which throttle ramps to full
 static var BRAKE_MARGIN := 12.0  # px/s over a target before the brake bites
 const REVERSE_GUARD := 10.0      # the controller's crawl threshold: brake below it = reverse gear
+const FALLBACK_TOP := 484.0      # mid-roster top: bare fixtures with no controller
+
+## The one definition of "this car's honest top speed" for the whole chase:
+## its controller ceiling (garage build included, boost excluded) on ASPHALT —
+## the road is where Route 666 is run, and a ride's road profile (racing
+## slicks) is part of what it can really do. The pack, the pedal's band, the
+## pace keeper and the Buzzardz' ceilings all price off this, read live.
+## Duck-typed: fixtures without a controller ride the fallback; fixtures
+## without a terrain profile skip the asphalt factor.
+static func road_top(vehicle, fallback := FALLBACK_TOP) -> float:
+	if vehicle == null or not is_instance_valid(vehicle) or not vehicle.has_method(&"get_controller"):
+		return fallback
+	var ctrl = vehicle.get_controller()
+	if ctrl == null:
+		return fallback
+	var top: float = ctrl.max_speed
+	if vehicle.has_method(&"terrain_factor"):
+		top *= float(DrivingController.effective_terrain(vehicle, &"road")["top"])
+	return top
 
 ## Throttle that carries fwd_speed (signed, along the nose) up to target_speed
 ## and holds it there. The brake only ever bites while the car rolls FORWARD
