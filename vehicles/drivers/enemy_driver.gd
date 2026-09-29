@@ -330,7 +330,8 @@ func _intent_ladder(vehicle, delta: float) -> Dictionary:
 				_escape_dir = (vehicle.global_position - _last_pin).normalized()
 			else:
 				_escape_dir = Vector2.RIGHT.rotated(vehicle.heading)
-			_escape_dir = _safe_escape_dir(vehicle, _escape_dir, CLEAR_DIST)
+			var safe_dir := _safe_escape_dir(vehicle, _escape_dir, CLEAR_DIST)
+			_escape_dir = safe_dir if safe_dir != Vector2.ZERO else -_escape_dir
 		else:
 			return _unstick_intent()
 
@@ -665,23 +666,10 @@ func _break_exit_unsafe(vehicle) -> bool:
 	return Hazards.point_inside(tree, _break_exit, Hazards.PLAN_MARGIN) \
 		or Hazards.segment_blocked(tree, vehicle.global_position, _break_exit, Hazards.GUARD_MARGIN)
 
-## Deflects a committed world escape direction so its endpoint at `reach`
-## doesn't land in a lethal rect: rim tangent first (either sign), then the
-## straight reverse. Levels without zones return the direction untouched.
+## Returns a hazard-safe committed escape, or ZERO when none exists. The hop
+## skips on ZERO; grounded CLEAR falls back to the straight reverse.
 func _safe_escape_dir(vehicle, dir: Vector2, reach: float) -> Vector2:
-	var tree: SceneTree = vehicle.get_tree()
-	var pos: Vector2 = vehicle.global_position
-	var idx := Hazards.segment_hit(tree, pos, pos + dir * reach, Hazards.GUARD_MARGIN)
-	if idx < 0:
-		return dir
-	var rect: Rect2 = Hazards.rects(tree)[idx]
-	var tangent := Vector2.RIGHT if rect.size.x >= rect.size.y else Vector2.DOWN
-	if tangent.dot(dir) < 0.0:
-		tangent = -tangent
-	for cand: Vector2 in [tangent, -tangent, -dir]:
-		if not Hazards.segment_blocked(tree, pos, pos + cand * reach, Hazards.GUARD_MARGIN):
-			return cand
-	return -dir
+	return Hazards.escape_direction(vehicle.get_tree(), vehicle.global_position, dir, reach)
 
 func _update_break_rearm(dist: float) -> void:
 	if not _break_rearmed and _mode != Mode.BREAK and dist >= _near * BREAK_REARM_MULT:
@@ -992,14 +980,15 @@ func _on_stuck(vehicle, target, bearing: float) -> Dictionary:
 		# A hop toward a cross-river target is a ballistic suicide (the arc is
 		# shorter than the channel). Deflect the landing before committing.
 		dir = _safe_escape_dir(vehicle, dir, ESCAPE_HOP_RANGE)
-		vehicle.escape_hop(dir)
-		_hop_cd = HOP_COOLDOWN
-		_pin_repeats = 0
-		_stuck_t = 0.0
-		_mode = Mode.CLEAR  # land already driving through
-		_clear_t = CLEAR_TIME
-		_escape_dir = dir
-		return {"throttle": 1.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
+		if dir != Vector2.ZERO:
+			vehicle.escape_hop(dir)
+			_hop_cd = HOP_COOLDOWN
+			_pin_repeats = 0
+			_stuck_t = 0.0
+			_mode = Mode.CLEAR  # land already driving through
+			_clear_t = CLEAR_TIME
+			_escape_dir = dir
+			return {"throttle": 1.0, "steer": 0.0, "fire_mg": false, "fire_selected": false}
 	_enter_unstick(vehicle.heading, bearing, pin)
 	return _unstick_intent()
 

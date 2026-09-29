@@ -16,8 +16,10 @@ extends RefCounted
 ## itself: zones poll collision_mask 1 and every grounded car carries bit 1
 ## on every floor. Airborne exemption is the CALLER's job (height > 0).
 
-## Hard-guard inflation. Must stay under the zones' 24px/side kill inset or
-## the guard fires on legally driveable rim (bridge lanes sit ~48px out).
+## The zones' kill shape sits this far inside the painted rect, per side.
+const KILL_INSET := 24.0
+## Hard-guard inflation. Must stay under KILL_INSET or the guard fires on
+## legally driveable rim (bridge lanes sit ~48px out).
 static var GUARD_MARGIN := 20.0
 ## Detour/scoring inflation. Must keep the 320px bridge gaps open as a
 ## corridor (320 - 2*72 = 176px ≥ any car width).
@@ -61,9 +63,9 @@ static func point_inside(tree: SceneTree, p: Vector2, margin := 0.0) -> bool:
 	return false
 
 # One shared slab pass keeps this per-frame path allocation-free. Returns the
-# entry fraction, or the entry axis when `axis_only` is true.
+# entry fraction, entry axis, or exit fraction according to the flags.
 static func _segment_entry(rect: Rect2, from: Vector2, to: Vector2,
-		margin: float, axis_only: bool) -> float:
+		margin: float, axis_only: bool, exit_only := false) -> float:
 	var r := rect.grow(margin)
 	var d := to - from
 	var t0 := 0.0
@@ -89,7 +91,9 @@ static func _segment_entry(rect: Rect2, from: Vector2, to: Vector2,
 			t1 = minf(t1, tb)
 			if t0 > t1:
 				return -1.0 if axis_only else CLEAR
-	return float(entry_axis) if axis_only else t0
+	if axis_only:
+		return float(entry_axis)
+	return t1 if exit_only else t0
 
 ## Liang-Barsky slab test of one segment against one (margin-grown) rect.
 ## Returns the entry fraction t in [0, 1] (0 = `from` already inside), or
@@ -116,6 +120,77 @@ static func segment_hit(tree: SceneTree, from: Vector2, to: Vector2, margin := 0
 
 static func segment_blocked(tree: SceneTree, from: Vector2, to: Vector2, margin := 0.0) -> bool:
 	return segment_hit(tree, from, to, margin) >= 0
+
+static func _escape_safe(all: Array[Rect2], from: Vector2, endpoint: Vector2,
+		reach: float, margin: float) -> bool:
+	for rect: Rect2 in all:
+		var grown := rect.grow(margin)
+		if grown.has_point(endpoint):
+			return false
+		if grown.has_point(from):
+			var exit_t := _segment_entry(rect, from, endpoint, margin, false, true)
+			if exit_t * reach > margin + KILL_INSET:
+				return false
+		elif _segment_entry(rect, from, endpoint, margin, false) < CLEAR:
+			return false
+	return true
+
+## Picks a hazard-safe world direction for a committed escape. A car already
+## on a forgiveness band may cross that band only long enough to leave it;
+## every landing must finish outside every grown rect.
+static func escape_direction(tree: SceneTree, from: Vector2, dir: Vector2,
+		reach: float, margin := GUARD_MARGIN) -> Vector2:
+	var all := rects(tree)
+	if all.is_empty():
+		return dir
+	if dir.length_squared() <= 0.0001 or reach <= 0.0:
+		return Vector2.ZERO
+	var requested := dir.normalized()
+	var band_idx := -1
+	var face_axis := -1
+	var face_dist := INF
+	var outward := Vector2.ZERO
+	for i in all.size():
+		var rect: Rect2 = all[i]
+		if not rect.grow(margin).has_point(from):
+			continue
+		var offset := from - rect.get_center()
+		var half := rect.size * 0.5
+		var axis := 0
+		if absf(offset.x) <= half.x and absf(offset.y) > half.y:
+			axis = 1
+		elif not (absf(offset.x) > half.x and absf(offset.y) <= half.y):
+			axis = 0 if absf(absf(offset.x) - half.x) \
+				<= absf(absf(offset.y) - half.y) else 1
+		var dist := absf(absf(offset[axis]) - half[axis])
+		var normal := Vector2.ZERO
+		normal[axis] = 1.0 if offset[axis] >= 0.0 else -1.0
+		if dist < face_dist - 0.001:
+			face_dist = dist
+			band_idx = i
+			face_axis = axis
+			outward = normal
+		elif absf(dist - face_dist) <= 0.001:
+			outward += normal
+	if outward != Vector2.ZERO:
+		outward = outward.normalized()
+	if band_idx < 0:
+		band_idx = segment_hit(tree, from, from + requested * reach, margin)
+		if band_idx >= 0:
+			face_axis = segment_entry_axis(all[band_idx], from,
+				from + requested * reach, margin)
+	var tangent := Vector2.DOWN if face_axis == 0 else Vector2.RIGHT
+	if tangent.dot(requested) < 0.0:
+		tangent = -tangent
+	var candidates: Array[Vector2] = [requested]
+	if outward != Vector2.ZERO:
+		candidates.append(outward)
+	candidates.append_array([tangent, -tangent, -requested])
+	for candidate: Vector2 in candidates:
+		var endpoint := from + candidate * reach
+		if _escape_safe(all, from, endpoint, reach, margin):
+			return candidate
+	return Vector2.ZERO
 
 ## Where to drive AROUND the first rect blocking from->to. Returns [] when the
 ## beeline is clear; otherwise up to two candidates past the blocking rect's

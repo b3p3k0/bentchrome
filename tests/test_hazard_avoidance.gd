@@ -40,6 +40,7 @@ func _init(runner) -> void:
 	t = runner
 
 func _water(container: Node2D, pos: Vector2, size: Vector2) -> Node:
+	Hazards.rects(t)  # flush a same-frame fixture swap before restoring the same group count
 	var zone = WaterScene.instantiate()
 	zone.size = size
 	zone.position = pos
@@ -144,6 +145,107 @@ func test_entry_axis_reports_the_face() -> void:
 		"hazards: a miss has no entry face")
 	t.check(Hazards.segment_entry_axis(rect, Vector2.ZERO, Vector2(300, 0)) == -1,
 		"hazards: a segment starting inside has no entry face")
+
+func _escape_path_safe(from: Vector2, dir: Vector2, reach: float) -> bool:
+	if dir == Vector2.ZERO:
+		return false
+	var endpoint := from + dir * reach
+	for rect: Rect2 in Hazards.rects(t):
+		var grown := rect.grow(Hazards.GUARD_MARGIN)
+		if grown.has_point(endpoint):
+			return false
+		if grown.has_point(from):
+			var band_depth := Hazards.GUARD_MARGIN + Hazards.KILL_INSET + 0.01
+			if grown.has_point(from + dir * band_depth):
+				return false
+		elif Hazards.segment_entry_t(rect, from, endpoint, Hazards.GUARD_MARGIN) \
+				< Hazards.CLEAR:
+			return false
+	return true
+
+func test_escape_direction_leaves_forgiveness_band() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	_water(container, Vector2.ZERO, Vector2(600, 300))
+	var from := Vector2(0, -160)
+	var result := Hazards.escape_direction(t, from, Vector2.UP, 280.0)
+	t.check(result == Vector2.UP,
+		"escape: a requested direction out of the forgiveness band stays outward")
+	t.root.remove_child(container)
+	container.free()
+
+func test_escape_direction_never_enters_from_forgiveness_band() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	_water(container, Vector2.ZERO, Vector2(600, 300))
+	var from := Vector2(0, -160)
+	var result := Hazards.escape_direction(t, from, Vector2.DOWN, 280.0)
+	t.check(result.dot(Vector2.UP) >= 0.0,
+		"escape: a band escape has no component into the void")
+	t.check(_escape_path_safe(from, result, 280.0),
+		"escape: the band escape leaves promptly and lands outside the pit")
+	t.root.remove_child(container)
+	container.free()
+
+func test_escape_direction_handles_overlapping_corner_bands() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	_water(container, Vector2.ZERO, Vector2(600, 300))
+	_water(container, Vector2(450, -450), Vector2(300, 600))
+	var from := Vector2(290, -160)
+	var left_result := Vector2.ZERO
+	for requested in [Vector2.DOWN, Vector2.RIGHT, Vector2.UP, Vector2.LEFT]:
+		var result := Hazards.escape_direction(t, from, requested, 700.0)
+		if result != Vector2.ZERO:
+			t.check(_escape_path_safe(from, result, 700.0),
+				"escape corner: every offered direction clears both bands promptly")
+		if requested == Vector2.LEFT:
+			left_result = result
+	t.check(left_result.dot(Vector2.LEFT) > 0.0 and left_result.dot(Vector2.UP) > 0.0,
+		"escape corner: a left request finds the open up-left route")
+	t.root.remove_child(container)
+	container.free()
+
+func test_escape_direction_uses_entered_face() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	_water(container, Vector2.ZERO, Vector2(1200, 200))
+	var result := Hazards.escape_direction(t, Vector2(-700, 0), Vector2.RIGHT, 450.0)
+	t.check(absf(result.dot(Vector2.RIGHT)) < 0.001 and absf(result.y) > 0.9,
+		"escape: a wide rect deflects along the entered west face, not its long axis")
+	t.root.remove_child(container)
+	container.free()
+
+func test_boxed_escape_skips_hop_and_unsticks() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	_water(container, Vector2(200, 0), Vector2(100, 400))
+	_water(container, Vector2(-200, 0), Vector2(100, 400))
+	_water(container, Vector2(0, 200), Vector2(400, 100))
+	_water(container, Vector2(0, -200), Vector2(400, 100))
+	var car := _guarded_car(container, Vector2.ZERO, Vector2.ZERO, 0.0)
+	var target := FakeCar.new()
+	container.add_child(target)
+	target.global_position = Vector2(500, 0)
+	t.check(Hazards.escape_direction(t, car.global_position, Vector2.RIGHT,
+		DriverScript.ESCAPE_HOP_RANGE) == Vector2.ZERO,
+		"escape: a four-sided box reports no safe landing")
+	var driver = DriverScript.new()
+	driver._on_stuck(car, target, 0.0)
+	var intent: Dictionary = driver._on_stuck(car, target, 0.0)
+	t.check(car.hops.is_empty(), "hop: no safe landing skips the airborne escape")
+	t.check(driver._mode == DriverScript.Mode.UNSTICK and float(intent["throttle"]) < 0.0,
+		"hop: a boxed rival falls through to the ordinary reverse-out")
+	t.check(driver._hop_cd == 0.0 and driver._pin_repeats == 2,
+		"hop: a skipped landing preserves cooldown and repeat state")
+	driver.free()
+	t.root.remove_child(container)
+	container.free()
+
+func test_escape_direction_unchanged_without_hazards() -> void:
+	var requested := Vector2(3, -4)
+	t.check(Hazards.escape_direction(t, Vector2(20, 30), requested, 280.0) == requested,
+		"escape: a hazard-free tree returns the requested direction unchanged")
 
 func test_segment_hit_first_blocker() -> void:
 	var container := Node2D.new()
