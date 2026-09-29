@@ -53,7 +53,10 @@ emblem its breathing room; the final `-resize` is the softness knob.
 To repair one detail of a card that is otherwise right, EDIT it instead of
 rerolling: attach the source art and name the single change plus everything
 that must stay. `source/brief_fony_fix.md` is the pass that squared up the
-diamond's right point:
+diamond's right point; `source/brief_fanstation_fix_pass1.md` then `_pass2.md`
+are the two passes that turned the FanStation base into a slim ribbon S
+(pass 2 edits the result of pass 1). Those passes also attached a reference
+screenshot as a shape guide for the S only; it is not kept in the repo.
 
     codex exec --skip-git-repo-check -s workspace-write \
         -i source/card_fony_src.png < source/brief_fony_fix.md
