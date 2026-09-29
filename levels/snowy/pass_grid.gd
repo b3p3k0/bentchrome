@@ -1,0 +1,188 @@
+extends RefCounted
+## Signed-off Mountainside Mayhem pass layout. Dependency-free on purpose:
+## no class_name, nodes, drawing, or preloads. Consumers preload by path.
+
+const CELL := 128
+const N := 32
+const ORIGIN := Vector2(-2048, -2048)
+const ARENA_SIZE := Vector2(4096, 4096)
+const ARENA_RECT := Rect2(ORIGIN, ARENA_SIZE)
+
+const MOUNTAIN := &"mountain"
+const ROAD := &"road"
+const DROP := &"drop"
+const BRIDGE := &"bridge"
+const WEST_PIT := &"west_pit"
+const EAST_PIT := &"east_pit"
+const SPUR := &"spur"
+const LEDGE := &"ledge"
+
+const ROWS := {
+	1: Vector2i(20, 30), 2: Vector2i(19, 30), 3: Vector2i(19, 30),
+	4: Vector2i(18, 30), 5: Vector2i(18, 29), 6: Vector2i(16, 27),
+	7: Vector2i(15, 26), 8: Vector2i(14, 25), 9: Vector2i(14, 23),
+	10: Vector2i(14, 23), 11: Vector2i(14, 23), 12: Vector2i(14, 23),
+	13: Vector2i(14, 23), 14: Vector2i(14, 23), 15: Vector2i(14, 23),
+	16: Vector2i(13, 23), 17: Vector2i(9, 23), 18: Vector2i(8, 23),
+	19: Vector2i(7, 22), 20: Vector2i(7, 22), 21: Vector2i(6, 21),
+	22: Vector2i(6, 20), 23: Vector2i(4, 18), 24: Vector2i(3, 17),
+	25: Vector2i(2, 14), 26: Vector2i(1, 12), 27: Vector2i(1, 10),
+	28: Vector2i(1, 10), 29: Vector2i(1, 10), 30: Vector2i(1, 10),
+}
+const CHASM_ROWS := Vector2i(12, 13)
+const BRIDGE_COLS := Vector2i(17, 19)
+# The south cap row is mountain up to this column and drop beyond it.
+const SOUTH_CAP_MOUNTAIN_COLS := 10
+
+const KNOLL := {
+	"center": Vector2(-256, 640), "footprint": 512, "summit": 320,
+	"grade_length": 192, "cells": Rect2i(12, 19, 4, 4),
+	"from_floor": 2, "to_floor": 3,
+}
+const PADS := {
+	&"south_east": {
+		"center": Vector2(640, -64), "size": Vector2(224, 224),
+		"floor": 2, "launch": &"north", "lane_cols": Vector2i(20, 21),
+	},
+	&"north_west": {
+		"center": Vector2(0, -704), "size": Vector2(224, 224),
+		"floor": 2, "launch": &"south", "lane_cols": Vector2i(15, 16),
+	},
+}
+const SPUR_DATA := {
+	"cells": Rect2i(3, 21, 3, 2), "size": Vector2(384, 256),
+	"from_floor": 2, "to_floor": 3, "terrain": &"mud", "climbs": &"west",
+}
+const LEDGE_DATA := {
+	"cells": Rect2i(1, 21, 2, 2), "size": Vector2(256, 256), "floor": 3,
+	"crate": {"kind": &"power", "cell": Vector2i(1, 21)},
+}
+const SPAWNS := {
+	&"P": {"cell": Vector2i(4, 28), "center": Vector2(-1472, 1600), "start_floor": 2},
+	&"E1": {"cell": Vector2i(25, 3), "center": Vector2(1216, -1600), "start_floor": 2},
+	&"E2": {"cell": Vector2i(20, 7), "center": Vector2(576, -1088), "start_floor": 2},
+	&"E3": {"cell": Vector2i(19, 20), "center": Vector2(448, 576), "start_floor": 2},
+	&"E4": {"cell": Vector2i(9, 21), "center": Vector2(-832, 704), "start_floor": 2},
+}
+const STATION := {"cell": Vector2i(10, 24), "center": Vector2(-704, 1088), "floor": 2}
+
+static func kind_at(i: int, j: int) -> StringName:
+	if i < 0 or i >= N or j < 0 or j >= N:
+		return MOUNTAIN
+	var cell := Vector2i(i, j)
+	var ledge_cells: Rect2i = LEDGE_DATA["cells"]
+	var spur_cells: Rect2i = SPUR_DATA["cells"]
+	if ledge_cells.has_point(cell):
+		return LEDGE
+	if spur_cells.has_point(cell):
+		return SPUR
+	if not ROWS.has(j):
+		return MOUNTAIN if j == 0 or i <= SOUTH_CAP_MOUNTAIN_COLS else DROP
+	var span: Vector2i = ROWS[j]
+	if i < span.x:
+		return MOUNTAIN
+	if i > span.y:
+		return DROP
+	if j >= CHASM_ROWS.x and j <= CHASM_ROWS.y:
+		if i >= BRIDGE_COLS.x and i <= BRIDGE_COLS.y:
+			return BRIDGE
+		return WEST_PIT if i < BRIDGE_COLS.x else EAST_PIT
+	return ROAD
+
+static func is_driveable(i: int, j: int) -> bool:
+	var kind := kind_at(i, j)
+	return kind == ROAD or kind == BRIDGE
+
+static func cell_rect(i: int, j: int) -> Rect2:
+	return Rect2(ORIGIN + Vector2(i, j) * CELL, Vector2(CELL, CELL))
+
+static func cell_center(i: int, j: int) -> Vector2:
+	return ORIGIN + (Vector2(i, j) + Vector2(0.5, 0.5)) * CELL
+
+static func cell_of(point: Vector2) -> Vector2i:
+	return Vector2i(
+		floori((point.x - ORIGIN.x) / CELL),
+		floori((point.y - ORIGIN.y) / CELL))
+
+static func clearance(point: Vector2) -> float:
+	if not ARENA_RECT.has_point(point):
+		return 0.0
+	var arena_end := ARENA_RECT.end
+	var best := minf(minf(point.x - ORIGIN.x, arena_end.x - point.x),
+		minf(point.y - ORIGIN.y, arena_end.y - point.y))
+	for j in N:
+		for i in N:
+			if is_driveable(i, j):
+				continue
+			var rect := cell_rect(i, j)
+			var nearest := Vector2(
+				clampf(point.x, rect.position.x, rect.end.x),
+				clampf(point.y, rect.position.y, rect.end.y))
+			best = minf(best, point.distance_to(nearest))
+	return best
+
+static func knoll_approaches() -> Dictionary:
+	var center: Vector2 = KNOLL["center"]
+	var summit_half: float = float(KNOLL["summit"]) * 0.5
+	var cardinal := summit_half + 220.0
+	var diagonal := summit_half + 250.0 / sqrt(2.0)
+	return {
+		&"N": center + Vector2.UP * cardinal,
+		&"S": center + Vector2.DOWN * cardinal,
+		&"E": center + Vector2.RIGHT * cardinal,
+		&"W": center + Vector2.LEFT * cardinal,
+		&"NE": center + Vector2(1, -1) * diagonal,
+		&"NW": center + Vector2(-1, -1) * diagonal,
+		&"SE": center + Vector2(1, 1) * diagonal,
+		&"SW": center + Vector2(-1, 1) * diagonal,
+	}
+
+static func render() -> PackedStringArray:
+	var features := {}
+	var station_cell: Vector2i = STATION["cell"]
+	features[station_cell] = "+ "
+	for spawn_name in SPAWNS:
+		var spawn: Dictionary = SPAWNS[spawn_name]
+		var spawn_cell: Vector2i = spawn["cell"]
+		features[spawn_cell] = String(spawn_name).rpad(2).left(2)
+	for pad_name in PADS:
+		var pad: Dictionary = PADS[pad_name]
+		var center: Vector2 = pad["center"]
+		var pad_cell := cell_of(Vector2(center.x - 1.0, center.y))
+		features[pad_cell] = "J^" if pad["launch"] == &"north" else "Jv"
+	var knoll_cells: Rect2i = KNOLL["cells"]
+	for j in range(knoll_cells.position.y, knoll_cells.end.y):
+		for i in range(knoll_cells.position.x, knoll_cells.end.x):
+			features[Vector2i(i, j)] = "/\\"
+	var knoll_center: Vector2 = KNOLL["center"]
+	var knoll_cell := cell_of(knoll_center - Vector2.ONE)
+	features[knoll_cell] = "K*"
+
+	var crate: Dictionary = LEDGE_DATA["crate"]
+	var crate_cell: Vector2i = crate["cell"]
+	var lines := PackedStringArray()
+	for j in N:
+		var line := ""
+		for i in N:
+			var cell := Vector2i(i, j)
+			var kind := kind_at(i, j)
+			if cell == crate_cell:
+				line += "p "
+			elif kind == SPUR:
+				line += "<<"
+			elif kind == LEDGE:
+				line += "LL"
+			elif kind == MOUNTAIN:
+				line += "##"
+			elif kind == DROP:
+				line += ".."
+			elif kind == WEST_PIT or kind == EAST_PIT:
+				line += "XX"
+			elif kind == BRIDGE:
+				line += "]["
+			elif features.has(cell):
+				line += String(features[cell])
+			else:
+				line += " |" if kind_at(i + 1, j) == DROP else "  "
+		lines.append(line)
+	return lines
