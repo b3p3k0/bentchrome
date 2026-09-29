@@ -573,7 +573,7 @@ SOUNDBOARD lists `bgm_*` rows with PLAY/STOP toggles.
 
 | Knob | Value | Where | What it does |
 |---|---|---|---|
-| TRACKS | scene path -> bgm_* | music_director.gd | which track a scene plays; UPCOMING = interstitial plays the next level's track; RESOLVE_CHILD = mp_match keys off its instanced arena; unknown scenes = bgm_menu |
+| TRACKS | scene path -> bgm_* | music_director.gd | which track a scene plays; UPCOMING = interstitial plays the next level's track; RESOLVE_CHILD = mp_match keys off its instanced arena; SILENT = no track (the boot sequence carries its own sting); unknown scenes = bgm_menu |
 | CROSSFADE / PHASE_CROSSFADE | 1.6s / 0.9s | music_director.gd | scene-to-scene fade / in-level override fade (Goliath p1->p2 gear change) |
 | DUCK_DB / DUCK_RATE_DB | -10 dB / 40 dB/s | music_director.gd | music dim while tree-paused or a named duck holds (end_screen rolling win) |
 | same-event no-op | structural | music_director.gd _request | interstitial->level, pause-Restart, and respawn continuity |
@@ -582,3 +582,25 @@ SOUNDBOARD lists `bgm_*` rows with PLAY/STOP toggles.
 | TARGET_RMS_DB / PEAK_DB | -18 / -1 | tools/bgm/master.py | one loudness convention across all tracks — no per-track trim in-game |
 | audio buses | Master / Music / SFX | default_bus_layout.tres (default path, no project setting needed) | MusicDirector players ride Music, all AudioDirector pools ride SFX; bus-less contexts fall back to Master |
 | MASTER/MUSIC/SFX VOLUME | 0-100% in 5% steps | ui/settings.gd + GameState.volume_* | persisted sliders; GameState.apply_audio_settings() pushes linear_to_db onto the buses at boot/adjust/reset; 0% mutes the bus |
+
+## Boot sequence (startup card knobs)
+
+Sources: `ui/boot_splash.gd` static vars (the `run/main_scene`); sting recipe in
+`tools/synth_boot.py`; drop-in contract, art briefs, and the cue table in
+`assets/boot/README.md`. Copy and card order are test-locked
+(`tests/test_boot_splash.gd`). Only a launch plays the cards.
+
+| Knob | Value | Where | What it does |
+|---|---|---|---|
+| `TIMING` | card 1: 1.2 / 4.8 / 0.8 s; card 2: 0.5 / 5.4 / 1.2 s | boot_splash.gd | fade-in / hold / fade-out per card; cut to the sting's cue points |
+| `LEAD_IN` / `GAP` | 0.3 s / 0.3 s | boot_splash.gd | black before the first card / between the cards |
+| total run | 14.5 s | boot_splash.gd `total_duration()` | unskipped length; test band 10-18 s |
+| `INPUT_LOCK` | 0.5 s | boot_splash.gd | any-key skip stays dead this long after launch |
+| `SKIP_FADE` | 0.3 s | boot_splash.gd | curtain + sting fade on a skip |
+| `STING_DB` | 0 dB | boot_splash.gd | sting trim on top of the SFX bus slider |
+| `ART_FILTER` | linear | boot_splash.gd | card upscale filter; nearest = crunchy pixels |
+| card size | 640x360 | assets/boot/README.md (magick recipe) | the softness knob — ship larger art for a crisper card |
+| BOOT INTRO | ON | ui/settings.gd (Graphics) + GameState.boot_intro | persisted; OFF hands the launch straight to the title |
+| `DUR` / `SWELL_TOP` / `ARRIVE` / `CHIMES` / `LAST_CHIME` / `FADE_FROM` | 14.5 / 6.4 / 7.4 / 7.6 / 11.9 / 13.2 s | tools/synth_boot.py | sting cue points — mirror `TIMING`, move them together |
+| `BEND` | -1.6 semitones | tools/synth_boot.py | how far the last chime sags (the knockoff tell); 0 or `--no-bend` plays it straight |
+| `PEAK_DB` | -1 dBFS | tools/synth_boot.py | sting peak ceiling |
