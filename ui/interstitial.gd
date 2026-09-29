@@ -8,6 +8,8 @@ extends CanvasLayer
 ## and any key rolls PAST the slot (+1, re-enter — consecutive placeholders
 ## chain); `optional: true` shows the STAY/DETOUR chooser instead.
 
+const CardFrame := preload("res://ui/card_frame.gd")
+
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const INPUT_LOCK := 1.2  # players arrive here still hammering fire
@@ -160,46 +162,9 @@ func _card_for(scene: String) -> Texture2D:
 	return TextureLoader.load_texture("%s/%s" % [CARD_DIR, file]) if file else null
 
 ## Full-screen loading card: letterboxed art over black, caption strip pinned
-## to the bottom edge.
+## to the bottom edge (the shared ui/card_frame.gd builder).
 func _build_card(card: Texture2D, caption: String, caption_color: Color) -> void:
-	var bg := ColorRect.new()
-	bg.color = Color.BLACK
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
-	var art := TextureRect.new()
-	art.texture = card
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(art)
-
-	var strip := ColorRect.new()
-	strip.color = Color(PANEL_BG.r, PANEL_BG.g, PANEL_BG.b, 0.85)
-	strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	strip.offset_top = -84.0
-	add_child(strip)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 8)
-	strip.add_child(vbox)
-
-	var caption_lbl := Label.new()
-	caption_lbl.text = caption
-	caption_lbl.add_theme_font_size_override("font_size", 24)
-	caption_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption_lbl.modulate = caption_color
-	vbox.add_child(caption_lbl)
-
-	_hint = Label.new()
-	_hint.text = "..."
-	_hint.add_theme_font_size_override("font_size", 14)
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.modulate = Color(0.55, 0.58, 0.62)
-	vbox.add_child(_hint)
+	_hint = CardFrame.build(self, card, caption, caption_color)
 
 ## Under-construction skip prompt over the level card: caption + sub-line +
 ## a two-option STAY/DETOUR row instead of the plain "press any key" hint.

@@ -84,6 +84,8 @@ const SUITES := [
 	preload("res://tests/test_chase_director.gd"),
 	preload("res://tests/test_pace_keeper.gd"),
 	preload("res://tests/test_chase_flow.gd"),
+	preload("res://tests/test_robbery.gd"),
+	preload("res://tests/test_robbery_screen.gd"),
 	preload("res://tests/test_stadium_level.gd"),
 	preload("res://tests/test_goliath_trailer.gd"),
 	preload("res://tests/test_goliath_boss.gd"),

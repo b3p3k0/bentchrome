@@ -5,13 +5,14 @@ extends "res://levels/combat_level.gd"
 ## end screen's arena-style group win (runtime hordes would fake a cleared
 ## arena), and drives the timed win itself.
 ##
-## NOBODY LOSES A LIFE HERE, and nobody respawns. combat_level's lives loop
-## never runs (no super() in _process): the run ends the moment the pack
-## catches the car OR the car is wrecked — same outcome either way. The pack
-## swallows the car for a beat, then the ROBBERY takes something
-## (game/robbery.gd) and the road goes on to the next stop. No retry: Route
-## 666 is a one-shot gamble, which is what makes STAY ON ROUTE a real choice.
-## Off the tour (no next stop to roll on to) the classic loss panel stands in.
+## NOBODY RESPAWNS HERE. combat_level's lives loop never runs (no super() in
+## _process): the run ends the moment the pack catches the car OR the car is
+## wrecked — same outcome either way. The pack swallows the car for a beat,
+## then the ROBBERY spins its wheel — bolts, parts, or blood
+## (game/robbery.gd; one slice in ten costs a life, never the last one) — and
+## the road goes on to the next stop. No retry: Route 666 is a one-shot
+## gamble, which is what makes STAY ON ROUTE a real choice. Off the tour (no
+## next stop to roll on to) the classic loss panel stands in.
 
 const CourseScript := preload("res://levels/chase/chase_course.gd")
 const StreamerScript := preload("res://levels/chase/course_streamer.gd")
@@ -21,6 +22,7 @@ const KeeperScript := preload("res://levels/chase/pace_keeper.gd")
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const Robbery := preload("res://game/robbery.gd")
 const RobberyScreen := preload("res://ui/robbery_screen.gd")
+const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
@@ -39,6 +41,8 @@ var catch_enabled := true
 ## SceneFlow.goto_scene); the campaign index still advances.
 var auto_advance := true
 var jack_cause: StringName = &""
+## The wheel's dice. Tests seed it; play randomizes it at boot.
+var robbery_rng := RandomNumberGenerator.new()
 
 var _wall = null
 var _streamer = null
@@ -52,6 +56,7 @@ var _jacked := false
 func _ready() -> void:
 	super()
 	add_to_group(&"chase_host")
+	robbery_rng.randomize()
 	var seed_val := randi() & 0x7FFFFFFF
 	course = CourseScript.new()
 	course.pre_roll(seed_val)
@@ -172,14 +177,22 @@ func _open_robbery() -> void:
 			_end_screen._show(false)
 		return
 	# The bay you had rides into the next stop, exactly as a win would carry
-	# it — unless the robbery says otherwise.
+	# it — unless the wheel says otherwise.
 	_end_screen._capture_ammo_carry(gs)
-	var outcome: Dictionary = Robbery.apply(Robbery.placeholder_slice(), gs)
+	# Bolts, parts, or blood: the wheel is rigged to what this driver owns,
+	# the landing is rolled up front, and the bill is settled before the
+	# card ever shows — the spin is theatre, the robbery already happened.
+	var items: Array = GarageItems.load_catalog()
+	var wheel: Array = Robbery.build_wheel(Robbery.state_of(gs, items))
+	var landed: int = Robbery.spin(wheel, robbery_rng)
+	var outcome: Dictionary = Robbery.apply(wheel[landed], gs, items, robbery_rng)
+	print("[chase] robbed: %s (%s)" % [outcome["headline"], outcome["detail"]])
 	_robbery = RobberyScreen.new()
 	_robbery.name = "RobberyScreen"
 	add_child(_robbery)
 	_robbery.finished.connect(_roll_on.bind(next), CONNECT_ONE_SHOT)
-	_robbery.open(jack_cause, outcome)
+	_robbery.open(jack_cause, outcome, wheel, landed,
+		player_car_id(_player.stats, gs.selected_vehicle_id))
 
 ## Robbed, not beaten: the campaign advances past Route 666 either way.
 func _roll_on(next: int) -> void:

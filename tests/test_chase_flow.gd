@@ -48,6 +48,16 @@ func _close(scene: Node) -> void:
 	t.root.remove_child(scene)
 	scene.free()
 
+## A seed whose first roll on a ten-wedge wheel lands on `index` — the same
+## draw Robbery.spin() makes, searched rather than assumed.
+func _seed_landing_on(index: int) -> int:
+	var rng := RandomNumberGenerator.new()
+	for candidate in range(1, 500):
+		rng.seed = candidate
+		if rng.randi_range(0, Robbery.WHEEL.size() - 1) == index:
+			return candidate
+	return 1
+
 func _chase_index() -> int:
 	var flow = t.root.get_node_or_null(^"/root/SceneFlow")
 	for i in flow.CAMPAIGN.size():
@@ -140,13 +150,14 @@ func test_caught_is_a_robbery_not_a_life() -> void:
 	scene._process(0.016)
 	t.check(events.size() == 1, "chase: the run ends once")
 	# The robbery card (the jack beat's timer lands here on its own in play).
+	# Seeded dice: wedge 0 of the default wheel is a quarter of the wallet.
+	scene.robbery_rng.seed = _seed_landing_on(0)
 	scene._open_robbery()
 	var card = scene.get_node_or_null(^"RobberyScreen")
 	t.check(card != null and t.paused, "chase: the robbery card freezes the world")
 	t.check(Economy.funds == 3000,
-		"chase: the placeholder shakedown takes a quarter (wallet %d)" % Economy.funds)
-	t.check(card.get_node_or_null(^"CenterContainer") != null or card.get_child_count() > 0,
-		"chase: the card has something to show")
+		"chase: the wheel landed on a quarter of the wallet (wallet %d)" % Economy.funds)
+	t.check(card.get_node_or_null(^"Panel") != null, "chase: the card has something to show")
 	t.check(gs.carry_ammo.size() == WeaponRack.Slot.size(),
 		"chase: the bay you had rides on to the next stop")
 	scene._open_robbery()
@@ -174,6 +185,7 @@ func test_wrecked_is_the_same_robbery() -> void:
 	t.check(scene.is_jacked() and scene.jack_cause == &"wrecked", "chase: a wreck ends the run the same way")
 	t.check(gs.lives == 3, "chase: a wreck never costs a life either")
 	t.check(Economy.funds == 2000, "chase: no destroyed penalty on Route 666")
+	scene.robbery_rng.seed = _seed_landing_on(0)
 	scene._open_robbery()
 	t.check(scene.get_node_or_null(^"RobberyScreen") != null and Economy.funds == 1500,
 		"chase: they pick over the wreck (wallet %d)" % Economy.funds)
@@ -233,23 +245,3 @@ func test_off_the_tour_the_loss_panel_stands_in() -> void:
 	t.check(scene._end_screen.visible, "chase: the classic loss panel stands in")
 	t.check(Economy.funds == 4000, "chase: nothing is taken off the tour")
 	_close(scene)
-
-## The leaf on its own: a bite of bolts, and the fallbacks when there's
-## nothing to bite.
-func test_placeholder_shakedown() -> void:
-	Economy.enabled = true
-	Economy.god = false
-	Economy.funds = 1000
-	var hit: Dictionary = Robbery.apply(Robbery.placeholder_slice(), null)
-	t.check(hit["kind"] == Robbery.Kind.BOLTS and hit["bolts"] == 250 and Economy.funds == 750,
-		"robbery: a quarter of the wallet")
-	t.check(String(hit["headline"]) != "" and String(hit["detail"]).contains("250"),
-		"robbery: the outcome says what was taken")
-	Economy.funds = 0
-	var broke: Dictionary = Robbery.apply(Robbery.placeholder_slice(), null)
-	t.check(broke["kind"] == Robbery.Kind.DIGNITY and broke["bolts"] == 0,
-		"robbery: a dry wallet costs nothing but dignity")
-	var odd: Dictionary = Robbery.apply({"kind": Robbery.Kind.DIGNITY}, null)
-	t.check(odd["bolts"] == 0 and String(odd["headline"]) != "", "robbery: a harmless slice is harmless")
-	Economy.enabled = false
-	Economy.reset_run()
