@@ -2,6 +2,7 @@ extends Node
 ## Owns screen/level navigation. Plain scene swaps for now; a fade can layer on
 ## later. Scene paths live here so callers just say where they want to go.
 
+const BOOT := "res://ui/boot_splash.tscn"  # the main scene; hands off to TITLE
 const TITLE := "res://ui/title.tscn"
 const MODE_SELECT := "res://ui/mode_select.tscn"
 const DIFFICULTY := "res://ui/difficulty_select.tscn"

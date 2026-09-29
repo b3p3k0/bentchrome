@@ -8,7 +8,11 @@ config_version=5
 
 config/name="Bent Chrome"
 config/description="Top-down vehicular combat — clean-slate rebuild"
-run/main_scene="res://ui/title.tscn"
+; The boot sequence (parody startup cards) plays first and hands off to the
+; title; the engine's own splash stays black so nothing precedes the cards.
+run/main_scene="res://ui/boot_splash.tscn"
+boot_splash/bg_color=Color(0, 0, 0, 1)
+boot_splash/show_image=false
 ; Editor-only builds (export preset with a custom "level_editor" feature tag)
 ; boot straight into the level editor; the game preset is untouched.
 run/main_scene.level_editor="res://editor/editor_main.tscn"

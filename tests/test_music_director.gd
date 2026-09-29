@@ -59,14 +59,14 @@ func test_tracks_cover_flows() -> void:
 	for entry in flow.MP_MAPS:
 		t.check(MusicScript.TRACKS.has(entry.scene),
 			"bgm: MP map mapped: " + str(entry.scene))
-	for path in [flow.TITLE, flow.MODE_SELECT, flow.DIFFICULTY,
+	for path in [flow.BOOT, flow.TITLE, flow.MODE_SELECT, flow.DIFFICULTY,
 			flow.SELECT, flow.SETTINGS, flow.MP_MENU,
 			flow.MP_LOBBY, flow.MP_SCOREBOARD, flow.TUTORIAL,
 			flow.CUSTOM, flow.INTERSTITIAL, flow.MP_MATCH]:
 		t.check(MusicScript.TRACKS.has(path), "bgm: flow scene mapped: " + path)
 	for path in MusicScript.TRACKS:
 		var want: StringName = MusicScript.TRACKS[path]
-		if want in [MusicScript.UPCOMING, MusicScript.RESOLVE_CHILD]:
+		if want in MusicScript.SENTINELS:
 			continue
 		t.check(String(want).begins_with("bgm_"),
 			"bgm: track name shape: " + String(want))
@@ -135,4 +135,24 @@ func test_duck_and_override() -> void:
 	t.check(d._override == &"" and d._ducks.is_empty(),
 		"bgm: scene change clears override and ducks")
 	t.check(d._current == &"bgm_menu", "bgm: unknown/menu scene requests bgm_menu")
+	_done(d)
+
+## The boot sequence carries its own sting: no track under it, and the title's
+## menu music then starts from the top instead of joining mid-bar.
+func test_boot_scene_is_silent() -> void:
+	var d = _fresh()
+	d._streams[&"bgm_menu"] = _fake_stream()
+	d._scene_changed(flow.BOOT)
+	t.check(d._current == &"" and d._active == -1 and d.playing_event() == &"",
+		"bgm: boot sequence requests no track")
+	t.check(not d._players[0].playing and not d._players[1].playing,
+		"bgm: nothing plays under the boot sting")
+	d._scene_changed(flow.TITLE)
+	t.check(d._current == &"bgm_menu" and d._active >= 0,
+		"bgm: title starts the menu track after the boot sequence")
+	t.check(d._gain[d._active] == 0.0 and d._target[d._active] == 1.0,
+		"bgm: menu track fades in from zero")
+	d._scene_changed(flow.BOOT)
+	t.check(d._current == &"" and d._active == -1,
+		"bgm: a silent scene fades a running track out")
 	_done(d)

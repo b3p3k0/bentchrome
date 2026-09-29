@@ -18,12 +18,17 @@ const DUCK_RATE_DB := 40.0    # dB per second toward the duck target
 ## TRACKS sentinels: the interstitial plays the UPCOMING level's track (the
 ## loading card becomes the intro — same-event requests are no-ops, so the
 ## music rolls straight into the level), and mp_match resolves through its
-## instanced arena CHILD so MP shares the SP table.
+## instanced arena CHILD so MP shares the SP table. SILENT scenes carry their
+## own audio (the boot sequence's sting) — no track, so the next scene's music
+## starts from the top.
 const UPCOMING := &"__upcoming__"
 const RESOLVE_CHILD := &"__child__"
+const SILENT := &"__silent__"
+const SENTINELS: Array[StringName] = [UPCOMING, RESOLVE_CHILD, SILENT]
 
 ## Scene path -> track event. Unknown scenes fall back to bgm_menu.
 const TRACKS := {
+	"res://ui/boot_splash.tscn": SILENT,
 	"res://ui/title.tscn": &"bgm_menu",
 	"res://ui/mode_select.tscn": &"bgm_menu",
 	"res://ui/difficulty_select.tscn": &"bgm_menu",
@@ -146,6 +151,8 @@ func _scene_changed(path: String) -> void:
 		want = _upcoming_track()
 		if want == &"":
 			return  # can't resolve (headless / no campaign state) — hold
+	if want == SILENT:
+		want = &""  # no asset by that name: _request fades to silence
 	_scene_track = want
 	_request(want, CROSSFADE)
 
@@ -162,7 +169,7 @@ func _upcoming_track() -> StringName:
 	while idx < flow.CAMPAIGN.size() - 1 and StringName(flow.CAMPAIGN[idx].mode) == &"placeholder":
 		idx += 1
 	var want: StringName = TRACKS.get(flow.CAMPAIGN[idx].scene, &"")
-	return want if not want in [UPCOMING, RESOLVE_CHILD] else &""
+	return want if not want in SENTINELS else &""
 
 ## mp_match instances its arena as a direct child (the PackedScene keeps its
 ## path) — scan until a TRACKS hit lands, then play the same track SP would.
@@ -172,7 +179,7 @@ func _resolve_child_track() -> void:
 		return
 	for child in cs.get_children():
 		var want: StringName = TRACKS.get(child.scene_file_path, &"")
-		if want != &"" and not want in [UPCOMING, RESOLVE_CHILD]:
+		if want != &"" and not want in SENTINELS:
 			_child_scan = false
 			_scene_track = want
 			_request(want, CROSSFADE)
