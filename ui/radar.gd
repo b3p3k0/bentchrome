@@ -136,6 +136,10 @@ func _scan() -> void:
 					var half: Vector2 = c.shape.size * 0.5
 					lo = lo.min(c.global_position - half)
 					hi = hi.max(c.global_position + half)
+			if node.collision_layer & 4:
+				var rect := _body_rect(node)
+				if rect.size != Vector2.ZERO:
+					_solids.append({"rect": rect})
 		elif node is StaticBody2D and node.collision_layer & 4:
 			var rect := _body_rect(node)
 			if rect.size == Vector2.ZERO:
