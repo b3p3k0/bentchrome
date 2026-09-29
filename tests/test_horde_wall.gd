@@ -240,7 +240,7 @@ func test_rolling_start_respawn() -> void:
 	var player = scene.get_node(^"Vehicle")
 	var driver = player.get_node(^"Driver")
 	var intent: Dictionary = driver.get_intent(player, 0.016)
-	t.check(intent["throttle"] >= 0.45, "chase: throttle floor holds with feet off the pedal")
+	t.check(intent["throttle"] > 0.0, "chase: hands off under cruise keeps the gas on")
 	var health = player.get_node(^"Health")
 	health.kill()
 	var respawned := false

@@ -1,9 +1,11 @@
 extends RefCounted
 ## ChaseDriver logic: intent contract, steer convergence, pace-hold throttle
 ## band, burst duty cycle, spawn grace, sedan rocket cadence — plus the
-## Buzzard data files' glass-cannon shape.
+## speed-band governor, the player's chase pedal, and the Buzzard data
+## files' glass-cannon shape.
 
 const DriverScript := preload("res://levels/chase/chase_driver.gd")
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 var t
 
@@ -185,24 +187,79 @@ func test_yoyo_catchup() -> void:
 	t.root.remove_child(container)
 	container.free()
 
-func test_brake_passes_through_floor_holds() -> void:
+## The governor's pure math: carry a speed up to a target and hold it; the
+## brake only bites rolling forward, well over the target.
+func test_speed_band_governor() -> void:
+	const TOP := 500.0
+	var cruise: float = TOP * SpeedBand.CRUISE_FRAC
+	var floor_speed: float = TOP * SpeedBand.FLOOR_FRAC
+	t.check(floor_speed < cruise and cruise < TOP, "band: floor < cruise < top")
+	t.check(is_equal_approx(SpeedBand.band_target(0.0, TOP), cruise), "band: hands off asks for cruise")
+	t.check(is_equal_approx(SpeedBand.band_target(1.0, TOP), TOP), "band: W asks for the top")
+	t.check(is_equal_approx(SpeedBand.band_target(-1.0, TOP), floor_speed), "band: S asks for the floor")
+	t.check(is_equal_approx(SpeedBand.band_target(0.5, TOP), (cruise + TOP) * 0.5),
+		"band: a half stick lands between cruise and top")
+	t.check(is_equal_approx(SpeedBand.toward(100.0, cruise, false), 1.0), "band: far under the target = full gas")
+	var near: float = SpeedBand.toward(cruise - SpeedBand.BAND * 0.5, cruise, false)
+	t.check(is_equal_approx(near, 0.5), "band: the gas ramps down into the target (%.2f)" % near)
+	t.check(is_equal_approx(SpeedBand.toward(cruise + 60.0, cruise, false), 0.0),
+		"band: over the target without the brake = coast")
+	t.check(is_equal_approx(SpeedBand.toward(cruise + 60.0, cruise, true), -1.0),
+		"band: over the target with the brake = brake")
+	t.check(is_equal_approx(SpeedBand.toward(cruise + 4.0, cruise, true), 0.0),
+		"band: inside the brake margin the pedal rests (no chatter)")
+	t.check(SpeedBand.toward(5.0, -50.0, true) >= 0.0, "band: never the brake at a crawl — that's reverse gear")
+	t.check(SpeedBand.toward(-200.0, -400.0, true) >= 0.0, "band: never the brake mid backward-slide")
+
+## The player's pedal through the real driver: speed up, slow down, never stop.
+func test_player_pedal_is_a_speed_band() -> void:
 	const IR := preload("res://game/input_router.gd")
 	var container := Node2D.new()
 	t.root.add_child(container)
-	var vehicle := FakeVehicle.new()
+	var vehicle := FakeVehicle.new()   # heading north, ctrl.max_speed 500
 	container.add_child(vehicle)
 	var driver = preload("res://levels/chase/chase_player_driver.gd").new()
 	container.add_child(driver)
-	var idle: Dictionary = driver.get_intent(vehicle, 0.016)
-	t.check(is_equal_approx(idle["throttle"], 0.45), "chase: hands off cruises at the floor")
+	var top: float = vehicle.ctrl.max_speed
+	var cruise: float = top * SpeedBand.CRUISE_FRAC
+	var floor_speed: float = top * SpeedBand.FLOOR_FRAC
+	# Hands off: gas below cruise, coast above it — settles at cruise, not top.
+	vehicle.velocity = Vector2(0, -200.0)
+	var slow: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(slow["throttle"] > 0.9, "chase: hands off under cruise pulls up to it (%.2f)" % slow["throttle"])
+	vehicle.velocity = Vector2(0, -(cruise + 30.0))
+	var fast: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(fast["throttle"], 0.0), "chase: hands off over cruise coasts — never the top for free")
+	# S: a real brake above the floor, a HOLD at it — never a stop, never reverse.
 	Input.action_press(IR.ACTION_MOVE_DOWN)
+	vehicle.velocity = Vector2(0, -top)
 	var braking: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(braking["throttle"] < -0.5, "chase: S brakes while above the floor (%.2f)" % braking["throttle"])
+	vehicle.velocity = Vector2(0, -(floor_speed - 5.0))
+	var held: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(held["throttle"] > 0.0, "chase: S under the floor feeds gas — the car never stops (%.2f)" % held["throttle"])
+	vehicle.velocity = Vector2.ZERO
+	var parked: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(parked["throttle"] > 0.9, "chase: S at a standstill is full gas, not reverse")
+	# Post-whip backward slide (nose north, travelling south along it): the
+	# brake would be reverse gear and chop the slide — the pedal rests.
+	vehicle.velocity = Vector2(0, 300.0)
+	var sliding: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(sliding["throttle"], 0.0), "chase: S in a backward slide never finds reverse")
 	Input.action_release(IR.ACTION_MOVE_DOWN)
-	t.check(braking["throttle"] < -0.5, "chase: S is a real brake now (%.2f)" % braking["throttle"])
+	var drifting: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(drifting["throttle"], 0.0), "chase: hands off in a backward slide coasts")
+	# W: flat out, the controller owns the ceiling.
 	Input.action_press(IR.ACTION_MOVE_UP)
+	vehicle.velocity = Vector2(0, -top)
 	var sprint: Dictionary = driver.get_intent(vehicle, 0.016)
 	Input.action_release(IR.ACTION_MOVE_UP)
-	t.check(sprint["throttle"] > 0.9, "chase: W still sprints")
+	t.check(is_equal_approx(sprint["throttle"], 1.0), "chase: W is flat out")
+	# Boost: full throttle even over the honest top — the headroom is the point.
+	t.check(is_equal_approx(SpeedBand.pedal(0.0, top * 1.3, top, true), 1.0),
+		"chase: a live boost is never governed")
+	t.check(is_equal_approx(SpeedBand.pedal(-1.0, top * 1.3, top, false), -1.0),
+		"chase: a dry boost button governs like any other pedal")
 	t.root.remove_child(container)
 	container.free()
 
