@@ -8,6 +8,15 @@ const HealthScript := preload("res://vehicles/health.gd")
 
 var t
 
+class FakeController:
+	var max_speed := 500.0
+
+class FakeCar extends Node2D:
+	var velocity := Vector2.ZERO
+	var ctrl = FakeController.new()
+	func get_controller():
+		return ctrl
+
 func _init(runner) -> void:
 	t = runner
 
@@ -22,23 +31,30 @@ func test_wall_pressure_math() -> void:
 	container.add_child(player)
 	var wall = WallScript.new()
 	wall.target = player
-	wall.wall_speed = 330.0
+	wall.pace_frac = 0.7
 	wall.front_y = player.position.y + 2000.0
 	container.add_child(wall)
-	# Rubberband: at gap 2000 the surge term is (2000-900)*0.35 = 385 on top of
-	# the 330 cruise — 357.5px closed over half a second.
+	# A bare fixture has no controller: the pack prices itself off the fallback.
+	var top: float = wall.base_top()
+	t.check(is_equal_approx(top, WallScript.FALLBACK_TOP), "wall: bare targets ride the fallback top")
+	# Rubberband: past the leash the surge stacks on the phase pace.
+	var cruise: float = top * 0.7
+	var surged: float = WallScript.pack_speed(top, 0.7, 2000.0)
+	t.check(surged > cruise, "wall: trailing past the leash surges (%d > %d)" % [int(surged), int(cruise)])
 	wall._physics_process(0.5)
-	t.check(is_equal_approx(wall.gap(), 2000.0 - 357.5), "wall: surges when trailing (gap %d)" % int(wall.gap()))
-	# At the comfort pivot the surge is zero — pure phase cruise.
-	wall.front_y = player.position.y + WallScript.COMFORT_GAP
+	t.check(is_equal_approx(wall.gap(), 2000.0 - surged * 0.5),
+		"wall: surges when trailing (gap %d)" % int(wall.gap()))
+	# At the leash the surge is zero — pure phase cruise.
+	wall.front_y = player.position.y + WallScript.LEASH_GAP
 	wall._physics_process(0.5)
-	t.check(is_equal_approx(wall.gap(), WallScript.COMFORT_GAP - 165.0),
-		"wall: eases to cruise inside comfort")
-	# From the max clamp, closure outruns the fastest car in the game (640).
+	t.check(is_equal_approx(wall.gap(), WallScript.LEASH_GAP - cruise * 0.5),
+		"wall: eases to cruise inside the leash")
+	# From the max clamp, closure outruns the chased car even on the boost
+	# (boost_top_factor 1.5) — at the slowest phase pace on the books.
 	wall.front_y = player.position.y + WallScript.MAX_GAP
 	var gap_before: float = wall.gap()
 	wall._physics_process(1.0)
-	t.check(gap_before - wall.gap() > 640.0,
+	t.check(gap_before - wall.gap() > top * 1.5,
 		"wall: nothing outruns the horde globally (closed %d/s)" % int(gap_before - wall.gap()))
 	player.position.y = -30000.0
 	wall._physics_process(0.016)
@@ -58,6 +74,37 @@ func test_wall_pressure_math() -> void:
 	t.check(is_equal_approx(wall.gap(), WallScript.RESPAWN_GAP), "wall: death reset regroups it")
 	wall.reset_behind(player.position.y + 500.0)
 	t.check(is_equal_approx(wall.gap(), WallScript.RESPAWN_GAP), "wall: reset never pulls it closer")
+	t.root.remove_child(container)
+	container.free()
+
+## The squeeze is priced in fractions of the chased car's top: the slowest and
+## fastest rides on the roster get the same pack, scaled — and the same
+## flat-out resting gap.
+func test_pack_is_priced_against_the_car() -> void:
+	const SLOW := 453.0  # Hubcap
+	const FAST := 640.0  # Cyclone
+	for gap_px in [100.0, WallScript.LEASH_GAP, WallScript.LEASH_GAP + 300.0, WallScript.MAX_GAP]:
+		var slow: float = WallScript.pack_speed(SLOW, 0.9, gap_px) / SLOW
+		var fast: float = WallScript.pack_speed(FAST, 0.9, gap_px) / FAST
+		t.check(is_equal_approx(slow, fast),
+			"wall: same squeeze for every ride at gap %d (%.3f of top)" % [int(gap_px), slow])
+	# Flat out (speed == top) the gap rests where the surge eats the pace deficit.
+	var rest: float = WallScript.LEASH_GAP + (1.0 - 0.9) / WallScript.SURGE_PER_PX
+	t.check(is_equal_approx(WallScript.pack_speed(SLOW, 0.9, rest), SLOW)
+		and is_equal_approx(WallScript.pack_speed(FAST, 0.9, rest), FAST),
+		"wall: the flat-out resting gap is the same for every car (%d px)" % int(rest))
+	# A fixture with a controller prices the pack off ITS top, read live.
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var car := FakeCar.new()
+	car.ctrl.max_speed = FAST
+	container.add_child(car)
+	var wall = WallScript.new()
+	wall.target = car
+	container.add_child(wall)
+	t.check(is_equal_approx(wall.base_top(), FAST), "wall: reads the chased car's own top")
+	car.ctrl.max_speed = SLOW
+	t.check(is_equal_approx(wall.base_top(), SLOW), "wall: the read is live, never cached")
 	t.root.remove_child(container)
 	container.free()
 

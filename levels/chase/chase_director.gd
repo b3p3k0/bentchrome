@@ -1,9 +1,9 @@
 extends Node
-## The Buzzard wave director: a 180-second pressure arc. Phases set the live
-## cap, spawn cadence, class mix, and the horde wall's cruise speed — warm-up,
-## waves, two breathers, a crescendo, and a finale sprint where the spawns
-## stop and the wall surges. Spawns arrive pace-matched just off-screen
-## behind; stragglers cull far south. Deaths bump the host's kill tally.
+## The Buzzard wave director: a 120-second pressure arc cut into short beats.
+## Phases set the live cap, spawn cadence, class mix, and the pack's PACE — a
+## fraction of the player's own top speed, so every ride feels the same
+## squeeze. Two short breaths, then the pace climbs to 1.0 for the last mile
+## while the spawns keep coming. Deaths bump the host's kill tally.
 
 const BuzzardScene := preload("res://levels/chase/buzzard.tscn")
 const TumbleScript := preload("res://levels/chase/death_tumble.gd")
@@ -11,15 +11,19 @@ const BikeStats := preload("res://data/vehicles/buzz_bike.tres")
 const SedanStats := preload("res://data/vehicles/buzz_sedan.tres")
 const TechnicalStats := preload("res://data/vehicles/buzz_technical.tres")
 
-## The pressure arc. t = phase start (host clock seconds).
+## The pressure arc. t = phase start (host clock seconds); pace = the pack's
+## cruise as a fraction of the player's top speed (horde_wall.pack_speed).
+## Green flag / first blood / breath / squeeze / breath / frenzy / all in /
+## last mile — the finale keeps its weights: the spawns never stop.
 static var PHASES := [
-	{"t": 0.0,   "cap": 2, "interval": 5.0, "weights": {&"bike": 1.0},                "wall": 300.0},
-	{"t": 15.0,  "cap": 4, "interval": 4.0, "weights": {&"bike": 0.7, &"sedan": 0.3}, "wall": 330.0},
-	{"t": 50.0,  "cap": 3, "interval": 6.0, "weights": {&"bike": 1.0},                "wall": 320.0},
-	{"t": 65.0,  "cap": 6, "interval": 3.5, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "wall": 350.0},
-	{"t": 110.0, "cap": 4, "interval": 5.0, "weights": {&"sedan": 0.7, &"technical": 0.3},              "wall": 340.0},
-	{"t": 125.0, "cap": 8, "interval": 2.8, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "wall": 380.0},
-	{"t": 168.0, "cap": 8, "interval": 999.0, "weights": {},                          "wall": 420.0},
+	{"t": 0.0,   "cap": 2, "interval": 4.0, "weights": {&"bike": 1.0},                "pace": 0.80},
+	{"t": 8.0,   "cap": 4, "interval": 3.5, "weights": {&"bike": 0.7, &"sedan": 0.3}, "pace": 0.86},
+	{"t": 25.0,  "cap": 3, "interval": 5.0, "weights": {&"bike": 1.0},                "pace": 0.84},
+	{"t": 32.0,  "cap": 6, "interval": 3.0, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.90},
+	{"t": 55.0,  "cap": 4, "interval": 4.5, "weights": {&"sedan": 0.7, &"technical": 0.3},              "pace": 0.88},
+	{"t": 62.0,  "cap": 8, "interval": 2.6, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.94},
+	{"t": 90.0,  "cap": 8, "interval": 2.2, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.97},
+	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.5, &"sedan": 0.3, &"technical": 0.2}, "pace": 1.00},
 ]
 
 static var SPAWN_BEHIND := 1100.0   # off-screen even at the 0.42 overview zoom
@@ -37,7 +41,7 @@ static var CLASS_TABLE := {
 
 var host = null            # buzzard_run host: clock, course, kills
 var target: Node2D = null  # the player
-var wall = null            # horde_wall: phase cruise speed lands here
+var wall = null            # horde_wall: the phase pace lands here
 var frozen := false        # finale/win: stop directing, let the field play out
 
 var rng := RandomNumberGenerator.new()
@@ -63,7 +67,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var ph := phase_at(host.clock)
 	if wall != null:
-		wall.wall_speed = ph["wall"]
+		wall.pace_frac = ph["pace"]
 	_cull_t -= delta
 	if _cull_t <= 0.0:
 		_cull_t = 0.5

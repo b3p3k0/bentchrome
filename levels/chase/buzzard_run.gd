@@ -1,5 +1,5 @@
 extends "res://levels/combat_level.gd"
-## The Buzzard Run host: combat_level's lives loop under a 180-second survival
+## The Buzzard Run host: combat_level's lives loop under a 120-second survival
 ## clock. Wires the seeded course + streamer + horde wall around the player,
 ## suppresses the end screen's arena-style group win (runtime hordes would
 ## fake a cleared arena), and drives the timed win itself. Respawn is a
@@ -11,7 +11,7 @@ const StreamerScript := preload("res://levels/chase/course_streamer.gd")
 const WallScript := preload("res://levels/chase/horde_wall.gd")
 const DirectorScript := preload("res://levels/chase/chase_director.gd")
 
-static var RUN_SECONDS := 180.0
+static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0     # respawn rolling start (300 px/s = 45 mph)
 static var SCATTER_RADIUS := 550.0 # buzzards this close get shoved off a respawn
 

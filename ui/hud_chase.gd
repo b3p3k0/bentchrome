@@ -1,7 +1,7 @@
 extends "res://ui/hud.gd"
 ## The Buzzard Run HUD: the left dash is untouched; the right gutter swaps
 ## the arena radar for the dashboard GPS and the opponents roster for a
-## threat panel — the 3:00 countdown, kill tally, live-pack count, and a
+## threat panel — the 2:00 countdown, kill tally, live-pack count, and a
 ## horde-gap meter. Polls the chase host duck-typed via the &"chase_host"
 ## group (time_left / wall_gap / kills).
 
@@ -35,7 +35,7 @@ func _build_radar() -> void:
 	add_child(gps)
 
 func _build_opponents() -> void:
-	_clock_label = _label_at(Vector2(1280 - GUTTER + 20, 444), "3:00", 40)
+	_clock_label = _label_at(Vector2(1280 - GUTTER + 20, 444), "2:00", 40)
 	_clock_label.modulate = SELECTED
 	_wrecked_label = _label_at(Vector2(1280 - GUTTER + 20, 500), "WRECKED 0", 16)
 	_pack_label = _label_at(Vector2(1280 - GUTTER + 150, 500), "PACK 0", 16)

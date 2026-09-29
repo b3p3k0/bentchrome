@@ -1,9 +1,10 @@
 extends RefCounted
 ## The wave director: phase table shape, phase lookup, the runtime spawn
 ## recipe (stats/driver/palette/position land before add_child), cap respect,
-## wall-speed handoff, cull line, respawn grace, and the kill tally.
+## pack-pace handoff, cull line, respawn grace, and the kill tally.
 
 const DirectorScript := preload("res://levels/chase/chase_director.gd")
+const RunScript := preload("res://levels/chase/buzzard_run.gd")
 
 var t
 
@@ -16,16 +17,23 @@ func test_phase_table_sane() -> void:
 		t.check(ph["t"] > last_t, "director: phase starts ascend (t=%s)" % ph["t"])
 		last_t = ph["t"]
 		t.check(int(ph["cap"]) >= 1 and int(ph["cap"]) <= 8, "director: cap within the perf budget")
-		t.check(ph["wall"] >= 250.0 and ph["wall"] <= 450.0, "director: wall cruise stays outrunnable")
+		t.check(ph["pace"] >= 0.7 and ph["pace"] <= 1.0,
+			"director: pace stays a fraction of the chased car's top (%.2f)" % ph["pace"])
+		t.check(ph["t"] < RunScript.RUN_SECONDS, "director: every beat starts inside the run")
+		t.check(not ph["weights"].is_empty(), "director: the spawns never stop (t=%s)" % ph["t"])
 		for kind in ph["weights"]:
 			t.check(DirectorScript.CLASS_TABLE.has(kind), "director: %s is a real class" % kind)
 			t.check(ph["weights"][kind] > 0.0, "director: weights positive")
 	t.check(is_equal_approx(DirectorScript.PHASES[0]["t"], 0.0), "director: arc starts at zero")
+	var last: Dictionary = DirectorScript.PHASES[DirectorScript.PHASES.size() - 1]
+	t.check(is_equal_approx(last["pace"], 1.0), "director: the last mile runs at the car's own top")
 
 func test_phase_lookup() -> void:
-	t.check(is_equal_approx(DirectorScript.phase_at(0.0)["wall"], 300.0), "director: warm-up phase at t=0")
-	t.check(is_equal_approx(DirectorScript.phase_at(60.0)["t"], 50.0), "director: breather covers t=60")
-	t.check(is_equal_approx(DirectorScript.phase_at(500.0)["t"], 168.0), "director: finale is terminal")
+	t.check(is_equal_approx(DirectorScript.phase_at(0.0)["pace"], 0.80), "director: green flag at t=0")
+	t.check(is_equal_approx(DirectorScript.phase_at(28.0)["t"], 25.0), "director: breath covers t=28")
+	t.check(DirectorScript.phase_at(28.0)["pace"] < DirectorScript.phase_at(20.0)["pace"],
+		"director: a breath eases the pace")
+	t.check(is_equal_approx(DirectorScript.phase_at(500.0)["t"], 110.0), "director: last mile is terminal")
 
 func test_spawn_cull_grace_and_kills() -> void:
 	var gs = t.root.get_node_or_null(^"/root/GameState")
@@ -68,11 +76,11 @@ func test_spawn_cull_grace_and_kills() -> void:
 	for i in 3:
 		await t.physics_frame
 	t.check(get_tree_enemies() == 2, "director: cap holds the line (got %d)" % get_tree_enemies())
-	# Wall speed rides the phase.
-	scene.clock = 130.0
+	# The pack's pace rides the phase.
+	scene.clock = 95.0
 	await t.physics_frame
 	await t.physics_frame
-	t.check(is_equal_approx(wall.wall_speed, 380.0), "director: crescendo drives the wall")
+	t.check(is_equal_approx(wall.pace_frac, 0.97), "director: all-in drives the pack's pace")
 	scene.clock = 20.0  # back off the crescendo for the rest of the test
 	# Respawn grace: the pack holds fire, then releases.
 	director.on_player_respawn()

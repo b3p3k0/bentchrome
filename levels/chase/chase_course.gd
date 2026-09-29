@@ -1,6 +1,7 @@
 extends RefCounted
 ## The pre-rolled Buzzard Run: a seeded plan of chunk_defs entries long enough
-## that a top-speed run can't outrun it (190s x 640 px/s, plus margin). The
+## that a top-speed run can't outrun it (120s of a 640 px/s car on the boost
+## the whole way is ~119k with the streamer's lookahead, plus margin). The
 ## whole future is known at boot — the GPS reads turns ahead, the streamer
 ## instantiates only a window. Course distance d = -world_y (north is up).
 ## sample(d) is the single geometry authority: centerline x and half-width,

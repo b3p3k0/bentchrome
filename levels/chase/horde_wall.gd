@@ -1,26 +1,28 @@
 extends Node2D
 ## The Buzzardz' pressure line: a rolling wall of dust, headlights and bad
-## intentions that owns the south edge of the run. It advances north at the
-## director's cruise speed, never falls farther back than MAX_GAP, and eats a
-## life on contact (through Health, so the respawn blink-shield and DEVGOD are
-## respected). A road-spanning backstop rides 250px inside it — you cannot
-## reverse through the horde. Batch A visual is a painted dust band + drifting
-## headlight pairs; the full FX stack lands in Batch B.
+## intentions that owns the south edge of the run. Its speed is priced against
+## the PLAYER'S OWN CAR — the director's pace is a fraction of that ride's top
+## speed, plus a surge that grows with every px the gap runs past the leash —
+## so a land-yacht and an open-wheeler feel the same squeeze. It never falls
+## farther back than MAX_GAP, and eats a life on contact (through Health, so
+## the respawn blink-shield and DEVGOD are respected). A road-spanning
+## backstop rides 250px inside it — you cannot reverse through the horde.
 
 static var MAX_GAP := 2400.0      # px the wall trails at best (never irrelevant)
 static var KILL_MARGIN := 50.0    # gap at which the swarm takes you
 static var RESPAWN_GAP := 1400.0  # reset distance after a death
-static var COMFORT_GAP := 900.0   # the yo-yo pivot: past this, the horde surges
-static var CATCHUP_RATE := 0.35   # extra px/s of closure per px of excess gap
+static var LEASH_GAP := 900.0     # the rubberband pivot: past this, the horde surges
+static var SURGE_PER_PX := 0.0007 # extra pace (fraction of top) per px past the leash
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DUST_AMOUNT := 140          # particle budget: one system, under 200
 const RUMBLE_GAP := 500.0         # ground shudder starts here, grows to contact
+const FALLBACK_TOP := 484.0       # mid-roster top: bare fixtures, freed targets
 
 var target: Node2D = null   # the player, set by the host
 var course = null           # chase_course.gd, set by the host (centers the band)
-var wall_speed := 330.0     # px/s north; the director's phase drives this
+var pace_frac := 0.80       # fraction of the target's top; the director's phase drives this
 var front_y := 0.0          # world y of the kill line
 
 var _backstop: StaticBody2D = null
@@ -65,6 +67,22 @@ func gap() -> float:
 		return MAX_GAP
 	return front_y - target.global_position.y
 
+## The pack's speed in px/s: the phase pace plus the leash surge, both priced
+## in fractions of the chased car's top. Flat-out equilibrium lands at
+## LEASH_GAP + (1 - pace) / SURGE_PER_PX whatever the car — only the clock
+## it takes to get there scales with the ride.
+static func pack_speed(top: float, pace: float, gap_px: float) -> float:
+	return top * (pace + SURGE_PER_PX * maxf(gap_px - LEASH_GAP, 0.0))
+
+## The chased car's honest top speed (garage build included, boost excluded),
+## read live and duck-typed so bare test fixtures ride the fallback.
+func base_top() -> float:
+	if target != null and is_instance_valid(target) and target.has_method(&"get_controller"):
+		var ctrl = target.get_controller()
+		if ctrl != null:
+			return ctrl.max_speed
+	return FALLBACK_TOP
+
 ## Death reset: the swarm regroups a fair distance back (maxf — if it was
 ## already trailing farther, it doesn't leap forward to punish the respawn).
 func reset_behind(y: float) -> void:
@@ -74,10 +92,9 @@ func _physics_process(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
 		return
 	var player_y: float = target.global_position.y
-	# Rubberband: cruise inside COMFORT_GAP, surge harder the farther it trails
+	# Rubberband: cruise inside the leash, surge harder the farther it trails
 	# — no car outruns the horde globally; skill holds it at arm's length.
-	var pressure := maxf(front_y - player_y - COMFORT_GAP, 0.0) * CATCHUP_RATE
-	front_y -= (wall_speed + pressure) * delta       # north is -y
+	front_y -= pack_speed(base_top(), pace_frac, front_y - player_y) * delta  # north is -y
 	front_y = minf(front_y, player_y + MAX_GAP)      # never out of the mirrors
 	var road_x := 0.0
 	if course != null:
