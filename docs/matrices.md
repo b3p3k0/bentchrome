@@ -611,6 +611,23 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | GPS window | −800..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; horde drawn at its true position, pulses in danger |
 | Audio | roar gain 0.22 → 1.0 · horn ≥6s apart | horde_wall `ROAR_FLOOR` / `HORN_COOLDOWN` | `horde_roar` loop via `AudioDirector.loop_gain`; `jacked` sting on the robbery card |
 
+### The bridge is out (the clock-out finale)
+
+Source: `levels/chase/finale_director.gd`, `finale_driver.gd`, `finale_bird_driver.gd`, `horde_wall.halt_at`, `chunk_defs.gd` `bridge_out`, `chunk_builder._bridge_out`. Toggle: `buzzard_run.finale_enabled` (tests about "the line pays" turn it off for the instant win).
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| The cut | `FINALE_LEAD` 900px | finale_director | the river mile splices in at the first chunk boundary at least this far ahead — past the top of the frame (140 + 360/0.55 ≈ 795), so it rolls into view ~1.5s later; `CourseStreamer.invalidate_from` BEFORE `ChaseCourse.splice` |
+| The river | bank 600 · brink 1000 · deep to 1650 · shallows to 1750 · lip 878 | `bridge_out` `river` block (chunk-local d) | kill rect = channel − 24 each end (1024–1626); `river_y(entry, key)` puts any of them in the world; three `straight` chunks of run-out follow |
+| The arc | `LAUNCH_SPEED` 700 · `FINALE_VZ` 860 | finale_driver | 2·860/1300 = 1.323s of air × 700 = 926px from the brink ⇒ lands at d ≈ 1926, 300px past the kill rect and past the shallows, whatever the car (forced velocity, no drag — test-locked) |
+| The fools | `BIKE_JUMP_SPEED` 480 · stock `jump_launch` 760 · `JUMPERS` 2 · `TRAIL_DY` 260 | finale_bird_driver, finale_director | 1.169s × 480 = 561px off the lip ⇒ into the channel with ~280px to spare either side; two bikes are always cast (spawned if fewer live); brakers stop `STOP_AHEAD` 40 short of the bank on their shoulder |
+| The halt | `HALT_BRAKE` 320 · `HALT_CREEP` 40 · `HALT_ROAR_FADE` 1.5s | horde_wall | speed ramps to zero over the last 320px, creeps the last inches, snaps onto the bank, never crosses it; the MAX_GAP drag is off; three `brake` crunches; `horde_deco.halted` damps the riders over 0.5s and lays their skids once |
+| The camera | `FINALE_CAM_D` 1250 · `FINALE_CAM_ZOOM` 0.45 · `FINALE_CAM_TIME` 0.6s | finale_director | a scene Camera2D takes over at the pop (no tree pause): the bank at the bottom edge, the river low, the landing in frame; slide `FINALE_CAM_D` down to see more riders, up to see more road |
+| The card | `FINALE_BEAT` 1.5s · `FINALE_MAX` 10s | finale_director | the classic paused fork with the purse note, a beat after the second splash — or ten seconds after the pop regardless |
+| Free deaths | `chase_director.kill_hooks` | chase_director | `finale_mode()` freezes spawns/absorbs and the died hook reads the gate when it FIRES: a bird going into the river rings no bell, pays no bounty, siphons no nitro, tumbles no wreck |
+
+The whole show runs ~7-9s of game time; the probe prints `[finale] air / landed d / jumpers gone / show` on every won run, and `tests/test_chase_finale.gd` boots it compressed.
+
 ### The robbery wheel
 
 Source: `game/robbery.gd` (`WHEEL`, `REDEAL_ORDER`, `REDEAL_BITE`). Ten wedges, uniform spin, landing rolled and billed before the card opens.
