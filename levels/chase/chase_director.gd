@@ -28,8 +28,10 @@ static var PHASES := [
 
 static var EMERGE_DEPTH := 90.0     # px inside the dust crest where pursuers are born
 static var ABSORB_DEPTH := 180.0    # px inside the crest where the pack takes one back
+static var EMERGE_SPEED := 140.0    # px/s over the player a newborn boils out at (a slow start sinks it back into the dust)
 static var SPAWN_BEHIND := 1100.0   # wall-less fallback (bare fixtures): px behind the player
 static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
+static var FLEE_AHEAD := 950.0      # px up the road (past the top of the view) where a breakaway is gone
 static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's free line
 
 ## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~14, sedan ~25,
@@ -39,8 +41,10 @@ static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's
 ## getting the shot is the payoff. ahead = enters from the top of the screen
 ## and falls back through the field (the technical shoots, the blocker
 ## steals your lane); everyone else boils up out of the dust bank.
+## mg_damage / mg_spread re-tune a class's scrapgun at spawn: the bike's
+## strafing run is SPRAY AND PRAY — a lot of tracer, not a lot of lead.
 static var CLASS_TABLE := {
-	&"bike": {"stats": null, "hp_scale": 0.2, "ahead": false},
+	&"bike": {"stats": null, "hp_scale": 0.2, "ahead": false, "mg_damage": 0.9, "mg_spread": 20.0},
 	&"sedan": {"stats": null, "hp_scale": 0.32, "ahead": false},
 	&"technical": {"stats": null, "hp_scale": 0.6, "ahead": true},
 	&"blocker": {"stats": null, "hp_scale": 0.6, "ahead": true, "tint": Color(0.78, 0.46, 0.1)},
@@ -129,6 +133,10 @@ func spawn(kind: StringName) -> Node:
 	b.stats = stats
 	b.hp_scale = row["hp_scale"]
 	b.weapon_lock_exempt = true  # chase pacing lives in chase_driver, not the bay lock
+	var mg = b.get_node_or_null(^"MachineGunMount")
+	if mg != null and row.has("mg_damage"):
+		mg.damage = row["mg_damage"]
+		mg.spread_deg = row["mg_spread"]
 	var driver = b.get_node(^"Driver")
 	driver.role = kind
 	driver.lane_offset = _lane_flip * rng.randf_range(80.0, 240.0)
@@ -148,7 +156,7 @@ func spawn(kind: StringName) -> Node:
 		else rng.randf_range(x_range.x, x_range.y))
 	b.global_position = Vector2(spawn_x, spawn_y)
 	var entry_speed: float = target.velocity.length() * 0.4 if ahead \
-		else target.velocity.length() + 60.0
+		else target.velocity.length() + EMERGE_SPEED
 	b.velocity = Vector2(0.0, -entry_speed)  # pace-matched entry
 	var health = b.get_node(^"Health")
 	health.died.connect(func() -> void:
@@ -226,8 +234,17 @@ func _absorb_y() -> float:
 
 ## Outrun a Buzzard and it fades back into the dust: freed quietly, no wreck,
 ## no bounty, no bell — the kill tally only counts what you actually killed.
+## Same for a bike that zipped past and made it off the top of the screen: it
+## got away, and the pack will send it round again as somebody else.
 func _absorb() -> void:
 	var line := _absorb_y()
+	var gone: float = target.global_position.y - FLEE_AHEAD
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):
-		if enemy is Node2D and enemy.global_position.y > line:
+		if not (enemy is Node2D):
+			continue
+		if enemy.global_position.y > line:
 			enemy.queue_free()
+		elif enemy.global_position.y < gone:
+			var brain = enemy.get_node_or_null(^"Driver")
+			if brain != null and brain.has_method(&"breaking_away") and brain.breaking_away():
+				enemy.queue_free()

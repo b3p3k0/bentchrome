@@ -162,18 +162,24 @@ func _report(player) -> void:
 		for source in _by_source:
 			print("[src] %-32s %6.1f dmg in %3d hits (%.0f%%)" % [source, _by_source[source][0],
 				_by_source[source][1], 100.0 * _by_source[source][0] / maxf(_taken, 1.0)])
-		# Did the sortie land? Alongside = within a car length of level; boxed =
-		# nose clearly ahead of the player while on the BOX station.
-		var flown := 0
-		var beside := 0
-		var boxed := 0
-		for id in _sorties:
-			var flight: Dictionary = _sorties[id]
-			if not flight.has(Brain.Stage.LOITER):
-				continue   # never got out of the rush
-			flown += 1
-			if float(flight.get(Brain.Stage.ALONGSIDE, INF)) < 60.0:
-				beside += 1
-			if float(flight.get(Brain.Stage.BOX, INF)) < -40.0:
-				boxed += 1
-		print("[sortie] %d flown  %d got alongside  %d boxed the player in" % [flown, beside, boxed])
+		# Did the sorties land? Per class: flown (got out of the rush), got by
+		# (its tail led your nose), and how it left — boxed you in, or broke
+		# away up the road.
+		for kind in [&"bike", &"sedan"]:
+			var flown := 0
+			var got_by := 0
+			var boxed := 0
+			var away := 0
+			for id in _sorties:
+				var flight: Dictionary = _sorties[id]
+				if flight["role"] != kind or not flight.has(Brain.Stage.PASS):
+					continue
+				flown += 1
+				if flight.has(Brain.Stage.BOX) or flight.has(Brain.Stage.EXIT):
+					got_by += 1
+				if float(flight.get(Brain.Stage.BOX, INF)) < -40.0:
+					boxed += 1
+				if float(flight.get(Brain.Stage.EXIT, INF)) < -300.0:
+					away += 1
+			print("[sortie] %-5s %2d flown  %2d got by  %2d boxed you in  %2d broke away up the road" % [
+				kind, flown, got_by, boxed, away])

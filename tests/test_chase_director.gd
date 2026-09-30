@@ -4,6 +4,7 @@ extends RefCounted
 ## pack-pace handoff, absorb line, the stand-down, and the kill tally.
 
 const DirectorScript := preload("res://levels/chase/chase_director.gd")
+const DriverScript := preload("res://levels/chase/chase_driver.gd")
 const RunScript := preload("res://levels/chase/buzzard_run.gd")
 
 var t
@@ -162,6 +163,24 @@ func test_spawn_cull_grace_and_kills() -> void:
 	t.check(scene.kills == kills_at_absorb, "director: an absorbed Buzzard rings no bell")
 	t.check(is_equal_approx(tank.boost_fuel, 40.0), "director: an absorbed Buzzard siphons no nitro")
 	t.check(Economy.funds == funds_before, "director: an absorbed Buzzard pays no bounty")
+	# A breakaway that made it off the top of the screen is gone the same
+	# quiet way — but only a bird that is actually running for it: the
+	# ahead-spawns live up there on purpose.
+	wall.set_physics_process(false)
+	var runner = director.spawn(&"bike")
+	var parked = director.spawn(&"technical")
+	await t.physics_frame
+	runner.get_node(^"Driver").skip_to(DriverScript.Stage.EXIT)
+	runner.global_position.y = player.global_position.y - DirectorScript.FLEE_AHEAD - 100.0
+	var kills_at_flee: int = scene.kills
+	director._absorb()
+	await t.physics_frame
+	await t.physics_frame
+	t.check(not is_instance_valid(runner), "director: a breakaway off the top of the screen is gone")
+	t.check(is_instance_valid(parked), "director: a technical up the road is not a breakaway — it stays")
+	t.check(scene.kills == kills_at_flee and Economy.funds == funds_before,
+		"director: the one that got away pays nothing")
+	t.check(DirectorScript.FLEE_AHEAD > 800.0, "director: gone means past the top of the view")
 	Economy.enabled = econ_was
 	Economy.funds = funds_before
 	t.paused = false

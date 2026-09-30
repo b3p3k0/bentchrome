@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 display_name = "Scrap Rocket"
 cooldown = 1.6
-damage = 8.0
+damage = 4.0
 projectile_speed = 850.0
 projectile_lifetime = 3.0
 turn_rate_deg = 90.0
