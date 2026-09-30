@@ -24,6 +24,20 @@ func test_defs_sane() -> void:
 	for name in ChunkDefs.DEFS:
 		var def: Dictionary = ChunkDefs.DEFS[name]
 		t.check(def["len"] > 0.0 and def["half_w"] > 0.0, "course: %s has positive extents" % name)
+		if def.has("cutoff"):
+			var cf: Dictionary = def["cutoff"]
+			var last_t := -1.0
+			for st in cf["trail"]:
+				t.check(float(st[0]) > last_t and float(st[0]) > 0.0 and float(st[0]) < def["len"], "course: %s's trail stations ascend inside the chunk" % name)
+				t.check(float(st[1]) * float(cf["side"]) > 0.0, "course: %s's trail lies on its side" % name)
+				last_t = float(st[0])
+			var last_g := -1.0
+			for g in cf["gaps"]:
+				t.check(float(g[0]) > last_g and float(g[1]) > float(g[0]) and float(g[1]) < def["len"], "course: %s's gaps ascend inside the chunk" % name)
+				last_g = float(g[1])
+			t.check(float(cf["width"]) > 0.0 and absf(float(cf["trees_x"])) > absf(float(cf["trail"][1][1])), "course: %s's treeline stands outside the trail" % name)
+			t.check(name in ChunkDefs.NO_REPEAT and ChunkDefs.WEIGHTS.has(name) and not (name in ChunkDefs.RARE),
+				"course: %s is rolled like a chunk, never twice running, never a landmark" % name)
 		if def.has("river"):
 			var r: Dictionary = def["river"]
 			t.check(r["bank"] < r["brink"] and r["brink"] < r["deep_to"] and r["deep_to"] < r["shallow_to"]
@@ -219,7 +233,7 @@ func test_builder_medians() -> void:
 	chicane.free()
 
 func test_rare_set_pieces_spaced() -> void:
-	for seed_val in [11, 222, 3333]:
+	for seed_val in [11, 444, 3333]:   # (222 lost a landmark when the cutoffs joined the deck — the assertion is about spacing, not the seed)
 		var c = _course(seed_val)
 		var last_rare := -CourseScript.RARE_SPACING
 		var ok := true
@@ -282,6 +296,49 @@ func test_builder_set_pieces_and_flair() -> void:
 			flair += 1
 	t.check(flair >= 4, "builder: roadside flair streams every chunk (got %d)" % flair)
 	plain.free()
+
+## The cutoff's geometry: the road's S and the trail's legs are holdable at
+## the lane wheel's cone; the trail starts INSIDE the wall's inner edge at
+## each gap's mouth and is clear of the outer edge by its end; the two kinds
+## mirror.
+func test_cutoff_geometry() -> void:
+	const Pedal := preload("res://levels/chase/chase_player_driver.gd")
+	var lock := tan(deg_to_rad(Pedal.LANE_YAW_DEG))
+	var l: Dictionary = ChunkDefs.DEFS[&"cutoff_l"]
+	var r: Dictionary = ChunkDefs.DEFS[&"cutoff_r"]
+	for name in [&"cutoff_l", &"cutoff_r"]:
+		var def: Dictionary = ChunkDefs.DEFS[name]
+		var cf: Dictionary = def["cutoff"]
+		var pts: Array = cf["trail"]
+		for i in pts.size() - 1:
+			var slope: float = absf(float(pts[i + 1][1]) - float(pts[i][1])) / (float(pts[i + 1][0]) - float(pts[i][0]))
+			t.check(slope <= lock + 0.02, "cutoff: %s trail leg %d is holdable (%.2f)" % [name, i, slope])
+		var entry := _entry_for(name)
+		var side: float = cf["side"]
+		# The mouths: the trail crosses the wall line INSIDE each gap — through
+		# the entry gap on its way out (inside at the start, past the
+		# embankment by the end) and back through the exit gap (the reverse).
+		var gaps: Array = cf["gaps"]
+		for k in 2:
+			var g: Array = gaps[k]
+			var d_road: float = g[0] if k == 0 else g[1]     # the end that touches the road
+			var d_wild: float = g[1] if k == 0 else g[0]     # the end out past the embankment
+			var inner: float = Builder._center_x(entry, d_road) + side * (float(def["half_w"]) + Builder.SHOULDER_W)
+			var on_road: float = side * (inner - ChunkDefs.cutoff_x(def, d_road))
+			t.check(on_road >= 75.0, "cutoff: %s gap %d: at the road end the trail is well inside the wall line (%d)" % [name, k, int(on_road)])
+			var outer: float = Builder._center_x(entry, d_wild) + side * (float(def["half_w"]) + Builder.SHOULDER_W + Builder.EMBANK_W)
+			var clear: float = side * (ChunkDefs.cutoff_x(def, d_wild) - outer)
+			t.check(clear >= 40.0, "cutoff: %s gap %d: at the wild end the trail is clear of the embankment (%d)" % [name, k, int(clear)])
+		var mid_d: float = (float(pts[1][0]) + float(pts[2][0])) * 0.5
+		var outer_mid: float = Builder._center_x(entry, mid_d) + side * (float(def["half_w"]) + Builder.SHOULDER_W + Builder.EMBANK_W)
+		var near_edge: float = ChunkDefs.cutoff_x(def, mid_d) - side * float(cf["width"]) * 0.5
+		t.check(side * (near_edge - outer_mid) >= 60.0, "cutoff: %s: on the straight the trail clears the bulged embankment (%d)" % [name, int(side * (near_edge - outer_mid))])
+		t.check(is_equal_approx(ChunkDefs.cutoff_x(def, 0.0), float(pts[0][1])) and is_equal_approx(ChunkDefs.cutoff_x(def, 2000.0), float(pts[pts.size() - 1][1])),
+			"cutoff: %s: the trail holds its first and last station past the ends" % name)
+	for i in l["cutoff"]["trail"].size():
+		t.check(is_equal_approx(float(l["cutoff"]["trail"][i][1]), -float(r["cutoff"]["trail"][i][1])), "cutoff: the pair mirror (station %d)" % i)
+	for i in l["path"].size():
+		t.check(is_equal_approx(float(l["path"][i][1]), -float(r["path"][i][1])), "cutoff: the roads mirror (station %d)" % i)
 
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch

@@ -158,6 +158,44 @@ const DEFS := {
 			{"kind": &"heal", "at": [720.0, 0.0]},
 		],
 	},
+	# --- the back roads --------------------------------------------------
+	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
+	# straight along the inside — through a GAP in the shoulder and the
+	# embankment, fenced by a treeline and a ditch, and back through a
+	# second gap. The `cutoff` block: `side` (-1 = the trail is on the left),
+	# `trail` stations [d, x_off] from the chunk ENTRY x (not the bent
+	# centreline), `width`, the embankment `gaps` [from, to] on that side,
+	# `trees_x` the treeline's offset. Honest dirt (slower) — the pay-off is
+	# the pack losing sight of you (horde_wall.lost_sight) and the S-bend's
+	# curve tax you skip. The pair mirror each other.
+	&"cutoff_l": {
+		"len": 2000.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"cutoff", "shoulder": &"grass",
+		"path": [[300.0, 0.0], [760.0, 200.0], [1240.0, 200.0], [1700.0, 0.0]],
+		"cutoff": {
+			"side": -1.0, "width": 150.0, "trees_x": -700.0,
+			"trail": [[260.0, -330.0], [820.0, -570.0], [1180.0, -570.0], [1740.0, -330.0]],
+			"gaps": [[300.0, 720.0], [1280.0, 1700.0]],
+		},
+		"props": [
+			{"kind": &"cone", "at": [240.0, -300.0]},
+			{"kind": &"cone", "at": [1760.0, -300.0]},
+		],
+	},
+	&"cutoff_r": {
+		"len": 2000.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"cutoff", "shoulder": &"grass",
+		"path": [[300.0, 0.0], [760.0, -200.0], [1240.0, -200.0], [1700.0, 0.0]],
+		"cutoff": {
+			"side": 1.0, "width": 150.0, "trees_x": 700.0,
+			"trail": [[260.0, 330.0], [820.0, 570.0], [1180.0, 570.0], [1740.0, 330.0]],
+			"gaps": [[300.0, 720.0], [1280.0, 1700.0]],
+		},
+		"props": [
+			{"kind": &"cone", "at": [240.0, 300.0]},
+			{"kind": &"cone", "at": [1760.0, 300.0]},
+		],
+	},
 	# --- the finale (never rolled: buzzard_run splices it in at 0:00) -------
 	# The bridge is out. A straight mile with a river across it: the deck runs
 	# from the near `bank` to the `brink` where it breaks off, the DEEP channel
@@ -234,6 +272,8 @@ const WEIGHTS := {
 	&"log_run": 1.5,
 	&"washout_l": 0.7,
 	&"washout_r": 0.7,
+	&"cutoff_l": 0.6,
+	&"cutoff_r": 0.6,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -242,7 +282,21 @@ const WEIGHTS := {
 
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
-	&"washout_l", &"washout_r"]
+	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r"]
+
+## A cutoff's trail: its centre at chunk-local d as an offset from the chunk
+## ENTRY x (the trail runs straight while the road bends away from it).
+## Shared by the builder, the host's on-trail check, the GPS and the bot.
+static func cutoff_x(def: Dictionary, d: float) -> float:
+	var pts: Array = def["cutoff"]["trail"]
+	if d <= float(pts[0][0]):
+		return float(pts[0][1])
+	for i in pts.size() - 1:
+		var a: Array = pts[i]
+		var b: Array = pts[i + 1]
+		if d <= float(b[0]):
+			return lerpf(float(a[1]), float(b[1]), (d - float(a[0])) / (float(b[0]) - float(a[0])))
+	return float(pts[pts.size() - 1][1])
 
 ## World y of a river landmark (`bank`, `brink`, `deep_to`, `shallow_to`,
 ## `pad_d`) of a bridge_out plan entry — north is -y, so deeper into the
