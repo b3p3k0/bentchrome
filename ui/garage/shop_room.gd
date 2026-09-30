@@ -94,7 +94,7 @@ func refresh(shell) -> void:
 		if String(item.id) in shell.owned:
 			owned_count += 1
 	_station.text = "%s — %s %d/%d" % [data["label"], category, owned_count, total]
-	_quip.text = "SLO MO: " + String(data["quip"])
+	_quip.text = String(data["quip"])  # the dim grey says who's talking
 	_next_level.text = shell.next_level_name
 	_wallet.text = "⚙ %s" % shell.fmt(shell.wallet())
 	_set_menu_light(not shell.is_room())
