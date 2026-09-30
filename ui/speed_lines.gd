@@ -1,12 +1,23 @@
 extends Control
 ## Windshield speed streaks: thin vertical lines whipping south past the play
 ## square once the run gets properly fast — density and reach ramp from
-## THRESHOLD to a full-tilt read at FULL. Pure overlay, ignores the mouse.
+## THRESHOLD_FRAC to a full-tilt read at FULL_FRAC. Both are fractions of the
+## car's OWN honest top on asphalt (SpeedBand.road_top), so the slowest ride
+## on the roster reads "flat out" exactly like the fastest: nothing at
+## cruise, a whisper flat out, the full windshield on the boost. Pure
+## overlay, ignores the mouse.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
-static var THRESHOLD := 480.0   # px/s where the streaks fade in
-static var FULL := 640.0        # px/s of maximum streak intensity
+static var THRESHOLD_FRAC := 0.90   # of the car's top: where the streaks fade in
+static var FULL_FRAC := 1.35        # of the car's top: maximum streak intensity
+
+## 0 = no streaks, 1 = full tilt, for a speed against a car's top.
+static func intensity(speed: float, top: float) -> float:
+	if top <= 0.0:
+		return 0.0
+	return clampf((speed / top - THRESHOLD_FRAC) / (FULL_FRAC - THRESHOLD_FRAC), 0.0, 1.0)
 
 var _t := 0.0
 
@@ -21,10 +32,9 @@ func _draw() -> void:
 	var player := VehiclesHelper.local(get_tree())
 	if player == null or not player.has_method(&"get_speed"):
 		return
-	var speed: float = player.get_speed()
-	if speed < THRESHOLD:
+	var k := intensity(player.get_speed(), SpeedBand.road_top(player))
+	if k <= 0.0:
 		return
-	var k := clampf((speed - THRESHOLD) / (FULL - THRESHOLD), 0.0, 1.0)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242  # stable lanes; only the scroll moves
 	var n := int(4.0 + k * 10.0)

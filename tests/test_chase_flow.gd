@@ -86,6 +86,20 @@ func test_rolling_start_and_the_clock_win() -> void:
 	t.check(scene.get_node(^"ChaseDirector").frozen, "chase: the pack stands down at the line")
 	_close(scene)
 
+## The windshield streaks read "flat out" the same for every ride.
+func test_speed_streaks_scale_to_the_car() -> void:
+	const Lines := preload("res://ui/speed_lines.gd")
+	for top in [453.0, 640.0]:
+		t.check(is_equal_approx(Lines.intensity(top * SpeedBand.CRUISE_FRAC, top), 0.0),
+			"streaks: nothing at cruise (top %d)" % int(top))
+		var flat: float = Lines.intensity(top, top)
+		t.check(flat > 0.0 and flat < 0.5, "streaks: a whisper flat out (top %d, %.2f)" % [int(top), flat])
+		t.check(is_equal_approx(Lines.intensity(top * 1.5, top), 1.0),
+			"streaks: the full windshield on the boost (top %d)" % int(top))
+	t.check(is_equal_approx(Lines.intensity(453.0, 453.0), Lines.intensity(640.0, 640.0)),
+		"streaks: the slowest ride reads flat out exactly like the fastest")
+	t.check(is_equal_approx(Lines.intensity(500.0, 0.0), 0.0), "streaks: no top, no streaks, no divide by zero")
+
 ## The other side of the gamble: living dangerously pays, if you live.
 func test_daredevil_accrues_on_the_bumper_and_pays_at_the_line() -> void:
 	var scene = await _boot()
