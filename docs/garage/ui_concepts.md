@@ -1,4 +1,11 @@
-# Garage UI concepts — round 1 (nothing locked)
+# Garage UI concepts — round 1
+
+> **Shipped (2026-09-30):** the soft recommendation below won. The shop is
+> Concept A's diegetic room (a first-person pixel painting of Slo Mo's shop,
+> flashlight-lit, stations as hotspots) wrapping Concept B's catalog as a
+> pop-up menu. Input is keyboard only — arrows, ENTER, ESC — which
+> supersedes the "keyboard + mouse both" rule under Shared mechanics. See
+> `docs/garage/README.md` and `docs/art_briefs/slo_mos_shop.md`.
 
 Both mockups use the house palette (amber #ffd833 chrome, panel #121218,
 blocky borders, monospace) at the 1280×720 base viewport. SVGs render in

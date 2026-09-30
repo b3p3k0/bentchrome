@@ -45,6 +45,15 @@ application). Start here; each doc owns one concern.
   `special_ammo_cap_bonus` adds to the special cap. Scale axes stack
   multiplicatively; the validator rejects unknown keys and do-nothing items.
   Mechanism contract: docs/garage_seams.md.
+- **SLO MO'S (2026-09-30):** the shop is Concept A's room with Concept B's
+  catalog inside it. A first-person pixel-art painting of Slo Mo's shop
+  (`ui/garage/shop_room.gd`, art contract in
+  `docs/art_briefs/slo_mos_shop.md`) is lit at runtime by a phone-flashlight
+  shader; ←/→ sweep the beam over five stations, ENTER opens that category
+  (`shop_menu.gd`, with 384×288 part art), and every buy goes through Slo
+  Mo's "Deal?" confirm. Keyboard only (arrows / ENTER / ESC): the old
+  click-to-buy cards are gone, the mouse is swallowed, and a 0.25s guard
+  stops double taps. Moe is now Slo Mo. Tests: `test_garage_shop`.
 - Branch flow: `feature/garage` → merge to `development` → promotion to `main`.
 - **Decided (Kevin, 2026-07-19):** currency = **BOLTS**, start at 0; earned
   by destroying enemies/destructibles/soft targets (size-proportionate,

@@ -875,3 +875,23 @@ only; goals are hidden from players (the book shows locked stickers as `???`).
 | profile | `user://stickers.json` | stickers.gd `PROFILE_PATH` | saved on every change; headless runs never save |
 | notice sound delay | 0.9 s | end_screen.gd | `sticker_earned` waits for the win/lose sting |
 | art | 768x256 PNG | assets/img/stickers/ | drop-in; missing art paints a seeded vinyl stand-in |
+
+## Slo Mo's shop (PIT STOP knobs)
+
+Sources: `ui/garage/garage.gd` (state, input, purchase rules), `ui/garage/shop_room.gd`
+(room, lighting), `shaders/shop_spotlight.gdshader`. Art contract and re-measure recipe:
+`docs/art_briefs/slo_mos_shop.md`.
+
+| Knob | Value | Where | What it does |
+|---|---|---|---|
+| `GUARD_SEC` | 0.25 s | garage.gd | after every mode change (and on opening), Enter/Escape are ignored this long |
+| `MO_LINES` | idle / confirm / locked / short / owned / bought | garage.gd | Slo Mo's lines at the bottom of the menu |
+| `HOTSPOTS` | 5 stations, left to right | shop_room.gd | category, label, flashlight rect (1280×720 px) and Mo's quip per station; order = ←/→ order |
+| `LAMPS` | 3 fixtures | shop_room.gd | Vector4(x, y, pool rx, pool ry) of each overhead light |
+| `ROOM_AMBIENT` / `MENU_AMBIENT` | 0.25 / 0.14 | shop_room.gd | room brightness outside the beam and lamp pools |
+| `ROOM_BEAM` / `MENU_BEAM` | 1.0 / 0.55 | shop_room.gd | flashlight strength in the room / behind an open menu |
+| `BEAM_PAD` / `BEAM_MIN_RADIUS` | 1.15 / 90 px | shop_room.gd | beam ellipse = hotspot half-size × pad, never smaller than the minimum |
+| `SWAY_PX` | 3 px | shop_room.gd | handheld wobble of the beam |
+| `SPOT_MOVE_SEC` | 0.15 s | shop_room.gd | beam travel time between stations (runs under the paused tree) |
+| `beam_gain` / `beam_tint_amount` | 1.2 / 0.10 | shop_spotlight.gdshader | how much brighter and cooler the beam is than the painting |
+| `lamp_strength` / `lamp_halo` / `lamp_halo_radius` | 0.45 / 0.22 / 70 px | shop_spotlight.gdshader | warm pool under each fixture, and the glow on the fixture itself |

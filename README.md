@@ -90,6 +90,9 @@ The campaign is a thirteen-stop fight card, and three stops are still behind saw
 **Keyboard or controller?**  
 Both. Same steer-to-drive scheme either way — throttle, brake/reverse, steer — with the same inertia and drift.
 
+**What's the PIT STOP?**  
+Win a campaign level and you can swing by Slo Mo's parts shop before the next one. It's after hours: sweep your phone flashlight across the room with ←/→, ENTER opens whatever station you're pointing at, ↑/↓ browses the parts, ENTER again and Mo asks if you've got a deal. ESC backs out a step at a time. Keyboard only — Mo doesn't trust mice.
+
 **Can I remap controls?**  
 Yep—Settings > Controls. If something refuses to bind, log an issue and we’ll slap it back into shape.
 
