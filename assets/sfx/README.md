@@ -42,6 +42,7 @@ and the boot log always tells you the score:
 | `boost_loop` | **loops** while boosting | seamless airy whoosh |
 | `splat` / `crunch` | a soft target dies (run over or shot; positional) | wet/dry gore — living targets coinflip between them, ambient props always crunch |
 | `pickup` | the player collects any crate/heal/boost | short grab cue |
+| `sticker_earned` | a bumper-sticker notice or finale prize appears | vinyl peel and slap, then a bright two-note chime |
 | `overheat` | your MG heat-locks | steam hiss / lock click |
 | `horde_roar` | **loops** all through Route 666; its gain rides how close the pack is | seamless mass of rough engines + gravel — no single motor should read |
 | `horde_horn` | the pack reaches your bumper (the danger zone), at most once per 6s | low cracked war horn — must NOT sound like `ram_warn` |

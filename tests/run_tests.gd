@@ -13,6 +13,7 @@ const SUITES := [
 	preload("res://tests/test_hit_feedback.gd"),
 	preload("res://tests/test_hit_tags.gd"),
 	preload("res://tests/test_stickers.gd"),
+	preload("res://tests/test_sticker_notice.gd"),
 	preload("res://tests/test_sticker_book.gd"),
 	preload("res://tests/test_sticker_art.gd"),
 	preload("res://tests/test_impact_fx.gd"),

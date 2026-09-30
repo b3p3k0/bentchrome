@@ -3,6 +3,7 @@ extends RefCounted
 ## bad-file tolerance, and reset. Never touches Kevin's real settings.json.
 
 const TMP := "user://_test_settings.json"
+const TMP_STICKERS := "user://_test_settings_stickers.json"
 const SettingsScene := preload("res://ui/settings.tscn")
 const GameStateScript := preload("res://game/game_state.gd")
 
@@ -220,14 +221,17 @@ func test_settings_submenus_contract() -> void:
 	var dev_names: Array[String] = []
 	for row in screen._dev_rows:
 		dev_names.append(String(row.name))
-	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "SOUNDBOARD", "CAR TUNER", "BACK"],
+	t.check(dev_names == ["DEVELOPER MODE", "DEVGOD", "SOUNDBOARD", "CAR TUNER",
+		"STICKERS: UNLOCK ALL", "STICKERS: RESET", "BACK"],
 		"developer dialog: master, subordinate options, and back are present")
 	t.check(not bool(screen._rows[0].persist) and not bool(screen._rows[1].persist)
 		and not bool(screen._gfx_rows[6].persist) and not bool(screen._audio_rows[3].persist)
-		and not bool(screen._dev_rows[4].persist),
+		and not bool(screen._dev_rows[4].persist) and not bool(screen._dev_rows[5].persist)
+		and not bool(screen._dev_rows[6].persist),
 		"settings dialogs: opening and closing are non-persisting navigation")
 	t.check(screen._rows[0].kind == &"submenu" and screen._rows[1].kind == &"submenu"
-		and screen._rows[4].kind == &"action",
+		and screen._rows[4].kind == &"action" and screen._dev_rows[4].kind == &"action"
+		and screen._dev_rows[5].kind == &"action",
 		"settings menu: row kinds distinguish values from right-only destinations")
 
 	screen._settings_path = TMP
@@ -357,7 +361,7 @@ func test_settings_submenus_contract() -> void:
 		"developer dialog: locked child adjustments preserve remembered values")
 	screen._dev_index = 0
 	screen._step_dev(1)
-	t.check(screen._dev_index == 4, "developer dialog: navigation skips locked children")
+	t.check(screen._dev_index == 6, "developer dialog: navigation skips locked children")
 	gs.dev_mode = true
 	screen._dev_index = 0
 	screen._step_dev(1)
@@ -378,6 +382,63 @@ func test_settings_submenus_contract() -> void:
 	DirAccess.remove_absolute(TMP)
 	t.root.remove_child(screen)
 	screen.free()
+
+func test_sticker_developer_actions() -> void:
+	var gs := _gs()
+	var keep_dev: bool = gs.dev_mode
+	var stickers: Node = t.root.get_node(^"/root/Stickers")
+	var keep_store := {
+		"counters": stickers.counters.duplicate(true),
+		"sets": stickers.sets.duplicate(true),
+		"unlocked": stickers.unlocked.duplicate(true),
+		"seen": stickers.seen.duplicate(true),
+		"fresh": stickers._fresh.duplicate(),
+		"profile_path": stickers._profile_path,
+	}
+	DirAccess.remove_absolute(TMP_STICKERS)
+	stickers.load_profile(TMP_STICKERS)
+	stickers.ensure_catalog()
+	gs.dev_mode = true
+	var screen = SettingsScene.instantiate()
+	t.root.add_child(screen)
+	screen._settings_path = TMP
+	screen._open_dev_dialog()
+
+	screen._dev_index = 4
+	screen._unhandled_input(_key(KEY_RIGHT))
+	var total: int = stickers.catalog().size()
+	t.check(total > 0 and stickers.unlocked.size() == total,
+		"developer stickers: UNLOCK ALL owns the complete live catalog")
+	t.check(stickers.drain_fresh().is_empty(),
+		"developer stickers: UNLOCK ALL drains its own fresh notifications")
+	t.check(String(screen._val_stickers_owned()[0]) == "%d / %d OWNED" % [total, total],
+		"developer stickers: value column reports owned over catalog total")
+
+	screen._dev_index = 5
+	screen._unhandled_input(_key(KEY_RIGHT))
+	t.check(stickers.unlocked.size() == total and screen._sticker_reset_armed
+		and screen._val_stickers_reset()[0] == "RIGHT AGAIN TO WIPE",
+		"developer stickers: first RESET press only arms the destructive action")
+	screen._unhandled_input(_key(KEY_DOWN))
+	t.check(not screen._sticker_reset_armed and stickers.unlocked.size() == total,
+		"developer stickers: moving off RESET disarms without wiping")
+	screen._dev_index = 5
+	screen._unhandled_input(_key(KEY_RIGHT))
+	screen._unhandled_input(_key(KEY_RIGHT))
+	t.check(stickers.unlocked.is_empty() and screen._val_stickers_reset()[0] == "WIPED",
+		"developer stickers: a second consecutive RIGHT wipes the profile")
+
+	screen._close_dev_dialog()
+	t.root.remove_child(screen)
+	screen.free()
+	gs.dev_mode = keep_dev
+	stickers.counters = keep_store.counters
+	stickers.sets = keep_store.sets
+	stickers.unlocked = keep_store.unlocked
+	stickers.seen = keep_store.seen
+	stickers._fresh.assign(keep_store.fresh)
+	stickers._profile_path = keep_store.profile_path
+	DirAccess.remove_absolute(TMP_STICKERS)
 
 func test_devgod_health_blocks_damage_not_pits() -> void:
 	var h = preload("res://vehicles/health.gd").new()

@@ -639,6 +639,51 @@ def pickup():
     write("pickup", x, peak=0.9, fade_ms=2.0)
 
 
+def sticker_earned():
+    """~900ms vinyl peel, flat slap, then a bright major-third chime."""
+    dur = 0.9
+    out = np.zeros(int(SR * dur))
+    r = np.random.default_rng(166)
+
+    # A short rising band-passed noise zip: adhesive lifting off painted metal.
+    peel_dur = 0.12
+    peel_t = t(peel_dur)
+    peel_cut = 900.0 * (4200.0 / 900.0) ** (peel_t / peel_dur)
+    peel = svf_bp(r.uniform(-1, 1, peel_t.size), peel_cut, 1.8)
+    peel *= np.sin(np.pi * peel_t / peel_dur) ** 0.7
+    out[:peel.size] += peel * 0.65
+
+    # The vinyl lands with a low, dead thump and a tiny high-frequency edge.
+    slap_dur = 0.2
+    slap_t = t(slap_dur)
+    thump = sweep(150, 55, slap_dur, "exp") * np.exp(-slap_t / 0.025)
+    thump += one_pole_lp(r.uniform(-1, 1, slap_t.size), 150.0) \
+        * np.exp(-slap_t / 0.018) * 0.8
+    click = one_pole_hp(r.uniform(-1, 1, slap_t.size), 2600.0) \
+        * np.exp(-slap_t / 0.003) * 0.55
+    slap = softclip(1.2 * thump + click, 1.5)
+    slap_at = int(SR * 0.13)
+    out[slap_at:slap_at + slap.size] += slap
+
+    # Two bell-ish notes a major third apart (G5 -> B5), with a little square
+    # edge under the sine so the reward reads over the finale fireworks.
+    def bell(freq, note_dur):
+        note_t = t(note_dur)
+        tone = sine(freq, note_dur) + 0.16 * square(freq, note_dur)
+        tone += 0.22 * sine(freq * 2.01, note_dur)
+        return one_pole_lp(tone, 5200.0) * np.exp(-note_t / 0.19)
+
+    note_dur = 0.44
+    first = bell(783.99, note_dur) * 0.48
+    second = bell(987.77, note_dur) * 0.55
+    first_at = int(SR * 0.27)
+    second_at = int(SR * 0.46)
+    out[first_at:first_at + first.size] += first[:out.size - first_at]
+    out[second_at:second_at + min(second.size, out.size - second_at)] += \
+        second[:out.size - second_at]
+    write("sticker_earned", softclip(out, 1.25), peak=0.92, fade_ms=5.0)
+
+
 def overheat():
     """~650ms MG lockout: metallic lock click, then venting steam hiss."""
     dur = 0.65
@@ -1426,6 +1471,7 @@ if __name__ == "__main__":
     brake()
     jump_pad()
     pickup()
+    sticker_earned()
     overheat()
     win_sting()
     lose_sting()

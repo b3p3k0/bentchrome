@@ -15,7 +15,7 @@ const POOL_UI := 3          # pause-immune one-shots (menus run while the tree
 ## on purpose — a skid loop must freeze when the pause menu opens.
 const UI_EVENTS := {&"ui_move": true, &"ui_select": true, &"ui_back": true,
 	&"win_sting": true, &"lose_sting": true, &"mp_join": true, &"mp_leave": true,
-	&"jacked": true}
+	&"jacked": true, &"sticker_earned": true}
 
 ## Event -> tuning knobs. volume_db trims per asset; pitch_jitter (±fraction)
 ## keeps rapid repeats (MG, hits) from sounding machine-stamped.
@@ -47,6 +47,7 @@ const CATALOG := {
 	&"splat": {"volume_db": -2.0, "pitch_jitter": 0.12},  # soft target, wet verdict
 	&"crunch": {"volume_db": -2.0, "pitch_jitter": 0.12}, # soft target, dry verdict
 	&"pickup": {"volume_db": -4.0, "pitch_jitter": 0.05},  # crate/heal/boost collect
+	&"sticker_earned": {"volume_db": -2.0, "pitch_jitter": 0.0},
 	&"overheat": {"volume_db": -4.0, "pitch_jitter": 0.0}, # MG heat lockout trips
 	# Route 666: the pack's engines (gain rides proximity via loop_gain), its
 	# war horn when it reaches the bumper, and the robbery card's sting.

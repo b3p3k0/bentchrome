@@ -9,8 +9,10 @@ extends CanvasLayer
 ## chain); `optional: true` shows the STAY/DETOUR chooser instead.
 
 const CardFrame := preload("res://ui/card_frame.gd")
+const StickerNotice := preload("res://ui/sticker_notice.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)
+const STICKER_PINK := Color(1.0, 0.36, 0.72)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
 const INPUT_LOCK := 1.2  # players arrive here still hammering fire
 const CARD_DIR := "res://assets/img/cards"
@@ -40,10 +42,17 @@ var _chooser := false
 var _advance_on_key := false  # placeholder slot: any key rolls past, not into
 var _choice_index := 0
 var _choice_entries: Array[Label] = []
+var _sticker_line: Label
 
 func _ready() -> void:
 	layer = 60
 	_build_ui()
+	var stickers := get_node_or_null(^"/root/Stickers")
+	var fresh: Array = stickers.drain_fresh() if stickers else []
+	if not fresh.is_empty():
+		_sticker_line.text = StickerNotice.line(fresh, stickers)
+		_sticker_line.visible = true
+		StickerNotice.play_sound(self)
 	get_tree().create_timer(INPUT_LOCK).timeout.connect(_arm, CONNECT_ONE_SHOT)
 
 func _arm() -> void:
@@ -165,6 +174,7 @@ func _card_for(scene: String) -> Texture2D:
 ## to the bottom edge (the shared ui/card_frame.gd builder).
 func _build_card(card: Texture2D, caption: String, caption_color: Color) -> void:
 	_hint = CardFrame.build(self, card, caption, caption_color)
+	_build_overlay_sticker_line(92.0)
 
 ## Under-construction skip prompt over the level card: caption + sub-line +
 ## a two-option STAY/DETOUR row instead of the plain "press any key" hint.
@@ -222,6 +232,7 @@ func _build_detour(card: Texture2D) -> void:
 	_choice_index = 0
 	_choice_highlight()
 	_chooser = true
+	_build_overlay_sticker_line(140.0)
 
 ## The original blocky panel — kept as the fallback when no card art exists.
 func _build_panel(next_index: int, next_name: String) -> void:
@@ -268,6 +279,8 @@ func _build_panel(next_index: int, next_name: String) -> void:
 		trim.add_child(block)
 	vbox.add_child(trim)
 
+	_build_inline_sticker_line(vbox)
+
 	var next_lbl := Label.new()
 	next_lbl.text = "NEXT STOP:  %s" % next_name.to_upper()
 	next_lbl.add_theme_font_size_override("font_size", 22)
@@ -280,3 +293,29 @@ func _build_panel(next_index: int, next_name: String) -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.modulate = Color(0.55, 0.58, 0.62)
 	vbox.add_child(_hint)
+
+func _build_overlay_sticker_line(bottom_margin: float) -> void:
+	_sticker_line = _new_sticker_line()
+	_sticker_line.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_sticker_line.offset_left = 48.0
+	_sticker_line.offset_right = -48.0
+	_sticker_line.offset_top = -bottom_margin - 44.0
+	_sticker_line.offset_bottom = -bottom_margin - 4.0
+	_sticker_line.z_index = 2
+	add_child(_sticker_line)
+
+func _build_inline_sticker_line(parent: Node) -> void:
+	_sticker_line = _new_sticker_line()
+	_sticker_line.custom_minimum_size = Vector2(620, 0)
+	parent.add_child(_sticker_line)
+
+func _new_sticker_line() -> Label:
+	var line := Label.new()
+	line.name = "StickerLine"
+	line.add_theme_font_size_override("font_size", 16)
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.modulate = STICKER_PINK
+	line.visible = false
+	return line

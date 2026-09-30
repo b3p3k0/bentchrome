@@ -7,13 +7,22 @@ extends CanvasLayer
 ## keeps the buttons alive. Instanced per-level next to the pause menu.
 
 const UiStyle := preload("res://ui/ui_style.gd")
+const StickerNotice := preload("res://ui/sticker_notice.gd")
+const StickerPaint := preload("res://ui/sticker_paint.gd")
 const Economy := preload("res://game/economy.gd")
 const Difficulty := preload("res://game/difficulty.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
 const RED := Color(0.75, 0.2, 0.2)      # lose — HUD HP-bar red
+const STICKER_PINK := Color(1.0, 0.36, 0.72)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
+
+const PRIZE_IDS := {
+	Difficulty.Tier.EASY: &"day_tripper",
+	Difficulty.Tier.MEDIUM: &"long_hauler",
+	Difficulty.Tier.HARD: &"road_king",
+}
 
 const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't click menus
 
@@ -44,12 +53,18 @@ var _center: CenterContainer
 var _rolling_title: Label
 var _rolling_hint: Label
 var _claim_armed := false
+var _prize_armed := false
+var _prize_overlay: Control
+var _prize_title: Label
+var _prize_hint: Label
+var _fresh_stickers: Array = []
 var _title: Label
 var _panel_style: StyleBoxFlat
 var _trim_blocks: Array = []
 var _restart_btn: Button
 var _buttons: Array = []
 var _hint: Label            # mid-campaign: wallet line above the fork
+var _sticker_line: Label
 var _campaign_next := -1    # armed continue target (next level index)
 var _campaign_win_reported := false
 var _continue_armed := false
@@ -109,9 +124,17 @@ func _show(win: bool) -> void:
 			_announce.bind(false), CONNECT_ONE_SHOT)
 	if win:
 		_report_campaign_finale()
+	var stickers := get_node_or_null(^"/root/Stickers")
+	_fresh_stickers = stickers.drain_fresh() if stickers else []
+	_sticker_line.visible = false
 	if win and win_keeps_rolling:
 		_show_rolling_win()
 		return
+	if not _fresh_stickers.is_empty():
+		_sticker_line.text = StickerNotice.line(_fresh_stickers, stickers)
+		_sticker_line.visible = true
+		get_tree().create_timer(0.9, true).timeout.connect(
+			_play_sticker_sound, CONNECT_ONE_SHOT)
 	var next := _campaign_next_index() if win else -1
 	var accent := AMBER if win else RED
 	_title.text = "YOU WIN" if win else "YOU LOSE"
@@ -173,7 +196,7 @@ func _show_rolling_win() -> void:
 		music.duck(&"end_screen", true)
 	visible = true
 	_dim.color.a = 0.15
-	_center.visible = false  # the classic panel waits behind the stub
+	_center.visible = false  # the classic panel waits behind the prize beat
 	_rolling_title = Label.new()
 	_rolling_title.text = "YOU WIN!"
 	_rolling_title.add_theme_font_size_override("font_size", 56)
@@ -209,17 +232,119 @@ func _arm_claim() -> void:
 	if _rolling_hint:
 		_rolling_hint.visible = true
 
-## Close-sequence STUB: the real prize ceremony is still on the drawing
-## board — reveal the classic panel so every road stays open.
+## Opens the campaign-finale sticker ceremony; non-campaign stadium wins keep
+## the direct path to the classic end panel.
 func _claim_prize() -> void:
-	print("[coliseum] prize sequence TBD — enjoy the fireworks")
+	_claim_armed = false
 	if _rolling_hint:
 		_rolling_hint.visible = false
+	if not _campaign_win_reported:
+		_finish_prize_claim()
+		return
+	_show_prize_overlay()
+
+func _show_prize_overlay() -> void:
+	var stickers := get_node_or_null(^"/root/Stickers")
+	var prize_id: StringName = PRIZE_IDS.get(Difficulty.tier, &"day_tripper")
+	var prize_name := _sticker_name(prize_id, stickers)
+
+	_prize_overlay = Control.new()
+	_prize_overlay.name = "StickerPrizeOverlay"
+	_prize_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	_prize_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_prize_overlay)
+
+	var veil := ColorRect.new()
+	veil.color = Color(0.0, 0.0, 0.0, 0.75)
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_prize_overlay.add_child(veil)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_prize_overlay.add_child(center)
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 8)
+	center.add_child(vbox)
+
+	_prize_title = Label.new()
+	_prize_title.name = "PrizeTitle"
+	_prize_title.text = "YOUR PRIZE" if prize_id in _fresh_stickers else "STILL YOURS"
+	_prize_title.add_theme_font_size_override("font_size", 44)
+	_prize_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prize_title.modulate = AMBER if prize_id in _fresh_stickers else AMBER.darkened(0.42)
+	vbox.add_child(_prize_title)
+
+	var sticker_stage := CenterContainer.new()
+	sticker_stage.custom_minimum_size = Vector2(820, 280)
+	vbox.add_child(sticker_stage)
+	var sticker := StickerPaint.make(prize_id, prize_name, Vector2(768, 256))
+	sticker.rotation = deg_to_rad(-4.0)
+	sticker.pivot_offset = Vector2(384, 128)
+	sticker_stage.add_child(sticker)
+
+	var name_label := Label.new()
+	name_label.name = "PrizeName"
+	name_label.text = prize_name.to_upper()
+	name_label.add_theme_font_size_override("font_size", 28)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(name_label)
+
+	var others: Array = []
+	for id_v in _fresh_stickers:
+		if StringName(id_v) != prize_id:
+			others.append(id_v)
+	var other_line := Label.new()
+	other_line.name = "OtherStickerLine"
+	other_line.text = StickerNotice.line(others, stickers)
+	other_line.add_theme_font_size_override("font_size", 16)
+	other_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	other_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	other_line.custom_minimum_size = Vector2(900, 0)
+	other_line.modulate = STICKER_PINK
+	other_line.visible = not others.is_empty()
+	vbox.add_child(other_line)
+
+	_prize_hint = Label.new()
+	_prize_hint.name = "PrizeHint"
+	_prize_hint.text = "press any key"
+	_prize_hint.add_theme_font_size_override("font_size", 18)
+	_prize_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prize_hint.modulate = Color(0.62, 0.64, 0.68)
+	_prize_hint.visible = false
+	vbox.add_child(_prize_hint)
+
+	if not _fresh_stickers.is_empty():
+		StickerNotice.play_sound(self)
+	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(
+		_arm_prize_overlay, CONNECT_ONE_SHOT)
+
+func _sticker_name(id: StringName, stickers: Node) -> String:
+	if stickers:
+		stickers.ensure_catalog()
+		for row_v in stickers.catalog():
+			if row_v is Dictionary and String(row_v.get("id", "")) == String(id):
+				return String(row_v.get("name", String(id)))
+	return String(id).to_upper()
+
+func _arm_prize_overlay() -> void:
+	if _prize_overlay == null or not is_instance_valid(_prize_overlay):
+		return
+	_prize_armed = true
+	_prize_hint.visible = true
+
+func _finish_prize_claim() -> void:
+	_prize_armed = false
+	if _prize_overlay and is_instance_valid(_prize_overlay):
+		_prize_overlay.visible = false
 	_center.visible = true
 	for b in _buttons:
 		b.disabled = false
 	if _restart_btn:
 		_restart_btn.grab_focus()
+
+func _play_sticker_sound() -> void:
+	StickerNotice.play_sound(self)
 
 func _arm_buttons() -> void:
 	for b in _buttons:
@@ -285,14 +410,17 @@ func _open_garage() -> void:
 		_continue_campaign())
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _continue_armed and not _claim_armed:
+	if not _continue_armed and not _claim_armed and not _prize_armed:
 		return
 	var pressed: bool = (event is InputEventKey and event.pressed and not event.echo) \
 		or (event is InputEventJoypadButton and event.pressed) \
 		or (event is InputEventMouseButton and event.pressed)
 	if not pressed:
 		return
-	if _claim_armed:
+	if _prize_armed:
+		get_viewport().set_input_as_handled()
+		_finish_prize_claim()
+	elif _claim_armed:
 		get_viewport().set_input_as_handled()
 		_claim_armed = false
 		_claim_prize()
@@ -342,6 +470,16 @@ func _build_ui() -> void:
 		trim.add_child(block)
 		_trim_blocks.append(block)
 	vbox.add_child(trim)
+
+	_sticker_line = Label.new()
+	_sticker_line.name = "StickerLine"
+	_sticker_line.add_theme_font_size_override("font_size", 16)
+	_sticker_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_sticker_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_sticker_line.custom_minimum_size = Vector2(620, 0)
+	_sticker_line.modulate = STICKER_PINK
+	_sticker_line.visible = false
+	vbox.add_child(_sticker_line)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)

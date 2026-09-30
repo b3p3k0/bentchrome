@@ -8,6 +8,7 @@ const HitTags := preload("res://game/hit_tags.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const EndScreenScene := preload("res://ui/end_screen.tscn")
+const InterstitialScene := preload("res://ui/interstitial.tscn")
 
 const TMP_PROFILE := "user://_test_stickers.json"
 const TMP_ROSTER := "user://_test_stickers_roster.json"
@@ -103,17 +104,21 @@ func _done_vehicle(fixture: Dictionary) -> void:
 		container.free()
 
 
-func _end_screen_fixture() -> Dictionary:
+func _end_screen_fixture(rolling := true) -> Dictionary:
 	var container := Node2D.new()
 	t.root.add_child(container)
 	t.current_scene = container
 	var screen := EndScreenScene.instantiate()
-	screen.win_keeps_rolling = true
+	screen.win_keeps_rolling = rolling
 	container.add_child(screen)
 	return {"container": container, "screen": screen}
 
 
 func _done_end_screen(fixture: Dictionary) -> void:
+	t.paused = false
+	var music: Node = t.root.get_node_or_null(^"/root/MusicDirector")
+	if music:
+		music.duck(&"end_screen", false)
 	t.current_scene = null
 	var container: Node = fixture.container
 	t.root.remove_child(container)
@@ -189,6 +194,111 @@ func test_profile_round_trip() -> void:
 	t.check(loaded.seen == source.seen, "stickers profile: seen ids round-trip")
 	source.free()
 	loaded.free()
+	_cleanup_temp()
+
+
+func test_end_screen_sticker_notice_and_finale_prize() -> void:
+	var keep := _gate_state()
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var selected_was: StringName = gs.selected_vehicle_id
+	var tier_was: int = Difficulty.tier
+	var scene_was: Node = t.current_scene
+	var mouse_was := Input.mouse_mode
+	var real_flow: Node = t.root.get_node(^"/root/SceneFlow")
+	var store := _store()
+	_set_earnable()
+
+	store._fresh.append(&"my_other_car")
+	var loss := _end_screen_fixture(false)
+	loss.screen._show(false)
+	t.check(loss.screen._sticker_line.visible
+		and loss.screen._sticker_line.text.contains("MY OTHER CAR IS ALSO TOTALED"),
+		"end screen notice: a loss presents a fresh death sticker in pink copy")
+	_done_end_screen(loss)
+
+	gs.game_mode = &"single_battle"
+	var plain_win := _end_screen_fixture(false)
+	plain_win.screen._show(true)
+	t.check(not plain_win.screen._sticker_line.visible,
+		"end screen notice: a win with no fresh sticker keeps the line hidden")
+	_done_end_screen(plain_win)
+
+	t.root.remove_child(real_flow)
+	var flow := CampaignFlowStub.new()
+	flow.name = "SceneFlow"
+	flow.CAMPAIGN = [{"scene": ""}]
+	t.root.add_child(flow)
+	gs.game_mode = &"campaign"
+	gs.selected_vehicle_id = &"ghost"
+	Difficulty.tier = Difficulty.Tier.EASY
+	store.reset_profile()
+	var earned := _end_screen_fixture(true)
+	earned.screen._show(true)
+	t.check(not earned.screen._sticker_line.visible,
+		"finale notice: the rolling lap holds fresh stickers for the prize beat")
+	earned.screen._claim_prize()
+	t.check(earned.screen._prize_overlay != null and earned.screen._prize_overlay.visible
+		and earned.screen._prize_title.text == "YOUR PRIZE",
+		"finale prize: the tier sticker reads YOUR PRIZE when freshly earned")
+	earned.screen._arm_prize_overlay()
+	var dismiss := InputEventKey.new()
+	dismiss.pressed = true
+	dismiss.physical_keycode = KEY_SPACE
+	earned.screen._unhandled_input(dismiss)
+	t.check(not earned.screen._prize_overlay.visible and earned.screen._center.visible
+		and not earned.screen._restart_btn.disabled,
+		"finale prize: dismissal hides the overlay and restores the classic panel")
+	_done_end_screen(earned)
+
+	store.reset_profile()
+	store.unlocked["day_tripper"] = 1
+	var retained := _end_screen_fixture(true)
+	retained.screen._show(true)
+	retained.screen._claim_prize()
+	t.check(retained.screen._prize_title.text == "STILL YOURS",
+		"finale prize: an already-owned tier sticker reads STILL YOURS")
+	_done_end_screen(retained)
+
+	gs.game_mode = &"single_battle"
+	var battle := _end_screen_fixture(true)
+	battle.screen._show(true)
+	battle.screen._claim_prize()
+	t.check(battle.screen._prize_overlay == null and battle.screen._center.visible,
+		"finale prize: a single-battle stadium win goes straight to the classic panel")
+	_done_end_screen(battle)
+
+	t.root.remove_child(flow)
+	flow.free()
+	t.root.add_child(real_flow)
+	t.current_scene = scene_was
+	gs.selected_vehicle_id = selected_was
+	Difficulty.tier = tier_was
+	Input.mouse_mode = mouse_was
+	_restore_gate(keep)
+	_cleanup_temp()
+
+
+func test_interstitial_drains_leftover_sticker_notice() -> void:
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var level_was: int = gs.level_index
+	var store := _store()
+	gs.level_index = 0
+	store._fresh.append(&"basic_af")
+	var with_fresh := InterstitialScene.instantiate()
+	t.root.add_child(with_fresh)
+	t.check(with_fresh._sticker_line.visible
+		and with_fresh._sticker_line.text.contains("BASIC AF"),
+		"interstitial notice: a leftover fresh id renders above the card caption")
+	t.root.remove_child(with_fresh)
+	with_fresh.free()
+
+	var empty := InterstitialScene.instantiate()
+	t.root.add_child(empty)
+	t.check(not empty._sticker_line.visible,
+		"interstitial notice: an empty drain keeps the line hidden")
+	t.root.remove_child(empty)
+	empty.free()
+	gs.level_index = level_was
 	_cleanup_temp()
 
 

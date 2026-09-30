@@ -28,6 +28,12 @@ func test_zero_assets_never_crash() -> void:
 	t.check(DirectorScript.CATALOG[&"horde_roar"].get("loop", false), "sfx: the horde's engines are a loop")
 	t.check(DirectorScript.UI_EVENTS.has(&"jacked"),
 		"sfx: the robbery sting rides the pause-immune pool (the card freezes the tree)")
+	t.check(DirectorScript.CATALOG.has(&"sticker_earned")
+		and is_equal_approx(float(DirectorScript.CATALOG[&"sticker_earned"].volume_db), -2.0)
+		and is_zero_approx(float(DirectorScript.CATALOG[&"sticker_earned"].pitch_jitter)),
+		"sfx: sticker earned is catalogued at -2 dB with no pitch jitter")
+	t.check(DirectorScript.UI_EVENTS.has(&"sticker_earned"),
+		"sfx: sticker earned rides the pause-immune pool")
 	t.check(true, "sfx: full catalog no-ops cleanly with zero assets")
 	t.root.remove_child(director)
 	director.free()

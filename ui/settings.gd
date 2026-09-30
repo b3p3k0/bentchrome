@@ -44,6 +44,8 @@ var _dev_index := 0
 var _dev_rows: Array = []
 var _dev_name_labels: Array = []
 var _dev_value_labels: Array = []
+var _sticker_reset_armed := false
+var _sticker_reset_wiped := false
 var _sb_dialog: Control  # soundboard: third-level modal over the dev dialog
 var _ct_dialog: Control  # car tuner: third-level modal, MOUSE-driven grid (the
 	# one documented dev-tool exception to this screen's keyboard contract);
@@ -105,6 +107,10 @@ func _ready() -> void:
 			"kind": &"submenu", "persist": false},
 		{"name": "CAR TUNER", "adjust": _adj_car_tuner, "value": _val_open,
 			"kind": &"submenu", "persist": false},
+		{"name": "STICKERS: UNLOCK ALL", "adjust": _adj_stickers_unlock_all,
+			"value": _val_stickers_owned, "kind": &"action", "persist": false},
+		{"name": "STICKERS: RESET", "adjust": _adj_stickers_reset,
+			"value": _val_stickers_reset, "kind": &"action", "persist": false},
 		{"name": "BACK", "adjust": _adj_close_dev, "value": _val_blank,
 			"kind": &"action", "persist": false},
 	]
@@ -218,6 +224,44 @@ func _adj_soundboard(_d: int) -> void:
 
 func _adj_car_tuner(_d: int) -> void:
 	_open_car_tuner()
+
+func _adj_stickers_unlock_all(_d: int) -> void:
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers == null:
+		return
+	stickers.ensure_catalog()
+	stickers.unlock_all()
+	stickers.drain_fresh()  # a dev shortcut must not leak into the next end card
+
+func _val_stickers_owned() -> Array:
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers == null:
+		return ["0 / 0 OWNED", DIM_TEXT]
+	stickers.ensure_catalog()
+	var rows: Array = stickers.catalog()
+	var owned := 0
+	for row_v in rows:
+		if row_v is Dictionary and stickers.is_unlocked(StringName(row_v.get("id", ""))):
+			owned += 1
+	return ["%d / %d OWNED" % [owned, rows.size()], DIM_TEXT]
+
+func _adj_stickers_reset(_d: int) -> void:
+	if not _sticker_reset_armed:
+		_sticker_reset_armed = true
+		_sticker_reset_wiped = false
+		return
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers:
+		stickers.reset_profile()
+	_sticker_reset_armed = false
+	_sticker_reset_wiped = true
+
+func _val_stickers_reset() -> Array:
+	if _sticker_reset_wiped:
+		return ["WIPED", WARN]
+	if _sticker_reset_armed:
+		return ["RIGHT AGAIN TO WIPE", WARN]
+	return ["-->", DIM_TEXT]
 
 func _open_car_tuner() -> void:
 	if _ct_dialog:
@@ -644,6 +688,7 @@ func _dev_input(key: MenuKey) -> void:
 	_refresh_dev()
 
 func _step_dev(dir: int) -> void:
+	_clear_sticker_reset_state()
 	var candidate: int = _dev_index
 	for _i in _dev_rows.size():
 		candidate = wrapi(candidate + dir, 0, _dev_rows.size())
@@ -734,11 +779,16 @@ func _open_dev_dialog() -> void:
 func _close_dev_dialog() -> void:
 	if not _dev_dialog:
 		return
+	_clear_sticker_reset_state()
 	_dev_dialog.queue_free()
 	_dev_dialog = null
 	_dev_name_labels.clear()
 	_dev_value_labels.clear()
 	_refresh()
+
+func _clear_sticker_reset_state() -> void:
+	_sticker_reset_armed = false
+	_sticker_reset_wiped = false
 
 func _refresh_dev() -> void:
 	if not _dev_dialog:
