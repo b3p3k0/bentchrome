@@ -8,6 +8,9 @@ extends StaticBody2D
 ## junk pile, gas pump, fuel barrel) — empty keeps the plain slab. Barrels are
 ## the fun ones: they detonate with a real blast.
 
+signal flattened
+signal restored
+
 const BASE_COLOR := Color(0.45, 0.38, 0.28)     # crate-brown vs the cold gray of solid blocks
 const WRECKED_COLOR := Color(0.22, 0.18, 0.14)  # battered toward rubble as HP falls
 
@@ -167,6 +170,7 @@ func _present_remains() -> void:
 	if is_in_group(&"tutorial_smash"):
 		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
 	queue_redraw()
+	flattened.emit()
 
 func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
@@ -186,6 +190,7 @@ func capture_arena_state(_actor_lookup: Array) -> Dictionary:
 
 func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 	var alive := ArenaState.is_alive(row)
+	var was_dead := _dead
 	_health.hp = clampf(float(row.get("hp", 0.0)), 0.0, 1.0) * max_hp
 	_wreck = 1.0 - _health.hp / maxf(max_hp, 0.001)
 	if alive:
@@ -194,6 +199,8 @@ func apply_arena_state(row: Dictionary, initial_state: bool) -> void:
 		collision_layer = _base_collision_layer
 		_vis.visible = deco == &""  # resurrect the plain slab's polygon too
 		queue_redraw()
+		if was_dead:
+			restored.emit()
 	elif not _dead:
 		if not initial_state:
 			_spawn_death_visual()  # late joiners get silent remains, no boom
