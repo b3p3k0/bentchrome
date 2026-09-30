@@ -68,6 +68,7 @@ var host = null            # buzzard_run host: clock, course, kills
 var target: Node2D = null  # the player
 var wall = null            # horde_wall: the phase pace lands here
 var frozen := false        # finale/win: stop directing, let the field play out
+var kill_hooks := true     # a wreck rings the bell, pays and siphons; off for the finale's show
 
 var rng := RandomNumberGenerator.new()
 var _spawn_cd := 3.0       # first contact a breath after launch
@@ -160,8 +161,8 @@ func spawn(kind: StringName) -> Node:
 	b.velocity = Vector2(0.0, -entry_speed)  # pace-matched entry
 	var health = b.get_node(^"Health")
 	health.died.connect(func() -> void:
-		if host == null or not is_instance_valid(host):
-			return
+		if host == null or not is_instance_valid(host) or not kill_hooks:
+			return   # (checked when it FIRES: a bird cast in the finale dies for free)
 		host.kills += 1
 		# Buzzard bounty: chase kills pay the small rate (Economy's valve keeps
 		# non-campaign lanes free; attribution rides the tally — chase combat
@@ -218,6 +219,13 @@ func stand_down() -> void:
 		var driver = enemy.get_node_or_null(^"Driver")
 		if driver != null and "hold_fire" in driver:
 			driver.hold_fire = true
+
+## The finale's show: no spawns, no absorbing, and the birds that go into
+## the river die for free — no bell, no bounty, no nitro, no tumbling wreck.
+## spawn() keeps working (the show may need a jumper or two).
+func finale_mode() -> void:
+	frozen = true
+	kill_hooks = false
 
 ## Where a pursuer is born: just inside the dust crest, so it boils up out of
 ## the pack in plain sight instead of arriving from nowhere.

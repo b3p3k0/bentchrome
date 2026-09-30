@@ -192,3 +192,53 @@ func test_spawn_cull_grace_and_kills() -> void:
 
 func get_tree_enemies() -> int:
 	return t.get_nodes_in_group(&"enemies").size()
+
+## The finale's show: a bird cast in it dies for free — no bell, no bounty,
+## no nitro, no tumbling wreck — and the gate is read when the death FIRES,
+## so a bird spawned before the show still dies quietly in it.
+func test_finale_mode_kills_are_free() -> void:
+	var gs = t.root.get_node_or_null(^"/root/GameState")
+	if gs != null:
+		gs.lives = 3
+		gs.devgod = false
+	var scene = load("res://levels/chase/buzzard_run.tscn").instantiate()
+	scene.catch_enabled = false
+	t.root.add_child(scene)
+	t.current_scene = scene
+	for i in 3:
+		await t.physics_frame
+	var director = scene.get_node(^"ChaseDirector")
+	var player = scene.get_node(^"Vehicle")
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var Economy := preload("res://game/economy.gd")
+	var econ_was: bool = Economy.enabled
+	Economy.enabled = true
+	var funds_before: int = Economy.funds
+	var tank = player.get_controller()
+	tank.boost_fuel = 40.0
+	var early = director.spawn(&"bike")      # spawned BEFORE the show starts
+	director.finale_mode()
+	t.check(director.frozen and not director.kill_hooks, "finale: the director freezes and unhooks the bell")
+	var late = director.spawn(&"bike")       # spawn() still works in the show
+	t.check(late.is_in_group(&"enemies"), "finale: the show can still cast a bird")
+	var kills_before: int = scene.kills
+	early.get_node(^"Health").kill()
+	late.get_node(^"Health").kill()
+	await t.physics_frame
+	t.check(scene.kills == kills_before, "finale: a bird dying in the show rings no bell")
+	t.check(is_equal_approx(tank.boost_fuel, 40.0), "finale: and siphons no nitro")
+	t.check(Economy.funds == funds_before, "finale: and pays no bounty")
+	var tumbling := false
+	for child in scene.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("death_tumble.gd"):
+			tumbling = true
+	t.check(not tumbling, "finale: no wreck tumbles out of a river")
+	Economy.enabled = econ_was
+	Economy.funds = funds_before
+	t.paused = false
+	if gs != null:
+		gs.lives = 3
+	t.current_scene = null
+	t.root.remove_child(scene)
+	scene.free()
