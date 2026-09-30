@@ -7,6 +7,8 @@
 faction = &"enemies"
 ai_cooldown_scale = 1.4
 ram_damage_scale = 0.02
+smash_and_pass = true
+smash_bite = 0.0
 rotation = -1.5708
 
 [node name="Driver" parent="." index="1"]

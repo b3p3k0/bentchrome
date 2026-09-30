@@ -96,6 +96,14 @@ const SLIDE_GRACE := 0.6     # seconds after handbrake release the slam still cr
 @export var punch_hp_ref := 200.0     # punch-through keep-scale reference:
 @export var punch_keep_min := 0.55    # ram-killing a prop restores entry speed
 @export var punch_keep_max := 0.95    # scaled by its heft — debris flies, cover costs
+## Route 666's rule ("a chase scene by Michael Bay"): every Health-bearing
+## prop under the nose is destroyed ON CONTACT — no HP roll — the car keeps
+## its entry momentum scaled by the prop's heft (the punch_* clamp above), and
+## pays a bite of its own HP scaled the same way. Nothing on the road ever
+## stops a car. Off by default: arenas keep the honest ram.
+@export var smash_and_pass := false
+@export var smash_bite := 0.12        # of the prop's max HP, off the rammer's own HP
+const SMASH_MIN_SPEED := 40.0         # under this the nose is only resting on it
 
 @export_group("Bounce")
 @export var bounce_factor := 0.35     # fraction of the into-surface speed reflected
@@ -1374,7 +1382,12 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 				break
 		else:
 			var health := _find_health_child(other)
-			if health and impact_speed > ram_min_speed:
+			if health == null:
+				continue
+			if smash_and_pass:
+				_smash_through(health, impact_speed, pre_slide_vel)
+				continue  # no cooldown, no break: every prop under the nose this tick goes
+			if impact_speed > ram_min_speed:
 				health.take_damage((impact_speed - ram_min_speed) * ram_damage_scale)
 				if health.hp <= 0.0:
 					if is_in_group(&"player"):
@@ -1387,6 +1400,22 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 						punch_keep_min, punch_keep_max)
 				_ram_cd = ram_cooldown
 				break
+
+## smash_and_pass: the prop dies, the salvage pays, the momentum mostly
+## survives, and the hull takes its bite. The slide already stopped the car
+## against the prop this tick; restoring the entry velocity carries it
+## through the (now collisionless) remains next tick.
+func _smash_through(health: Health, impact_speed: float, pre_slide_vel: Vector2) -> void:
+	if health.hp <= 0.0 or impact_speed < SMASH_MIN_SPEED:
+		return
+	var heft: float = health.max_hp
+	health.kill()
+	if is_in_group(&"player"):
+		preload("res://game/economy.gd").award_salvage(heft)
+	velocity = pre_slide_vel * clampf(1.0 - heft / punch_hp_ref, punch_keep_min, punch_keep_max)
+	if _health and smash_bite > 0.0:
+		set_meta(&"bc_hit_kind", &"ram")
+		_health.take_damage(heft * smash_bite)
 
 ## Deflection: reflect the pre-slide velocity component that went INTO the
 ## surface, scaled by bounce_factor — angled hits carom, dead-on stays a thud.

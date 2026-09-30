@@ -91,6 +91,7 @@ const REMAINS := {
 	&"spool": [&"splinter", Color(0.48, 0.34, 0.19), Color(0.28, 0.20, 0.12)],
 	&"pipes": [&"debris", Color(0.42, 0.45, 0.46), Color(0.14, 0.16, 0.17)],
 	&"rebar": [&"debris", Color(0.42, 0.25, 0.16), Color(0.35, 0.21, 0.14)],
+	&"pillar": [&"debris", Color(0.42, 0.42, 0.45), Color(0.2, 0.2, 0.22)],
 }
 
 @export var size := Vector2(96, 96)
@@ -281,6 +282,8 @@ func _draw() -> void:
 			_draw_kiosk()
 		&"barrier":
 			_draw_barrier()
+		&"pillar":
+			_draw_pillar()
 		&"rail":
 			_draw_rail()
 		&"fan_rail":
@@ -498,6 +501,18 @@ func _draw_junk() -> void:
 	draw_circle(tire_at, reach * 0.32, _shade(TIRE_BLACK))
 	draw_circle(tire_at, reach * 0.14, _shade(RUST_DARK))
 	draw_line(Vector2(-reach * 0.7, reach * 0.5), Vector2(reach * 0.1, reach * 0.15), _shade(METAL_DARK), 4.0)
+
+## Overpass pillar (deco = &"pillar"): a square concrete column with a hazard
+## stripe at its foot — the Route 666 overpass supports, smashable so nothing
+## on that road ever stops a car (the deck above stays up; theatrics win).
+func _draw_pillar() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half, size), _shade(Color(0.42, 0.42, 0.45)))
+	draw_rect(Rect2(-half + Vector2(4, 4), size - Vector2(8, 8)), _shade(Color(0.48, 0.48, 0.51)))
+	draw_rect(Rect2(Vector2(-half.x, half.y - 10), Vector2(size.x, 10)), _shade(HAZARD_YELLOW))
+	for i in 3:
+		var x := -half.x + 6 + float(i) * (size.x / 3.0)
+		draw_line(Vector2(x, half.y - 10), Vector2(x + 8, half.y), _shade(HAZARD_DARK), 3.0)
 
 ## Gas pump: red body, pale face with a dark meter, hose to a nozzle.
 func _draw_pump() -> void:

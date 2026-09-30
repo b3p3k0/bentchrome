@@ -227,13 +227,19 @@ func test_rare_set_pieces_spaced() -> void:
 func test_builder_set_pieces_and_flair() -> void:
 	var over: Node2D = Builder.build(_entry_for(&"overpass"))
 	var statics := 0
+	var pillars := 0
 	var deck := false
 	for child in over.get_children():
 		if child is StaticBody2D and child.collision_layer == 2:
 			statics += 1
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd") and child.deco == &"pillar":
+			pillars += 1
+			t.check(child.max_hp >= 40.0, "builder: a pillar is the heaviest thing on the road")
 		if child is Polygon2D and child.z_index == 1:
 			deck = true
-	t.check(statics == 4, "builder: overpass = 2 embankments + 2 pillars (got %d)" % statics)
+	t.check(statics == 2, "builder: overpass = 2 embankments (got %d)" % statics)
+	t.check(pillars == 2, "builder: 2 pillars, smashable like everything else on the road (got %d)" % pillars)
 	t.check(deck, "builder: the deck rides z 1 — drive under it")
 	over.free()
 	var stop: Node2D = Builder.build(_entry_for(&"truckstop"))

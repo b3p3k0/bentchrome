@@ -393,7 +393,7 @@ static func _blob(center: Vector2, r: float, rng: RandomNumberGenerator) -> Pack
 
 ## Overpass: a concrete deck crossing OVER the road (z 1 paint — cars pass
 ## under; the terrace z-order trick, no FloorZones, pure dressing) with a
-## shadow band beneath and two pillar walls forcing a line through.
+## shadow band beneath and two smashable pillars forcing a line through.
 static func _overpass(root: Node2D, entry: Dictionary) -> void:
 	var def: Dictionary = entry["def"]
 	var mid: float = def["len"] * 0.5
@@ -426,29 +426,16 @@ static func _overpass(root: Node2D, entry: Dictionary) -> void:
 		rail.color = Color(0.22, 0.22, 0.25)
 		rail.z_index = 1
 		root.add_child(rail)
+	# The pillars are destructibles like everything else on this road: a car
+	# smashes through one (smash_and_pass) instead of stopping dead under the
+	# deck. Heaviest thing on the course — the momentum bite is real.
 	for side in [-1.0, 1.0]:
-		var pillar := StaticBody2D.new()
+		var pillar := BlockScene.instantiate()
 		pillar.name = "PillarL" if side < 0.0 else "PillarR"
-		pillar.collision_layer = 2
-		pillar.collision_mask = 0
 		pillar.position = Vector2(c + side * 300.0, -mid)
-		var col := CollisionShape2D.new()
-		var shape := RectangleShape2D.new()
-		shape.size = Vector2(56, 56)
-		col.shape = shape
-		pillar.add_child(col)
-		var paint := Polygon2D.new()
-		paint.polygon = PackedVector2Array([
-			Vector2(-28, -28), Vector2(28, -28), Vector2(28, 28), Vector2(-28, 28),
-		])
-		paint.color = Color(0.42, 0.42, 0.45)
-		pillar.add_child(paint)
-		var stripe := Polygon2D.new()
-		stripe.polygon = PackedVector2Array([
-			Vector2(-28, 18), Vector2(28, 18), Vector2(28, 28), Vector2(-28, 28),
-		])
-		stripe.color = Color(0.95, 0.8, 0.2)
-		pillar.add_child(stripe)
+		pillar.size = Vector2(56, 56)
+		pillar.max_hp = 60.0
+		pillar.deco = &"pillar"
 		root.add_child(pillar)
 
 ## Truckstop dressing: dirt apron paint, a flickering neon sign and light

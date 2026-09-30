@@ -88,6 +88,44 @@ func test_rolling_start_and_the_clock_win() -> void:
 	t.check(scene.get_node(^"ChaseDirector").frozen, "chase: the pack stands down at the line")
 	_close(scene)
 
+## Smash and pass: nothing on the road ever stops the car. A log under the
+## nose dies on contact, the momentum mostly survives, the hull takes a bite.
+func test_smash_and_pass() -> void:
+	var scene = await _boot()
+	scene.catch_enabled = false
+	scene.get_node(^"ChaseDirector").frozen = true
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	t.check(player.smash_and_pass, "smash: the chase car runs the smash-and-pass rule")
+	for i in 135:  # let the level-start blink shield lapse: the bite must land
+		await t.physics_frame
+	t.check(not player.is_shielded(), "smash: the spawn shield is down")
+	var log_block = load("res://environment/destructible_block.tscn").instantiate()
+	log_block.size = Vector2(140, 26)
+	log_block.max_hp = 15.0
+	log_block.deco = &"log"
+	log_block.position = player.global_position + Vector2(0.0, -220.0)
+	scene.add_child(log_block)
+	var hp_before: float = player.get_hp()
+	var funds_before: int = Economy.funds
+	var slowest := INF
+	var passed := false
+	for i in 90:  # 1.5s: more than enough road for a 220px approach
+		await t.physics_frame
+		slowest = minf(slowest, -player.velocity.y)
+		if player.global_position.y < log_block.position.y - 60.0:
+			passed = true
+			break
+	t.check(passed, "smash: the car is through and past the log (y %d vs %d)" % [int(player.global_position.y), int(log_block.position.y)])
+	t.check(log_block.get_node(^"Health").hp <= 0.0, "smash: the log died on contact")
+	var floor_speed: float = player.get_controller().max_speed * SpeedBand.FLOOR_FRAC
+	t.check(slowest > floor_speed * 0.8,
+		"smash: the car never stopped — slowest %d px/s against a floor of %d" % [int(slowest), int(floor_speed)])
+	t.check(player.get_hp() < hp_before and hp_before - player.get_hp() <= 15.0 * player.smash_bite + 0.01,
+		"smash: the hull took the log's bite (%.1f)" % (hp_before - player.get_hp()))
+	t.check(Economy.funds > funds_before, "smash: the salvage still pays")
+	_close(scene)
+
 ## The windshield streaks read "flat out" the same for every ride.
 func test_speed_streaks_scale_to_the_car() -> void:
 	const Lines := preload("res://ui/speed_lines.gd")
