@@ -1299,6 +1299,93 @@ def _pa_chain(x, seed=7):
     return out
 
 
+# ---- Route 666: the horde finds its voice (2026-09-29) ---------------------
+def horde_roar():
+    """~2.4s SEAMLESS loop: the pack itself. Five badly-tuned engines idling
+    rough against each other over a bed of gravel and dust — no single motor
+    ever reads, just the mass. In-game the gain rides how close they are
+    (AudioDirector.loop_gain), so this is mixed full and steady."""
+    body = 2.4
+    dur = body + 0.08
+    tt = t(dur)
+    r = np.random.default_rng(666)
+    engines = np.zeros(tt.size)
+    for f0, duty, amp, wob_hz in [(47.0, 0.30, 1.0, 0.41), (58.5, 0.26, 0.9, 0.83),
+            (71.0, 0.34, 0.8, 1.25), (88.0, 0.28, 0.6, 0.41), (104.0, 0.22, 0.45, 1.66)]:
+        # wobble rates are multiples of 1/body so every engine closes its loop
+        wob = np.sin(2 * np.pi * wob_hz * tt + r.uniform(0, 6.28))
+        ph = np.cumsum(f0 * (1.0 + 0.035 * wob)) / SR
+        pulse = np.where((ph % 1.0) < duty, 1.0, -0.45)
+        rough = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 45.0))
+        pulse = pulse * (0.65 + 0.35 * rough / (rough.max() + 1e-9))
+        engines += amp * one_pole_lp(pulse, 260.0 + 3.0 * f0)
+    engines = softclip(engines * 0.55, 2.2)
+    gravel = biquad_bp(r.uniform(-1, 1, tt.size), 900.0, 0.6)
+    gravel = gravel / (np.sqrt(np.mean(gravel ** 2)) + 1e-9)
+    surge = one_pole_lp(r.uniform(-1, 1, tt.size), 3.0)
+    gravel = gravel * (0.7 + 0.3 * surge / (np.max(np.abs(surge)) + 1e-9)) * 0.16
+    sub = one_pole_lp(r.uniform(-1, 1, tt.size), 70.0)
+    sub = sub / (np.sqrt(np.mean(sub ** 2)) + 1e-9) * 0.22
+    x = softclip(engines + gravel + sub, 1.4)
+    write("horde_roar", loopify(x, body, xf=0.08), peak=0.9, fade_ms=0.0)
+
+
+def horde_horn():
+    """~1.5s war horn: the pack is ON YOUR BUMPER. Lower and uglier than
+    Goliath's air horn (ram_warn) so the two never read alike — a cracked
+    two-note blast that sags flat at the end, like the truck it's bolted to."""
+    dur = 1.5
+    tt = t(dur)
+    r = np.random.default_rng(667)
+    sag = 1.0 - 0.045 * np.clip((tt - 0.9) / 0.6, 0, 1)
+    horn = np.zeros(tt.size)
+    for f, a in [(174.0, 1.0), (207.0, 0.85), (261.0, 0.4)]:
+        ph = np.cumsum(f * sag) / SR
+        horn += a * ((2.0 * (ph % 1.0) - 1.0) + 0.45 * (2.0 * ((ph * 2.013) % 1.0) - 1.0))
+    crack = np.abs(one_pole_lp(r.uniform(-1, 1, tt.size), 28.0))
+    horn = horn * (0.8 + 0.2 * crack / (crack.max() + 1e-9))
+    horn = one_pole_lp(one_pole_hp(horn, 120.0), 1700.0)
+    # two blasts: a short bark, then the long one
+    gate = np.where(tt < 0.22, 1.0, np.where(tt < 0.34, 0.0, 1.0))
+    gate = one_pole_lp(gate, 40.0)
+    env = np.minimum(tt / 0.025, 1.0) * (1.0 - np.clip((tt - 1.15) / 0.35, 0, 1)) * gate
+    x = softclip(horn * env * 0.9, 2.8)
+    write("horde_horn", x, peak=0.95, fade_ms=8.0)
+
+
+def jacked():
+    """~1.9s robbery sting: three descending brass "wah"s (the sad trombone,
+    played by someone who is enjoying this) and then your loose change hitting
+    the asphalt. Cheeky, not grim — nobody died, you just got robbed."""
+    r = np.random.default_rng(668)
+    out = np.zeros(int(SR * 1.9))
+    at = 0.0
+    for f, length in [(233.0, 0.26), (220.0, 0.26), (196.0, 0.62)]:
+        tt = t(length)
+        bend = 1.0 - 0.06 * np.clip(tt / length, 0, 1) ** 2   # each note droops
+        ph = np.cumsum(f * bend) / SR
+        tone = (2.0 * (ph % 1.0) - 1.0) + 0.5 * (2.0 * ((ph * 2.0) % 1.0) - 1.0)
+        # the "wah": a band-pass opening and closing across the note
+        wah = 500.0 + 900.0 * np.sin(np.pi * np.clip(tt / length, 0, 1)) ** 2
+        tone = svf_bp(tone, wah, 2.2)
+        env = np.minimum(tt / 0.02, 1.0) * (1.0 - np.clip((tt - length * 0.7) / (length * 0.3), 0, 1))
+        note = softclip(tone * env, 2.0)
+        i0 = int(SR * at)
+        out[i0:i0 + note.size] += note
+        at += length + 0.03
+    # the change: a scatter of small coins ringing as they land and spin down
+    for k in range(9):
+        when = 1.12 + 0.07 * k + r.uniform(-0.015, 0.015)
+        f0 = r.uniform(3600.0, 6200.0)
+        coin = metal_modes(0.35, [f0, f0 * 1.47, f0 * 2.09], [0.10, 0.07, 0.05],
+            [1.0, 0.6, 0.35], seed=900 + k) * (0.34 - 0.025 * k)
+        i0 = int(SR * when)
+        n = min(coin.size, out.size - i0)
+        if n > 0:
+            out[i0:i0 + n] += coin[:n]
+    write("jacked", one_pole_hp(out, 40.0), peak=0.94, fade_ms=10.0)  # hp: no DC ride
+
+
 def announcer():
     espeak = shutil.which("espeak-ng")
     if espeak is None:
@@ -1369,5 +1456,8 @@ if __name__ == "__main__":
     env_panic()
     env_chopper()
     env_genny()
+    horde_roar()
+    horde_horn()
+    jacked()
     announcer()
     print("[synth] done")

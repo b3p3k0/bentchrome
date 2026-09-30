@@ -14,7 +14,8 @@ const POOL_UI := 3          # pause-immune one-shots (menus run while the tree
 ## Events routed through the pause-immune pool. Gameplay events stay pausable
 ## on purpose — a skid loop must freeze when the pause menu opens.
 const UI_EVENTS := {&"ui_move": true, &"ui_select": true, &"ui_back": true,
-	&"win_sting": true, &"lose_sting": true, &"mp_join": true, &"mp_leave": true}
+	&"win_sting": true, &"lose_sting": true, &"mp_join": true, &"mp_leave": true,
+	&"jacked": true}
 
 ## Event -> tuning knobs. volume_db trims per asset; pitch_jitter (±fraction)
 ## keeps rapid repeats (MG, hits) from sounding machine-stamped.
@@ -47,6 +48,11 @@ const CATALOG := {
 	&"crunch": {"volume_db": -2.0, "pitch_jitter": 0.12}, # soft target, dry verdict
 	&"pickup": {"volume_db": -4.0, "pitch_jitter": 0.05},  # crate/heal/boost collect
 	&"overheat": {"volume_db": -4.0, "pitch_jitter": 0.0}, # MG heat lockout trips
+	# Route 666: the pack's engines (gain rides proximity via loop_gain), its
+	# war horn when it reaches the bumper, and the robbery card's sting.
+	&"horde_roar": {"volume_db": -5.0, "pitch_jitter": 0.0, "loop": true},
+	&"horde_horn": {"volume_db": 0.0, "pitch_jitter": 0.03},
+	&"jacked": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"win_sting": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"lose_sting": {"volume_db": 0.0, "pitch_jitter": 0.0},
 	&"ui_move": {"volume_db": -12.0, "pitch_jitter": 0.03},
@@ -229,6 +235,15 @@ func loop_set(event: StringName, on: bool) -> void:
 		p.play()
 	elif not on and p.playing:
 		p.stop()
+
+## Live gain for a loop that is already running: `linear` (0..1) rides on
+## top of the event's CATALOG trim — proximity loops (the horde's engines)
+## steer it every tick. No looper (no asset, or never started) = silent no-op.
+func loop_gain(event: StringName, linear: float) -> void:
+	var p: AudioStreamPlayer = _loopers.get(event)
+	if p == null or not CATALOG.has(event):
+		return
+	p.volume_db = float(CATALOG[event]["volume_db"]) + linear_to_db(clampf(linear, 0.001, 1.0))
 
 ## True when the event resolved a drop-in asset at boot (soundboard/debug).
 func has_asset(event: StringName) -> bool:

@@ -33,6 +33,8 @@ static var MERCY_CLOSE := 30.0    # ...to this many px/s: the last 150px take >=
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DUST_AMOUNT := 140          # particle budget: one system, under 200
+const ROAR_FLOOR := 0.22          # the engines at their farthest: never silent
+const HORN_COOLDOWN := 6.0        # seconds between war-horn blasts, at least
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const FALLBACK_TOP := SpeedBand.FALLBACK_TOP  # bare fixtures, freed targets
 
@@ -43,6 +45,9 @@ var front_y := 0.0          # world y of the dust crest
 var no_mercy := false       # the host sets this once the run is lost: swallow the car
 
 var _dust: CPUParticles2D = null
+var _roaring := false
+var _was_danger := false
+var _horn_t := 0.0
 
 func _ready() -> void:
 	z_index = 1  # the dust looms over cars it swallows
@@ -98,6 +103,16 @@ func pressure() -> float:
 func in_danger() -> bool:
 	return gap() < DANGER_GAP
 
+## The engines' gain for a given pressure: a floor so the pack is always
+## audible, swelling to full at contact.
+static func roar_gain(pressure_now: float) -> float:
+	return lerpf(ROAR_FLOOR, 1.0, clampf(pressure_now, 0.0, 1.0))
+
+## The war horn sounds on the EDGE into the danger zone, and never more often
+## than HORN_COOLDOWN — hovering on the line can't machine-gun it.
+static func horn_due(danger: bool, was_danger: bool, cooldown_left: float) -> bool:
+	return danger and not was_danger and cooldown_left <= 0.0
+
 ## The swarm has the car. Reported, never enforced: the host owns the cost.
 func caught() -> bool:
 	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
@@ -142,7 +157,34 @@ func _physics_process(delta: float) -> void:
 	var g := front_y - player_y
 	if g < DANGER_GAP and target.has_method(&"add_shake"):
 		target.add_shake(minf((DANGER_GAP - g) * 0.006, 0.9))
+	_voice(delta, g)
 	queue_redraw()
+
+## The pack's voice: engines whose gain rides the gap, and a war horn on the
+## edge into the danger zone. Drop-in assets — silent no-ops until they land.
+func _voice(delta: float, gap_px: float) -> void:
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio == null or not audio.has_method(&"loop_gain"):
+		return
+	if not _roaring:
+		audio.loop_set(&"horde_roar", true)
+		_roaring = true
+	audio.loop_gain(&"horde_roar", roar_gain(pressure_at(gap_px)))
+	_horn_t = maxf(_horn_t - delta, 0.0)
+	var danger := gap_px < DANGER_GAP
+	if horn_due(danger, _was_danger, _horn_t):
+		audio.play(&"horde_horn")
+		_horn_t = HORN_COOLDOWN
+	_was_danger = danger
+
+## Loopers live on the autoload and outlive the scene — always hang up.
+func _exit_tree() -> void:
+	if not _roaring:
+		return
+	_roaring = false
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio != null:
+		audio.loop_set(&"horde_roar", false)
 
 func _draw() -> void:
 	var half := ROAD_FALLBACK

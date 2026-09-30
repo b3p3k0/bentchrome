@@ -17,8 +17,17 @@ func test_zero_assets_never_crash() -> void:
 		director.play(event)
 		director.play_at(event, Vector2(100, 100))
 		director.loop_set(event, true)
+		director.loop_gain(event, 0.5)
 		director.loop_set(event, false)
 	director.play(&"not_even_a_real_event")
+	director.loop_gain(&"not_even_a_real_event", 0.5)
+	director.loop_gain(&"horde_roar", -3.0)   # out-of-range gains clamp, never crash
+	director.loop_gain(&"horde_roar", 99.0)
+	for event in [&"horde_roar", &"horde_horn", &"jacked"]:
+		t.check(DirectorScript.CATALOG.has(event), "sfx: Route 666's %s is catalogued" % event)
+	t.check(DirectorScript.CATALOG[&"horde_roar"].get("loop", false), "sfx: the horde's engines are a loop")
+	t.check(DirectorScript.UI_EVENTS.has(&"jacked"),
+		"sfx: the robbery sting rides the pause-immune pool (the card freezes the tree)")
 	t.check(true, "sfx: full catalog no-ops cleanly with zero assets")
 	t.root.remove_child(director)
 	director.free()

@@ -76,7 +76,8 @@ func open(cause: StringName, outcome: Dictionary, wheel: Array = [], landed := -
 	get_tree().paused = true
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio:  # stingers ride the pause-immune pool — the freeze can't cut them
-		audio.play(&"lose_sting")
+		var own: bool = audio.has_method(&"has_asset") and audio.has_asset(&"jacked")
+		audio.play(&"jacked" if own else &"lose_sting")
 	if _wheel != null:
 		stage = Stage.WHEEL
 		_hint.text = "..."

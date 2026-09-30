@@ -191,6 +191,18 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 	t.check(is_equal_approx(WallScript.mercy_cap(200.0, 100.0, 400.0), 200.0),
 		"wall: mercy never speeds the pack up")
 
+## The pack's voice: gain rides the gap, the horn sounds on the edge only.
+func test_the_pack_has_a_voice() -> void:
+	t.check(is_equal_approx(WallScript.roar_gain(0.0), WallScript.ROAR_FLOOR), "voice: never silent, even at its farthest")
+	t.check(is_equal_approx(WallScript.roar_gain(1.0), 1.0), "voice: full at contact")
+	t.check(WallScript.roar_gain(0.7) > WallScript.roar_gain(0.3), "voice: closer is louder")
+	t.check(is_equal_approx(WallScript.roar_gain(7.0), 1.0), "voice: the gain clamps")
+	t.check(WallScript.horn_due(true, false, 0.0), "voice: the horn sounds crossing INTO danger")
+	t.check(not WallScript.horn_due(true, true, 0.0), "voice: not while sitting in it")
+	t.check(not WallScript.horn_due(false, true, 0.0), "voice: not on the way out")
+	t.check(not WallScript.horn_due(true, false, 2.0), "voice: and never inside its cooldown")
+	t.check(WallScript.HORN_COOLDOWN >= 4.0, "voice: hovering on the line can't machine-gun the horn")
+
 func test_pressure_meter_and_danger_line() -> void:
 	t.check(is_equal_approx(WallScript.pressure_at(WallScript.MAX_GAP), 0.0), "wall: farthest = no pressure")
 	t.check(is_equal_approx(WallScript.pressure_at(WallScript.CATCH_MARGIN), 1.0), "wall: contact = full pressure")
