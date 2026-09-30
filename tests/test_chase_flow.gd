@@ -86,6 +86,57 @@ func test_rolling_start_and_the_clock_win() -> void:
 	t.check(scene.get_node(^"ChaseDirector").frozen, "chase: the pack stands down at the line")
 	_close(scene)
 
+## The other side of the gamble: living dangerously pays, if you live.
+func test_daredevil_accrues_on_the_bumper_and_pays_at_the_line() -> void:
+	var scene = await _boot()
+	var player = scene.get_node(^"Vehicle")
+	var wall = scene.get_node(^"HordeWall")
+	Economy.funds = 1000
+	scene._process(1.0)
+	t.check(scene.daredevil_bonus() == 0, "dare: a comfortable gap earns nothing")
+	wall.front_y = player.global_position.y + WallScript.DANGER_GAP - 20.0
+	scene._process(1.0)
+	t.check(scene.daredevil_bonus() == int(scene.DAREDEVIL_RATE),
+		"dare: a second on the bumper banks a second's bonus (%d)" % scene.daredevil_bonus())
+	for i in 40:
+		scene.clock = 0.0  # hold the clock still: this is about the bonus, not the line
+		scene._process(1.0)
+	t.check(scene.daredevil_bonus() == scene.DAREDEVIL_CAP, "dare: the bonus has a ceiling")
+	t.check(Economy.funds == 1000, "dare: nothing is paid until the line")
+	t.check(WallScript.DANGER_GAP > WallScript.CATCH_MARGIN and WallScript.DANGER_GAP < WallScript.LEASH_GAP,
+		"dare: the danger zone is never where clean driving rests — it has to be dared")
+	scene.clock = scene.RUN_SECONDS
+	scene._process(0.016)
+	t.check(scene._won, "dare: made it")
+	t.check(Economy.funds == 1000 + scene.PURSE + scene.DAREDEVIL_CAP,
+		"dare: the purse and the bonus land in the wallet (%d)" % Economy.funds)
+	var es = scene._end_screen
+	t.check(String(es.win_note).contains(str(scene.PURSE)) and String(es.win_note).contains(str(scene.DAREDEVIL_CAP)),
+		"dare: the win card says what for (%s)" % es.win_note)
+	t.check(es.visible, "dare: the win card is up")
+	_close(scene)
+
+func test_no_purse_for_the_robbed_or_off_the_tour() -> void:
+	var scene = await _boot()
+	var player = scene.get_node(^"Vehicle")
+	var wall = scene.get_node(^"HordeWall")
+	Economy.funds = 1000
+	wall.front_y = player.global_position.y + WallScript.DANGER_GAP - 20.0
+	scene._process(5.0)
+	t.check(scene.daredevil_bonus() > 0, "dare: bonus on the table")
+	wall.front_y = player.global_position.y + WallScript.CATCH_MARGIN - 5.0
+	scene._process(0.016)
+	t.check(scene.is_jacked() and Economy.funds == 1000, "dare: caught before the line = the bonus dies with the run")
+	_close(scene)
+	var off = await _boot()
+	Economy.enabled = false  # a non-campaign lane: the wallet valve is shut
+	Economy.funds = 1000
+	off.clock = off.RUN_SECONDS
+	off._process(0.016)
+	t.check(off._won and Economy.funds == 1000, "dare: off the tour the line pays nothing")
+	t.check(String(off._end_screen.win_note) == "", "dare: and the card doesn't pretend it did")
+	_close(off)
+
 ## The pack, the pedal, the keeper and the Buzzardz all price off ONE number:
 ## the car's honest top on asphalt — its road profile included.
 func test_everything_prices_off_the_asphalt_top() -> void:

@@ -2,10 +2,11 @@ extends "res://ui/hud.gd"
 ## The Buzzard Run HUD: the left dash is untouched; the right gutter swaps
 ## the arena radar for the dashboard GPS and the opponents roster for a
 ## threat panel — the 2:00 countdown, kill tally, live-pack count, and a
-## horde-pressure meter that flashes once the pack is on the bumper. Polls
-## the chase host duck-typed via the &"chase_host" group (time_left /
-## pressure / in_danger / kills). Dev mode adds a raw gap + pace readout for
-## tuning the squeeze.
+## horde-pressure meter that flashes once the pack is on the bumper, and the
+## daredevil bonus ticking up while it is. Polls the chase host duck-typed
+## via the &"chase_host" group (time_left / pressure / in_danger / kills /
+## daredevil_bonus). Dev mode adds a raw gap + pace readout for tuning the
+## squeeze.
 
 const GPSScript := preload("res://ui/chase_gps.gd")
 const SpeedLinesScript := preload("res://ui/speed_lines.gd")
@@ -19,6 +20,7 @@ var _pack_label: Label
 var _wall_hdr: Label
 var _wall_bar: ProgressBar
 var _wall_fill: StyleBoxFlat
+var _dare_label: Label  # the daredevil bonus on the table; hidden until earned
 var _dev_label: Label  # dev mode only: raw gap px + live pack pace
 
 func _build_ui() -> void:
@@ -59,9 +61,12 @@ func _build_opponents() -> void:
 	_wall_fill.bg_color = HORDE
 	_wall_bar.add_theme_stylebox_override("fill", _wall_fill)
 	add_child(_wall_bar)
+	_dare_label = _label_at(Vector2(1280 - GUTTER + 20, 572), "", 16)
+	_dare_label.modulate = SELECTED
+	_dare_label.visible = false
 	var dev := get_node_or_null(^"/root/Dev")
 	if dev != null and dev.enabled:
-		_dev_label = _label_at(Vector2(1280 - GUTTER + 20, 572), "", 12)
+		_dev_label = _label_at(Vector2(1280 - GUTTER + 20, 600), "", 12)
 		_dev_label.modulate = DIM_TEXT
 
 ## The threat panel polls live state — no round-start snapshot to go blind on.
@@ -80,6 +85,12 @@ func _update_opponents() -> void:
 	var hot: bool = host.in_danger() and int(Time.get_ticks_msec() / 160) % 2 == 0
 	_wall_fill.bg_color = HORDE_HOT if hot else HORDE
 	_wall_hdr.modulate = HORDE_HOT if host.in_danger() else DIM_TEXT
+	# Living dangerously pays — if you live. Lit while it's ticking up.
+	var dared: int = host.daredevil_bonus()
+	_dare_label.visible = dared > 0
+	if dared > 0:
+		_dare_label.text = "DAREDEVIL +%d" % dared
+		_dare_label.modulate = HORDE_HOT if hot else SELECTED
 	if _dev_label:
 		_dev_label.text = "GAP %d  PACE %.2f" % [int(host.wall_gap()), host.pack_pace()]
 

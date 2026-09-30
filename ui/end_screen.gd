@@ -27,6 +27,10 @@ const INPUT_LOCK := 1.2  # seconds before buttons arm — combat fire mustn't cl
 ## can't trip it); the host still drives _show() directly when it wants one.
 @export var suppress_loss := false
 
+## An extra line above the wallet on a mid-campaign win — what the level paid
+## beyond its kills (Route 666's purse and daredevil bonus). Empty = no line.
+var win_note := ""
+
 ## Victory-lap mode (the Coliseum): a WIN shows the card WITHOUT pausing the
 ## tree — the level keeps animating behind it (auto-lap, fireworks) and the
 ## dim veil thins so the show reads. Losses still freeze the world.
@@ -121,6 +125,8 @@ func _show(win: bool) -> void:
 			b.visible = false
 		_hint.visible = true
 		_hint.text = "⚙ %d banked" % Economy.funds if Economy.enabled else "..."
+		if win_note != "":
+			_hint.text = "%s\n%s" % [win_note, _hint.text]
 		_hint.modulate = AMBER
 		for b in _fork_buttons:
 			b.visible = true

@@ -27,6 +27,12 @@ const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
 static var JACK_BEAT := 1.2      # seconds the pack swallows the car before the robbery card
+## The other side of the gamble: what making it out pays. The purse is flat;
+## the DAREDEVIL bonus accrues for every second spent with the pack on the
+## bumper (the danger zone) and is only paid if you survive to collect it.
+static var PURSE := 3000
+static var DAREDEVIL_RATE := 100.0   # bolts per second in the danger zone
+static var DAREDEVIL_CAP := 2000
 
 signal jacked(cause: StringName)     # &"caught" | &"wrecked"
 signal rolled_on(next_index: int)    # the robbery is done; the campaign advanced
@@ -34,6 +40,7 @@ signal rolled_on(next_index: int)    # the robbery is done; the campaign advance
 var course = null
 var clock := 0.0
 var kills := 0   # director bumps this; the chase HUD reads it
+var daredevil := 0.0   # bolts accrued living dangerously; paid at the line
 ## Suites that boot this scene to test something else stand the pack down so
 ## a slow fixture can't be jacked mid-test. Wrecks still end the run.
 var catch_enabled := true
@@ -112,7 +119,10 @@ func _process(delta: float) -> void:
 		_won = true
 		if _director:
 			_director.stand_down()
+		_pay_out()
 		_end_screen._show(true)
+	elif in_danger():
+		daredevil = minf(daredevil + DAREDEVIL_RATE * delta, float(DAREDEVIL_CAP))
 
 ## &"wrecked" (0 HP), &"caught" (the pack has the car), or &"" (still running).
 func loss_cause() -> StringName:
@@ -147,6 +157,19 @@ func in_danger() -> bool:
 ## The pack's live pace as a fraction of the player's top (dev readout).
 func pack_pace() -> float:
 	return _wall.pace_frac if _wall else 0.0
+
+## Whole bolts of daredevil bonus on the table (the HUD ticker).
+func daredevil_bonus() -> int:
+	return int(daredevil)
+
+## The line is crossed: the purse and whatever the driver dared to earn go in
+## the wallet (Economy's valve and reward scale apply — off the tour it pays
+## nothing), and the win card says what for.
+func _pay_out() -> void:
+	var purse: int = Economy.award_flat(PURSE)
+	var dared: int = Economy.award_flat(daredevil_bonus())
+	if Economy.enabled and _end_screen != null:
+		_end_screen.win_note = "PURSE +%d     DAREDEVIL +%d" % [purse, dared]
 
 ## The run is lost. The pack comes off the trigger and rolls over the car
 ## (no mercy, no pace floor, and a caught driver's hands leave the wheel);
