@@ -275,7 +275,7 @@ func test_builder_set_pieces_and_flair() -> void:
 	plain.free()
 
 func test_builder_momentum_obstacles() -> void:
-	var pchunk: Node2D = Builder.build(_entry_for(&"potholes"))
+	var pchunk: Node2D = Builder.build(_entry_for(&"slicks"))
 	var pits := 0
 	for child in pchunk.get_children():
 		if child is Area2D and child.collision_layer == 128:
@@ -283,7 +283,7 @@ func test_builder_momentum_obstacles() -> void:
 				if sub is CollisionShape2D and sub.shape is CircleShape2D:
 					pits += 1  # shoulders are rect strips; only pits are circles
 					break
-	t.check(pits == 5, "builder: potholes chunk pits the asphalt (got %d)" % pits)
+	t.check(pits == 5, "builder: the slicks chunk spills five oil slicks (got %d)" % pits)
 	pchunk.free()
 	var lchunk: Node2D = Builder.build(_entry_for(&"log_run"))
 	var logs := 0

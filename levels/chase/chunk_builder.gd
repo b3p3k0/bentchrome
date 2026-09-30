@@ -295,11 +295,11 @@ static func _place_props(root: Node2D, entry: Dictionary) -> void:
 				pump.max_hp = 40.0
 				pump.deco = &"pump"
 				root.add_child(pump)
-			&"pothole":
-				_pothole(root, pos, rng)
+			&"slick":
+				_slick(root, pos, rng)
 			&"jump":
 				# The arena launch pad, highway edition: airborne clears the
-				# logs and potholes — and the wall doesn't care where you land.
+				# logs and oil slicks — and the wall doesn't care where you land.
 				var pad := Area2D.new()
 				pad.set_script(JumpPadScript)
 				pad.name = "JumpPad"
@@ -463,32 +463,65 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 		lamp.position = Vector2(c + 440, -d)
 		root.add_child(lamp)
 
-## Pothole: a cracked pale lip around a dark pit (pure paint) over a small
-## dirt TerrainZone — hitting one costs grip for a beat; airtime clears it.
-static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
-	var r := 36.0
-	var lip := PackedVector2Array()
-	var pit := PackedVector2Array()
-	var n := 10
+## Oil slick: a glossy black pool with an iridescent rim and wet highlights
+## (pure paint — the sheen is what makes it READ on dark asphalt) over a
+## small dirt TerrainZone. Driving through costs speed and grip for a beat,
+## never HP; airtime clears it.
+static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
+	var r := 44.0
+	var rim := PackedVector2Array()
+	var pool := PackedVector2Array()
+	var n := 12
 	for i in n:
 		var a := TAU * float(i) / float(n)
-		var rad := r * rng.randf_range(0.75, 1.05)
-		var spoke := Vector2(cos(a) * 1.25, sin(a) * 0.85)
-		lip.append(pos + spoke * (rad + 7.0))
-		pit.append(pos + spoke * rad)
-	var lip_poly := Polygon2D.new()
-	lip_poly.polygon = lip
-	lip_poly.color = Color(0.28, 0.27, 0.28)
-	lip_poly.z_index = -1
-	root.add_child(lip_poly)
-	var pit_poly := Polygon2D.new()
-	pit_poly.polygon = pit
-	pit_poly.color = Color(0.09, 0.09, 0.1)
-	pit_poly.z_index = -1
-	root.add_child(pit_poly)
+		var rad := r * rng.randf_range(0.7, 1.08)
+		var spoke := Vector2(cos(a) * 1.3, sin(a) * 0.8)
+		rim.append(pos + spoke * (rad + 6.0))
+		pool.append(pos + spoke * rad)
+	# The iridescent rim: the oily rainbow you see at the edge of a spill.
+	var rim_poly := Polygon2D.new()
+	rim_poly.polygon = rim
+	rim_poly.color = Color(0.36, 0.22, 0.44)
+	rim_poly.z_index = -1
+	root.add_child(rim_poly)
+	var inner := PackedVector2Array()
+	for p in pool:
+		inner.append(pos + (p - pos) * 1.06)
+	var sheen := Polygon2D.new()
+	sheen.polygon = inner
+	sheen.color = Color(0.14, 0.34, 0.3)
+	sheen.z_index = -1
+	root.add_child(sheen)
+	var pool_poly := Polygon2D.new()
+	pool_poly.polygon = pool
+	pool_poly.color = Color(0.05, 0.05, 0.07)
+	pool_poly.z_index = -1
+	root.add_child(pool_poly)
+	# Wet highlights: two pale streaks catching the light, and a drip tail.
+	for k in 2:
+		var streak := Polygon2D.new()
+		var sx := pos.x + rng.randf_range(-r * 0.5, r * 0.2)
+		var sy := pos.y + rng.randf_range(-r * 0.35, r * 0.1) + float(k) * 9.0
+		streak.polygon = PackedVector2Array([
+			Vector2(sx, sy), Vector2(sx + rng.randf_range(14.0, 26.0), sy - 1.5),
+			Vector2(sx + rng.randf_range(14.0, 26.0), sy + 1.5), Vector2(sx, sy + 2.5),
+		])
+		streak.color = Color(0.55, 0.6, 0.66, 0.55)
+		streak.z_index = -1
+		root.add_child(streak)
+	var drip := Polygon2D.new()
+	var dx := pos.x + rng.randf_range(-r * 0.4, r * 0.4)
+	drip.polygon = PackedVector2Array([
+		Vector2(dx - 3.0, pos.y + r * 0.7), Vector2(dx + 3.0, pos.y + r * 0.7),
+		Vector2(dx + 1.5, pos.y + r * 0.7 + rng.randf_range(16.0, 30.0)),
+		Vector2(dx - 1.5, pos.y + r * 0.7 + rng.randf_range(16.0, 30.0)),
+	])
+	drip.color = Color(0.05, 0.05, 0.07)
+	drip.z_index = -1
+	root.add_child(drip)
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
-	zone.name = "Pothole"
+	zone.name = "Slick"
 	zone.collision_layer = 128
 	zone.collision_mask = 0
 	zone.terrain_type = &"dirt"
