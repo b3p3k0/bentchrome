@@ -611,6 +611,17 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | GPS window | −800..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; horde drawn at its true position, pulses in danger |
 | Audio | roar gain 0.22 → 1.0 · horn ≥6s apart | horde_wall `ROAR_FLOOR` / `HORN_COOLDOWN` | `horde_roar` loop via `AudioDirector.loop_gain`; `jacked` sting on the robbery card |
 
+### They flinch (ordnance in the dust)
+
+Source: `horde_wall.flinch` / `pace_mult`, `horde_deco.flinch`, `buzzard_run._physics_process` (the fuse), `mine.blow()`.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| The fuse | `FLINCH_INSET` 40px inside the crest | buzzard_run | every tick, any live mine you dropped or non-MG missile you fired past the line goes off there (explosion FX, gone); the pack's own mines, your MG rounds and anything still in front of the crest are left alone; a mine dropped early pops when the crest rolls over it |
+| The cut | `FLINCH_CUT` 0.25 (mine) · `MISSILE_CUT` 0.18 · `FLINCH_SECONDS` 1.5 | horde_wall | pace × (1 − cut) while it lasts: ~0.25 × 465 × 1.5 ≈ 175px of gap at a 484 top; a second bang refreshes the clock and keeps the bigger cut, never compounds; `pace_mult` also folds in `LOST_SIGHT_CUT` 0.3 (cutoffs) and the two stack |
+| The recoil | `FLINCH_RECOIL` 40px · `FLINCH_RECOIL_T` 0.6s | horde_deco | the riders are shoved south and ease back, headlights stutter, a one-shot puff of dust off the crest; the roar halves while flinching |
+| Probe | `--mines` | chase_run | a mine off the tail every `MINE_EVERY` 15s; every `[run]` line reports `flinches` — with eight of them a run's danger time roughly halves |
+
 ### The bridge is out (the clock-out finale)
 
 Source: `levels/chase/finale_director.gd`, `finale_driver.gd`, `finale_bird_driver.gd`, `horde_wall.halt_at`, `chunk_defs.gd` `bridge_out`, `chunk_builder._bridge_out`. Toggle: `buzzard_run.finale_enabled` (tests about "the line pays" turn it off for the instant win).
