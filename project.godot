@@ -23,6 +23,7 @@ config/icon="res://icon.svg"
 
 Dev="*res://game/dev.gd"
 GameState="*res://game/game_state.gd"
+Stickers="*res://game/stickers.gd"
 SceneFlow="*res://game/scene_flow.gd"
 Spawner="*res://game/spawner.gd"
 InputRouter="*res://game/input_router.gd"

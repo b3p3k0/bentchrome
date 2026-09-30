@@ -37,6 +37,7 @@ const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
 const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const IR := preload("res://game/input_router.gd")  # input names only (leaf)
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const PitFallFXScript := preload("res://environment/pit_fall_fx.gd")
 const SinkBubbles := preload("res://environment/sink_bubbles.gd")
@@ -144,6 +145,7 @@ var _zoom_was_pressed := false
 var _locator_left := 0.0
 var _locator_elapsed := 0.0
 var _falling := false     # mid pit-fall (shrinking); suppresses the explosion
+var _fall_kind: StringName = &""  # pit/water discriminator for death stickers
 var _fire_lock := false   # selection changed while fire held — release to re-arm
 						   # (a dry slot auto-cycles mid-click; without this the
 						   # same press instantly fires the next weapon)
@@ -1012,6 +1014,7 @@ func launch_from_jump() -> void:
 func fall_into_pit(target: Vector2) -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
+	_fall_kind = &"pit"
 	_falling = true
 	_pit_fall_scale = 1.0
 	_hold_camera_for_pit()
@@ -1039,7 +1042,8 @@ func fall_into_pit(target: Vector2) -> void:
 	tween.chain().tween_callback(func() -> void:
 		if _health:
 			_health.kill()
-		_falling = false)
+		_falling = false
+		_fall_kind = &"")
 
 func _spawn_pit_impact() -> void:
 	var world_parent: Node = get_parent()
@@ -1055,6 +1059,7 @@ func _spawn_pit_impact() -> void:
 func sink_into_water() -> void:
 	if _falling or height > 0.0 or (_health and _health.hp <= 0.0):
 		return
+	_fall_kind = &"water"
 	_falling = true
 	if is_in_group(&"player"):  # same fall tax as the pit — wetter, not cheaper
 		preload("res://game/economy.gd").apply_penalty(&"fall")
@@ -1087,9 +1092,11 @@ func sink_into_water() -> void:
 	tween.tween_callback(func() -> void:
 		if _health:
 			_health.kill()
-		_falling = false)
+		_falling = false
+		_fall_kind = &"")
 
 func _on_died() -> void:
+	_report_sticker_death()
 	end_repair_hold(false)
 	if _special:
 		_special.cancel_dash()
@@ -1110,6 +1117,32 @@ func _on_died() -> void:
 		if audio_d and not _falling:
 			audio_d.play_at(&"npc_death", global_position)
 		queue_free()
+
+func _report_sticker_death() -> void:
+	if net_puppet:
+		return
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers == null:
+		return
+	var local_player := VehiclesHelper.local(get_tree())
+	if self == local_player:
+		var cause := &"other"
+		if _fall_kind == &"water":
+			cause = &"drown"
+		elif _fall_kind == &"pit" or last_hit_id == HitTags.FALL:
+			cause = &"fall"
+		elif is_instance_valid(last_attacker) and last_attacker is Vehicle \
+				and last_attacker != self \
+				and Time.get_ticks_msec() - last_hit_ms <= int(stickers.ATTRIBUTION_MS) \
+				and last_hit_id not in [&"", HitTags.ENVIRONMENT, HitTags.FALL, HitTags.UNKNOWN] \
+				and HitTags.RAM not in HitTags.families(last_hit_id):
+			cause = &"enemy_fire"
+		stickers.record_death(cause)
+	elif is_instance_valid(last_attacker) and last_attacker == local_player \
+			and last_attacker != self \
+			and Time.get_ticks_msec() - last_hit_ms <= int(stickers.ATTRIBUTION_MS) \
+			and last_hit_id != &"":
+		stickers.record_kill(self, last_hit_id)
 
 func _spawn_explosion() -> void:
 	var scene := get_tree().current_scene
@@ -1330,6 +1363,8 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 	height = 0.0
 	vz = 0.0
 	_falling = false
+	_fall_kind = &""
+	last_hit_id = &""  # a fresh life starts with no sticker grudge
 	floor_index = -1     # re-adopted from the FloorSensor on first grounded tick
 	_takeoff_floor = -1
 	if _floor_tween:
