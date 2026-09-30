@@ -61,9 +61,10 @@ static func build(entry: Dictionary) -> Node2D:
 	var shoulder: StringName = def.get("shoulder", &"grass")
 	for side in [-1.0, 1.0]:
 		_build_shoulder(root, ds, cx, half, side, shoulder)
-		_build_embankment(root, ds, cx, half, side, shoulder)
+		_build_embankment(root, entry, side, shoulder)
 	_build_medians(root, entry)
 	_build_washout(root, entry)
+	_build_cutoff(root, entry)
 	_place_props(root, entry)
 	_place_pickups(root, entry)
 	_roadside_flair(root, entry, ds, cx, half)
@@ -285,6 +286,124 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 		(zone.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)   # the bed is the paint
 		root.add_child(zone)
 
+## The cutoff: a clearing beside the road with a dirt-bike trail through it,
+## a ditch between the trail and the embankment's foot, and a treeline
+## fencing the far side — solid pines on a layer-2 body, so the trail is a
+## corridor you stay in or scrape. The mouths are the embankment's gaps
+## (_build_embankment); the trail's zone outranks the grass shoulder where
+## they meet.
+static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	if not def.has("cutoff"):
+		return
+	var cf: Dictionary = def["cutoff"]
+	var side: float = cf["side"]
+	var width: float = cf["width"]
+	var entry_x: float = entry["entry_x"]
+	var pts: Array = cf["trail"]
+	var d_from: float = pts[0][0]
+	var d_to: float = pts[pts.size() - 1][0]
+	var gaps: Array = cf["gaps"]
+	var trees_x: float = entry_x + float(cf["trees_x"])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 1213
+	# The clearing: grass from the shoulder's edge out past the treeline,
+	# over the whole cutoff, so the gaps open onto ground and not the void.
+	var clear := PackedVector2Array()
+	var n := maxi(int(ceilf((d_to - d_from + 200.0) / 90.0)), 2)
+	var near := PackedVector2Array()
+	for i in n + 1:
+		var d := lerpf(d_from - 100.0, d_to + 100.0, float(i) / float(n))
+		near.append(Vector2(_center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W - 4.0), -d))
+	var far := PackedVector2Array()
+	for p in near:
+		far.append(Vector2(trees_x + side * 120.0, p.y))
+	var clearing := Polygon2D.new()
+	clearing.name = "Clearing"
+	clearing.polygon = _strip(near, far)
+	clearing.color = SLOPE_FILL[&"grass"].lightened(0.08)
+	clearing.z_index = -1
+	root.add_child(clearing)
+	# The ditch: a dark rut between the embankment's foot and the trail,
+	# along the straight where the two run side by side. Mud: stray and stick.
+	var ditch_a := PackedVector2Array()
+	var ditch_b := PackedVector2Array()
+	var d0: float = gaps[0][1]
+	var d1: float = gaps[1][0]
+	var m := maxi(int(ceilf((d1 - d0) / 90.0)), 2)
+	for i in m + 1:
+		var d := lerpf(d0, d1, float(i) / float(m))
+		var foot: float = _center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W + EMBANK_W)
+		var trail_edge: float = entry_x + ChunkDefs.cutoff_x(def, d) - side * width * 0.5
+		ditch_a.append(Vector2(foot, -d))
+		ditch_b.append(Vector2(trail_edge - side * 10.0, -d))
+	var ditch := _zone_strip("Ditch", &"mud", ditch_a, ditch_b)
+	(ditch.get_node(^"Vis") as Polygon2D).color = Color(0.12, 0.11, 0.08, 0.85)
+	root.add_child(ditch)
+	# The trail: a torn-edged dirt bed and its zone, which outranks the
+	# grass shoulder at the mouths.
+	var inner := PackedVector2Array()
+	var outer := PackedVector2Array()
+	var torn_in := PackedVector2Array()
+	var torn_out := PackedVector2Array()
+	var k := maxi(int(ceilf((d_to - d_from) / 60.0)), 2)
+	for i in k + 1:
+		var d := lerpf(d_from, d_to, float(i) / float(k))
+		var tx: float = entry_x + ChunkDefs.cutoff_x(def, d)
+		inner.append(Vector2(tx - side * width * 0.5, -d))
+		outer.append(Vector2(tx + side * width * 0.5, -d))
+		torn_in.append(Vector2(tx - side * (width * 0.5 + rng.randf_range(-6.0, 14.0)), -d))
+		torn_out.append(Vector2(tx + side * (width * 0.5 + rng.randf_range(-6.0, 14.0)), -d))
+	var bed := Polygon2D.new()
+	bed.name = "TrailBed"
+	bed.polygon = _strip(torn_in, torn_out)
+	bed.color = WASHOUT_DIRT
+	bed.z_index = -1
+	root.add_child(bed)
+	for i in range(0, k, 2):   # twin ruts the bikes wore in
+		for lane in [-0.28, 0.28]:
+			var rut := Polygon2D.new()
+			var a: Vector2 = inner[i].lerp(outer[i], 0.5 + lane)
+			var b: Vector2 = inner[i + 1].lerp(outer[i + 1], 0.5 + lane) if i + 1 <= k else a
+			rut.polygon = PackedVector2Array([a + Vector2(-3, 0), a + Vector2(3, 0), b + Vector2(3, 0), b + Vector2(-3, 0)])
+			rut.color = WASHOUT_DIRT.darkened(0.22)
+			rut.z_index = -1
+			root.add_child(rut)
+	var trail := _zone_strip("Trail", &"dirt", inner, outer)
+	(trail.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)
+	trail.terrain_priority = 1
+	root.add_child(trail)
+	# The treeline: solid pines along the far side of the trail, close enough
+	# together that nothing drives between them.
+	var trees := StaticBody2D.new()
+	trees.name = "Treeline"
+	trees.collision_layer = 2
+	trees.collision_mask = 0
+	var d := d_from - 60.0
+	while d < d_to + 60.0:
+		var at := Vector2(trees_x + rng.randf_range(-25.0, 25.0), -d)
+		var col := CollisionShape2D.new()
+		var shape := CircleShape2D.new()
+		shape.radius = 26.0
+		col.shape = shape
+		col.position = at
+		trees.add_child(col)
+		var crown_r := rng.randf_range(30.0, 42.0)
+		var shade := Polygon2D.new()
+		shade.polygon = _blob(at + Vector2(side * 8.0, 10.0), crown_r * 1.05, rng)
+		shade.color = Color(0.05, 0.08, 0.04, 0.55)
+		trees.add_child(shade)
+		var crown := Polygon2D.new()
+		crown.polygon = _blob(at, crown_r, rng)
+		crown.color = Color(0.12, 0.26, 0.12).darkened(rng.randf_range(0.0, 0.2))
+		trees.add_child(crown)
+		var crown2 := Polygon2D.new()
+		crown2.polygon = _blob(at + Vector2(-side * 6.0, -8.0), crown_r * 0.6, rng)
+		crown2.color = Color(0.18, 0.34, 0.16).darkened(rng.randf_range(0.0, 0.15))
+		trees.add_child(crown2)
+		d += rng.randf_range(78.0, 92.0)
+	root.add_child(trees)
+
 ## An irregular, squashed n-gon: a damp patch, or a slab of the old road.
 static func _chunk_of_road(center: Vector2, r: float, squash: float, n: int, rng: RandomNumberGenerator) -> PackedVector2Array:
 	var out := PackedVector2Array()
@@ -300,19 +419,39 @@ static func _road_angle(entry: Dictionary, d: float) -> float:
 	return Vector2(ahead - behind, -80.0).angle()
 
 ## The impassable rim: an opaque painted slope with a layer-2 wall under its
-## inner edge — "floor 2 but no way up", so nothing feels invisible.
-static func _build_embankment(root: Node2D, ds: Array, cx: Array, half: Array, side: float, shoulder: StringName) -> void:
+## inner edge — "floor 2 but no way up", so nothing feels invisible. A
+## cutoff's trail side is built in runs, leaving its mouths open.
+static func _build_embankment(root: Node2D, entry: Dictionary, side: float, shoulder: StringName) -> void:
+	var def: Dictionary = entry["def"]
+	var chunk_len: float = def["len"]
+	var runs: Array = [[0.0, chunk_len]]
+	if def.has("cutoff") and is_equal_approx(float(def["cutoff"]["side"]), side):
+		runs = []
+		var d := 0.0
+		for g in def["cutoff"]["gaps"]:
+			runs.append([d, float(g[0])])
+			d = float(g[1])
+		runs.append([d, chunk_len])
+	for k in runs.size():
+		var suffix := "" if runs.size() == 1 else str(k)
+		_embank_run(root, entry, side, shoulder, float(runs[k][0]), float(runs[k][1]),
+			("EmbankL" if side < 0.0 else "EmbankR") + suffix)
+
+static func _embank_run(root: Node2D, entry: Dictionary, side: float, shoulder: StringName,
+		d0: float, d1: float, wall_name: String) -> void:
 	var inner := PackedVector2Array()
 	var outer := PackedVector2Array()
 	var crest := PackedVector2Array()
-	for i in ds.size():
-		var y: float = -ds[i]
-		var e: float = cx[i] + side * (half[i] + SHOULDER_W)
+	var n := maxi(int(ceilf((d1 - d0) / STEP)), 1)
+	for i in n + 1:
+		var d := lerpf(d0, d1, float(i) / float(n))
+		var y := -d
+		var e: float = _center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W)
 		inner.append(Vector2(e, y))
 		outer.append(Vector2(e + side * EMBANK_W, y))
 		crest.append(Vector2(e + side * EMBANK_W * 0.62, y))
 	var wall := StaticBody2D.new()
-	wall.name = "EmbankL" if side < 0.0 else "EmbankR"
+	wall.name = wall_name
 	wall.collision_layer = 2
 	wall.collision_mask = 0
 	var col := CollisionPolygon2D.new()
@@ -449,9 +588,13 @@ static func _roadside_flair(root: Node2D, entry: Dictionary, ds: Array, cx: Arra
 	var d := rng.randf_range(80.0, 240.0)
 	var side := 1.0
 	var river: Dictionary = def.get("river", {})
+	var trail_side: float = float(def["cutoff"]["side"]) if def.has("cutoff") else 0.0
 	while d < chunk_len - 60.0:
 		if not river.is_empty() and d > float(river["bank"]) - 60.0 and d < float(river["shallow_to"]):
 			d = float(river["shallow_to"]) + 40.0   # no bushes growing out of the river
+			continue
+		if is_equal_approx(side, trail_side):
+			side = -side   # the trail side is the trail's to dress
 			continue
 		var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
 		var base_x: float = cx[i] + side * (half[i] + SHOULDER_W + 60.0 + rng.randf_range(0.0, 50.0))

@@ -340,6 +340,70 @@ func test_cutoff_geometry() -> void:
 	for i in l["path"].size():
 		t.check(is_equal_approx(float(l["path"][i][1]), -float(r["path"][i][1])), "cutoff: the roads mirror (station %d)" % i)
 
+## The cutoff, built: the trail side's wall is three runs with the mouths
+## open, the far side stays one; a solid treeline fences the trail; the
+## trail is a dirt zone that outranks the shoulder; the ditch is mud.
+func test_builder_cutoff() -> void:
+	for name in [&"cutoff_l", &"cutoff_r"]:
+		var def: Dictionary = ChunkDefs.DEFS[name]
+		var cf: Dictionary = def["cutoff"]
+		var side: float = cf["side"]
+		var chunk: Node2D = Builder.build(_entry_for(name))
+		var walls := 0
+		var trail_walls := 0
+		var trees: Node = null
+		var trail: Node = null
+		var ditch: Node = null
+		for child in chunk.get_children():
+			if child is StaticBody2D and child.collision_layer == 2:
+				if child.name == "Treeline":
+					trees = child
+					continue
+				var polys := 0
+				for sub in child.get_children():
+					if sub is CollisionPolygon2D:
+						polys += 1
+				t.check(polys == 1, "cutoff: %s: every wall run is one polygon (%s)" % [name, child.name])
+				walls += 1
+				if String(child.name).begins_with("EmbankL" if side < 0.0 else "EmbankR"):
+					trail_walls += 1
+			elif child is Area2D and child.collision_layer == 128:
+				if child.name == "Trail":
+					trail = child
+				elif child.name == "Ditch":
+					ditch = child
+		t.check(walls == 4 and trail_walls == 3, "cutoff: %s: three wall runs on the trail side, one on the other (%d/%d)" % [name, walls, trail_walls])
+		t.check(trees != null, "cutoff: %s: a treeline stands beyond the trail" % name)
+		if trees != null:
+			var circles := 0
+			var off_line := false
+			for sub in trees.get_children():
+				if sub is CollisionShape2D and sub.shape is CircleShape2D:
+					circles += 1
+					if absf(sub.position.x - float(cf["trees_x"])) > 30.0:
+						off_line = true
+			t.check(circles >= 14 and not off_line, "cutoff: %s: %d solid pines on the line" % [name, circles])
+		t.check(trail != null and trail.terrain_type == &"dirt" and trail.terrain_priority == 1,
+			"cutoff: %s: the trail is dirt and outranks the shoulder at the mouths" % name)
+		t.check(ditch != null and ditch.terrain_type == &"mud", "cutoff: %s: the ditch is mud" % name)
+		if trail != null:
+			var outside := true
+			for sub in trail.get_children():
+				if sub is CollisionShape2D:
+					var d: float = -sub.position.y
+					if d > float(cf["gaps"][0][1]) and d < float(cf["gaps"][1][0]):
+						var edge: float = Builder._center_x(_entry_for(name), d) + side * (float(def["half_w"]) + Builder.SHOULDER_W)
+						if side * (sub.position.x - edge) < 0.0:
+							outside = false
+			t.check(outside, "cutoff: %s: along the straight the trail lies outside the road" % name)
+		var flair_on_trail := false
+		for child in chunk.get_children():
+			if child is Polygon2D and child.z_index == 0 and child.position == Vector2.ZERO and child.polygon.size() > 0:
+				if side * (child.polygon[0].x - float(cf["trail"][1][1]) * 0.5) > 0.0 and -child.polygon[0].y > 300.0 and -child.polygon[0].y < 1700.0:
+					flair_on_trail = true
+		t.check(not flair_on_trail, "cutoff: %s: no roadside scrub sprouts across the trail" % name)
+		chunk.free()
+
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch
 ## lip that launches the birds but never the player.
