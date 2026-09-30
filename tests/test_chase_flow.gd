@@ -341,12 +341,18 @@ func test_off_the_tour_the_loss_panel_stands_in() -> void:
 	var gs = t.root.get_node(^"/root/GameState")
 	var player = scene.get_node(^"Vehicle")
 	gs.game_mode = &"single_battle"  # no tour to rejoin: nothing to rob, nowhere to roll on
+	gs.owned_mods = ["armor_plating"]
 	Economy.funds = 4000
 	player.get_node(^"Health").kill()
 	scene._process(0.016)
 	t.check(scene.is_jacked(), "chase: the run still ends")
 	scene._open_robbery()
-	t.check(scene.get_node_or_null(^"RobberyScreen") == null, "chase: no robbery off the tour")
-	t.check(scene._end_screen.visible, "chase: the classic loss panel stands in")
-	t.check(Economy.funds == 4000, "chase: nothing is taken off the tour")
+	var card = scene.get_node_or_null(^"RobberyScreen")
+	t.check(card != null, "chase: off the tour the show still plays — an exhibition spin")
+	t.check(not scene._end_screen.visible, "chase: the classic panel waits for the card")
+	t.check(Economy.funds == 4000 and gs.owned_mods == ["armor_plating"] and gs.lives == 3,
+		"chase: nothing is taken off the tour")
+	card.roll_on()
+	t.check(scene._end_screen.visible, "chase: then the classic loss panel stands in")
+	gs.owned_mods.clear()
 	_close(scene)

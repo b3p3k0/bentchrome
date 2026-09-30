@@ -1,7 +1,7 @@
 extends RefCounted
 ## The fight card (SINGLE BATTLE's level picker): the filter lists melee
-## arenas selectable and placeholder slots greyed while boss/chase slots
-## stay off the card entirely; the screen boots its cursor onto a live row
+## arenas and the chase selectable and placeholder slots greyed while boss
+## slots stay off the card entirely; the screen boots its cursor onto a live row
 ## and hops greyed ones; a pick stamps GameState.battle_level_index; and the
 ## battle slot is run state that survives reset_campaign (car select resets
 ## the run BEFORE launching into the slot). The scene is load()ed at test
@@ -33,24 +33,23 @@ func test_fight_card_filter() -> void:
 		else:
 			locked_names.append(String(row.name))
 	t.check(enabled_tails == ["arena_assault.tscn", "dock.tscn", "downtown.tscn",
-			"freeway.tscn", "suburbs.tscn", "snowy.tscn", "ground_floor_gore.tscn",
+			"freeway.tscn", "suburbs.tscn", "buzzard_run.tscn", "snowy.tscn", "ground_floor_gore.tscn",
 			"capital_city_carnage.tscn"],
-		"fight card: every melee/duel arena is selectable, in tour order")
+		"fight card: every melee/duel arena and the chase are selectable, in tour order")
 	t.check(locked_names == ["Terminal Terror", "Slaughter on the Strip"],
 		"fight card: unbuilt slots hang greyed as coming attractions")
 	for row_v in rows:
 		var row: Dictionary = row_v
 		var profile: Dictionary = flow.CAMPAIGN[int(row.campaign_index)]
 		t.check(StringName(profile.encounter) != &"miniboss"
-			and StringName(profile.encounter) != &"boss"
-			and StringName(profile.encounter) != &"chase",
-			"fight card: %s is not a boss or chase slot" % row.name)
+			and StringName(profile.encounter) != &"boss",
+			"fight card: %s is not a boss slot" % row.name)
 
 func test_screen_boots_onto_a_live_row() -> void:
 	var screen := _fresh()
 	t.check(screen._entries.size() == screen._rows.size()
-		and screen._rows.size() == 11,
-		"fight card: ten tour rows plus BACK")
+		and screen._rows.size() == 12,
+		"fight card: eleven tour rows plus BACK")
 	t.check(bool(screen._rows[screen._index].enabled),
 		"fight card: cursor never boots onto a greyed slot")
 	t.check(String(screen._rows[screen._index].name) == "Arena Assault",

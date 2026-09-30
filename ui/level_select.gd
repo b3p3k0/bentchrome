@@ -1,10 +1,12 @@
 extends Control
 ## The fight card: SINGLE BATTLE's battleground picker, between difficulty
 ## select and car select. Lists the campaign tour in slot order, filtered to
-## the brawls — melee arenas are selectable, unbuilt placeholder slots hang
-## greyed as coming attractions (they join the card automatically the day
-## their CAMPAIGN entry becomes a real melee arena), and boss/chase slots
-## stay campaign-exclusive. Confirm stamps GameState.battle_level_index and
+## the fights — melee arenas AND the Route 666 chase are selectable, unbuilt
+## placeholder slots hang greyed as coming attractions (they join the card
+## automatically the day their CAMPAIGN entry becomes a real melee arena),
+## and boss slots stay campaign-exclusive. A chase run off the tour has no
+## purse and nothing to rob: it ends on an exhibition spin and the classic
+## panel (buzzard_run.gd). Confirm stamps GameState.battle_level_index and
 ## rolls to car select; BACK and ESC return to difficulty select.
 ## Manual-highlight menu idiom cloned from title.gd — no focus system.
 
@@ -28,16 +30,17 @@ func _ready() -> void:
 	_highlight()
 
 ## Campaign slots that belong on the fight card, in tour order. Selectable =
-## a real melee or duel arena; placeholders list greyed; boss/chase slots
-## don't list. Static + campaign-injected so tests can probe the filter
-## without a tree.
+## a real melee or duel arena, or the chase; placeholders list greyed; boss
+## slots don't list. Static + campaign-injected so tests can probe the
+## filter without a tree.
 static func listed_slots(campaign: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for i in campaign.size():
 		var profile: Dictionary = campaign[i]
 		var mode := StringName(profile.mode)
-		var enabled: bool = mode == &"arena" \
-			and StringName(profile.encounter) in [&"melee", &"duel"]
+		var encounter := StringName(profile.encounter)
+		var enabled: bool = (mode == &"arena" and encounter in [&"melee", &"duel"]) \
+			or (mode == &"specialty" and encounter == &"chase")
 		if enabled or mode == &"placeholder":
 			out.append({"campaign_index": i, "name": String(profile.name),
 				"enabled": enabled, "profile": profile})
@@ -124,6 +127,8 @@ func _blurb_for(row: Dictionary) -> String:
 	if not bool(row.enabled):
 		return LOCKED_BLURB
 	var profile: Dictionary = row.profile
+	if StringName(profile.encounter) == &"chase":
+		return "forced-scroll chase — outrun the horde for two minutes"
 	if StringName(profile.encounter) == &"duel":
 		return "%s arena — 1v1 duel" % String(profile.size_class)
 	return "%s arena — %d rivals" % [String(profile.size_class),
