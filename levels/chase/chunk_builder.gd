@@ -82,6 +82,10 @@ static func build(entry: Dictionary) -> Node2D:
 			_truckstop(root, entry)
 		&"bridge_out":
 			_bridge_out(root, entry)
+		&"tollbooth":
+			_tollbooth(root, entry)
+		&"jackknife":
+			_jackknife(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -360,6 +364,89 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 		var zone := _zone_strip("WashoutL" if side < 0.0 else "WashoutR", &"dirt", outer, inner)
 		(zone.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)   # the bed is the paint
 		root.add_child(zone)
+
+## Toll plaza: a painted apron, three booths spanning the road with a lane
+## between each pair, a striped arm dropped across every lane (destructible:
+## smash one), and a CASH ONLY sign overhead.
+static func _tollbooth(root: Node2D, entry: Dictionary) -> void:
+	var d := 640.0
+	var c := _center_x(entry, d)
+	var half: float = entry["def"]["half_w"]
+	var apron := Polygon2D.new()
+	apron.name = "Plaza"
+	apron.polygon = PackedVector2Array([
+		Vector2(c - half - 90, -(d - 160)), Vector2(c + half + 90, -(d - 160)),
+		Vector2(c + half + 90, -(d + 160)), Vector2(c - half - 90, -(d + 160)),
+	])
+	apron.color = Color(0.25, 0.25, 0.27)
+	apron.z_index = -1
+	root.add_child(apron)
+	# Four booths, three lanes: booths at the edges and at ±1/3.
+	var booth_x: Array = [c - half + 10.0, c - half / 3.0, c + half / 3.0, c + half - 10.0]
+	for i in booth_x.size():
+		var booth := BlockScene.instantiate()
+		booth.name = "Booth%d" % i
+		booth.position = Vector2(booth_x[i], -d)
+		booth.size = Vector2(44, 90)
+		booth.max_hp = 60.0
+		booth.deco = &"booth"
+		root.add_child(booth)
+	for i in booth_x.size() - 1:
+		var arm := BlockScene.instantiate()
+		arm.name = "Arm%d" % i
+		arm.position = Vector2((float(booth_x[i]) + float(booth_x[i + 1])) * 0.5, -(d - 10.0))
+		arm.size = Vector2(float(booth_x[i + 1]) - float(booth_x[i]) - 50.0, 14)
+		arm.max_hp = 25.0
+		arm.deco = &"barrier"
+		root.add_child(arm)
+	var sign := Node2D.new()
+	sign.set_script(HighwayDecoScript)
+	sign.kind = &"sign"
+	sign.side = 1.0
+	sign.copy_seed = 66601   # dealt copy; the plaza's own line comes from the table
+	sign.position = Vector2(c + half + SHOULDER_W + 46.0, -(d - 300.0))
+	root.add_child(sign)
+	for lx in [c - half - 60.0, c + half + 60.0]:
+		var pool := LightKit.make_light(240.0, 0.6, Color(1.0, 0.92, 0.75))
+		pool.name = "PlazaLight"
+		pool.position = Vector2(lx, -d)
+		root.add_child(pool)
+
+## Jackknife: the trailer across two lanes, angled, with its tractor nosed
+## into the verge — the open lane is the line.
+static func _jackknife(root: Node2D, entry: Dictionary) -> void:
+	var d := 640.0
+	var c := _center_x(entry, d)
+	var half: float = entry["def"]["half_w"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 313
+	var side := 1.0 if rng.randf() < 0.5 else -1.0   # which two lanes it took
+	var trailer := BlockScene.instantiate()
+	trailer.name = "Trailer"
+	trailer.position = Vector2(c + side * half * 0.3, -d)
+	trailer.rotation = side * rng.randf_range(0.5, 0.75)
+	trailer.size = Vector2(230, 72)
+	trailer.max_hp = 90.0
+	trailer.deco = &"trailer"
+	root.add_child(trailer)
+	var cab := DerelictScene.instantiate()
+	cab.position = Vector2(c + side * (half - 30.0), -(d + 110.0))
+	cab.rotation = -PI / 2.0 + side * 1.1
+	root.add_child(cab)
+	# Skids where the rig came round.
+	for lane in [-14.0, 14.0]:
+		var skid := Polygon2D.new()
+		var a := Vector2(c + side * 40.0 + lane, -(d - 260.0))
+		var b := Vector2(c + side * (half * 0.3) + lane, -(d + 20.0))
+		skid.polygon = PackedVector2Array([a + Vector2(-4, 0), a + Vector2(4, 0), b + Vector2(4, 0), b + Vector2(-4, 0)])
+		skid.color = Color(0.07, 0.07, 0.08, 0.7)
+		skid.z_index = -1
+		root.add_child(skid)
+	var glass := Polygon2D.new()   # a glitter of windscreen on the asphalt
+	glass.polygon = _chunk_of_road(Vector2(c + side * (half - 60.0), -(d + 60.0)), 26.0, 0.6, 9, rng)
+	glass.color = Color(0.7, 0.8, 0.9, 0.35)
+	glass.z_index = -1
+	root.add_child(glass)
 
 ## The dressing along the mile: highway signs on a course-wide cadence
 ## (sides alternate), a billboard now and then, buzzards wheeling over the

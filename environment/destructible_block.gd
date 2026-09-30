@@ -134,6 +134,8 @@ const REMAINS := {
 	&"pipes": [&"debris", Color(0.42, 0.45, 0.46), Color(0.14, 0.16, 0.17)],
 	&"rebar": [&"debris", Color(0.42, 0.25, 0.16), Color(0.35, 0.21, 0.14)],
 	&"pillar": [&"debris", Color(0.42, 0.42, 0.45), Color(0.2, 0.2, 0.22)],
+	&"trailer": [&"crumple", Color(0.72, 0.7, 0.66), Color(0.3, 0.3, 0.32)],
+	&"booth": [&"crumple", Color(0.62, 0.6, 0.55), Color(0.24, 0.22, 0.2)],
 }
 
 @export var size := Vector2(96, 96)
@@ -351,6 +353,10 @@ func _draw() -> void:
 			_draw_barrier()
 		&"pillar":
 			_draw_pillar()
+		&"trailer":
+			_draw_trailer()
+		&"booth":
+			_draw_booth()
 		&"rail":
 			_draw_rail()
 		&"fan_rail":
@@ -588,6 +594,39 @@ func _draw_pillar() -> void:
 	for i in 3:
 		var x := -half.x + 6 + float(i) * (size.x / 3.0)
 		draw_line(Vector2(x, half.y - 10), Vector2(x + 8, half.y), _shade(HAZARD_DARK), 3.0)
+
+## Jackknifed trailer (deco = &"trailer"): a long box on its side across the
+## road — corrugated flank, a faded livery band, the wheels in the air on
+## the far edge, a torn rear door.
+func _draw_trailer() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half, size), _shade(Color(0.72, 0.7, 0.66)))
+	draw_rect(Rect2(-half + Vector2(3, 3), size - Vector2(6, 6)), _shade(Color(0.78, 0.76, 0.72)))
+	var band := Rect2(Vector2(-half.x + 12, -half.y * 0.25), Vector2(size.x - 24, half.y * 0.5))
+	draw_rect(band, _shade(Color(0.5, 0.18, 0.16)))
+	for i in int(size.x / 14.0):
+		var x := -half.x + 7 + float(i) * 14.0
+		draw_line(Vector2(x, -half.y + 3), Vector2(x, half.y - 3), _shade(Color(0.6, 0.58, 0.54)), 1.0)
+	for k in 4:   # the wheels, up in the air along the far flank
+		var wx := -half.x + size.x * (0.2 + 0.2 * float(k))
+		draw_circle(Vector2(wx, half.y - 4), 7.0, _shade(Color(0.12, 0.12, 0.13)))
+		draw_circle(Vector2(wx, half.y - 4), 3.0, _shade(Color(0.5, 0.5, 0.52)))
+	draw_rect(Rect2(Vector2(half.x - 10, -half.y), Vector2(10, size.y)), _shade(Color(0.3, 0.3, 0.32)))
+	draw_line(Vector2(half.x - 10, -half.y + 6), Vector2(half.x - 2, half.y * 0.4), _shade(Color(0.16, 0.16, 0.17)), 2.0)
+
+## Toll booth (deco = &"booth"): a little hut with a window, a striped
+## fascia and a shut hatch — CASH ONLY, and nobody home.
+func _draw_booth() -> void:
+	var half := size * 0.5
+	draw_rect(Rect2(-half, size), _shade(Color(0.62, 0.6, 0.55)))
+	draw_rect(Rect2(-half + Vector2(3, 3), size - Vector2(6, 6)), _shade(Color(0.7, 0.68, 0.63)))
+	draw_rect(Rect2(Vector2(-half.x, -half.y), Vector2(size.x, 8)), _shade(HAZARD_YELLOW))
+	for i in int(size.x / 12.0):
+		var x := -half.x + float(i) * 12.0
+		draw_line(Vector2(x, -half.y), Vector2(x + 6, -half.y + 8), _shade(HAZARD_DARK), 3.0)
+	draw_rect(Rect2(Vector2(-half.x * 0.5, -half.y * 0.2), Vector2(size.x * 0.5, half.y * 0.55)), _shade(Color(0.32, 0.4, 0.48)))
+	draw_rect(Rect2(Vector2(-half.x * 0.5, -half.y * 0.2), Vector2(size.x * 0.5, half.y * 0.55)), _shade(Color(0.2, 0.2, 0.22)), false, 2.0)
+	draw_rect(Rect2(Vector2(-half.x * 0.35, half.y * 0.5), Vector2(size.x * 0.35, 6)), _shade(Color(0.3, 0.28, 0.26)))
 
 ## Gas pump: red body, pale face with a dark meter, hose to a nozzle.
 func _draw_pump() -> void:

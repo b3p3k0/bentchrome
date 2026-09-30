@@ -466,6 +466,42 @@ func test_builder_highway_dressing() -> void:
 	t.check(boards >= 5 and boards <= 8, "dressing: a billboard every %dpx (got %d)" % [int(Builder.BILLBOARD_EVERY), boards])
 	t.check(flocks >= 1, "dressing: buzzards wheel over the wrecks somewhere in 30k (got %d)" % flocks)
 
+## Two more flavors: the toll plaza (booths across the road, a smashable
+## arm in every lane, lit) and the jackknife (a trailer across two lanes
+## with its cab in the verge).
+func test_builder_tollbooth_and_jackknife() -> void:
+	var plaza: Node2D = Builder.build(_entry_for(&"tollbooth"))
+	var booths := 0
+	var arms := 0
+	var lights := 0
+	for child in plaza.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd"):
+			if child.deco == &"booth":
+				booths += 1
+			elif child.deco == &"barrier" and String(child.name).begins_with("Arm"):
+				arms += 1
+		if child is PointLight2D:
+			lights += 1
+	t.check(booths == 4 and arms == 3, "tollbooth: four booths, an arm in each of three lanes (%d/%d)" % [booths, arms])
+	t.check(lights >= 2, "tollbooth: the plaza is lit")
+	plaza.free()
+	var wreck: Node2D = Builder.build(_entry_for(&"jackknife"))
+	var trailer: Node = null
+	var cabs := 0
+	for child in wreck.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("destructible_block.gd") and child.deco == &"trailer":
+			trailer = child
+		if script and script.resource_path.ends_with("derelict_car.gd"):
+			cabs += 1
+	t.check(trailer != null and trailer.max_hp >= 80.0 and absf(trailer.rotation) > 0.4,
+		"jackknife: the trailer lies angled across the road, and it is heavy")
+	t.check(cabs >= 2, "jackknife: the cab is in the verge (and a wreck from the def)")
+	wreck.free()
+	for name in [&"tollbooth", &"jackknife"]:
+		t.check(ChunkDefs.WEIGHTS.has(name) and name in ChunkDefs.NO_REPEAT, "flavors: %s rolls, never twice running" % name)
+
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch
 ## lip that launches the birds but never the player.

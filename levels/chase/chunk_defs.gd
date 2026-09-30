@@ -158,6 +158,37 @@ const DEFS := {
 			{"kind": &"heal", "at": [720.0, 0.0]},
 		],
 	},
+	# Toll plaza: three booths across the road with a striped arm dropped in
+	# every lane — pick a gate and smash the arm (25 HP, a nick), or hit a
+	# booth (60 HP, a real bite). CASH ONLY; nobody's home.
+	&"tollbooth": {
+		"len": 1300.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"tollbooth", "shoulder": &"dirt",
+		"set_piece": &"tollbooth",
+		"props": [
+			{"kind": &"cone", "at": [380.0, -330.0]},
+			{"kind": &"cone", "at": [380.0, 330.0]},
+			{"kind": &"barrel", "at": [900.0, 300.0]},
+		],
+	},
+	# Jackknife: a rig lost it here — the trailer lies across two lanes with
+	# its load spilled around it. Slalom the open lane, or pay hull to the
+	# trailer (90 HP: the heaviest thing on the road after the pillars).
+	&"jackknife": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"jackknife", "shoulder": &"grass",
+		"set_piece": &"jackknife",
+		"props": [
+			{"kind": &"junk", "at": [520.0, 250.0]},
+			{"kind": &"barrel", "at": [480.0, -80.0]},
+			{"kind": &"barrel", "at": [530.0, -120.0]},
+			{"kind": &"derelict", "at": [720.0, -150.0]},
+			{"kind": &"junk", "at": [880.0, 60.0]},
+		],
+		"pickups": [
+			{"kind": &"boost", "at": [1100.0, 200.0]},
+		],
+	},
 	# --- the back roads --------------------------------------------------
 	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
 	# straight along the inside — through a GAP in the shoulder and the
@@ -274,6 +305,8 @@ const WEIGHTS := {
 	&"washout_r": 0.7,
 	&"cutoff_l": 0.6,
 	&"cutoff_r": 0.6,
+	&"tollbooth": 0.7,
+	&"jackknife": 0.7,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -282,7 +315,7 @@ const WEIGHTS := {
 
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
-	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r"]
+	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r", &"tollbooth", &"jackknife"]
 
 ## A cutoff's trail: its centre at chunk-local d as an offset from the chunk
 ## ENTRY x (the trail runs straight while the road bends away from it).
