@@ -611,6 +611,23 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | GPS window | −800..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; horde drawn at its true position, pulses in danger |
 | Audio | roar gain 0.22 → 1.0 · horn ≥6s apart | horde_wall `ROAR_FLOOR` / `HORN_COOLDOWN` | `horde_roar` loop via `AudioDirector.loop_gain`; `jacked` sting on the robbery card |
 
+### Dusk to night, and the roadside
+
+Source: `buzzard_run.gd` (`SKY_KEYS`, `sky_at`, `_light_the_cars`), `horde_deco.gd` (`RIDER_BEAM_*`), `chunk_builder.gd` (`_road_wear`, `_highway_dressing`, `_tollbooth`, `_jackknife`), `levels/chase/highway_deco.gd`.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| The sky | golden (1.0, 0.93, 0.82) → sunset @0.35 (0.92, 0.72, 0.6) → dusk @0.65 (0.66, 0.58, 0.72) → night @0.85 (0.48, 0.52, 0.74) | `SKY_KEYS` | a CanvasModulate in `night_arena` driven from the clock; night is the Coliseum's brightness so obstacles still read; the finale is dark |
+| Headlights | length 460 · spread 56° · energy 0.7 · viewer (0.85, 0.9, 1.0) · others (1.0, 0.9, 0.7) | `BEAM_*` | GFG's lazy group-scan attach on every `vehicles` node (meta `chase_beam`) |
+| Rider beams | length 260 · energy 0.45 | horde_deco `RIDER_BEAM_*` | every painted rider in the dust burns one; reads once the sky goes |
+| Lit landmarks | truckstop neon + 2 lamp pools · toll plaza 2 pools · burning wrecks glow 110px | chunk_builder | `LightKit.make_light` |
+| Signs | one per `SIGN_EVERY` 1400px, sides alternate, nudged ≥120px off seams · board 210×70, type 24/19 | `_highway_dressing`, `SIGN_COPY` | never on a cutoff's trail side or a river |
+| Billboards | one per `BILLBOARD_EVERY` 4300px · board 340×130, type 34/28/15 · on the verge | `BILLBOARD_COPY`, `BOARD_TINTS` | the truckstop's is always MERCY DINER (`DINER_SEED`) |
+| Life | vultures over convoy / log_run / jackknife (and 40% of ≥3-prop chunks) · a wreck in three burns · a tumbleweed on 30% of plain straights at 42 px/s | `_highway_dressing`, `_place_props` | paint and FX only — nothing collides |
+| Road wear | 3-5 marks per chunk (+3 on busy kinds): skids, tar patches, cracks, stains, splats | `_road_wear` | z −1 over the marks |
+| Toll plaza | 4 `booth` blocks 44×90 / 60 HP · 3 `barrier` arms / 25 HP · weight 0.7 · `NO_REPEAT` | `tollbooth` def, `_tollbooth` | pick a gate |
+| Jackknife | `trailer` block 230×72 / 90 HP angled 0.5-0.75 rad across two lanes · cab derelict · weight 0.7 · `NO_REPEAT` | `jackknife` def, `_jackknife` | the open lane is the line; a nitro bottle past it |
+
 ### They flinch (ordnance in the dust)
 
 Source: `horde_wall.flinch` / `pace_mult`, `horde_deco.flinch`, `buzzard_run._physics_process` (the fuse), `mine.blow()`.
