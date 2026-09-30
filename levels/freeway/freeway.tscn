@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -54,10 +54,16 @@ shader_parameter/scale = 14.0
 shader_parameter/shimmer = 1.6
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
-size = Vector2(2256, 40)
+size = Vector2(4176, 40)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
 size = Vector2(40, 5456)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lowland"]
+size = Vector2(1920, 5376)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_temp_east"]
+size = Vector2(24, 5376)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_sh_side"]
 size = Vector2(256, 5376)
@@ -85,11 +91,12 @@ script = ExtResource("1_lvl")
 
 [node name="Asphalt" type="Polygon2D" parent="."]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-1088, -2688, 1088, -2688, 1088, 2688, -1088, 2688)
+polygon = PackedVector2Array(-1088, -2688, 3008, -2688, 3008, 2688, -1088, 2688)
 
 [node name="GridFloor" type="Node2D" parent="."]
+position = Vector2(960, 0)
 script = ExtResource("1_grid")
-extent = Vector2(1600, 3200)
+extent = Vector2(2048, 2688)
 
 [node name="RoadMarks" type="Node2D" parent="."]
 
@@ -242,6 +249,26 @@ shape = SubResource("RectangleShape2D_sq384")
 position = Vector2(0, 0)
 floor_index = 2
 size = Vector2(2176, 5376)
+
+[node name="FZLowland" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(2048, 0)
+floor_index = 1
+size = Vector2(1920, 5376)
+
+[node name="LowlandDirt" type="Area2D" parent="."]
+position = Vector2(2048, 0)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"dirt"
+
+[node name="Vis" type="Polygon2D" parent="LowlandDirt"]
+material = SubResource("SM_dirt")
+color = Color(0.5, 0.36, 0.2, 0.5)
+polygon = PackedVector2Array(-960, -2688, 960, -2688, 960, 2688, -960, 2688)
+
+[node name="Col" type="CollisionShape2D" parent="LowlandDirt"]
+shape = SubResource("RectangleShape2D_lowland")
 
 [node name="JumpW" type="Area2D" parent="."]
 position = Vector2(-640, -960)
@@ -421,21 +448,21 @@ collision_layer = 2
 collision_mask = 0
 
 [node name="TopVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, -2708)
+position = Vector2(960, -2708)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-1128, -20, 1128, -20, 1128, 20, -1128, 20)
+polygon = PackedVector2Array(-2088, -20, 2088, -20, 2088, 20, -2088, 20)
 
 [node name="TopCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, -2708)
+position = Vector2(960, -2708)
 shape = SubResource("RectangleShape2D_wall_h")
 
 [node name="BottomVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(0, 2708)
+position = Vector2(960, 2708)
 color = Color(0.4, 0.4, 0.46, 1)
-polygon = PackedVector2Array(-1128, -20, 1128, -20, 1128, 20, -1128, 20)
+polygon = PackedVector2Array(-2088, -20, 2088, -20, 2088, 20, -2088, 20)
 
 [node name="BottomCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(0, 2708)
+position = Vector2(960, 2708)
 shape = SubResource("RectangleShape2D_wall_h")
 
 [node name="LeftVis" type="Polygon2D" parent="Boundary"]
@@ -448,13 +475,25 @@ position = Vector2(-1108, 0)
 shape = SubResource("RectangleShape2D_wall_v")
 
 [node name="RightVis" type="Polygon2D" parent="Boundary"]
-position = Vector2(1108, 0)
+position = Vector2(3028, 0)
 color = Color(0.4, 0.4, 0.46, 1)
 polygon = PackedVector2Array(-20, -2728, 20, -2728, 20, 2728, -20, 2728)
 
 [node name="RightCol" type="CollisionShape2D" parent="Boundary"]
-position = Vector2(1108, 0)
+position = Vector2(3028, 0)
 shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="TempEastWall" type="StaticBody2D" parent="."]
+position = Vector2(1100, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="TempEastWall"]
+color = Color(0.4, 0.4, 0.46, 1)
+polygon = PackedVector2Array(-12, -2688, 12, -2688, 12, 2688, -12, 2688)
+
+[node name="Col" type="CollisionShape2D" parent="TempEastWall"]
+shape = SubResource("RectangleShape2D_temp_east")
 
 [node name="AmmoStandard1" parent="." instance=ExtResource("8_ammo")]
 position = Vector2(-640, -1856)

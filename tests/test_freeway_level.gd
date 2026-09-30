@@ -12,6 +12,15 @@ const SIDES := [&"north", &"east", &"south", &"west"]
 
 var t
 
+class FullThrottleDriver:
+	extends Driver
+	func get_intent(_vehicle, _delta: float) -> Dictionary:
+		return {
+			"throttle": 1.0, "steer": 0.0, "fire_mg": false,
+			"fire_selected": false, "weapon_prev": false, "weapon_next": false,
+			"handbrake": false,
+		}
+
 func _init(runner) -> void:
 	t = runner
 
@@ -19,6 +28,18 @@ func _walk(node: Node, out: Array) -> void:
 	out.append(node)
 	for child in node.get_children():
 		_walk(child, out)
+
+func _collision_rect(owner: Node2D, collision: CollisionShape2D) -> Rect2:
+	var rectangle := collision.shape as RectangleShape2D
+	if rectangle == null:
+		return Rect2()
+	return Rect2(owner.position + collision.position - rectangle.size * 0.5, rectangle.size)
+
+func _remove_other_cars(freeway: Node) -> void:
+	for child in freeway.get_children():
+		if child is Vehicle and child.name != &"Vehicle":
+			freeway.remove_child(child)
+			child.free()
 
 func _toward_vector(toward: StringName) -> Vector2:
 	match toward:
@@ -169,7 +190,7 @@ func test_freeway_floor_stamps_and_counts() -> void:
 	t.check(counts.pickups == 8, "freeway: 8 ammo pickups (got %d)" % counts.pickups)
 	t.check(counts.pads == 2, "freeway: 2 jump pads (got %d)" % counts.pads)
 	t.check(counts.cars == 7, "freeway: 7 cars (got %d)" % counts.cars)
-	t.check(floor_zones == 1, "freeway: only the floor-2 plate is live this card")
+	t.check(floor_zones == 2, "freeway: the plate and lowland are the only live floor zones")
 	freeway.free()
 
 func test_freeway_scene_plate_matches_plan() -> void:
@@ -184,12 +205,165 @@ func test_freeway_scene_plate_matches_plan() -> void:
 			"freeway: FZPlate rectangle matches the plan")
 	freeway.free()
 
+func test_freeway_arena_shell_matches_plan() -> void:
+	var freeway := FreewayScene.instantiate()
+	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
+	var grid := freeway.get_node(^"GridFloor") as GridFloor
+	var arena := Plan.ARENA_RECT
+	var corners := [
+		arena.position,
+		Vector2(arena.end.x, arena.position.y),
+		arena.end,
+		Vector2(arena.position.x, arena.end.y),
+	]
+	t.check(asphalt.polygon.size() == 4, "freeway: asphalt is one arena rectangle")
+	for corner in corners:
+		t.check(corner in asphalt.polygon, "freeway: asphalt reaches arena corner %s" % corner)
+	t.check(grid.position == arena.get_center(), "freeway: grid is centred on the arena")
+	t.check(grid.extent == arena.size * 0.5, "freeway: grid lines reach every arena edge")
+	freeway.free()
+
+func test_freeway_boundary_encloses_arena_only() -> void:
+	var freeway := FreewayScene.instantiate()
+	var boundary := freeway.get_node(^"Boundary") as StaticBody2D
+	var arena := Plan.ARENA_RECT
+	var expected := {
+		&"TopCol": Rect2(arena.position - Vector2(40, 40),
+			Vector2(arena.size.x + 80, 40)),
+		&"BottomCol": Rect2(Vector2(arena.position.x - 40, arena.end.y),
+			Vector2(arena.size.x + 80, 40)),
+		&"LeftCol": Rect2(arena.position - Vector2(40, 40),
+			Vector2(40, arena.size.y + 80)),
+		&"RightCol": Rect2(Vector2(arena.end.x, arena.position.y - 40),
+			Vector2(40, arena.size.y + 80)),
+	}
+	var collisions: Array[CollisionShape2D] = []
+	for child in boundary.get_children():
+		if child is CollisionShape2D:
+			collisions.append(child)
+	t.check(collisions.size() == expected.size(),
+		"freeway: boundary has exactly four collision rectangles")
+	for collision in collisions:
+		var rectangle := collision.shape as RectangleShape2D
+		t.check(expected.has(collision.name),
+			"freeway: boundary collision %s is one of the four sides" % collision.name)
+		t.check(rectangle != null, "freeway: %s uses a rectangle" % collision.name)
+		if rectangle and expected.has(collision.name):
+			t.check(_collision_rect(boundary, collision) == expected[collision.name],
+				"freeway: %s encloses the arena with a 20px stand-off" % collision.name)
+	freeway.free()
+
+func test_freeway_lowland_matches_plan() -> void:
+	var freeway := FreewayScene.instantiate()
+	var lowland_plan: Dictionary = Plan.FLOOR_ZONES[&"FZLowland"]
+	var expected: Rect2 = lowland_plan["rect"]
+	var floor_zone := freeway.get_node_or_null(^"FZLowland") as FloorZone
+	var dirt := freeway.get_node_or_null(^"LowlandDirt") as Area2D
+	t.check(floor_zone != null, "freeway: FZLowland exists")
+	if floor_zone:
+		var actual := Rect2(floor_zone.position - floor_zone.size * 0.5, floor_zone.size)
+		t.check(floor_zone.floor_index == int(lowland_plan["floor"]),
+			"freeway: FZLowland floor matches the plan")
+		t.check(actual == expected, "freeway: FZLowland rectangle matches the plan")
+	t.check(dirt != null, "freeway: LowlandDirt exists")
+	if dirt:
+		var collision := dirt.get_node_or_null(^"Col") as CollisionShape2D
+		var vis := dirt.get_node_or_null(^"Vis") as Polygon2D
+		t.check(dirt.collision_layer == 128 and dirt.collision_mask == 0,
+			"freeway: LowlandDirt is terrain-only collision")
+		t.check(dirt.get("terrain_type") == &"dirt", "freeway: lowland handles as dirt")
+		t.check(collision != null, "freeway: LowlandDirt has a collision rectangle")
+		if collision:
+			t.check(_collision_rect(dirt, collision) == expected,
+				"freeway: LowlandDirt collision covers the lowland")
+		t.check(vis != null, "freeway: LowlandDirt has visible paint")
+		if vis:
+			var shoulder_vis := freeway.get_node(^"ShoulderN/Vis") as Polygon2D
+			t.check(vis.material == shoulder_vis.material,
+				"freeway: LowlandDirt uses the shared dirt paint")
+	freeway.free()
+
+func test_freeway_temporary_east_wall_matches_plate_edge() -> void:
+	var freeway := FreewayScene.instantiate()
+	var wall := freeway.get_node_or_null(^"TempEastWall") as StaticBody2D
+	var arena := Plan.ARENA_RECT
+	var plate := Plan.rect_of(Plan.FLOOR_ZONES, &"FZPlate")
+	var expected := Rect2(Vector2(plate.end.x, arena.position.y),
+		Vector2(24, arena.size.y))
+	t.check(wall != null, "freeway: TempEastWall exists")
+	if wall:
+		var collisions: Array[CollisionShape2D] = []
+		for child in wall.get_children():
+			if child is CollisionShape2D:
+				collisions.append(child)
+		t.check(wall.collision_layer == 2 and wall.collision_mask == 0,
+			"freeway: TempEastWall is on the wall layer only")
+		t.check(collisions.size() == 1, "freeway: TempEastWall has one collision rectangle")
+		if collisions.size() == 1:
+			t.check(_collision_rect(wall, collisions[0]) == expected,
+				"freeway: TempEastWall spans the plate edge for the full arena height")
+		var vis := wall.get_node_or_null(^"Vis") as Polygon2D
+		t.check(vis != null, "freeway: TempEastWall is visible")
+		if vis:
+			var boundary_vis := freeway.get_node(^"Boundary/RightVis") as Polygon2D
+			t.check(vis.color == boundary_vis.color,
+				"freeway: TempEastWall uses the boundary grey")
+	freeway.free()
+
+func test_freeway_campaign_size_matches_plan() -> void:
+	var flow: Node = t.root.get_node(^"/root/SceneFlow")
+	var found := false
+	for profile_v in flow.CAMPAIGN:
+		var profile: Dictionary = profile_v
+		if String(profile.scene) != "res://levels/freeway/freeway.tscn":
+			continue
+		found = true
+		t.check(profile.arena_size == Plan.ARENA_RECT.size,
+			"freeway: campaign arena size matches the plan")
+	t.check(found, "freeway: campaign profile exists")
+
+func test_freeway_temporary_wall_holds_live_car() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	for i in 4:
+		await t.physics_frame
+	player.global_position = Vector2(1000, 1200)
+	player.heading = 0.0
+	player.velocity = Vector2.ZERO
+	player.set_driver(FullThrottleDriver.new())
+	var max_x := player.global_position.x
+	for i in 120:
+		await t.physics_frame
+		max_x = maxf(max_x, player.global_position.x)
+	var plate := Plan.rect_of(Plan.FLOOR_ZONES, &"FZPlate")
+	t.check(max_x <= plate.end.x,
+		"freeway: TempEastWall holds an eastbound car on the plate (max x %.1f)" % max_x)
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+
+func test_freeway_lowland_sets_live_car_floor() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	player.position = Vector2(2000, 0)
+	player.set_driver(Driver.new())
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	for i in 6:
+		await t.physics_frame
+	t.check(Floors.floor_of(player) == 1,
+		"freeway: a car spawned in the lowland adopts floor 1")
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+
 func test_freeway_floor_two_car_still_rams_and_shoots_rails() -> void:
 	var freeway := FreewayScene.instantiate()
-	for child in freeway.get_children():
-		if child is Vehicle and child.name != &"Vehicle":
-			freeway.remove_child(child)
-			child.free()
+	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var ram_rail := freeway.get_node(^"RailW1") as StaticBody2D
 	var shot_rail := freeway.get_node(^"RailW4") as StaticBody2D

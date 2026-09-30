@@ -51,7 +51,7 @@ const CAMPAIGN := [
 		"arena_size": Vector2(3712, 3584), "target_cars": 5, "stations": 1, "mp_ready": true},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight",
 		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
-		"arena_size": Vector2(2176, 5376), "target_cars": 7, "stations": 3, "mp_ready": true},
+		"arena_size": Vector2(4096, 5376), "target_cars": 7, "stations": 3, "mp_ready": true},
 	{"scene": "res://levels/depot/depot.tscn", "name": "Lackey's Arena",
 		"mode": &"arena", "size_class": &"medium", "encounter": &"miniboss",
 		"arena_size": Vector2(3072, 3072), "target_cars": 4, "stations": 1, "mp_ready": false,
