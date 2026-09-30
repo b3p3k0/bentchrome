@@ -56,6 +56,17 @@ const WALLS := {
 
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
 
+const RAIL_THICKNESS := 12.0
+const RAIL_INSET := 8.0
+const RAIL_MAX_LENGTH := 256.0
+const RAIL_BREAK_CLEARANCE := 16.0
+
+static var RAILS: Array[Rect2] = _build_rails(
+	FLOOR_ZONES[&"FZDeck"]["rect"],
+	RAMPS[&"RampW"]["rect"],
+	RAMPS[&"RampA"]["rect"],
+)
+
 static func rect_of(table: Dictionary, name: StringName) -> Rect2:
 	return table[name]["rect"]
 
@@ -79,6 +90,33 @@ static func plate_east_edge_covered(y: float) -> bool:
 		if _has_point_inclusive(rect_of(FLOOR_ZONES, shelf_name), point):
 			return true
 	return false
+
+static func _build_rails(deck: Rect2, west_opening: Rect2,
+		east_opening: Rect2) -> Array[Rect2]:
+	var rails: Array[Rect2] = []
+	var east_end := east_opening.position.x - RAIL_BREAK_CLEARANCE
+	_append_rail_run(rails, deck.position.x, east_end,
+		deck.position.y + RAIL_INSET)
+	_append_rail_run(rails, west_opening.end.x, east_end,
+		deck.end.y - RAIL_INSET)
+	return rails
+
+static func _append_rail_run(rails: Array[Rect2], start: float, end: float,
+		center_y: float) -> void:
+	var length := end - start
+	if length <= 0.0:
+		return
+	var segment_count := ceili(
+		(length + RAIL_BREAK_CLEARANCE) /
+		(RAIL_MAX_LENGTH + RAIL_BREAK_CLEARANCE)
+	)
+	var segment_length := (
+		length - RAIL_BREAK_CLEARANCE * (segment_count - 1)
+	) / segment_count
+	for segment_index in segment_count:
+		var x := start + segment_index * (segment_length + RAIL_BREAK_CLEARANCE)
+		rails.append(Rect2(Vector2(x, center_y - RAIL_THICKNESS * 0.5),
+			Vector2(segment_length, RAIL_THICKNESS)))
 
 static func _has_point_inclusive(rect: Rect2, point: Vector2) -> bool:
 	return point.x >= rect.position.x and point.x <= rect.end.x \
