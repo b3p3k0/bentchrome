@@ -38,6 +38,10 @@ var _heals := 0
 var _max_pack := 0
 var _by_source := {}   # "role (kind)" -> [damage, hits]
 var _last_stamp := 0
+var _finale_air := 0.0     # the show: the car's highest point over the river
+var _finale_land := INF    # chunk-local d where it came down
+var _finale_over := false  # it was airborne and is no longer
+var _jumpers := 0
 var _sorties := {}     # bird instance id -> {role, best dy per stage}: did the choreography LAND?
 
 func _init() -> void:
@@ -81,7 +85,9 @@ func _tick() -> void:
 	_frame += 1
 	var player = _scene.get_node(^"Vehicle")
 	var over: bool = _scene.is_jacked() or _scene._won
-	if not over:
+	if _scene.has_method(&"finale_running") and _scene.finale_running():
+		_watch_finale(player)
+	elif not over:
 		_watch(player)
 	if _verbose and _frame % 900 == 0 and not over:
 		print("[t=%3ds] gap %3d  pace %.2f  speed %3d  hp %3d  kills %2d  pack %d  fuel %3d  took %.1f hp/s" % [
@@ -93,9 +99,22 @@ func _tick() -> void:
 		_report(player)
 		paused = false
 		quit(0)
-	elif _frame > 60 * 150:
+	elif _frame > 60 * 170:
 		print("[run] TIMEOUT  car %s  clock %.1f" % [_car, _scene.clock])
 		quit(0)
+
+## The bridge is out: how high the car flew, where it came down, and how
+## many birds went into the river (a finale that lands short is a bug).
+func _watch_finale(player) -> void:
+	var fin = _scene._finale
+	if fin == null:
+		return
+	_jumpers = maxi(_jumpers, fin.jumpers.size())
+	var h: float = float(player.get("height"))
+	if h > _finale_air:
+		_finale_air = h
+	elif _finale_air > 0.0 and h == 0.0 and _finale_land == INF and not fin.entry.is_empty():
+		_finale_land = -player.global_position.y - float(fin.entry["start_d"])
 
 func _watch(player) -> void:
 	var gap: float = _scene.wall_gap()
@@ -154,6 +173,16 @@ func _watch(player) -> void:
 
 func _report(player) -> void:
 	var verdict := "WON" if _scene._won else "JACKED(%s)" % _scene.jack_cause
+	if _scene._won and _scene._finale != null:
+		var fin = _scene._finale
+		var r: Dictionary = fin.entry["def"]["river"] if not fin.entry.is_empty() else {}
+		var sunk := 0
+		for j in fin.jumpers:
+			if not is_instance_valid(j):
+				sunk += 1
+		print("[finale] air %d  landed d %s (channel to %s, shallows to %s)  jumpers %d  gone %d  show %.1fs" % [
+			int(_finale_air), str(int(_finale_land)) if _finale_land != INF else "-",
+			str(r.get("deep_to", "?")), str(r.get("shallow_to", "?")), _jumpers, sunk, _scene.clock - _scene.RUN_SECONDS])
 	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d" % [
 		verdict, _car, _scene.clock, int(_min_gap), _danger_frames / 60.0, _slowdowns,
 		_boost_frames / 60.0, int(maxf(_hp0 - _taken, 0.0)) if _tank else int(player.get_hp()),

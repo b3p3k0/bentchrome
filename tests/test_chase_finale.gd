@@ -187,3 +187,100 @@ func test_player_jump_clears_the_river() -> void:
 	t.check(landing >= kill_to + 150.0, "numbers: the car lands %dpx past the channel's kill rect" % int(landing - kill_to))
 	t.check(landing >= float(r["shallow_to"]), "numbers: and past the far shallows, on the road")
 	t.check(landing < float(ChunkDefs.DEFS[&"bridge_out"]["len"]), "numbers: and still inside the river mile")
+
+## The show itself, booted: at 0:00 the run doesn't end — the road is
+## rewritten with the river a frame's height ahead, the car is locked in and
+## untouchable, the pack is told where the bank is, two bikes are cast to
+## jump — then, compressed: the car flies the exact arc, lands on the far
+## road unhurt while the scene camera holds, both bikes go into the river for
+## free, and the card comes a beat after the last splash.
+func test_the_bridge_is_out() -> void:
+	const FinaleDirector := preload("res://levels/chase/finale_director.gd")
+	const Economy := preload("res://game/economy.gd")
+	var gs = t.root.get_node_or_null(^"/root/GameState")
+	gs.lives = 3
+	gs.devgod = false
+	gs.game_mode = &"campaign"
+	var scene = load("res://levels/chase/buzzard_run.tscn").instantiate()
+	scene.auto_advance = false
+	t.root.add_child(scene)
+	t.current_scene = scene
+	scene.set_process(false)
+	for i in 3:
+		await t.physics_frame
+	var player = scene.get_node(^"Vehicle")
+	var wall = scene.get_node(^"HordeWall")
+	var director = scene.get_node(^"ChaseDirector")
+	var streamer = scene.get_node(^"CourseStreamer")
+	var pcam: Camera2D = player.get_node(^"Camera2D")
+	var d0: float = -player.global_position.y
+	Economy.enabled = true
+	Economy.funds = 1000
+	var beat_was: float = FinaleDirector.FINALE_BEAT
+	FinaleDirector.FINALE_BEAT = 0.3
+	scene.clock = scene.RUN_SECONDS
+	scene._process(0.016)
+	t.check(scene.finale_running() and not scene._won, "finale: at 0:00 the show starts instead of the win")
+	var fin = scene._finale
+	t.check(fin != null and fin.entry["name"] == &"bridge_out", "finale: the river mile is on the plan")
+	var cut: int = scene.course.plan.find(fin.entry)
+	t.check(float(fin.entry["start_d"]) >= d0 + FinaleDirector.FINALE_LEAD, "finale: spliced past the top of the frame")
+	for i in streamer._live:
+		t.check(i < cut or i >= cut, "finale: live keys are sane")
+	t.check(scene.course.plan.size() == cut + 4, "finale: the river and three straights of run-out end the plan")
+	var driver = player.get_driver()
+	t.check(driver != null and driver.get_script() == FinaleDirector.FinaleDriver, "finale: the car is locked in")
+	t.check(player.get_node(^"Health").god and not scene.catch_enabled, "finale: nothing can hurt or catch it now")
+	t.check(is_equal_approx(wall.halt_y, ChunkDefs.river_y(fin.entry, "bank")), "finale: the pack knows where the bank is")
+	t.check(director.frozen and not director.kill_hooks, "finale: the director is in show mode")
+	t.check(fin.jumpers.size() == FinaleDirector.JUMPERS, "finale: %d bikes are cast to jump" % FinaleDirector.JUMPERS)
+	var dare: float = scene.daredevil
+	scene._process(0.016)
+	t.check(is_equal_approx(scene.daredevil, dare), "finale: the daredevil bonus is frozen at the line")
+	# Compress the road: the car a hundred px short of the bank at speed, the
+	# jumpers on its tail — and let the show run.
+	var bank_y: float = ChunkDefs.river_y(fin.entry, "bank")
+	player.global_position = Vector2(scene.course.sample(-bank_y)["x"], bank_y + 100.0)
+	player.velocity = Vector2(0, -FinaleDirector.FinaleDriver.LAUNCH_SPEED)
+	for j in fin.jumpers:
+		j.global_position = player.global_position + Vector2(0, 150.0)
+		j.velocity = player.velocity
+	wall.front_y = player.global_position.y + 300.0   # on the bumper, as it would be
+	var hp_before: float = player.get_hp()
+	var flew := false
+	var landed := false
+	var cam_held := false
+	var frames := 0
+	while frames < 420 and not scene._won:
+		await t.physics_frame
+		frames += 1
+		if player.height > 0.0:
+			flew = true
+			if is_equal_approx(player.velocity.y, -FinaleDirector.FinaleDriver.LAUNCH_SPEED) \
+					and t.root.get_viewport().get_camera_2d() != pcam:
+				cam_held = true
+		elif flew and not landed:
+			landed = true
+	t.check(flew, "finale: the car flew")
+	t.check(cam_held, "finale: airborne at exactly the launch speed with the scene camera holding")
+	t.check(landed and -player.global_position.y - float(fin.entry["start_d"]) >= float(fin.entry["def"]["river"]["shallow_to"]),
+		"finale: it came down on the far road (d %d)" % int(-player.global_position.y - float(fin.entry["start_d"])))
+	t.check(is_equal_approx(player.get_hp(), hp_before) and player.is_physics_processing(), "finale: unhurt, still driving")
+	var gone := 0
+	for j in fin.jumpers:
+		if not is_instance_valid(j):
+			gone += 1
+	t.check(gone == FinaleDirector.JUMPERS, "finale: both bikes went into the river (%d)" % gone)
+	t.check(scene.kills == 0 and Economy.funds == 1000 + scene.PURSE, "finale: for free — and the purse is paid at the card")
+	t.check(scene._won and scene._end_screen.visible and t.paused, "finale: the card comes after the last splash (%d frames)" % frames)
+	t.check(wall.halted and wall.front_y >= wall.halt_y - 0.01, "finale: the pack pulled up at the bank")
+	FinaleDirector.FINALE_BEAT = beat_was
+	t.paused = false
+	Economy.enabled = false
+	Economy.funds = 0
+	gs.lives = 3
+	gs.level_index = 0
+	gs.carry_ammo.clear()
+	t.current_scene = null
+	t.root.remove_child(scene)
+	scene.free()

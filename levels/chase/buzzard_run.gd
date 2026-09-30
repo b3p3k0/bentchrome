@@ -23,6 +23,7 @@ const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const Robbery := preload("res://game/robbery.gd")
 const RobberyScreen := preload("res://ui/robbery_screen.gd")
 const GarageItems := preload("res://ui/garage/garage_catalog.gd")
+const FinaleScript := preload("res://levels/chase/finale_director.gd")
 
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
@@ -47,6 +48,9 @@ var catch_enabled := true
 ## Tests stop short of the scene change (nothing headless may reach
 ## SceneFlow.goto_scene); the campaign index still advances.
 var auto_advance := true
+## The clock-out plays the bridge-is-out show before the card (finale_director);
+## suites about "the line pays" turn it off and get the old instant win.
+var finale_enabled := true
 var jack_cause: StringName = &""
 ## The wheel's dice. Tests seed it; play randomizes it at boot.
 var robbery_rng := RandomNumberGenerator.new()
@@ -57,6 +61,7 @@ var _director = null
 var _keeper = null
 var _end_screen = null
 var _robbery = null
+var _finale = null
 var _won := false
 var _jacked := false
 
@@ -119,13 +124,51 @@ func _process(delta: float) -> void:
 	if cause != &"":
 		_get_jacked(cause)
 	elif clock >= RUN_SECONDS and _end_screen != null:
-		_won = true
-		if _director:
-			_director.stand_down()
-		_pay_out()
-		_end_screen._show(true)
+		if finale_enabled:
+			if _finale == null:
+				_start_finale()
+		else:
+			_finish_run()
 	elif in_danger():
 		daredevil = minf(daredevil + DAREDEVIL_RATE * delta, float(DAREDEVIL_CAP))
+
+## The line is crossed: the bridge-is-out show (finale_director) — nothing
+## can catch or hurt the car from here, the pack is told where the bank is,
+## and the card comes after the last splash.
+func _start_finale() -> void:
+	catch_enabled = false
+	if _keeper:
+		_keeper.enabled = false   # the finale driver owns the velocity
+	var health = _player.get_node_or_null(^"Health")
+	if health != null:
+		health.god = true
+	if _player.has_method(&"get_controller") and _player.get_controller() != null:
+		_player.get_controller().boost_fuel = 100.0   # the flame stays lit to the brink
+	_finale = FinaleScript.new()
+	_finale.name = "Finale"
+	_finale.host = self
+	_finale.player = _player
+	_finale.course = course
+	_finale.wall = _wall
+	_finale.director = _director
+	_finale.streamer = _streamer
+	_finale.finished.connect(_finish_run, CONNECT_ONE_SHOT)
+	add_child(_finale)
+	_finale.start()
+
+## The win proper: the purse, and the card.
+func _finish_run() -> void:
+	if _won or _jacked:
+		return
+	_won = true
+	if _director:
+		_director.stand_down()
+	_pay_out()
+	if _end_screen != null:
+		_end_screen._show(true)
+
+func finale_running() -> bool:
+	return _finale != null and _finale.running
 
 ## &"wrecked" (0 HP), &"caught" (the pack has the car), or &"" (still running).
 func loss_cause() -> StringName:

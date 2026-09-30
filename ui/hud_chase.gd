@@ -75,9 +75,13 @@ func _update_opponents() -> void:
 	if host == null:
 		return
 	var left: float = host.time_left()
-	_clock_label.text = "%d:%02d" % [int(left) / 60, int(left) % 60]
-	if left <= 20.0:
-		_clock_label.modulate = Color(0.9, 0.25, 0.2) if int(left * 2.0) % 2 == 0 else SELECTED
+	if host.has_method(&"finale_running") and host.finale_running():
+		_clock_label.text = "BRIDGE OUT"
+		_clock_label.modulate = SELECTED
+	else:
+		_clock_label.text = "%d:%02d" % [int(left) / 60, int(left) % 60]
+		if left <= 20.0:
+			_clock_label.modulate = Color(0.9, 0.25, 0.2) if int(left * 2.0) % 2 == 0 else SELECTED
 	_wrecked_label.text = "WRECKED %d" % host.kills
 	_pack_label.text = "PACK %d" % get_tree().get_nodes_in_group(&"enemies").size()
 	_wall_bar.value = host.pressure() * 100.0

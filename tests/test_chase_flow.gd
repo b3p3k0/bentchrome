@@ -81,6 +81,7 @@ func test_rolling_start_and_the_clock_win() -> void:
 		"chase: the player's bay keeps its 2s lock — no full-auto missiles")
 	scene._process(0.016)
 	t.check(scene.loss_cause() == &"" and not scene.is_jacked(), "chase: a clean run is still running")
+	scene.finale_enabled = false   # the instant win: the show is test_chase_finale's
 	scene.clock = scene.RUN_SECONDS - 0.01
 	scene._process(0.016)
 	t.check(scene._won, "chase: the clock calls the win")
@@ -196,6 +197,7 @@ func test_daredevil_accrues_on_the_bumper_and_pays_at_the_line() -> void:
 	t.check(Economy.funds == 1000, "dare: nothing is paid until the line")
 	t.check(WallScript.DANGER_GAP > WallScript.CATCH_MARGIN and WallScript.DANGER_GAP < WallScript.LEASH_GAP,
 		"dare: the danger zone is never where clean driving rests — it has to be dared")
+	scene.finale_enabled = false
 	scene.clock = scene.RUN_SECONDS
 	scene._process(0.016)
 	t.check(scene._won, "dare: made it")
@@ -222,6 +224,7 @@ func test_no_purse_for_the_robbed_or_off_the_tour() -> void:
 	var off = await _boot()
 	Economy.enabled = false  # a non-campaign lane: the wallet valve is shut
 	Economy.funds = 1000
+	off.finale_enabled = false
 	off.clock = off.RUN_SECONDS
 	off._process(0.016)
 	t.check(off._won and Economy.funds == 1000, "dare: off the tour the line pays nothing")

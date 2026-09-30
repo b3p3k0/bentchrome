@@ -52,7 +52,7 @@ for car in "${CARS[@]}"; do
   for ((i = 0; i < RUNS; i++)); do
     timeout 120 "$GODOT" --headless --fixed-fps 60 --path "$PROJECT_DIR" \
       -s res://tools/probes/chase_run.gd -- "--car=$car" "--skill=$SKILL" "${EXTRA[@]}" 2>&1 \
-      | grep -E '^\[(run|src|hit|sortie|t=)' | tee -a "$OUT"
+      | grep -E '^\[(run|src|hit|sortie|finale|t=)' | tee -a "$OUT"
   done
 done
 
