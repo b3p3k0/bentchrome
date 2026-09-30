@@ -242,6 +242,7 @@ position = Vector2(-640, -960)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
+floor_index = 2
 
 [node name="Vis" type="Polygon2D" parent="JumpW"]
 color = Color(0.9, 0.55, 0.15, 0.85)
@@ -255,6 +256,7 @@ position = Vector2(640, 960)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
+floor_index = 2
 
 [node name="Vis" type="Polygon2D" parent="JumpE"]
 color = Color(0.9, 0.55, 0.15, 0.85)
@@ -264,7 +266,7 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="PillarW" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(-512, 0)
 
@@ -276,7 +278,7 @@ polygon = PackedVector2Array(-64, -128, 64, -128, 64, 128, -64, 128)
 shape = SubResource("RectangleShape2D_pillar")
 
 [node name="PillarE" type="StaticBody2D" parent="."]
-collision_layer = 4
+collision_layer = 20
 script = ExtResource("12_deco")
 position = Vector2(512, 0)
 
@@ -292,96 +294,112 @@ position = Vector2(-464, -1856)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailW2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -1600)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailW3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -1344)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailW4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, -448)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailW5" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, 576)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailW6" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-464, 1728)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1856)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1600)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 1344)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, 448)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE5" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, -576)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="RailE6" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(464, -1728)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
 
 [node name="Debris1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-832, -2368)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"junk"
+floor_index = 2
 
 [node name="Debris2" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(832, -1088)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"junk"
+floor_index = 2
 
 [node name="Debris3" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-832, 1088)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"junk"
+floor_index = 2
 
 [node name="Debris4" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(640, 2368)
 size = Vector2(96, 96)
 max_hp = 60.0
 deco = &"junk"
+floor_index = 2
 
 [node name="HealthStation1" parent="." instance=ExtResource("10_heal")]
 position = Vector2(0, -2240)
@@ -472,90 +490,114 @@ amount = 1
 [node name="Brush1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-256, -1856)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(288, -1728)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush3" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-288, -768)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush4" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(224, -384)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush5" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-288, 448)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush6" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(288, 704)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush7" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-224, 1024)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush8" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-320, 1856)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush9" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-960, -1600)
 kind = &"brush"
+floor_index = 2
 
 [node name="Brush10" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(960, -320)
 kind = &"brush"
+floor_index = 2
 
 [node name="Cone1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-780, -2260)
 kind = &"cone"
+floor_index = 2
 
 [node name="Cone2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(870, -1180)
 kind = &"cone"
+floor_index = 2
 
 [node name="Cone3" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-780, 990)
 kind = &"cone"
+floor_index = 2
 
 [node name="Sign1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-870, -1900)
 kind = &"sign"
+floor_index = 2
 
 [node name="Sign2" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(870, 300)
 kind = &"sign"
+floor_index = 2
 
 [node name="Wreck1" parent="." instance=ExtResource("23_wreck")]
 position = Vector2(-960, -800)
 rotation = 0.2
+floor_index = 2
 
 [node name="Wreck2" parent="." instance=ExtResource("23_wreck")]
 position = Vector2(960, 1500)
 rotation = -0.15
+floor_index = 2
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 2304)
+start_floor = 2
 
 [node name="Enemy1" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-640, -2240)
+start_floor = 2
 
 [node name="Enemy2" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(640, -2240)
+start_floor = 2
 
 [node name="Enemy3" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-640, 0)
+start_floor = 2
 
 [node name="Enemy4" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(640, 0)
+start_floor = 2
 
 [node name="Enemy5" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(-640, 1408)
+start_floor = 2
 
 [node name="Enemy6" parent="." instance=ExtResource("6_enemy")]
 position = Vector2(896, 960)
+start_floor = 2
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]
