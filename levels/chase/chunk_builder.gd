@@ -60,6 +60,7 @@ static func build(entry: Dictionary) -> Node2D:
 		cx.append(_center_x(entry, d))
 		half.append(_half_w(entry, d))
 	_paint_road(root, ds, cx, half)
+	_road_wear(root, entry, ds, cx, half)
 	var shoulder: StringName = def.get("shoulder", &"grass")
 	_build_cutoff(root, entry)   # before the walls: its clearing paints UNDER the embankment
 	for side in [-1.0, 1.0]:
@@ -123,6 +124,74 @@ static func _paint_road(root: Node2D, ds: Array, cx: Array, half: Array) -> void
 	_add_marks(root, "CenterLine", center, &"dashed_yellow")
 	_add_marks(root, "EdgeL", edge_l, &"dashed_white")
 	_add_marks(root, "EdgeR", edge_r, &"dashed_white")
+
+## The road has been driven on: seeded skid marks (pairs, some veering for
+## the verge), tar patches over old holes, cracks, an oil stain, the odd
+## splat — pure paint at z -1 over the marks, never a collider. Every chunk
+## gets a little; junk and bad-road chunks get more.
+static func _road_wear(root: Node2D, entry: Dictionary, ds: Array, cx: Array, half: Array) -> void:
+	var def: Dictionary = entry["def"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 4242
+	var chunk_len: float = def["len"]
+	var busy: bool = def["kind"] in [&"bad_road", &"log_run", &"convoy", &"chicane", &"slalom"]
+	var count := rng.randi_range(3, 5) + (3 if busy else 0)
+	for i in count:
+		var d := rng.randf_range(80.0, chunk_len - 80.0)
+		var si := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+		var c: float = cx[si]
+		var h: float = half[si]
+		var x := c + rng.randf_range(-h + 60.0, h - 60.0)
+		match rng.randi() % 6:
+			0, 1:   # a skid: two dark streaks, sometimes veering
+				var length := rng.randf_range(90.0, 260.0)
+				var veer := rng.randf_range(-0.35, 0.35)
+				for lane in [-16.0, 16.0]:
+					var streak := Polygon2D.new()
+					var a := Vector2(x + lane, -d)
+					var b := a + Vector2(veer * length, -length)
+					var w := rng.randf_range(3.0, 5.0)
+					streak.polygon = PackedVector2Array([a + Vector2(-w, 0), a + Vector2(w, 0), b + Vector2(w * 0.6, 0), b + Vector2(-w * 0.6, 0)])
+					streak.color = Color(0.08, 0.08, 0.09, rng.randf_range(0.45, 0.7))
+					streak.z_index = -1
+					root.add_child(streak)
+			2:   # a tar patch: a darker blob of fresher asphalt
+				var patch := Polygon2D.new()
+				patch.polygon = _chunk_of_road(Vector2(x, -d), rng.randf_range(30.0, 60.0), 0.6, 7, rng)
+				patch.color = ASPHALT.darkened(0.25)
+				patch.z_index = -1
+				root.add_child(patch)
+			3:   # cracks: a short jagged run
+				var pts := PackedVector2Array()
+				var at := Vector2(x, -d)
+				for k in rng.randi_range(4, 7):
+					pts.append(at)
+					at += Vector2(rng.randf_range(-14.0, 14.0), -rng.randf_range(12.0, 30.0))
+				var crack := Line2D.new()
+				crack.points = pts
+				crack.width = 2.0
+				crack.default_color = Color(0.09, 0.09, 0.1, 0.8)
+				crack.z_index = -1
+				root.add_child(crack)
+			4:   # an old stain: oil that dried where something sat
+				var stain := Polygon2D.new()
+				stain.polygon = _chunk_of_road(Vector2(x, -d), rng.randf_range(14.0, 26.0), 0.7, 8, rng)
+				stain.color = Color(0.1, 0.09, 0.08, 0.6)
+				stain.z_index = -1
+				root.add_child(stain)
+			5:   # a splat: something didn't make it across
+				var splat := Polygon2D.new()
+				splat.polygon = _chunk_of_road(Vector2(x, -d), rng.randf_range(9.0, 16.0), 0.55, 9, rng)
+				splat.color = Color(0.42, 0.12, 0.1, 0.7)
+				splat.z_index = -1
+				root.add_child(splat)
+				var smear := Polygon2D.new()
+				smear.polygon = PackedVector2Array([
+					Vector2(x - 4, -d), Vector2(x + 4, -d), Vector2(x + 2, -d - rng.randf_range(20.0, 44.0)), Vector2(x - 2, -d - rng.randf_range(20.0, 44.0)),
+				])
+				smear.color = Color(0.42, 0.12, 0.1, 0.45)
+				smear.z_index = -1
+				root.add_child(smear)
 
 static func _add_marks(root: Node2D, mark_name: String, pts: PackedVector2Array, style: StringName) -> void:
 	var marks := Node2D.new()

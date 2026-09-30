@@ -295,10 +295,14 @@ func test_builder_set_pieces_and_flair() -> void:
 	convoy.free()
 	var plain: Node2D = Builder.build(_entry_for(&"straight"))
 	var flair := 0
+	var wear := 0
 	for child in plain.get_children():
 		if child is Polygon2D and child.z_index == 0:
 			flair += 1
+		if (child is Polygon2D or child is Line2D) and child.z_index == -1 and child.name.begins_with("@"):
+			wear += 1
 	t.check(flair >= 4, "builder: roadside flair streams every chunk (got %d)" % flair)
+	t.check(wear >= 3, "builder: the road has been driven on — skids, patches, cracks (got %d)" % wear)
 	plain.free()
 
 ## The cutoff's geometry: the road's S and the trail's legs are holdable at
