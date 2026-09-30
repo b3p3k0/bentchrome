@@ -25,6 +25,12 @@ const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 @export var projectile_tint := Color.WHITE  # modulates spawned shots (color-coded missiles)
 @export var pierces_cover := false      # spawned shots ignore the obstacle layer
 @export var cooldown_scale := 1.0       # >1 slows fire; AI mounts run at 3x
+## Forward-only lock (Route 666 authors this on the chase car): > 0 lets a
+## tracking shot lock only a target inside this half-angle of the LAUNCH
+## direction. The classic lock (0) takes the nearest car at any bearing —
+## and a missile can't home on anything behind its own nose, so a nearer car
+## on your tail turns the shot into a dumb rocket.
+@export var lock_cone_deg := 0.0
 
 @export_group("Heat")
 @export var heat_per_shot := 0.0   # 0 = no heat mechanic (secondaries)
@@ -192,7 +198,8 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node, wp: Dictiona
 	var shooter_floor := Floors.floor_of(shooter)
 	var tgt: Node2D = null
 	if tracking:
-		tgt = Targeting.nearest_other(origin, shooter, acq)
+		tgt = Targeting.nearest_in_cone(origin, direction, deg_to_rad(lock_cone_deg), shooter, acq) \
+			if lock_cone_deg > 0.0 else Targeting.nearest_other(origin, shooter, acq)
 	var target_floor := Floors.floor_of(tgt)
 	var pierces: bool = wp["pierces_cover"]
 	for i in pellet_count:

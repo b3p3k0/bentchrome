@@ -70,6 +70,51 @@ func test_mount_wave_scales_lock_and_turn() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+## The forward-only lock (Route 666): with a car on your tail NEARER than
+## the one in your sights, the classic lock takes the tail car — which the
+## missile can never home on — and the shot goes dumb. With a cone authored,
+## the lock is the car the missile was launched at.
+func test_mount_forward_lock_cone() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var mount = MountScript.new()
+	mount.projectile_scene = ProjectileScene
+	mount.turn_rate_deg = 100.0
+	mount.acquisition_radius = 700.0
+	mount.fire_rate = 100.0
+	container.add_child(mount)
+	var shooter := TrackShooter.new()
+	container.add_child(shooter)
+	var tail := _prey(Vector2(0, 150))     # in the dust, right behind
+	container.add_child(tail)
+	var mark := _prey(Vector2(40, -400))   # boxing you in, up the road
+	container.add_child(mark)
+	t.check(mount.try_fire(Vector2.ZERO, Vector2.UP, shooter), "lock: classic shot fires")
+	var classic := _last_projectile(container)
+	t.check(classic != null and classic.target == tail, "lock: the classic lock takes the nearest car, even one behind")
+	mount.lock_cone_deg = 70.0
+	mount.tick(0.02)
+	t.check(mount.try_fire(Vector2.ZERO, Vector2.UP, shooter), "lock: cone shot fires")
+	var aimed := _last_projectile(container)
+	t.check(aimed != null and aimed != classic and aimed.target == mark, "lock: with a cone, the lock is the car up the road")
+	mount.tick(0.02)
+	t.check(mount.try_fire(Vector2.ZERO, Vector2.DOWN, shooter), "lock: a rear launch fires")
+	var rear := _last_projectile(container)
+	t.check(rear != null and rear.target == tail, "lock: a rear missile's cone faces backward — it takes the tail car")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+	var chase_car = load("res://levels/chase/chase_player.tscn").instantiate()
+	t.check(chase_car.get_node(^"SecondaryMount").lock_cone_deg > 0.0
+		and chase_car.get_node(^"SecondaryMount").lock_cone_deg <= 90.0,
+		"lock: Route 666's car locks forward, inside the missile's own homing cone")
+	t.check(is_zero_approx(chase_car.get_node(^"MachineGunMount").lock_cone_deg), "lock: the MG never tracked anyway")
+	chase_car.free()
+	var arena_car = load("res://vehicles/vehicle.tscn").instantiate()
+	t.check(is_zero_approx(arena_car.get_node(^"SecondaryMount").lock_cone_deg), "lock: arena cars keep the classic lock")
+	arena_car.free()
+
 func _last_projectile(container: Node) -> Node:
 	var found: Node = null
 	for child in container.get_children():

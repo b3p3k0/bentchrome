@@ -14,6 +14,9 @@ smash_and_pass = true
 [node name="Driver" parent="."]
 script = ExtResource("2_drv")
 
+[node name="SecondaryMount" parent="."]
+lock_cone_deg = 70.0
+
 [node name="SpecialController" parent="."]
 dash_cone_deg = 24.0
 
