@@ -12,6 +12,21 @@ const Economy := preload("res://game/economy.gd")
 const Difficulty := preload("res://game/difficulty.gd")
 const UiStyle := preload("res://ui/ui_style.gd")
 const GarageScene := preload("res://ui/garage/garage.tscn")
+const GarageItems := preload("res://ui/garage/garage_catalog.gd")
+const Robbery := preload("res://game/robbery.gd")
+const ChaseRun := preload("res://levels/chase/buzzard_run.gd")
+
+## Route 666 in the sim: odds of beating the clock, and the run state the
+## robbery reads (the sim has no car on a road — a stocked bay stands in).
+const CHASE_SURVIVAL := 0.6
+const SIM_BAY := [1, 2, 1, 1, 0, 0, 0]
+
+## GameState's robbery-facing surface. owned_mods IS the sim's _owned array
+## (shared by reference), so a stolen part leaves the build for real.
+class SimRun:
+	var lives := 3
+	var owned_mods: Array = []
+	var carry_ammo: Array = []
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
@@ -29,6 +44,7 @@ var _cars: Array = []
 var _car_index := 0
 var _owned: Array = []
 var _stop := 0            # index into the campaign name list
+var _lives := 3           # only Route 666's BLOOD wedge spends these in the sim
 var _levels: Array = []
 var _fork_panel: Control
 var _receipt: RichTextLabel
@@ -86,8 +102,8 @@ func _run_level() -> void:
 	var is_chase := name.contains("Route 666")
 
 	if is_chase:
-		for i in randi_range(8, 14):
-			lines.append(["+%d" % Economy.award_kill(&"chase"), "KILL — buzzard"])
+		_run_chase(name, lines)
+		return
 	else:
 		for i in randi_range(4, 7):
 			lines.append(["+%d" % Economy.award_kill(&"mook"), "KILL — mook"])
@@ -110,6 +126,40 @@ func _run_level() -> void:
 	_misfortune(lines, &"station", "HEALTH STATION", Economy.PENALTY_STATION, 0.35)
 
 	_show_receipt(name, lines)
+
+## Route 666 has its own ledger: kills and roadside salvage, then EITHER the
+## purse and whatever was dared, OR the robbery wheel. No arena misfortunes —
+## nobody is destroyed, falls, or visits a station on the highway.
+func _run_chase(level_name: String, lines: Array) -> void:
+	for i in randi_range(6, 12):
+		lines.append(["+%d" % Economy.award_kill(&"chase"), "KILL — buzzard"])
+	for i in randi_range(3, 8):
+		var pick: Array = SMASH_POOL[randi_range(0, SMASH_POOL.size() - 1)]
+		var paid := Economy.award_salvage(pick[0])
+		if paid > 0:
+			lines.append(["+%d" % paid, "SALVAGE — %s (%d hp)" % [pick[1], int(pick[0])]])
+	if randf() < CHASE_SURVIVAL:
+		lines.append(["+%d" % Economy.award_flat(ChaseRun.PURSE), "PURSE — made it out"])
+		var dared := randi_range(0, ChaseRun.DAREDEVIL_CAP)
+		var seconds := float(dared) / ChaseRun.DAREDEVIL_RATE
+		lines.append(["+%d" % Economy.award_flat(dared),
+			"DAREDEVIL — %.0fs with the pack on the bumper" % seconds])
+	else:
+		var run := SimRun.new()
+		run.lives = _lives
+		run.owned_mods = _owned
+		run.carry_ammo = SIM_BAY.duplicate()
+		var items: Array = GarageItems.load_catalog()
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		var wheel: Array = Robbery.build_wheel(Robbery.state_of(run, items))
+		var landed: Dictionary = wheel[Robbery.spin(wheel, rng)]
+		var out: Dictionary = Robbery.apply(landed, run, items, rng)
+		_lives = run.lives
+		var amount := "-%d" % int(out["bolts"]) if int(out["bolts"]) > 0 else "-"
+		lines.append([amount, "JACKED on %s — %s (%s)" % [
+			String(Robbery.describe(landed)["label"]), out["headline"], out["detail"]]])
+	_show_receipt(level_name, lines)
 
 func _misfortune(lines: Array, kind: StringName, label: String, frac: float, chance: float) -> void:
 	var forced: bool = _toggles[kind].button_pressed
@@ -155,6 +205,7 @@ func _close_shop() -> void:
 	_refresh()
 
 func _reset_run() -> void:
+	_lives = 3
 	Economy.reset_run()
 	_owned.clear()
 	_stop = 0
