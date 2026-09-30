@@ -69,6 +69,33 @@ func test_fence_breach_starts_the_evacuation() -> void:
 		"marine one: the spool window closes into the climb")
 	_teardown(rig)
 
+func test_boarding_survives_a_figure_killed_mid_sprint() -> void:
+	var rig := _rig()
+	var marine: Node2D = rig.marine
+	(rig.fences[0] as StaticBody2D).collision_layer = 0
+	marine.tick(0.1)
+	t.check(marine.phase == MarineScript.Phase.SPOOLING and marine._figures.size() == 4,
+		"marine one: the breached fence sends the whole detail sprinting")
+	var victim: Node2D = marine._figures[0]
+	var survivors: Array = marine._figures.slice(1)
+	# Match an ambient actor's deferred death so the stored reference is truly stale.
+	victim.queue_free()
+	await t.process_frame
+	t.check(not is_instance_valid(victim),
+		"marine one: the mid-sprint casualty has left the tree")
+	marine.tick(MarineScript.SPOOL_SECONDS + 0.1)
+	t.check(marine.phase == MarineScript.Phase.CLIMBING,
+		"marine one: a dead figure cannot abort boarding")
+	t.check(marine._figures.is_empty(),
+		"marine one: boarding releases every stored figure reference")
+	var survivors_boarded := true
+	for figure in survivors:
+		if is_instance_valid(figure) and not figure.is_queued_for_deletion():
+			survivors_boarded = false
+	t.check(survivors_boarded,
+		"marine one: the three surviving figures board with the casualty gone")
+	_teardown(rig)
+
 func test_ground_kill_pays_the_bounty() -> void:
 	var rig := _rig()
 	var marine: Node2D = rig.marine

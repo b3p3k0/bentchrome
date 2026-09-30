@@ -207,7 +207,7 @@ func _enter_phase(p: Phase, initial_state: bool) -> void:
 				_spawn_figure()
 		Phase.CLIMBING:
 			for figure in _figures:  # the whole detail boards
-				if figure is Node2D and is_instance_valid(figure):
+				if is_instance_valid(figure) and figure is Node2D:
 					figure.queue_free()
 			_figures.clear()
 		Phase.ESCAPED:
@@ -276,7 +276,7 @@ func _on_died() -> void:
 ## already silences MP and non-campaign lanes; attribution rides the same
 ## last_attacker guard the kill-bounty path uses.
 func _pay_bounty() -> void:
-	if last_attacker is Node2D and is_instance_valid(last_attacker) \
+	if is_instance_valid(last_attacker) and last_attacker is Node2D \
 			and last_attacker.is_in_group(&"player"):
 		preload("res://game/economy.gd").award_kill(&"mini_boss")
 
@@ -310,7 +310,7 @@ func _run_cinematic(pcam: Camera2D) -> void:
 	# The spiral is clock-driven and this node processes through the pause,
 	# so the camera just rides along until impact + a savoring beat.
 	await get_tree().create_timer(SPIRAL_SECONDS + CINEMATIC_TAIL, true).timeout
-	if pcam and is_instance_valid(pcam):
+	if is_instance_valid(pcam):
 		pcam.make_current()
 	var cam := get_node_or_null(^"CrashCam")
 	if cam:
