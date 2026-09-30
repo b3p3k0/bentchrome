@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -89,6 +89,12 @@ size = Vector2(224, 224)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_shelf"]
 size = Vector2(256, 512)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_landing"]
+size = Vector2(256, 320)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_country_road"]
+size = Vector2(896, 256)
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_retain_short"]
 size = Vector2(24, 384)
 
@@ -103,6 +109,12 @@ size = Vector2(24, 512)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_shelf_cap"]
 size = Vector2(280, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_landing_wall"]
+size = Vector2(256, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ramp_b_wall"]
+size = Vector2(384, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_deck_gap"]
 size = Vector2(24, 320)
@@ -276,6 +288,11 @@ position = Vector2(2048, 0)
 floor_index = 1
 size = Vector2(1920, 5376)
 
+[node name="FZLanding" parent="." instance=ExtResource("24_fzone")]
+position = Vector2(1600, -768)
+floor_index = 2
+size = Vector2(256, 320)
+
 [node name="FZShelfN" parent="." instance=ExtResource("24_fzone")]
 position = Vector2(1216, -2048)
 floor_index = 2
@@ -300,6 +317,43 @@ polygon = PackedVector2Array(-960, -2688, 960, -2688, 960, 2688, -960, 2688)
 
 [node name="Col" type="CollisionShape2D" parent="LowlandDirt"]
 shape = SubResource("RectangleShape2D_lowland")
+
+[node name="LandingRoad" type="Area2D" parent="."]
+position = Vector2(1600, -768)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"road"
+terrain_priority = 10
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="LandingRoad"]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-128, -160, 128, -160, 128, 160, -128, 160)
+
+[node name="Col" type="CollisionShape2D" parent="LandingRoad"]
+shape = SubResource("RectangleShape2D_landing")
+
+[node name="CountryRoad" type="Area2D" parent="."]
+position = Vector2(2560, -768)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"road"
+terrain_priority = 10
+soften_visual = false
+
+[node name="Vis" type="Polygon2D" parent="CountryRoad"]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(-448, -128, 448, -128, 448, 128, -448, 128)
+
+[node name="Col" type="CollisionShape2D" parent="CountryRoad"]
+shape = SubResource("RectangleShape2D_country_road")
+
+[node name="CountryCenterline" type="Node2D" parent="."]
+script = ExtResource("21_marks")
+points = PackedVector2Array(3008, -768, 2112, -768)
+style = &"dashed_yellow"
 
 [node name="ShelfNRoad" type="Area2D" parent="."]
 position = Vector2(1216, -2048)
@@ -354,6 +408,17 @@ rails = true
 terrain_type = "road"
 downhill_pull = 120.0
 
+[node name="RampB" type="Node2D" parent="."]
+position = Vector2(1920, -768)
+rotation = -1.5707963267949
+script = ExtResource("25_grade")
+low_floor = 1
+high_floor = 2
+size = Vector2(320, 384)
+rails = false
+terrain_type = "road"
+downhill_pull = 120.0
+
 [node name="RetainE_1Shadow" type="Node2D" parent="."]
 position = Vector2(1112, -2496)
 rotation = -1.5707963267949
@@ -381,6 +446,19 @@ rotation = -1.5707963267949
 script = ExtResource("28_ddeco")
 kind = &"ledge_shadow"
 size = Vector2(1920, 90)
+
+[node name="LandingNShadow" type="Node2D" parent="."]
+position = Vector2(1600, -952)
+rotation = 3.14159265358979
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(256, 90)
+
+[node name="LandingSShadow" type="Node2D" parent="."]
+position = Vector2(1600, -584)
+script = ExtResource("28_ddeco")
+kind = &"ledge_shadow"
+size = Vector2(256, 90)
 
 [node name="ConRampNUp" type="Node2D" parent="."]
 position = Vector2(1216, -1536)
@@ -412,6 +490,22 @@ script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
 approach_dir = Vector2(0, -1)
+kind = &"grade"
+
+[node name="ConRampBUp" type="Node2D" parent="."]
+position = Vector2(1920, -768)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConRampBDown" type="Node2D" parent="."]
+position = Vector2(1920, -768)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
 kind = &"grade"
 
 [node name="ConPlateDownN" type="Node2D" parent="."]
@@ -738,6 +832,73 @@ polygon = PackedVector2Array(-140, -12, 140, -12, 140, 12, -140, 12)
 
 [node name="Col" type="CollisionShape2D" parent="ShelfS_S"]
 shape = SubResource("RectangleShape2D_shelf_cap")
+
+[node name="LandingN" type="StaticBody2D" parent="."]
+position = Vector2(1600, -940)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="LandingN"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="LandingN"]
+shape = SubResource("RectangleShape2D_landing_wall")
+
+[node name="LandingS" type="StaticBody2D" parent="."]
+position = Vector2(1600, -596)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="LandingS"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-128, -12, 128, -12, 128, 12, -128, 12)
+
+[node name="Col" type="CollisionShape2D" parent="LandingS"]
+shape = SubResource("RectangleShape2D_landing_wall")
+
+[node name="RampBN" type="StaticBody2D" parent="."]
+position = Vector2(1920, -940)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RampBN"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-192, -12, 192, -12, 192, 12, -192, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RampBN"]
+shape = SubResource("RectangleShape2D_ramp_b_wall")
+
+[node name="RampBS" type="StaticBody2D" parent="."]
+position = Vector2(1920, -596)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="RampBS"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-192, -12, 192, -12, 192, 12, -192, 12)
+
+[node name="Col" type="CollisionShape2D" parent="RampBS"]
+shape = SubResource("RectangleShape2D_ramp_b_wall")
+
+[node name="TempLandingW" type="StaticBody2D" parent="."]
+position = Vector2(1460, -768)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="TempLandingW"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(-12, -160, 12, -160, 12, 160, -12, 160)
+
+[node name="Col" type="CollisionShape2D" parent="TempLandingW"]
+shape = SubResource("RectangleShape2D_deck_gap")
+
+[node name="Floor2Stop" type="StaticBody2D" parent="TempLandingW"]
+collision_layer = 16
+collision_mask = 0
+
+[node name="Col" type="CollisionShape2D" parent="TempLandingW/Floor2Stop"]
+shape = SubResource("RectangleShape2D_deck_gap")
 
 [node name="TempDeckGap" type="StaticBody2D" parent="."]
 position = Vector2(1100, -768)
