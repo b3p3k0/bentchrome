@@ -19,6 +19,8 @@ const RIDERS := 11
 const BAND_DEPTH := 520.0
 const LOW_DUST := 150
 const HIGH_DUST := 80
+const FLINCH_RECOIL := 40.0     # px the riders are shoved south by a bang
+const FLINCH_RECOIL_T := 0.6    # seconds the shove takes to ease off
 const RUST := [
 	Color(0.42, 0.28, 0.18), Color(0.36, 0.34, 0.3), Color(0.5, 0.34, 0.14),
 	Color(0.3, 0.3, 0.32), Color(0.45, 0.3, 0.2), Color(0.38, 0.33, 0.28),
@@ -33,6 +35,8 @@ const TRACER := Color(1.0, 0.8, 0.45)
 var half := 640.0      # road half-width + margin at the crest (the wall pushes it)
 var pressure := 0.0    # 0 far .. 1 contact: fire and fury scale with it
 var halted := false    # stopped at the brink: the riders lock up, the dust settles
+var lost_sight := false   # the car is off the road: the headlights sweep, looking for it
+var _flinch_t := 0.0   # a bang in the dust: the riders recoil south for a beat
 var skid_marks: Array = []   # [from, to] world-local streaks laid on the halt
 var _halt_t := 0.0
 
@@ -131,12 +135,18 @@ func _process(delta: float) -> void:
 		motion = 0.06 + 0.94 * (1.0 - clampf(_halt_t / 0.5, 0.0, 1.0))
 		if _low and _halt_t > 0.4:
 			_low.emitting = false
+	# The recoil: a shove south that eases off over FLINCH_RECOIL_T.
+	var recoil := 0.0
+	if _flinch_t > 0.0:
+		_flinch_t = maxf(_flinch_t - delta, 0.0)
+		var k := _flinch_t / FLINCH_RECOIL_T
+		recoil = FLINCH_RECOIL * (1.0 - (1.0 - k) * (1.0 - k))
 	for r in _riders:
 		var node: Node2D = r["node"]
 		var base: Vector2 = r["base"]
 		var bob: float = sin(_t * r["bob"] + r["phase"]) * 5.0 * motion
 		var lurch: float = sin(_t * r["lurch"] + r["phase"] * 2.3) * 22.0 * motion
-		node.position = Vector2(base.x * half + lurch, base.y + bob)
+		node.position = Vector2(base.x * half + lurch, base.y + bob + recoil * (0.6 + 0.4 * float(r["phase"]) / TAU))
 		node.rotation = -PI / 2.0 + sin(_t * r["sway"] * 2.0 + r["phase"]) * 0.12 * motion
 		# Depth is murk: the deeper in the bank, the fainter the hull.
 		node.modulate = Color(1.0, 1.0, 1.0, clampf(1.15 - base.y / BAND_DEPTH, 0.4, 1.0))
@@ -155,6 +165,21 @@ func _process(delta: float) -> void:
 		_high.emission_rect_extents.x = half * 0.95
 	_bank.queue_redraw()
 	_lip.queue_redraw()
+
+## A bang in the dust: the riders recoil, the headlights stutter, and a puff
+## of dust jumps off the crest.
+func flinch() -> void:
+	_flinch_t = FLINCH_RECOIL_T
+	if _high != null:
+		var puff := _dust(30, 0.7, Vector2(half * 0.6, 30.0), Vector2(0.0, 10.0), 120.0, 260.0, 8.0, 16.0, DUST_LIP)
+		puff.one_shot = true
+		puff.explosiveness = 0.9
+		puff.preprocess = 0.0
+		puff.emitting = true
+		get_tree().create_timer(1.6).timeout.connect(puff.queue_free, CONNECT_ONE_SHOT)
+
+func flinching() -> bool:
+	return _flinch_t > 0.0
 
 ## The lock-up: a pair of dark streaks trailing south from every rider that
 ## was moving, laid once and painted by the bank layer from then on.
@@ -236,8 +261,14 @@ class Crest extends Node2D:
 			var nose: Vector2 = node.position + Vector2(0.0, -float(r["half_len"]))
 			var veil: float = clampf(1.0 - node.position.y / (BAND_DEPTH * 1.3), 0.4, 1.0)
 			var flick := 0.85 + 0.15 * sin(t * 23.0 + float(r["phase"]) * 5.0)
+			if deco._flinch_t > 0.0:
+				flick *= 0.3 + 0.7 * absf(sin(t * 31.0 + float(r["phase"]) * 3.0))   # the stutter
+			var sweep := 0.0
+			if deco.lost_sight:
+				sweep = 30.0 * sin(t * 1.3 + float(r["phase"]))   # looking for you
 			var spread: float = 7.0 if r["kind"] == &"buzz_bike" else 13.0
-			var lamps: Array = [nose] if r["kind"] == &"buzz_bike" else [nose + Vector2(-spread, 0), nose + Vector2(spread, 0)]
+			var lamps: Array = [nose + Vector2(sweep, 0)] if r["kind"] == &"buzz_bike" \
+				else [nose + Vector2(-spread + sweep, 0), nose + Vector2(spread + sweep, 0)]
 			for lamp in lamps:
 				draw_circle(lamp, 13.0, Color(LAMP.r, LAMP.g, LAMP.b, 0.14 * veil * flick))
 				draw_circle(lamp, 4.5, Color(LAMP.r, LAMP.g, LAMP.b, 0.9 * veil * flick))

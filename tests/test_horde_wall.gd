@@ -303,6 +303,70 @@ func test_the_pack_halts_at_the_bank() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+## They flinch: ordnance going off in the dust cuts the pack's pace for a
+## beat (refreshed, never compounded), the riders recoil, the roar dips; a
+## car off the road on a cutoff trail slows them too, and the two stack.
+func test_the_pack_flinches() -> void:
+	t.check(is_equal_approx(WallScript.pace_mult(0.25, 1.0, false), 0.75), "flinch: a quarter off the pace while it lasts")
+	t.check(is_equal_approx(WallScript.pace_mult(0.25, 0.0, false), 1.0), "flinch: full pace once it's over")
+	t.check(is_equal_approx(WallScript.pace_mult(0.0, 0.0, true), 1.0 - WallScript.LOST_SIGHT_CUT), "flinch: losing sight of the car slows them")
+	t.check(is_equal_approx(WallScript.pace_mult(0.25, 1.0, true), 0.75 * (1.0 - WallScript.LOST_SIGHT_CUT)), "flinch: a bang while they're looking around stacks")
+	# Live: two packs at the same equilibrium, one flinched — the gap opens.
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var results: Array = []
+	for flinched in [false, true]:
+		var player := Node2D.new()
+		player.position = Vector2(0, -1000)
+		container.add_child(player)
+		var wall = WallScript.new()
+		wall.target = player
+		wall.pace_frac = 0.8
+		wall.front_y = player.position.y + WallScript.LEASH_GAP + 200.0
+		container.add_child(wall)
+		var top: float = wall.base_top()
+		var cruise: float = WallScript.pack_speed(top, 0.8, WallScript.LEASH_GAP + 200.0)   # the car matches the pack: a steady gap
+		if flinched:
+			wall.flinch()
+			t.check(wall.flinching(), "flinch: the wall reports it")
+			wall.flinch(0.1, 0.5)
+			t.check(is_equal_approx(wall._flinch_cut, WallScript.FLINCH_CUT) and is_equal_approx(wall._flinch_t, WallScript.FLINCH_SECONDS),
+				"flinch: a smaller, shorter bang on top refreshes nothing away — the bigger cut and the longer clock stand")
+		for i in 100:   # 1.6s: the flinch lasts 1.5
+			player.position.y -= cruise * 0.016
+			wall._physics_process(0.016)
+		results.append(wall.gap())
+		t.check(not wall.flinching() or not flinched, "flinch: it wears off")
+		container.remove_child(wall)
+		wall.free()
+		container.remove_child(player)
+		player.free()
+	var opened: float = results[1] - results[0]
+	t.check(opened > 90.0 and opened < 260.0, "flinch: the gap opens by a car length or two (%d px)" % int(opened))
+	# The riders recoil and the deco reports it; the headlights' stutter and
+	# the sweep are paint (drawn in the LIP), the puff is a one-shot child.
+	var deco_wall = WallScript.new()
+	deco_wall.target = Node2D.new()
+	container.add_child(deco_wall.target)
+	container.add_child(deco_wall)
+	var deco = deco_wall.get_node(^"Deco")
+	var before: Array = []
+	for r in deco._riders:
+		before.append(r["node"].position.y)
+	deco.flinch()
+	t.check(deco.flinching(), "flinch: the riders are told")
+	deco._process(0.016)
+	var shoved := true
+	for i in deco._riders.size():
+		if deco._riders[i]["node"].position.y < before[i] + 10.0:
+			shoved = false
+	t.check(shoved, "flinch: every rider is shoved south")
+	for i in 60:
+		deco._process(0.016)
+	t.check(not deco.flinching(), "flinch: and settles back inside a second")
+	t.root.remove_child(container)
+	container.free()
+
 ## The curve tax: through a sweeper the pack, like the car, covers less
 ## north per second of speed — otherwise it quietly gains on every bend.
 func test_curve_tax() -> void:

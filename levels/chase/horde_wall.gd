@@ -32,6 +32,9 @@ static var MERCY_CLOSE := 45.0    # ...to this many px/s: the last 150px take >=
 static var HALT_BRAKE := 320.0    # px before a halt line over which the pack's speed ramps to zero
 static var HALT_ROAR_FADE := 1.5  # seconds for the engines to die once the pack has stopped
 static var HALT_CREEP := 40.0     # px/s the braking pack keeps until it is on the line
+static var FLINCH_CUT := 0.25     # the pack's pace loses this fraction while flinching...
+static var FLINCH_SECONDS := 1.5  # ...for this long after ordnance goes off in the dust
+static var LOST_SIGHT_CUT := 0.3  # the pace lost while the car is off the road (a cutoff trail)
 
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DecoScript := preload("res://levels/chase/horde_deco.gd")
@@ -47,6 +50,9 @@ var pace_frac := 0.80       # fraction of the target's top; the director's phase
 var front_y := 0.0          # world y of the dust crest
 var no_mercy := false       # the host sets this once the run is lost: swallow the car
 var halt_y := INF           # a world y the crest never passes (the finale's river bank)
+var lost_sight := false     # the host sets this while the car is off the road: the pack slows and looks
+var _flinch_t := 0.0        # seconds of flinch left
+var _flinch_cut := 0.0      # the cut the current flinch runs at
 var halted := false         # the pack has reached its halt line and stopped
 var _halt_gain := 1.0       # the engines' fade once halted
 
@@ -115,6 +121,28 @@ static func horn_due(danger: bool, was_danger: bool, cooldown_left: float) -> bo
 func caught() -> bool:
 	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
 
+## Ordnance went off in the dust: the pack backs off — its pace loses `cut`
+## for `seconds` (a second bang refreshes the clock and takes the bigger
+## cut; nothing ever compounds) and the riders recoil.
+func flinch(cut := FLINCH_CUT, seconds := FLINCH_SECONDS) -> void:
+	_flinch_cut = maxf(_flinch_cut, cut) if _flinch_t > 0.0 else cut
+	_flinch_t = maxf(_flinch_t, seconds)
+	if _deco != null and _deco.has_method(&"flinch"):
+		_deco.flinch()
+
+func flinching() -> bool:
+	return _flinch_t > 0.0
+
+## What the pack's pace is multiplied by, pure: a flinch and a lost car
+## both slow it, and they stack (a mine while they're looking around).
+static func pace_mult(flinch_cut: float, flinch_left: float, lost: bool) -> float:
+	var m := 1.0
+	if flinch_left > 0.0:
+		m *= 1.0 - flinch_cut
+	if lost:
+		m *= 1.0 - LOST_SIGHT_CUT
+	return m
+
 ## Stop the pack at a world y (north is -y): the finale's river bank. From
 ## HALT_BRAKE px out the speed ramps down, the crest never crosses the line,
 ## and the MAX_GAP drag stops pulling it north after the escaping car.
@@ -172,6 +200,8 @@ func _physics_process(delta: float) -> void:
 	# bends — through a sweeper the pack, like the car, covers less north per
 	# second of speed. Without it the pack quietly gains on every curve.
 	var speed := pack_speed(base_top(), tier_pace(), gap_now) * road_cos(course, -front_y)
+	speed *= pace_mult(_flinch_cut, _flinch_t, lost_sight)
+	_flinch_t = maxf(_flinch_t - delta, 0.0)
 	if not no_mercy and _target_alive():
 		speed = mercy_cap(speed, gap_now, _target_vn())
 	speed = halt_speed(speed, front_y, halt_y, HALT_BRAKE)
@@ -227,7 +257,12 @@ func _voice(delta: float, gap_px: float) -> void:
 		_halt_gain = move_toward(_halt_gain, 0.0, delta / HALT_ROAR_FADE)
 		audio.loop_gain(&"horde_roar", roar_gain(pressure_at(gap_px)) * _halt_gain)
 		return
-	audio.loop_gain(&"horde_roar", roar_gain(pressure_at(gap_px)))
+	var gain := roar_gain(pressure_at(gap_px))
+	if _flinch_t > 0.0:
+		gain *= 0.5    # the bang took the wind out of them
+	if lost_sight:
+		gain *= 0.35   # radios down, looking around
+	audio.loop_gain(&"horde_roar", gain)
 	_horn_t = maxf(_horn_t - delta, 0.0)
 	var danger := gap_px < DANGER_GAP
 	if horn_due(danger, _was_danger, _horn_t):
