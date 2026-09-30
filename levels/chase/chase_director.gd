@@ -32,15 +32,18 @@ static var SPAWN_BEHIND := 1100.0   # wall-less fallback (bare fixtures): px beh
 static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
 static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's free line
 
-## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70,
-## technical ~90, blocker ~80. ahead = enters from the top of the screen and
-## falls back through the field (the technical shoots, the blocker steals
-## your lane); everyone else boils up out of the dust bank.
+## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~14, sedan ~25,
+## technical ~58, blocker ~48. The harassers are GLASS on purpose — a bike
+## dies to one Homing Missile (15) or a half-second MG burst, a sedan to one
+## Fire Missile (26): the sortie puts them in front of your guns, and
+## getting the shot is the payoff. ahead = enters from the top of the screen
+## and falls back through the field (the technical shoots, the blocker
+## steals your lane); everyone else boils up out of the dust bank.
 static var CLASS_TABLE := {
-	&"bike": {"stats": null, "hp_scale": 0.55, "ahead": false},
-	&"sedan": {"stats": null, "hp_scale": 0.85, "ahead": false},
-	&"technical": {"stats": null, "hp_scale": 0.95, "ahead": true},
-	&"blocker": {"stats": null, "hp_scale": 1.0, "ahead": true, "tint": Color(0.78, 0.46, 0.1)},
+	&"bike": {"stats": null, "hp_scale": 0.2, "ahead": false},
+	&"sedan": {"stats": null, "hp_scale": 0.32, "ahead": false},
+	&"technical": {"stats": null, "hp_scale": 0.6, "ahead": true},
+	&"blocker": {"stats": null, "hp_scale": 0.6, "ahead": true, "tint": Color(0.78, 0.46, 0.1)},
 }
 
 ## What a Buzzard's engine is worth, as a fraction of the PLAYER'S top speed —
@@ -51,9 +54,10 @@ static var CLASS_TABLE := {
 ## this overrides the ceiling at spawn.
 static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62, &"blocker": 0.72}
 ## Shoot -> boost -> breathe: every Buzzard you WRECK siphons this much nitro
-## into the tank (of 100; 5/s burn, so a kill is ~1.2s of boost). Combat feeds
-## the escape. Absorbed stragglers pay nothing — outrunning isn't killing.
-static var KILL_NITRO := 6.0
+## into the tank (of 100; 5/s burn, so a kill is ~0.8s of boost — the birds
+## are glass now, and a good run wrecks ten of them). Combat feeds the
+## escape. Absorbed stragglers pay nothing — outrunning isn't killing.
+static var KILL_NITRO := 4.0
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 var host = null            # buzzard_run host: clock, course, kills

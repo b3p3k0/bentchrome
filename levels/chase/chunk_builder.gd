@@ -297,6 +297,8 @@ static func _place_props(root: Node2D, entry: Dictionary) -> void:
 				root.add_child(pump)
 			&"slick":
 				_slick(root, pos, rng)
+			&"pothole":
+				_pothole(root, pos, rng)
 			&"jump":
 				# The arena launch pad, highway edition: airborne clears the
 				# logs and oil slicks — and the wall doesn't care where you land.
@@ -463,52 +465,51 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 		lamp.position = Vector2(c + 440, -d)
 		root.add_child(lamp)
 
-## Oil slick: a glossy black pool with an iridescent rim and wet highlights
-## (pure paint — the sheen is what makes it READ on dark asphalt) over a
-## small dirt TerrainZone. Driving through costs speed and grip for a beat,
-## never HP; airtime clears it.
+## The two road hazards read as a pair: an OIL SLICK is TRUE BLACK with a
+## smooth, curvy spill edge and one bright light reflection (a sky glint —
+## the wet read); a POTHOLE is JAGGED dark grey, a hair lighter than the
+## oil, with a cracked pale rim and loose rubble (the broken read). Both are
+## pure paint over a small TerrainZone, never HP, and airtime clears both —
+## but they FEEL different: oil is ice (the car keeps going where it was
+## going), a pothole is dirt (a bump that bleeds speed).
+const OIL := Color(0.01, 0.01, 0.015)
+const POTHOLE := Color(0.095, 0.095, 0.1)
+
 static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
 	var r := 44.0
-	var rim := PackedVector2Array()
+	# A curvy edge: a smooth outline whose radius breathes on two slow waves
+	# (no per-vertex jitter — that's the pothole's look).
+	var w1 := rng.randf_range(0.10, 0.18)
+	var w2 := rng.randf_range(0.05, 0.10)
+	var ph1 := rng.randf() * TAU
+	var ph2 := rng.randf() * TAU
 	var pool := PackedVector2Array()
-	var n := 12
+	var n := 28
 	for i in n:
 		var a := TAU * float(i) / float(n)
-		var rad := r * rng.randf_range(0.7, 1.08)
-		var spoke := Vector2(cos(a) * 1.3, sin(a) * 0.8)
-		rim.append(pos + spoke * (rad + 6.0))
-		pool.append(pos + spoke * rad)
-	# The iridescent rim: the oily rainbow you see at the edge of a spill.
-	var rim_poly := Polygon2D.new()
-	rim_poly.polygon = rim
-	rim_poly.color = Color(0.36, 0.22, 0.44)
-	rim_poly.z_index = -1
-	root.add_child(rim_poly)
-	var inner := PackedVector2Array()
-	for p in pool:
-		inner.append(pos + (p - pos) * 1.06)
-	var sheen := Polygon2D.new()
-	sheen.polygon = inner
-	sheen.color = Color(0.14, 0.34, 0.3)
-	sheen.z_index = -1
-	root.add_child(sheen)
+		var rad := r * (1.0 + w1 * sin(2.0 * a + ph1) + w2 * sin(3.0 * a + ph2))
+		pool.append(pos + Vector2(cos(a) * 1.3, sin(a) * 0.8) * rad)
 	var pool_poly := Polygon2D.new()
 	pool_poly.polygon = pool
-	pool_poly.color = Color(0.05, 0.05, 0.07)
+	pool_poly.color = OIL
 	pool_poly.z_index = -1
 	root.add_child(pool_poly)
-	# Wet highlights: two pale streaks catching the light, and a drip tail.
-	for k in 2:
-		var streak := Polygon2D.new()
-		var sx := pos.x + rng.randf_range(-r * 0.5, r * 0.2)
-		var sy := pos.y + rng.randf_range(-r * 0.35, r * 0.1) + float(k) * 9.0
-		streak.polygon = PackedVector2Array([
-			Vector2(sx, sy), Vector2(sx + rng.randf_range(14.0, 26.0), sy - 1.5),
-			Vector2(sx + rng.randf_range(14.0, 26.0), sy + 1.5), Vector2(sx, sy + 2.5),
-		])
-		streak.color = Color(0.55, 0.6, 0.66, 0.55)
-		streak.z_index = -1
-		root.add_child(streak)
+	# The light reflection: one soft pale glint off the wet surface, sitting
+	# high on the spill where the sky would mirror, with a faint halo under it.
+	var gx := pos.x + rng.randf_range(-r * 0.35, r * 0.15)
+	var gy := pos.y - r * rng.randf_range(0.15, 0.35)
+	var glen := rng.randf_range(22.0, 34.0)
+	var halo := Polygon2D.new()
+	halo.polygon = _ellipse(Vector2(gx + glen * 0.5, gy), glen * 0.75, 6.0, 12)
+	halo.color = Color(0.5, 0.58, 0.7, 0.22)
+	halo.z_index = -1
+	root.add_child(halo)
+	var glint := Polygon2D.new()
+	glint.polygon = _ellipse(Vector2(gx + glen * 0.5, gy), glen * 0.5, 2.6, 12)
+	glint.color = Color(0.86, 0.9, 0.96, 0.85)
+	glint.z_index = -1
+	root.add_child(glint)
+	# A drip tail running south with the crown of the road.
 	var drip := Polygon2D.new()
 	var dx := pos.x + rng.randf_range(-r * 0.4, r * 0.4)
 	drip.polygon = PackedVector2Array([
@@ -516,15 +517,82 @@ static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> vo
 		Vector2(dx + 1.5, pos.y + r * 0.7 + rng.randf_range(16.0, 30.0)),
 		Vector2(dx - 1.5, pos.y + r * 0.7 + rng.randf_range(16.0, 30.0)),
 	])
-	drip.color = Color(0.05, 0.05, 0.07)
+	drip.color = OIL
 	drip.z_index = -1
 	root.add_child(drip)
+	_hazard_zone(root, "Slick", pos, r, &"ice")
+
+static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
+	var r := 38.0
+	# A jagged edge: few vertices, hard per-vertex radius jitter — broken
+	# asphalt, not a spill.
+	var hole := PackedVector2Array()
+	var n := 9
+	for i in n:
+		var a := TAU * float(i) / float(n) + rng.randf_range(-0.12, 0.12)
+		var rad := r * rng.randf_range(0.62, 1.1)
+		hole.append(pos + Vector2(cos(a) * 1.15, sin(a) * 0.85) * rad)
+	# The cracked rim: a pale lip of crumbled asphalt around the hole.
+	var lip := PackedVector2Array()
+	for p in hole:
+		lip.append(pos + (p - pos) * 1.16)
+	var lip_poly := Polygon2D.new()
+	lip_poly.polygon = lip
+	lip_poly.color = Color(0.36, 0.35, 0.33)
+	lip_poly.z_index = -1
+	root.add_child(lip_poly)
+	var hole_poly := Polygon2D.new()
+	hole_poly.polygon = hole
+	hole_poly.color = POTHOLE
+	hole_poly.z_index = -1
+	root.add_child(hole_poly)
+	# Depth: the near wall's shadow pooled toward the north-west of the pit.
+	var deep := PackedVector2Array()
+	for p in hole:
+		deep.append(pos + (p - pos) * 0.62 + Vector2(-4.0, -4.0))
+	var deep_poly := Polygon2D.new()
+	deep_poly.polygon = deep
+	deep_poly.color = Color(0.06, 0.06, 0.065)
+	deep_poly.z_index = -1
+	root.add_child(deep_poly)
+	# Loose rubble: a few chips scattered downstream of the hole.
+	for k in 4:
+		var chip := Polygon2D.new()
+		var c := pos + Vector2(rng.randf_range(-r * 0.9, r * 0.9), rng.randf_range(r * 0.5, r * 1.3))
+		var cs := rng.randf_range(2.5, 5.0)
+		chip.polygon = PackedVector2Array([
+			c + Vector2(-cs, -cs * 0.6), c + Vector2(cs * 0.8, -cs), c + Vector2(cs, cs * 0.7), c + Vector2(-cs * 0.6, cs),
+		])
+		chip.color = Color(0.4, 0.39, 0.36)
+		chip.z_index = -1
+		root.add_child(chip)
+	# Cracks radiating from the lip.
+	for k in 3:
+		var a := rng.randf() * TAU
+		var crack := Polygon2D.new()
+		var from := pos + Vector2(cos(a) * 1.15, sin(a) * 0.85) * r * 1.1
+		var to := from + Vector2(cos(a + rng.randf_range(-0.5, 0.5)), sin(a + rng.randf_range(-0.5, 0.5))) * rng.randf_range(12.0, 24.0)
+		var side := (to - from).orthogonal().normalized() * 1.2
+		crack.polygon = PackedVector2Array([from + side, to + side * 0.4, to - side * 0.4, from - side])
+		crack.color = Color(0.11, 0.11, 0.12)
+		crack.z_index = -1
+		root.add_child(crack)
+	_hazard_zone(root, "Pothole", pos, r, &"dirt")
+
+static func _ellipse(center: Vector2, rx: float, ry: float, n: int) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in n:
+		var a := TAU * float(i) / float(n)
+		out.append(center + Vector2(cos(a) * rx, sin(a) * ry))
+	return out
+
+static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, terrain: StringName) -> void:
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
-	zone.name = "Slick"
+	zone.name = label
 	zone.collision_layer = 128
 	zone.collision_mask = 0
-	zone.terrain_type = &"dirt"
+	zone.terrain_type = terrain
 	zone.position = pos
 	var col := CollisionShape2D.new()
 	var shape := CircleShape2D.new()

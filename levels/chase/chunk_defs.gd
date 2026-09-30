@@ -18,7 +18,7 @@ const DEFS := {
 		"kind": &"straight", "shoulder": &"grass",
 		"props": [
 			{"kind": &"derelict", "at": [420.0, -250.0]},
-			{"kind": &"slick", "at": [640.0, 90.0]},
+			{"kind": &"pothole", "at": [640.0, 90.0]},
 			{"kind": &"cone", "at": [800.0, 300.0]},
 			{"kind": &"cone", "at": [860.0, 266.0]},
 			{"kind": &"barrel", "at": [950.0, -330.0]},
@@ -89,16 +89,19 @@ const DEFS := {
 			{"kind": &"boost", "at": [860.0, -100.0]},
 		],
 	},
-	&"slicks": {
+	# Bad road: a stretch the county gave up on — jagged POTHOLES (dirt: a
+	# bump that bleeds speed) between OIL SLICKS (ice: the car keeps going
+	# where it was going). Two reads, two feels, one dodge.
+	&"bad_road": {
 		"len": 1200.0, "exit_dx": 0.0, "half_w": 360.0,
-		"kind": &"slicks", "shoulder": &"dirt",
+		"kind": &"bad_road", "shoulder": &"dirt",
 		"props": [
 			{"kind": &"cone", "at": [130.0, -220.0]},
-			{"kind": &"slick", "at": [220.0, -140.0]},
+			{"kind": &"pothole", "at": [220.0, -140.0]},
 			{"kind": &"slick", "at": [430.0, 120.0]},
-			{"kind": &"slick", "at": [640.0, -50.0]},
+			{"kind": &"pothole", "at": [640.0, -50.0]},
 			{"kind": &"slick", "at": [850.0, 200.0]},
-			{"kind": &"slick", "at": [1050.0, -180.0]},
+			{"kind": &"pothole", "at": [1050.0, -180.0]},
 		],
 	},
 	&"log_run": {
@@ -176,7 +179,7 @@ const WEIGHTS := {
 	&"chicane": 1.0,
 	&"narrow": 1.0,
 	&"slalom": 1.0,
-	&"slicks": 1.5,
+	&"bad_road": 1.5,
 	&"log_run": 1.5,
 	&"launch": 1.0,
 	&"overpass": 0.8,
@@ -185,7 +188,7 @@ const WEIGHTS := {
 }
 
 ## No two of these back to back — breathers between technical sections.
-const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"slicks", &"log_run", &"launch"]
+const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch"]
 
 ## Landmark chunks: at most one per RARE_SPACING of course (chase_course).
 const RARE := [&"overpass", &"truckstop", &"convoy"]

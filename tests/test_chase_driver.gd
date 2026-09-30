@@ -6,6 +6,7 @@ extends RefCounted
 
 const DriverScript := preload("res://levels/chase/chase_driver.gd")
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
+const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 
 var t
 
@@ -25,12 +26,6 @@ class FakeHost extends Node:
 	var front := INF
 	func wall_front_y() -> float:
 		return front
-
-## A course whose centreline drifts `slope` px of x per px of distance.
-class FakeCourse:
-	var slope := 0.0
-	func sample(d: float) -> Dictionary:
-		return {"x": slope * d, "half_w": 360.0}
 
 func _init(runner) -> void:
 	t = runner
@@ -136,10 +131,11 @@ func test_hold_mark_stays_north_of_the_crest() -> void:
 		"chase-ai: behind the clamped mark = on the gas (%.2f)" % intent["throttle"])
 	_done(r[0])
 
-## The sortie: rush (no fire), harass (bursts, not a hose), peel (no fire,
-## home to the pack) — and a bird that never reaches its station still gets
-## its turn once it runs out of patience.
-func test_sortie_rush_harass_peel() -> void:
+## The sortie: RUSH (no fire) → LOITER behind (bursts, not a hose) →
+## ALONGSIDE (same) → BOX ahead, guns silent, nose in your sights → PEEL (no
+## fire, home to the pack) — and a bird that never reaches its station still
+## gets its turn once it runs out of patience.
+func test_sortie_rush_loiter_alongside_box_peel() -> void:
 	var r := _rig()
 	var vehicle: FakeVehicle = r[1]
 	var player: Node2D = r[3]
@@ -157,22 +153,37 @@ func test_sortie_rush_harass_peel() -> void:
 	while driver.stage == DriverScript.Stage.RUSH and waited < 400:
 		driver.get_intent(vehicle, 0.016)
 		waited += 1
-	t.check(driver.stage == DriverScript.Stage.HARASS, "sortie: a rush that runs out of road harasses anyway")
+	t.check(driver.stage == DriverScript.Stage.LOITER, "sortie: a rush that runs out of road loiters anyway")
 	t.check(waited >= int(DriverScript.RUSH_TIMEOUT * 60.0) - 65 and waited <= int(DriverScript.RUSH_TIMEOUT * 60.0) + 2,
 		"sortie: patience is RUSH_TIMEOUT (%d ticks)" % waited)
-	var fired := 0
-	var ticks := 0
-	while driver.stage == DriverScript.Stage.HARASS and ticks < 400:
-		if driver.get_intent(vehicle, 0.016)["fire_mg"]:
-			fired += 1
-		ticks += 1
-	var seconds := float(ticks) / 60.0
-	var span: Array = DriverScript.ROLES[&"bike"]["harass"]
-	t.check(seconds >= float(span[0]) - 0.05 and seconds <= float(span[1]) + 0.05,
-		"sortie: a bike harasses for a second or two (%.1fs)" % seconds)
-	var duty := float(fired) / float(maxi(ticks, 1))
-	t.check(duty > 0.1 and duty < 0.5, "sortie: potshots in bursts, not a hose (duty %.2f)" % duty)
-	t.check(driver.stage == DriverScript.Stage.PEEL, "sortie: then it peels off")
+	# The stations, in order: behind you, beside you, ahead of you.
+	var S := DriverScript.SORTIE
+	t.check(float(S[DriverScript.Stage.LOITER]["dy"]) > 0.0, "sortie: the loiter station is behind the player")
+	t.check(absf(float(S[DriverScript.Stage.ALONGSIDE]["dy"])) < 60.0, "sortie: alongside is level with the player")
+	t.check(float(S[DriverScript.Stage.BOX]["dy"]) < 0.0, "sortie: the box station is ahead — in your sights")
+	for st in [DriverScript.Stage.LOITER, DriverScript.Stage.ALONGSIDE, DriverScript.Stage.BOX]:
+		var name: String = DriverScript.Stage.keys()[st]
+		# Put the bird ON its station: the hold clock only runs there.
+		var beside: float = DriverScript.LOITER_DX if st == DriverScript.Stage.LOITER else DriverScript.BESIDE_DX
+		vehicle.global_position = player.global_position + Vector2(beside, float(S[st]["dy"]))
+		var fired := 0
+		var ticks := 0
+		while driver.stage == st and ticks < 400:
+			if driver.get_intent(vehicle, 0.016)["fire_mg"]:
+				fired += 1
+			ticks += 1
+		var seconds := float(ticks) * 0.016
+		var dealt: float = driver.hold_seconds(st)
+		var span: Array = S[st]["hold"]
+		t.check(dealt >= float(span[0]) - 0.001 and dealt <= float(span[1]) + 0.001,
+			"sortie: %s holds a second or two (dealt %.2fs)" % [name, dealt])
+		t.check(absf(seconds - dealt) <= 0.05, "sortie: %s lasts its dealt seconds on station (%.2fs)" % [name, seconds])
+		if st == DriverScript.Stage.LOITER:
+			var duty := float(fired) / float(maxi(ticks, 1))
+			t.check(duty > 0.1 and duty < 0.5, "sortie: loiter potshots come in bursts, not a hose (duty %.2f)" % duty)
+		elif not bool(S[st]["fire"]):
+			t.check(fired == 0, "sortie: %s is a body block — guns silent" % name)
+	t.check(driver.stage == DriverScript.Stage.PEEL, "sortie: after the box it peels off")
 	var fired_peeling := 0
 	vehicle.velocity = Vector2(0, -400.0)
 	var eased := false
@@ -186,19 +197,122 @@ func test_sortie_rush_harass_peel() -> void:
 	t.check(eased, "sortie: peeling, the pedal comes off — home is the pack")
 	_done(r[0])
 
+## Birds pass you, they never drive through you: behind your nose the mark
+## stays on their flank, a bird still on your tail hangs off your quarter
+## instead of pulling level, the box cut-in waits until it leads your nose,
+## and a bird leaving the box slides out of your lane before it lifts.
+func test_sortie_passes_on_the_flank() -> void:
+	var r := _rig()
+	var vehicle: FakeVehicle = r[1]
+	var player: Node2D = r[3]
+	var driver = r[2]
+	driver.lane_offset = 120.0
+	driver._side = 1.0
+	player.global_position = Vector2(0, -1000)
+	driver.get_intent(vehicle, 0.016)   # take the aim snapshot
+	var pp := player.global_position
+	driver.skip_to(DriverScript.Stage.ALONGSIDE)
+	# Dead astern: not clear of the flank — the mark is wide AND held back.
+	var astern: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(10, 150), pp, INF)
+	t.check(is_equal_approx(astern.x, pp.x + DriverScript.BESIDE_DX), "flank: moving up, the mark is out on the bird's side")
+	t.check(is_equal_approx(astern.y, pp.y + DriverScript.QUARTER_DY), "flank: on your tail it hangs off your quarter, never through you")
+	# Out wide: clear — now it may pull level.
+	var wide: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(120, 150), pp, INF)
+	t.check(is_equal_approx(wide.y, pp.y + float(DriverScript.SORTIE[DriverScript.Stage.ALONGSIDE]["dy"])),
+		"flank: clear of your flank it pulls level")
+	driver.skip_to(DriverScript.Stage.BOX)
+	var level: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(120, 0), pp, INF)
+	t.check(is_equal_approx(level.x, pp.x + DriverScript.BESIDE_DX), "flank: level with you the box bird stays in its own lane")
+	var ahead: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(120, -DriverScript.CUT_IN_CLEAR - 10.0), pp, INF)
+	t.check(is_equal_approx(ahead.x, pp.x), "flank: once it leads your nose it cuts across — at where you were")
+	driver.peel()
+	var boxed: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(5, -110), pp, INF)
+	t.check(is_equal_approx(boxed.x, pp.x + DriverScript.BESIDE_DX) and is_equal_approx(boxed.y, pp.y - 110.0),
+		"flank: peeling from the box it clears your lane first — no brake check")
+	var clear: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(130, -110), pp, INF)
+	t.check(clear.y > pp.y + 300.0, "flank: clear of you, it drops home to the pack")
+	t.check(is_equal_approx(clear.x, pp.x + 130.0), "flank: straight back down its own lane — never across your nose")
+	var left: Vector2 = driver._sortie_mark(vehicle, pp + Vector2(-30, -110), pp, INF)
+	t.check(is_equal_approx(left.x, pp.x - DriverScript.BESIDE_DX), "flank: a bird boxed on your left escapes left")
+	_done(r[0])
+
+## A bird that can't reach its station doesn't hang forever: the hold clock
+## never starts, and TRANSIT_TIMEOUT past its hold it moves on anyway.
+func test_sortie_gives_up_a_station_it_cannot_reach() -> void:
+	var r := _rig()
+	var driver = r[2]
+	r[1].global_position = Vector2(0, 400)      # far astern and never moving
+	r[3].global_position = Vector2(0, -300)
+	driver.skip_to(DriverScript.Stage.ALONGSIDE)
+	var ticks := 0
+	while driver.stage == DriverScript.Stage.ALONGSIDE and ticks < 600:
+		driver.get_intent(r[1], 0.016)
+		ticks += 1
+	var want: float = driver.hold_seconds(DriverScript.Stage.ALONGSIDE) + DriverScript.TRANSIT_TIMEOUT
+	t.check(absf(float(ticks) * 0.016 - want) <= 0.05, "sortie: an unreachable station is given up after hold + transit (%.2fs)" % (float(ticks) * 0.016))
+	_done(r[0])
+
+## The sprint between stations never out-runs a boost: nitro always shakes a bird.
+func test_sprint_stays_under_a_boost() -> void:
+	const Director := preload("res://levels/chase/chase_director.gd")
+	var fastest := 0.0
+	for kind in Director.ROLE_PACE:
+		if DriverScript.ROLES[kind].get("sortie", false):
+			fastest = maxf(fastest, float(Director.ROLE_PACE[kind]))
+	t.check(fastest * DriverScript.SPRINT < 1.45,
+		"sortie: the fastest bird's sprint (%.2f of your top) stays under a boost's 1.5x" % (fastest * DriverScript.SPRINT))
+	t.check(fastest * DriverScript.SPRINT > 1.2,
+		"sortie: and it is enough to pass a flat-out car in about a second (%.2f)" % (fastest * DriverScript.SPRINT))
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var vehicle := FakeVehicle.new()
+	container.add_child(vehicle)
+	var driver = DriverScript.new()
+	container.add_child(driver)
+	var honest: float = vehicle.ctrl.max_speed
+	for i in 60:
+		driver._sprint(vehicle, 150.0, 0.016)
+	t.check(is_equal_approx(vehicle.ctrl.max_speed, honest * DriverScript.SPRINT) or absf(vehicle.ctrl.max_speed - honest * DriverScript.SPRINT) < 12.0,
+		"sortie: behind its mark the engine finds the sprint (%d)" % int(vehicle.ctrl.max_speed))
+	for i in 120:
+		driver._sprint(vehicle, 0.0, 0.016)
+	t.check(absf(vehicle.ctrl.max_speed - honest) < 1.0, "sortie: on station it gives it back (%d)" % int(vehicle.ctrl.max_speed))
+	t.root.remove_child(container)
+	container.free()
+
+## Sedans are slower birds: every station hold is dealt × hold_scale.
+func test_sedan_holds_longer() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var sedan = DriverScript.new()
+	sedan.role = &"sedan"
+	sedan.phase = 2.0
+	container.add_child(sedan)
+	var scale: float = DriverScript.ROLES[&"sedan"]["hold_scale"]
+	t.check(scale > 1.0, "sortie: a sedan lingers (hold_scale %.1f)" % scale)
+	for st in DriverScript.SORTIE:
+		var span: Array = DriverScript.SORTIE[st]["hold"]
+		var dealt: float = sedan.hold_seconds(st)
+		t.check(dealt >= float(span[0]) * scale - 0.001 and dealt <= float(span[1]) * scale + 0.001,
+			"sortie: sedan %s hold is the span × scale (%.2fs)" % [DriverScript.Stage.keys()[st], dealt])
+	t.root.remove_child(container)
+	container.free()
+
 ## Timid hyena: real damage mid-sortie sends a bird home early.
 func test_flinch_peels_early() -> void:
 	var r := _rig()
 	var driver = r[2]
 	r[3].global_position = Vector2(0, -300)
-	driver.begin_harass()
-	t.check(driver.stage == DriverScript.Stage.HARASS, "flinch: harassing")
+	driver.skip_to(DriverScript.Stage.LOITER)
+	t.check(driver.stage == DriverScript.Stage.LOITER, "flinch: loitering")
 	driver._on_hit(DriverScript.FLINCH_DAMAGE * 0.4, 50.0)
-	t.check(driver.stage == DriverScript.Stage.HARASS, "flinch: a scratch doesn't scare it")
+	t.check(driver.stage == DriverScript.Stage.LOITER, "flinch: a scratch doesn't scare it")
 	driver._on_hit(DriverScript.FLINCH_DAMAGE * 0.7, 40.0)
 	t.check(driver.stage == DriverScript.Stage.PEEL, "flinch: enough damage in one sortie and it peels")
 	driver.peel()
 	t.check(driver.stage == DriverScript.Stage.PEEL, "flinch: peeling twice is harmless")
+	driver.skip_to(DriverScript.Stage.BOX)
+	t.check(driver.stage == DriverScript.Stage.PEEL, "flinch: the sortie only ever runs forward")
 	_done(r[0])
 
 func test_hold_fire_grace() -> void:
@@ -229,7 +343,7 @@ func test_sedan_rocket_cadence() -> void:
 			max_streak = maxi(max_streak, streak)
 		else:
 			streak = 0
-	t.check(pulses == 1, "chase-ai: one rocket per sortie, fired on station (%d in 8s)" % pulses)
+	t.check(pulses == 1, "chase-ai: one rocket per sortie, fired from the loiter station (%d in 8s)" % pulses)
 	t.check(max_streak <= 1, "chase-ai: rocket intent is a single-frame pulse")
 	_done(r[0])
 
@@ -246,6 +360,8 @@ func test_yoyo_catchup() -> void:
 	var driver = DriverScript.new()
 	container.add_child(driver)
 	var honest: float = vehicle.ctrl.max_speed
+	var patience: float = DriverScript.RUSH_TIMEOUT
+	DriverScript.RUSH_TIMEOUT = 60.0   # the yo-yo is the RUSH's cheat: keep the bird rushing
 	vehicle.global_position = Vector2(0, -1000)  # 1000px behind — cheat range
 	for i in 40:
 		driver.get_intent(vehicle, 0.1)
@@ -264,6 +380,7 @@ func test_yoyo_catchup() -> void:
 		driver.get_intent(vehicle, 0.1)
 	t.check(absf(vehicle.ctrl.max_speed - honest) < 1.0,
 		"chase-ai: honest stats resume up close (%.2f)" % vehicle.ctrl.max_speed)
+	DriverScript.RUSH_TIMEOUT = patience
 	t.root.remove_child(container)
 	container.free()
 
@@ -307,18 +424,31 @@ func test_lane_steering() -> void:
 	t.check(Pedal.lane_steer(north + cone * 2.0, 1.0) < 0.0,
 		"lane: past the cone (a shove), even RIGHT steers back inside it")
 	t.check(Pedal.lane_steer(north + PI, 0.0) != 0.0, "lane: a car facing south is steered back around")
-	# The wheel's zero is the ROAD, not north: on a sweeper, hands off follows the bend.
-	var bend := north + deg_to_rad(15.0)
-	t.check(Pedal.lane_steer(north, 0.0, bend) > 0.0, "lane: hands off on a right-hand sweeper steers into it")
-	t.check(is_equal_approx(Pedal.lane_steer(bend, 0.0, bend), 0.0), "lane: on the bend's heading, the wheel rests")
-	t.check(is_equal_approx(Pedal.road_heading(null, 1000.0), north), "lane: no course reads as straight north")
-	var course := FakeCourse.new()
-	course.slope = 0.3   # x drifts 0.3 px per px of course: a right-hand sweeper
-	var road: float = Pedal.road_heading(course, 1000.0)
-	t.check(road > north and road < north + deg_to_rad(20.0),
-		"lane: the road heading leans with the sweeper (%.1f deg)" % rad_to_deg(road - north))
-	course.slope = -0.3
-	t.check(Pedal.road_heading(course, 1000.0) < north, "lane: and the other way on a left-hander")
+	# A sweeper is the driver's to drive, and the cone has to be able to: over
+	# every bend chunk as a whole (exit_dx over len) full lock out-turns the
+	# road, and on the steepest single leg of any chunk (the chicane's
+	# middle) a car at full lock falls off the centreline by less than a
+	# quarter of the road before the leg ends — the line is yours to find,
+	# never yours to lose.
+	var lock := tan(deg_to_rad(Pedal.LANE_YAW_DEG))
+	var worst_leg := 0.0
+	var worst_name := &""
+	for name in ChunkDefs.DEFS:
+		var def: Dictionary = ChunkDefs.DEFS[name]
+		var whole := absf(float(def["exit_dx"])) / float(def["len"])
+		t.check(whole < lock, "lane: full lock out-turns the %s chunk as a whole" % name)
+		var pts: Array = [Vector2.ZERO]
+		for pt in def.get("path", []):
+			pts.append(Vector2(pt[0], pt[1]))
+		pts.append(Vector2(def["len"], def["exit_dx"]))
+		for i in pts.size() - 1:
+			var run: float = pts[i + 1].x - pts[i].x
+			var rise: float = absf(pts[i + 1].y - pts[i].y)
+			var deficit := maxf(rise / run - lock, 0.0) * run   # px the centreline gets away, at full lock
+			if deficit > worst_leg:
+				worst_leg = deficit
+				worst_name = name
+	t.check(worst_leg < 90.0, "lane: the steepest leg (%s) only gets %dpx away from full lock — a quarter of the road" % [worst_name, int(worst_leg)])
 	# Through the real driver: the arena's free wheel and whip are gone.
 	var container := Node2D.new()
 	t.root.add_child(container)

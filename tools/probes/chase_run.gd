@@ -15,6 +15,7 @@ extends SceneTree
 const Economy := preload("res://game/economy.gd")
 const Wall := preload("res://levels/chase/horde_wall.gd")
 const Autopilot := preload("res://tools/probes/chase_autopilot.gd")
+const Brain := preload("res://levels/chase/chase_driver.gd")
 const RUN_SCENE := "res://levels/chase/buzzard_run.tscn"
 
 var _car := "hornet"
@@ -36,6 +37,8 @@ var _window := 0.0
 var _heals := 0
 var _max_pack := 0
 var _by_source := {}   # "role (kind)" -> [damage, hits]
+var _last_stamp := 0
+var _sorties := {}     # bird instance id -> {role, best dy per stage}: did the choreography LAND?
 
 func _init() -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -112,18 +115,42 @@ func _watch(player) -> void:
 		var hit: float = _last_hp - hp_now
 		_taken += hit
 		_window += hit
+		# A FRESH attribution stamp names the shooter; a stale one means the
+		# road did it (a smash bite, a barrel) — never bill that to whoever
+		# happened to land the last bullet.
 		var who = player.get("last_attacker")
+		var stamp: int = player.last_attacker_ms
 		var source := "road"
-		if who != null and is_instance_valid(who):
+		if stamp != _last_stamp and who != null and is_instance_valid(who):
 			var driver = who.get_node_or_null(^"Driver")
 			source = String(driver.role) if driver != null and "role" in driver else "other"
-		# Size tells the weapon apart: chip = scrapgun, big = rocket/turret/ram.
-		source += " (mg)" if hit < 3.0 else " (rocket/turret/ram)"
+		_last_stamp = stamp
+		if _verbose and hit >= 8.0 and source != "road":
+			var brain = who.get_node_or_null(^"Driver")
+			print("[hit] t=%5.1f  %4.1f from %s  stage %s  dy %4d  dx %4d  their v (%d, %d)  your v (%d, %d)" % [
+				_scene.clock, hit, source,
+				Brain.Stage.keys()[brain.stage] if brain != null and "stage" in brain else "-",
+				int(who.global_position.y - player.global_position.y), int(who.global_position.x - player.global_position.x),
+				int(who.velocity.x), int(who.velocity.y), int(player.velocity.x), int(player.velocity.y)])
+		# The botlab breadcrumb names the kind (hit_mg / hit_weapon / ram / environment).
+		var kind := "?"
+		if player.has_meta(&"bc_hit_kind"):
+			kind = String(player.get_meta(&"bc_hit_kind"))
+			player.remove_meta(&"bc_hit_kind")
+		source += " (%s)" % kind
 		var row: Array = _by_source.get(source, [0.0, 0])
 		_by_source[source] = [row[0] + hit, row[1] + 1]
 	elif hp_now > _last_hp:
 		_heals += 1
 	_last_hp = hp_now
+	# Sortie census: how far up each bird actually got on each station.
+	for bird in get_nodes_in_group(&"enemies"):
+		var brain = bird.get_node_or_null(^"Driver")
+		if brain == null or not ("stage" in brain) or not Brain.ROLES[brain.role].get("sortie", false):
+			continue
+		var flight: Dictionary = _sorties.get_or_add(bird.get_instance_id(), {"role": brain.role})
+		var dy: float = bird.global_position.y - player.global_position.y   # + = behind the player
+		flight[brain.stage] = minf(float(flight.get(brain.stage, INF)), dy)
 
 func _report(player) -> void:
 	var verdict := "WON" if _scene._won else "JACKED(%s)" % _scene.jack_cause
@@ -135,3 +162,18 @@ func _report(player) -> void:
 		for source in _by_source:
 			print("[src] %-32s %6.1f dmg in %3d hits (%.0f%%)" % [source, _by_source[source][0],
 				_by_source[source][1], 100.0 * _by_source[source][0] / maxf(_taken, 1.0)])
+		# Did the sortie land? Alongside = within a car length of level; boxed =
+		# nose clearly ahead of the player while on the BOX station.
+		var flown := 0
+		var beside := 0
+		var boxed := 0
+		for id in _sorties:
+			var flight: Dictionary = _sorties[id]
+			if not flight.has(Brain.Stage.LOITER):
+				continue   # never got out of the rush
+			flown += 1
+			if float(flight.get(Brain.Stage.ALONGSIDE, INF)) < 60.0:
+				beside += 1
+			if float(flight.get(Brain.Stage.BOX, INF)) < -40.0:
+				boxed += 1
+		print("[sortie] %d flown  %d got alongside  %d boxed the player in" % [flown, beside, boxed])

@@ -5,8 +5,8 @@ extends Control
 ## placeholder slots hang greyed as coming attractions (they join the card
 ## automatically the day their CAMPAIGN entry becomes a real melee arena),
 ## and boss slots stay campaign-exclusive. A chase run off the tour has no
-## purse and nothing to rob: it ends on an exhibition spin and the classic
-## panel (buzzard_run.gd). Confirm stamps GameState.battle_level_index and
+## purse and nothing to rob: caught or wrecked, it skips the wheel and ends
+## on the classic panel (buzzard_run.gd). Confirm stamps GameState.battle_level_index and
 ## rolls to car select; BACK and ESC return to difficulty select.
 ## Manual-highlight menu idiom cloned from title.gd — no focus system.
 

@@ -126,6 +126,43 @@ func test_smash_and_pass() -> void:
 	t.check(Economy.funds > funds_before, "smash: the salvage still pays")
 	_close(scene)
 
+## The bumper is a weapon out here: the chase car rams at twice the arena
+## rate from a far lower speed floor, the birds are glass, and a ram that
+## wrecks one punches through the wreck — a bird that boxes you in can be
+## shot OR driven through.
+func test_ram_swats_a_bird() -> void:
+	var scene = await _boot()
+	scene.catch_enabled = false
+	var director = scene.get_node(^"ChaseDirector")
+	director.frozen = true
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	t.check(player.ram_damage_scale > 0.06 and player.ram_min_speed < 220.0,
+		"ram: the chase car's bumper is tuned up (scale %.2f, floor %d)" % [player.ram_damage_scale, int(player.ram_min_speed)])
+	for i in 20:
+		await t.physics_frame
+	var bird = director.spawn(&"bike")
+	bird.set_physics_process(false)   # a sitting duck: the ram rule is what's under test
+	bird.velocity = Vector2.ZERO
+	bird.global_position = player.global_position + Vector2(0.0, -200.0)
+	var mark_y: float = bird.global_position.y
+	t.check(bird.get_max_hp() <= 20.0, "ram: a bike is glass (%d HP)" % int(bird.get_max_hp()))
+	var kills_before: int = scene.kills
+	var slowest := INF
+	var passed := false
+	for i in 90:
+		await t.physics_frame
+		slowest = minf(slowest, -player.velocity.y)
+		if player.global_position.y < mark_y - 60.0:
+			passed = true
+			break
+	t.check(scene.kills == kills_before + 1, "ram: the bird died under the bumper — and it counts as a kill")
+	t.check(passed, "ram: the car is through and past the wreck")
+	var floor_speed: float = player.get_controller().max_speed * SpeedBand.FLOOR_FRAC
+	t.check(slowest > floor_speed * 0.8,
+		"ram: the car never stopped — slowest %d px/s against a floor of %d" % [int(slowest), int(floor_speed)])
+	_close(scene)
+
 ## The windshield streaks read "flat out" the same for every ride.
 func test_speed_streaks_scale_to_the_car() -> void:
 	const Lines := preload("res://ui/speed_lines.gd")
@@ -347,12 +384,9 @@ func test_off_the_tour_the_loss_panel_stands_in() -> void:
 	scene._process(0.016)
 	t.check(scene.is_jacked(), "chase: the run still ends")
 	scene._open_robbery()
-	var card = scene.get_node_or_null(^"RobberyScreen")
-	t.check(card != null, "chase: off the tour the show still plays — an exhibition spin")
-	t.check(not scene._end_screen.visible, "chase: the classic panel waits for the card")
+	t.check(scene.get_node_or_null(^"RobberyScreen") == null, "chase: no wheel off the tour — nothing to take")
+	t.check(scene._end_screen.visible, "chase: the classic loss panel stands in")
 	t.check(Economy.funds == 4000 and gs.owned_mods == ["armor_plating"] and gs.lives == 3,
 		"chase: nothing is taken off the tour")
-	card.roll_on()
-	t.check(scene._end_screen.visible, "chase: then the classic loss panel stands in")
 	gs.owned_mods.clear()
 	_close(scene)

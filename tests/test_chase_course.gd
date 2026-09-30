@@ -275,15 +275,22 @@ func test_builder_set_pieces_and_flair() -> void:
 	plain.free()
 
 func test_builder_momentum_obstacles() -> void:
-	var pchunk: Node2D = Builder.build(_entry_for(&"slicks"))
+	var pchunk: Node2D = Builder.build(_entry_for(&"bad_road"))
 	var pits := 0
+	var oil := 0
+	var holes := 0
 	for child in pchunk.get_children():
 		if child is Area2D and child.collision_layer == 128:
 			for sub in child.get_children():
 				if sub is CollisionShape2D and sub.shape is CircleShape2D:
-					pits += 1  # shoulders are rect strips; only pits are circles
+					pits += 1  # shoulders are rect strips; only hazards are circles
+					if child.terrain_type == &"ice":
+						oil += 1
+					elif child.terrain_type == &"dirt":
+						holes += 1
 					break
-	t.check(pits == 5, "builder: the slicks chunk spills five oil slicks (got %d)" % pits)
+	t.check(pits == 5, "builder: the bad road spills five hazards (got %d)" % pits)
+	t.check(oil == 2 and holes == 3, "builder: oil is ice and potholes are dirt — two reads, two feels (%d/%d)" % [oil, holes])
 	pchunk.free()
 	var lchunk: Node2D = Builder.build(_entry_for(&"log_run"))
 	var logs := 0

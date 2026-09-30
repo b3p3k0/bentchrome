@@ -99,6 +99,7 @@ const SLIDE_GRACE := 0.6     # seconds after handbrake release the slam still cr
 ## Route 666's rule ("a chase scene by Michael Bay"): every Health-bearing
 ## prop under the nose is destroyed ON CONTACT — no HP roll — the car keeps
 ## its entry momentum scaled by the prop's heft (the punch_* clamp above), and
+## a ram that wrecks another CAR keeps punch_keep_max of it the same way, and
 ## pays a bite of its own HP scaled the same way. Nothing on the road ever
 ## stops a car. Off by default: arenas keep the honest ram.
 @export var smash_and_pass := false
@@ -1378,6 +1379,10 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)
 				other.take_ram_damage(hit, self)
+				if smash_and_pass and other.get_hp() <= 0.0:
+					# Smash and pass, car edition: a ram that WRECKS the other
+					# car punches through the wreck like any other road debris.
+					velocity = pre_slide_vel * punch_keep_max
 				_ram_cd = ram_cooldown
 				break
 		else:

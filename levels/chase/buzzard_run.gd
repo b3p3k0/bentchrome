@@ -198,7 +198,11 @@ func _open_robbery() -> void:
 	var gs := get_node_or_null(^"/root/GameState")
 	var next: int = _end_screen._campaign_next_index() if _end_screen != null else -1
 	if gs == null or next < 0:
-		_open_exhibition(gs)
+		# Off the tour (SINGLE BATTLE, a direct launch) there is nothing to
+		# take and nowhere to roll on to: no wheel, straight to the classic
+		# loss panel, whose Restart re-runs the slot.
+		if _end_screen != null:
+			_end_screen._show(false)
 		return
 	# The bay you had rides into the next stop, exactly as a win would carry
 	# it — unless the wheel says otherwise.
@@ -217,33 +221,6 @@ func _open_robbery() -> void:
 	_robbery.finished.connect(_roll_on.bind(next), CONNECT_ONE_SHOT)
 	_robbery.open(jack_cause, outcome, wheel, landed,
 		player_car_id(_player.stats, gs.selected_vehicle_id))
-
-## Off the tour (SINGLE BATTLE, a direct launch) there is nothing to take and
-## nowhere to roll on to — but the show still plays, because testers find
-## this level through the fight card: an EXHIBITION spin on the unrigged
-## wheel, the verdict, the splash, then the classic loss panel (Restart
-## re-runs the slot).
-func _open_exhibition(gs) -> void:
-	var wheel: Array = []
-	for slice in Robbery.WHEEL:
-		wheel.append((slice as Dictionary).duplicate())
-	var landed: int = Robbery.spin(wheel, robbery_rng)
-	var outcome := {"kind": Robbery.Kind.DIGNITY, "bolts": 0, "part": "",
-		"headline": "EXHIBITION RUN", "detail": "Off the tour, they only take the story."}
-	_robbery = RobberyScreen.new()
-	_robbery.name = "RobberyScreen"
-	add_child(_robbery)
-	_robbery.finished.connect(_stand_in_loss, CONNECT_ONE_SHOT)
-	var car_id: String = player_car_id(_player.stats, gs.selected_vehicle_id if gs else &"")
-	_robbery.open(jack_cause, outcome, wheel, landed, car_id)
-
-func _stand_in_loss() -> void:
-	if _robbery != null:
-		_robbery.queue_free()
-		_robbery = null
-	get_tree().paused = false
-	if _end_screen != null:
-		_end_screen._show(false)
 
 ## Robbed, not beaten: the campaign advances past Route 666 either way.
 func _roll_on(next: int) -> void:
