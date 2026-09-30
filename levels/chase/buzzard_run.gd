@@ -24,6 +24,7 @@ const Robbery := preload("res://game/robbery.gd")
 const RobberyScreen := preload("res://ui/robbery_screen.gd")
 const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 const FinaleScript := preload("res://levels/chase/finale_director.gd")
+const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
@@ -177,12 +178,34 @@ func _finish_run() -> void:
 func finale_running() -> bool:
 	return _finale != null and _finale.running
 
+## Off the road on a cutoff's trail: the chunk under the car has one, the
+## car is inside the trail's reach along the road and out past the shoulder
+## on the trail's side — through the mouth, that is. The pack loses sight
+## of you there (horde_wall.lost_sight).
+func on_trail() -> bool:
+	if course == null or _player == null or not is_instance_valid(_player):
+		return false
+	var d: float = -_player.global_position.y
+	var entry: Dictionary = course.plan[course.chunk_index_at(d)]
+	var def: Dictionary = entry["def"]
+	if not def.has("cutoff"):
+		return false
+	var cf: Dictionary = def["cutoff"]
+	var local: float = d - float(entry["start_d"])
+	var pts: Array = cf["trail"]
+	if local < float(pts[0][0]) or local > float(pts[pts.size() - 1][0]):
+		return false
+	var s: Dictionary = course.sample(d)
+	var side: float = cf["side"]
+	return side * (_player.global_position.x - float(s["x"])) > float(s["half_w"]) + 90.0
+
 ## The dust has no body, so nothing you throw at it can hit it — the host
 ## watches instead: every physics tick, any live mine you dropped or missile
 ## you fired that is inside the crest goes off there and the pack flinches.
 func _physics_process(_delta: float) -> void:
 	if _player == null or not is_instance_valid(_player) or _wall == null or _jacked:
 		return
+	_wall.lost_sight = on_trail()
 	var line: float = _wall.front_y + FLINCH_INSET
 	for child in get_children():
 		if not (child is Node2D) or child.is_queued_for_deletion() or child.global_position.y <= line:

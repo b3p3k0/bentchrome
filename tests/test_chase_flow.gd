@@ -223,6 +223,52 @@ func test_ordnance_in_the_dust_makes_the_pack_flinch() -> void:
 	t.check(not mg_retired[0] and not wall.flinching(), "flinch: an MG round in the dust is nothing")
 	_close(scene)
 
+## The back roads: on a cutoff's trail the pack loses sight of the car —
+## and finds it again when the car comes back through the mouth. The birds
+## themselves never leave the road.
+func test_the_trail_loses_the_pack() -> void:
+	const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
+	var scene = await _boot()
+	scene.catch_enabled = false
+	var director = scene.get_node(^"ChaseDirector")
+	director.frozen = true
+	var wall = scene.get_node(^"HordeWall")
+	wall.set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	player.set_physics_process(false)
+	var streamer = scene.get_node(^"CourseStreamer")
+	var d: float = -player.global_position.y
+	var cut: int = scene.course.chunk_index_at(d) + 1
+	streamer.invalidate_from(cut)
+	scene.course.splice(cut, [&"cutoff_l", &"straight", &"straight"])
+	var entry: Dictionary = scene.course.plan[cut]
+	var def: Dictionary = entry["def"]
+	var start: float = entry["start_d"]
+	t.check(not scene.on_trail(), "trail: on the road the pack has you")
+	# Onto the trail, mid-straight.
+	var td: float = start + 1000.0
+	player.global_position = Vector2(float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, 1000.0), -td)
+	scene._physics_process(0.016)
+	t.check(scene.on_trail() and wall.lost_sight, "trail: off the road on the trail the pack loses sight of you")
+	t.check(wall.get_node(^"Deco").lost_sight, "trail: and the riders start looking")
+	# The same d, back on the asphalt: found.
+	player.global_position = Vector2(scene.course.sample(td)["x"], -td)
+	scene._physics_process(0.016)
+	t.check(not scene.on_trail() and not wall.lost_sight, "trail: back on the road they have you again")
+	# Out past the shoulder but beyond the trail's reach along the road: not the trail.
+	player.global_position = Vector2(float(entry["entry_x"]) - 600.0, -(start + 100.0))
+	scene._physics_process(0.016)
+	t.check(not scene.on_trail(), "trail: the verge before the mouth is not the trail")
+	# A bird's steering never leaves the road, trail or no trail.
+	var bird = director.spawn(&"bike")
+	bird.global_position = Vector2(float(entry["entry_x"]) - 500.0, -td)
+	player.global_position = Vector2(float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, 1000.0), -td)
+	var brain = bird.get_driver()
+	var clamp_x: float = brain._clamp_to_road(bird, bird.global_position, player.global_position.x)
+	var s: Dictionary = scene.course.sample(td)
+	t.check(clamp_x >= float(s["x"]) - float(s["half_w"]), "trail: the birds' road clamp keeps them on the asphalt (%d)" % int(clamp_x))
+	_close(scene)
+
 ## The windshield streaks read "flat out" the same for every ride.
 func test_speed_streaks_scale_to_the_car() -> void:
 	const Lines := preload("res://ui/speed_lines.gd")

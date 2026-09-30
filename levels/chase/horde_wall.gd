@@ -50,7 +50,11 @@ var pace_frac := 0.80       # fraction of the target's top; the director's phase
 var front_y := 0.0          # world y of the dust crest
 var no_mercy := false       # the host sets this once the run is lost: swallow the car
 var halt_y := INF           # a world y the crest never passes (the finale's river bank)
-var lost_sight := false     # the host sets this while the car is off the road: the pack slows and looks
+var lost_sight := false:    # the host sets this while the car is off the road: the pack slows and looks
+	set(on):
+		lost_sight = on
+		if _deco != null:
+			_deco.lost_sight = on
 var _flinch_t := 0.0        # seconds of flinch left
 var _flinch_cut := 0.0      # the cut the current flinch runs at
 var halted := false         # the pack has reached its halt line and stopped
