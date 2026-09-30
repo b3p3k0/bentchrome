@@ -77,6 +77,8 @@ func test_rolling_start_and_the_clock_win() -> void:
 	var es = scene._end_screen
 	t.check(es != null and es.suppress_group_win and es.suppress_loss,
 		"chase: the host owns both calls — the win and the loss")
+	t.check(not player.weapon_lock_exempt,
+		"chase: the player's bay keeps its 2s lock — no full-auto missiles")
 	scene._process(0.016)
 	t.check(scene.loss_cause() == &"" and not scene.is_jacked(), "chase: a clean run is still running")
 	scene.clock = scene.RUN_SECONDS - 0.01

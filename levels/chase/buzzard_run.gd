@@ -73,7 +73,10 @@ func _ready() -> void:
 		# probe boots scenes that way): the plan is rolled, the run stands down.
 		set_process(false)
 		return
-	_player.weapon_lock_exempt = true  # Route 666 self-limits fire in its drivers
+	# The PLAYER keeps the ordinary 2s non-MG bay lock (Vehicle.WEAPON_LOCK):
+	# only the Buzzardz opt out (chase_director spawn), because their pacing
+	# lives in chase_driver. Exempting the player here turned a tap of RMB
+	# into a full-auto missile hose — funny, and very much not the game.
 	# The green flag drops on a ROLLING start (the level-start respawn in
 	# super() zeroed velocity): the pack rides a short leash now, and a
 	# standing launch would hand it the first hundred pixels for free.

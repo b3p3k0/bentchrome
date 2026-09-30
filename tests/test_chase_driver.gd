@@ -237,6 +237,44 @@ func test_speed_band_governor() -> void:
 	t.check(SpeedBand.toward(5.0, -50.0, true) >= 0.0, "band: never the brake at a crawl — that's reverse gear")
 	t.check(SpeedBand.toward(-200.0, -400.0, true) >= 0.0, "band: never the brake mid backward-slide")
 
+## Steering is a lane change: the nose swings at most LANE_YAW_DEG off north
+## and comes back to straight hands-off; the handbrake is eaten.
+func test_lane_steering() -> void:
+	const IR := preload("res://game/input_router.gd")
+	const Pedal := preload("res://levels/chase/chase_player_driver.gd")
+	var north: float = -PI / 2.0
+	var cone: float = deg_to_rad(Pedal.LANE_YAW_DEG)
+	t.check(Pedal.lane_steer(north, 1.0) > 0.5, "lane: RIGHT from straight swings the nose right")
+	t.check(Pedal.lane_steer(north, -1.0) < -0.5, "lane: LEFT from straight swings the nose left")
+	t.check(is_equal_approx(Pedal.lane_steer(north + cone, 1.0), 0.0),
+		"lane: at the cone's edge, RIGHT asks for nothing more")
+	t.check(Pedal.lane_steer(north + cone, 0.0) < 0.0, "lane: hands off, the nose comes back toward north")
+	t.check(is_equal_approx(Pedal.lane_steer(north, 0.0), 0.0), "lane: straight and hands off = no steer")
+	t.check(Pedal.lane_steer(north + cone * 2.0, 1.0) < 0.0,
+		"lane: past the cone (a shove), even RIGHT steers back inside it")
+	t.check(Pedal.lane_steer(north + PI, 0.0) != 0.0, "lane: a car facing south is steered back around")
+	# Through the real driver: the arena's free wheel and whip are gone.
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var vehicle := FakeVehicle.new()
+	vehicle.velocity = Vector2(0, -400.0)
+	container.add_child(vehicle)
+	var driver = Pedal.new()
+	container.add_child(driver)
+	Input.action_press(IR.ACTION_MOVE_RIGHT)
+	Input.action_press(IR.ACTION_HANDBRAKE)
+	var intent: Dictionary = driver.get_intent(vehicle, 0.016)
+	Input.action_release(IR.ACTION_MOVE_RIGHT)
+	Input.action_release(IR.ACTION_HANDBRAKE)
+	t.check(intent["steer"] > 0.0, "lane: RIGHT reaches the wheel")
+	t.check(not intent["handbrake"], "lane: the handbrake is eaten on Route 666")
+	vehicle.heading = north + cone
+	var held: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(is_equal_approx(float(held["steer"]), 0.0) or float(held["steer"]) < 0.0,
+		"lane: hands off at the cone's edge, the wheel centres")
+	t.root.remove_child(container)
+	container.free()
+
 ## The player's pedal through the real driver: speed up, slow down, never stop.
 func test_player_pedal_is_a_speed_band() -> void:
 	const IR := preload("res://game/input_router.gd")

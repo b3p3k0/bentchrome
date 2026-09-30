@@ -8,6 +8,7 @@ extends Driver
 ## so read its results as a FLOOR, not a forecast.
 
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
+const Pedal := preload("res://levels/chase/chase_player_driver.gd")
 
 const LOOK := 520.0        # px of obstacle sight at skill 1.0
 const DODGE_HOLD := 0.45   # seconds a dodge is committed to
@@ -47,8 +48,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_dodge = 0.0
 	var want_x: float = road_x if _dodge == 0.0 else own.x + _dodge * DODGE_SIDE
 	want_x = clampf(want_x, road_x - half + 60.0, road_x + half - 60.0)
-	var aim := Vector2(want_x, own.y - 260.0)
-	var steer := clampf(angle_difference(vehicle.heading, (aim - own).angle()) * 2.4, -1.0, 1.0)
+	# The same lane-change wheel the player has: a sidestep is an axis push.
+	var steer := Pedal.lane_steer(vehicle.heading, clampf((want_x - own.x) / 120.0, -1.0, 1.0))
 	var ctrl = vehicle.get_controller()
 	var boosting: bool = host.wall_gap() < boost_gap and ctrl.boost_fuel > 0.0
 	var fwd: float = vehicle.velocity.dot(Vector2.RIGHT.rotated(vehicle.heading))
