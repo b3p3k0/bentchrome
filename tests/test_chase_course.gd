@@ -393,9 +393,55 @@ func test_streamer_builds_window_and_frees_behind() -> void:
 	var max_start: float = course.plan[max_i]["start_d"]
 	t.check(min_start >= 8000.0 - StreamerScript.BEHIND - 1600.0, "streamer: trail keeps the wall corridor")
 	t.check(max_start <= 8000.0 + StreamerScript.AHEAD, "streamer: build horizon bounded")
+	# The splice: forget the built future from a cut, rewrite the plan there,
+	# and the next frames rebuild the new entries — lowest index first.
+	var cut: int = course.chunk_index_at(8000.0) + 2
+	t.check(streamer._live.has(cut), "streamer: the cut lands inside the built window")
+	var doomed: Node = streamer._live[cut]
+	streamer.invalidate_from(cut)
+	for i in streamer._live:
+		t.check(i < cut, "streamer: nothing built past the cut survives")
+	course.splice(cut, [&"washout_l", &"straight"])
+	await t.physics_frame
+	await t.physics_frame
+	t.check(not is_instance_valid(doomed), "streamer: the old chunk at the cut is freed")
+	t.check(streamer._live.has(cut) and course.plan[cut]["name"] == &"washout_l",
+		"streamer: the spliced chunk is rebuilt first")
+	await t.physics_frame
+	t.check(streamer._live.has(cut + 1), "streamer: then the one after it")
+	var stale := false
+	for i in streamer._live:
+		if i >= course.plan.size():
+			stale = true
+	t.check(not stale, "streamer: no live chunk outlives its plan entry")
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
+
+## The course can be rewritten from a chunk on (the finale's river): the cut
+## keeps every continuity rule _append already enforces, and the plan reads
+## sanely past its new end.
+func test_splice_rewrites_the_future() -> void:
+	var c = _course()
+	var before: int = c.plan.size()
+	var at: int = c.chunk_index_at(20000.0) + 1
+	var prev: Dictionary = c.plan[at - 1]
+	c.splice(at, [&"washout_l", &"straight", &"straight"])
+	t.check(c.plan.size() == at + 3 and c.plan.size() < before, "course: the plan is the cut plus the new tail")
+	var first: Dictionary = c.plan[at]
+	t.check(first["name"] == &"washout_l", "course: the first new chunk is the one asked for")
+	t.check(is_equal_approx(first["entry_x"], prev["exit_x"]), "course: the seam keeps the centreline")
+	t.check(is_equal_approx(first["start_d"], float(prev["start_d"]) + float(prev["def"]["len"])),
+		"course: the seam keeps the distance chain")
+	t.check(is_equal_approx(first["entry_half_w"], prev["def"]["half_w"]), "course: and the width taper")
+	var last: Dictionary = c.plan[c.plan.size() - 1]
+	t.check(is_equal_approx(c.total_len, float(last["start_d"]) + float(last["def"]["len"])),
+		"course: total_len is the new end")
+	t.check(c.chunk_index_at(c.total_len - 1.0) == c.plan.size() - 1, "course: the index search finds the new last chunk")
+	var past: Dictionary = c.sample(c.total_len + 500.0)
+	t.check(past["half_w"] > 0.0, "course: sampling past the new end stays safe")
+	c.splice(0, [&"straight"])
+	t.check(c.plan.size() == 2 and c.plan[0]["start_d"] == 0.0, "course: a cut is never below the launch chunk")
 
 func test_heal_pickup_heals_player_only() -> void:
 	var container := Node2D.new()

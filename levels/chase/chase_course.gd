@@ -37,6 +37,20 @@ func pre_roll(seed_val: int) -> void:
 		since_pickup = 0.0 if name == &"pickup" else since_pickup + picked_len
 		since_rare = 0.0 if name in ChunkDefs.RARE else since_rare + picked_len
 
+## Rewrite the future from chunk `at` on: everything from that index is
+## dropped and `names` are appended in order (the finale splices its river
+## in here). Continuity is _append's job, so entry_x / start_d / widths chain
+## across the cut for free. Whoever built chunks past `at` must free them
+## first (course_streamer.invalidate_from) — a live chunk with no plan entry
+## would index off the end.
+func splice(at: int, names: Array) -> void:
+	at = clampi(at, 1, plan.size())
+	plan.resize(at)
+	var last: Dictionary = plan[at - 1]
+	total_len = float(last["start_d"]) + float(last["def"]["len"])
+	for name in names:
+		_append(name)
+
 func _append(name: StringName) -> void:
 	var def: Dictionary = ChunkDefs.DEFS[name]
 	var entry_x := 0.0

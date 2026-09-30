@@ -19,6 +19,10 @@ func _physics_process(_delta: float) -> void:
 		return
 	var d: float = -target.global_position.y
 	for i in _live.keys():
+		if i >= course.plan.size():
+			_live[i].queue_free()   # the plan was cut under it (a splice): gone
+			_live.erase(i)
+			continue
 		var entry: Dictionary = course.plan[i]
 		var def: Dictionary = entry["def"]
 		var chunk_len: float = def["len"]
@@ -38,3 +42,12 @@ func _physics_process(_delta: float) -> void:
 			_live[i] = node
 			return  # one build per frame
 		i += 1
+
+## Forget everything built from plan index `index` on — call this BEFORE the
+## course is spliced there, so no live chunk outlives its plan entry. The next
+## frames rebuild the new entries, lowest index first.
+func invalidate_from(index: int) -> void:
+	for i in _live.keys():
+		if i >= index:
+			_live[i].queue_free()
+			_live.erase(i)
