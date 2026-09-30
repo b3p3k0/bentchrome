@@ -178,3 +178,151 @@ func test_barrel_blast_damages_neighbors() -> void:
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
+
+func test_barrel_blast_keeps_authored_radius_and_damage() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var barrel = _blast_block(container, &"barrel", Vector2.ZERO, 30.0)
+	var near = _blast_block(container, &"", Vector2(120, 0), 100.0)
+	var far = _blast_block(container, &"", Vector2(140, 0), 100.0)
+	await t.physics_frame
+	barrel.get_node("Health").take_damage(999.0)
+	await t.physics_frame
+	t.check_approx(near.get_node("Health").hp, 75.0,
+		"barrel: 120px target still takes exactly 25")
+	t.check_approx(far.get_node("Health").hp, 100.0,
+		"barrel: 140px target stays outside the 130px blast")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_tanker_blast_radius_damage_floor_and_self_exclusion() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var tanker = _blast_block(container, &"tanker", Vector2.ZERO, 100.0, 2)
+	var near = _blast_block(container, &"", Vector2(190, 0), 100.0, 2)
+	var far = _blast_block(container, &"", Vector2(210, 0), 100.0, 2)
+	var upstairs = _blast_block(container, &"", Vector2(100, 0), 100.0, 3)
+	var self_probe = _blast_block(container, &"tanker", Vector2(600, 0), 100.0, 2)
+	await t.physics_frame
+	self_probe._blast(200.0, 40.0)
+	t.check_approx(self_probe.get_node("Health").hp, 100.0,
+		"tanker: blast query excludes its own body")
+	tanker.get_node("Health").take_damage(999.0)
+	await t.physics_frame
+	t.check_approx(near.get_node("Health").hp, 60.0,
+		"tanker: 190px target takes exactly 40")
+	t.check_approx(far.get_node("Health").hp, 100.0,
+		"tanker: 210px target stays outside the 200px blast")
+	t.check_approx(upstairs.get_node("Health").hp, 100.0,
+		"tanker: same XY on another floor takes no damage")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_tanker_chains_through_barrel() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var tanker = _blast_block(container, &"tanker", Vector2.ZERO, 100.0)
+	var barrel = _blast_block(container, &"barrel", Vector2(150, 0), 10.0)
+	var beyond = _blast_block(container, &"", Vector2(250, 0), 100.0)
+	await t.physics_frame
+	tanker.get_node("Health").take_damage(999.0)
+	await t.physics_frame
+	await t.physics_frame
+	t.check_approx(barrel.get_node("Health").hp, 0.0,
+		"tanker chain: 40 damage kills the 10 HP barrel at 150px")
+	t.check_approx(beyond.get_node("Health").hp, 75.0,
+		"tanker chain: barrel blast reaches the body 100px beyond it")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_road_styles_draw_alive_dead_and_report_remains() -> void:
+	var holder := Node2D.new()
+	t.root.add_child(holder)
+	var flavors := {
+		&"semi": &"crumple",
+		&"tanker": &"scorch",
+		&"hay": &"splinter",
+		&"storefront": &"debris",
+	}
+	var sizes := {
+		&"semi": Vector2(180, 72),
+		&"tanker": Vector2(180, 72),
+		&"hay": Vector2(72, 72),
+		&"storefront": Vector2(140, 100),
+	}
+	var blocks: Array = []
+	var x := 0.0
+	for style: StringName in flavors:
+		var block = BlockScene.instantiate()
+		block.deco = style
+		block.size = sizes[style]
+		block.position = Vector2(x, 0)
+		holder.add_child(block)
+		blocks.append(block)
+		x += 400.0
+	await t.process_frame
+	var block_src = load("res://environment/destructible_block.gd")
+	for block in blocks:
+		t.check(block_src.REMAINS[block.deco][0] == flavors[block.deco],
+			"%s: reports its authored remains flavor" % block.deco)
+		block.get_node("Health").take_damage(999.0)
+	await t.process_frame
+	for block in blocks:
+		t.check(block.is_inside_tree() and block.collision_layer == 0,
+			"%s: draws for one dead frame as drive-over remains" % block.deco)
+	t.root.remove_child(holder)
+	holder.free()
+
+func test_storefront_front_defaults_and_all_sides_draw() -> void:
+	var holder := Node2D.new()
+	t.root.add_child(holder)
+	var first = BlockScene.instantiate()
+	first.deco = &"storefront"
+	t.check(first.front == "south", "storefront: front defaults south")
+	first.free()
+	var x := 0.0
+	for side in ["south", "north", "west", "east"]:
+		var shop = BlockScene.instantiate()
+		shop.deco = &"storefront"
+		shop.front = side
+		shop.position = Vector2(x, 0)
+		holder.add_child(shop)
+		x += 180.0
+	await t.process_frame
+	t.check(holder.get_child_count() == 4,
+		"storefront: every authored front draws for a frame")
+	for shop in holder.get_children():
+		shop.get_node("Health").take_damage(999.0)
+	await t.process_frame
+	for shop in holder.get_children():
+		t.check(shop.is_inside_tree() and shop.collision_layer == 0,
+			"storefront: %s front draws alive and dead" % shop.front)
+	t.root.remove_child(holder)
+	holder.free()
+
+func test_storefront_hvac_count_tracks_footprint() -> void:
+	var shop = BlockScene.instantiate()
+	shop.size = Vector2(384, 256)
+	var broad_count: int = shop.storefront_hvac_count()
+	shop.size = Vector2(192, 192)
+	var compact_count: int = shop.storefront_hvac_count()
+	t.check(broad_count == 2 and compact_count == 1,
+		"storefront: 384x256 gets two HVAC units and 192x192 gets one")
+	shop.free()
+
+func _blast_block(parent: Node, style: StringName, at: Vector2,
+		hp: float, floor_index: int = -1):
+	var block = BlockScene.instantiate()
+	block.deco = style
+	block.position = at
+	block.size = Vector2(2, 2) if style == &"" else Vector2(44, 44)
+	block.max_hp = hp
+	block.floor_index = floor_index
+	parent.add_child(block)
+	return block

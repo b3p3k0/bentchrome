@@ -62,8 +62,42 @@ const TRUCK_PALETTES := [
 	Color(0.45, 0.65, 0.3),   # falafel green
 ]
 
-const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside cooks
-const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
+# Road haulers share cab bones, but keep a work-truck palette of their own.
+const ROAD_TRUCK_PALETTES := [
+	Color(0.68, 0.16, 0.12),  # faded fleet red
+	Color(0.16, 0.34, 0.52),  # interstate blue
+	Color(0.30, 0.43, 0.20),  # farm green
+	Color(0.78, 0.44, 0.10),  # construction orange
+]
+const ROAD_TRAILERS := [
+	Color(0.76, 0.75, 0.69),  # weathered white
+	Color(0.58, 0.61, 0.62),  # dull aluminium
+]
+const STOREFRONT_PALETTES := [
+	Color(0.72, 0.18, 0.16),
+	Color(0.18, 0.42, 0.66),
+	Color(0.32, 0.56, 0.24),
+	Color(0.86, 0.57, 0.12),
+]
+const STOREFRONT_ROOFS := [
+	Color(0.43, 0.44, 0.45),
+	Color(0.47, 0.46, 0.44),
+	Color(0.39, 0.41, 0.42),
+]
+# Storefront roof furniture borrows these tones from levels/building_deco.gd.
+const GRAVEL_DARK := Color(0.24, 0.24, 0.29)
+const GRAVEL_LIGHT := Color(0.33, 0.33, 0.39)
+const HVAC := Color(0.4, 0.4, 0.46)
+const HVAC_SHADOW := Color(0.0, 0.0, 0.0, 0.25)
+const HVAC_EDGE := Color(0.5, 0.5, 0.56)
+const STRAW := Color(0.68, 0.52, 0.23)
+const STRAW_DARK := Color(0.43, 0.31, 0.13)
+const STRAW_TWINE := Color(0.84, 0.70, 0.37)
+
+const BLASTS := {
+	&"barrel": {"radius": 130.0, "damage": 25.0},
+	&"tanker": {"radius": 200.0, "damage": 40.0},
+}
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates
 const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
@@ -86,6 +120,10 @@ const REMAINS := {
 	&"junk": [&"debris", RUST, RUST_DARK],
 	&"pump": [&"scorch", PUMP_RED, HAZARD_DARK],
 	&"barrel": [&"scorch", BARREL_RED, BARREL_RIM],
+	&"semi": [&"crumple", ROAD_TRAILERS[0], METAL_DARK],
+	&"tanker": [&"scorch", ROAD_TRAILERS[1], HAZARD_DARK],
+	&"hay": [&"splinter", STRAW, STRAW_DARK],
+	&"storefront": [&"debris", STOREFRONT_ROOFS[0], METAL_DARK],
 	&"fence": [&"splinter", Color(0.92, 0.9, 0.85), Color(0.68, 0.66, 0.6)],
 	&"iron_fence": [&"crumple", IRON_HI, IRON],
 	&"container": [&"crumple", Color.WHITE, METAL_DARK],  # base = livery, darkened
@@ -105,7 +143,8 @@ const REMAINS := {
 @export var extra_floor := -1       # ≥1 adds a SECOND terrace bit — for guards
 									# straddling a grade boundary (stadium slope
 									# ends), where both floors must collide
-@export var livery := -1            # containers: CONTAINER_PALETTES index; -1 = seeded
+@export var livery := -1            # style palette index; -1 = position-seeded
+@export_enum("south", "north", "west", "east") var front := "south"
 @export_range(0, 65535, 1) var arena_net_id := 0 # 0 = legacy/local destruction
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
@@ -152,10 +191,11 @@ func _explode_and_free() -> void:
 	if _dead:
 		return
 	_spawn_death_visual()
-	if deco == &"barrel":
+	if BLASTS.has(deco):
 		# Deferred: death often lands mid-physics-flush (projectile Area2D
 		# signal), and shape queries need the space unlocked.
-		call_deferred("_barrel_blast")
+		var blast: Dictionary = BLASTS[deco]
+		call_deferred(&"_blast", float(blast.radius), float(blast.damage))
 	_present_remains()
 
 ## The flatten-in-place death state: the node STAYS — visible, collisionless
@@ -178,7 +218,7 @@ func _spawn_death_visual() -> void:
 		var boom := preload("res://environment/explosion.tscn").instantiate()
 		boom.global_position = global_position
 		boom.tint = _boom_tint()
-		boom.size_scale = 1.0 if deco == &"barrel" else 0.6
+		boom.size_scale = 1.4 if deco == &"tanker" else (1.0 if deco == &"barrel" else 0.6)
 		scene.add_child(boom)
 
 func capture_arena_state(_actor_lookup: Array) -> Dictionary:
@@ -211,8 +251,14 @@ func _boom_tint() -> Color:
 	match deco:
 		&"house":
 			return ROOF_DARK
-		&"barrel", &"pump":
+		&"barrel", &"tanker", &"pump":
 			return Color(1.0, 0.45, 0.15)  # fuel fire
+		&"semi":
+			return ROAD_TRAILERS[1]
+		&"hay":
+			return STRAW
+		&"storefront":
+			return STOREFRONT_ROOFS[0]
 		&"fence":
 			return Color(0.9, 0.88, 0.82)  # splinters fly white
 		&"iron_fence":
@@ -226,11 +272,11 @@ func _boom_tint() -> Color:
 		_:
 			return BASE_COLOR
 
-## Fuel-barrel detonation: flat damage to every Health-bearing body in range —
-## vehicles, crates, other barrels (chain reactions welcome), and you.
-func _barrel_blast() -> void:
+## Fuel detonation: flat damage to every Health-bearing body in range —
+## vehicles, pumps, other explosives (chain reactions welcome), and you.
+func _blast(radius: float, damage: float) -> void:
 	var shape := CircleShape2D.new()
-	shape.radius = BLAST_RADIUS
+	shape.radius = radius
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
 	params.transform = Transform2D(0.0, global_position)
@@ -243,12 +289,12 @@ func _barrel_blast() -> void:
 			continue  # a dock-level fireball doesn't cook the roof
 		for child in body.get_children():
 			if child is Health:
-				# Kind breadcrumb only — barrel kills stay deliberately creditless
+				# Kind breadcrumb only — fuel kills stay deliberately creditless
 				# (no last_attacker, no Combat.scale): shoot a barrel, walk away.
 				if body.has_method(&"note_hit"):
 					body.call(&"note_hit", HitTags.ENVIRONMENT)
 				body.set_meta(&"bc_hit_kind", &"environment")
-				child.take_damage(BLAST_DAMAGE)
+				child.take_damage(damage)
 				break
 
 func _shade(c: Color) -> Color:
@@ -271,6 +317,17 @@ func _truck_livery(rng: RandomNumberGenerator) -> Color:
 	if livery >= 0 and livery < TRUCK_PALETTES.size():
 		return TRUCK_PALETTES[livery]
 	return TRUCK_PALETTES[rng.randi() % TRUCK_PALETTES.size()]
+
+## Livery seams for highway cabs and strip-mall awnings.
+func _road_truck_livery(rng: RandomNumberGenerator) -> Color:
+	if livery >= 0 and livery < ROAD_TRUCK_PALETTES.size():
+		return ROAD_TRUCK_PALETTES[livery]
+	return ROAD_TRUCK_PALETTES[rng.randi() % ROAD_TRUCK_PALETTES.size()]
+
+func _storefront_livery(rng: RandomNumberGenerator) -> Color:
+	if livery >= 0 and livery < STOREFRONT_PALETTES.size():
+		return STOREFRONT_PALETTES[livery]
+	return STOREFRONT_PALETTES[rng.randi() % STOREFRONT_PALETTES.size()]
 
 func _draw() -> void:
 	if _dead:
@@ -306,6 +363,14 @@ func _draw() -> void:
 			_draw_pump()
 		&"barrel":
 			_draw_barrel()
+		&"semi":
+			_draw_semi()
+		&"tanker":
+			_draw_tanker()
+		&"hay":
+			_draw_hay()
+		&"storefront":
+			_draw_storefront()
 		&"fence":
 			_draw_fence()
 		&"iron_fence":
@@ -675,3 +740,236 @@ func _draw_barrel() -> void:
 		Vector2(0, -d), Vector2(d, 0), Vector2(0, d), Vector2(-d, 0),
 	]), _shade(HAZARD_YELLOW))
 	draw_line(Vector2(0, -d * 0.5), Vector2(0, d * 0.5), _shade(HAZARD_DARK), 2.0)
+
+## Parked highway semi: a weathered box trailer behind a bright fleet cab.
+## Like the food truck, its drawing space always runs left-to-right.
+func _draw_semi() -> void:
+	var rng := _seed_rng()
+	var trailer: Color = ROAD_TRAILERS[rng.randi() % ROAD_TRAILERS.size()]
+	var cab := _road_truck_livery(rng)
+	var tall := size.y > size.x
+	var run := size.y if tall else size.x
+	var wide := size.x if tall else size.y
+	var h := Vector2(run, wide) * 0.5
+	if tall:
+		draw_set_transform(Vector2.ZERO, PI * 0.5, Vector2.ONE)
+	draw_rect(Rect2(-h + Vector2(6, 9), Vector2(run, wide)), SHADOW)
+	draw_line(Vector2(-h.x + 3.0, 0.0), Vector2(h.x - 3.0, 0.0),
+		_shade(METAL_DARK), 7.0)
+	var trailer_w := run * 0.60
+	var trailer_rect := Rect2(Vector2(-h.x, -h.y * 0.9), Vector2(trailer_w, wide * 0.9))
+	draw_rect(trailer_rect, _shade(trailer))
+	draw_rect(trailer_rect, _shade(trailer.darkened(0.38)), false, 2.5)
+	# Roof seam and a few deterministic road-grime scratches.
+	draw_line(Vector2(-h.x + 5.0, 0.0), Vector2(-h.x + trailer_w - 5.0, 0.0),
+		_shade(trailer.darkened(0.22)), 2.0)
+	for i in 2:
+		var x := rng.randf_range(-h.x + trailer_w * 0.18, -h.x + trailer_w * 0.82)
+		var y := rng.randf_range(-wide * 0.28, wide * 0.28)
+		draw_line(Vector2(x - 5.0, y), Vector2(x + 7.0, y + 1.0),
+			_shade(trailer.darkened(0.3)), 1.2)
+	# Twin hinges at the -run doors.
+	for y: float in [-wide * 0.23, wide * 0.23]:
+		draw_line(Vector2(-h.x + 2.0, y), Vector2(-h.x + 11.0, y),
+			_shade(METAL_DARK), 3.0)
+		draw_circle(Vector2(-h.x + 5.0, y), 2.0, _shade(HAZARD_DARK))
+	_draw_road_cab(h, run, wide, cab)
+	_draw_road_wheels(h, run, wide)
+	if tall:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## Fuel tanker: the semi cab pulling a rounded, banded aluminium cylinder.
+func _draw_tanker() -> void:
+	var rng := _seed_rng()
+	var tank: Color = ROAD_TRAILERS[rng.randi() % ROAD_TRAILERS.size()]
+	var cab := _road_truck_livery(rng)
+	var tall := size.y > size.x
+	var run := size.y if tall else size.x
+	var wide := size.x if tall else size.y
+	var h := Vector2(run, wide) * 0.5
+	if tall:
+		draw_set_transform(Vector2.ZERO, PI * 0.5, Vector2.ONE)
+	draw_rect(Rect2(-h + Vector2(6, 9), Vector2(run, wide)), SHADOW)
+	draw_line(Vector2(-h.x + 3.0, 0.0), Vector2(h.x - 3.0, 0.0),
+		_shade(METAL_DARK), 7.0)
+	var tank_left := -h.x
+	var tank_length := run * 0.60
+	var tank_right := tank_left + tank_length
+	var tank_r := minf(wide * 0.36, tank_length * 0.28)
+	var left_cap := Vector2(tank_left + tank_r, 0.0)
+	var right_cap := Vector2(tank_right - tank_r, 0.0)
+	draw_circle(left_cap, tank_r, _shade(tank))
+	draw_circle(right_cap, tank_r, _shade(tank))
+	draw_rect(Rect2(Vector2(left_cap.x, -tank_r),
+		Vector2(right_cap.x - left_cap.x, tank_r * 2.0)), _shade(tank))
+	var tank_dark := _shade(tank.darkened(0.4))
+	draw_arc(left_cap, tank_r, PI * 0.5, PI * 1.5, 16, tank_dark, 2.5)
+	draw_arc(right_cap, tank_r, -PI * 0.5, PI * 0.5, 16, tank_dark, 2.5)
+	draw_line(Vector2(left_cap.x, -tank_r), Vector2(right_cap.x, -tank_r), tank_dark, 2.5)
+	draw_line(Vector2(left_cap.x, tank_r), Vector2(right_cap.x, tank_r), tank_dark, 2.5)
+	# Sun strip, three hoops, placard, and a seeded manhole on the tank crown.
+	draw_line(Vector2(left_cap.x, -tank_r * 0.42),
+		Vector2(right_cap.x, -tank_r * 0.42), _shade(tank.lightened(0.34)), 3.0)
+	for fraction: float in [0.23, 0.50, 0.77]:
+		var x := tank_left + tank_length * fraction
+		draw_line(Vector2(x, -tank_r), Vector2(x, tank_r), tank_dark, 3.0)
+	var placard := Vector2(tank_left + tank_r * 0.85, tank_r * 0.22)
+	draw_rect(Rect2(placard - Vector2(5, 5), Vector2(10, 10)), _shade(HAZARD_YELLOW))
+	draw_rect(Rect2(placard - Vector2(5, 5), Vector2(10, 10)),
+		_shade(HAZARD_DARK), false, 1.5)
+	var hatch_x := lerpf(left_cap.x, right_cap.x, rng.randf_range(0.42, 0.58))
+	draw_circle(Vector2(hatch_x, -tank_r * 0.08), 5.0, tank_dark)
+	draw_circle(Vector2(hatch_x, -tank_r * 0.08), 2.5, _shade(tank.lightened(0.2)))
+	_draw_road_cab(h, run, wide, cab)
+	_draw_road_wheels(h, run, wide)
+	if tall:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## Shared tractor nose: livery cab, windshield band, stack, and front bumper.
+func _draw_road_cab(h: Vector2, run: float, wide: float, cab: Color) -> void:
+	var cab_w := run * 0.24
+	var cab_x := h.x - cab_w
+	var cab_rect := Rect2(Vector2(cab_x, -h.y), Vector2(cab_w, wide))
+	draw_rect(cab_rect, _shade(cab))
+	draw_rect(cab_rect, _shade(cab.darkened(0.42)), false, 2.5)
+	draw_rect(Rect2(Vector2(cab_x + 4.0, -h.y + 4.0), Vector2(6.0, wide - 8.0)),
+		_shade(Color(0.58, 0.72, 0.79)))
+	draw_circle(Vector2(cab_x - 5.0, -wide * 0.28), 3.5, _shade(METAL_DARK))
+	draw_rect(Rect2(Vector2(h.x - 4.0, -h.y + 3.0), Vector2(4.0, wide - 6.0)),
+		_shade(Color(0.65, 0.66, 0.65)))
+
+func _draw_road_wheels(h: Vector2, run: float, wide: float) -> void:
+	var cab_w := run * 0.24
+	for wx: float in [-h.x + run * 0.18, -h.x + run * 0.48, h.x - cab_w * 0.5]:
+		draw_rect(Rect2(Vector2(wx - 6.0, -wide * 0.5 - 1.0), Vector2(12.0, 4.0)),
+			_shade(TIRE_BLACK))
+		draw_rect(Rect2(Vector2(wx - 6.0, wide * 0.5 - 3.0), Vector2(12.0, 4.0)),
+			_shade(TIRE_BLACK))
+
+## Round bale from above: layered straw coils, crossed twine, loose whiskers.
+func _draw_hay() -> void:
+	var rng := _seed_rng()
+	var r := minf(size.x, size.y) * 0.5
+	draw_circle(Vector2(6, 9), r, SHADOW)
+	draw_circle(Vector2.ZERO, r, _shade(STRAW_DARK))
+	draw_circle(Vector2.ZERO, r * 0.94, _shade(STRAW))
+	for fraction: float in [0.28, 0.52, 0.76]:
+		draw_arc(Vector2.ZERO, r * fraction, 0.0, TAU, 28, _shade(STRAW_DARK), 1.5)
+	draw_line(Vector2(-r * 0.84, 0.0), Vector2(r * 0.84, 0.0),
+		_shade(STRAW_TWINE), 2.5)
+	draw_line(Vector2(0.0, -r * 0.84), Vector2(0.0, r * 0.84),
+		_shade(STRAW_TWINE), 2.5)
+	for i in 10:
+		var angle := TAU * float(i) / 10.0 + rng.randf_range(-0.18, 0.18)
+		var start := Vector2.RIGHT.rotated(angle) * r * rng.randf_range(0.78, 0.94)
+		var finish := Vector2.RIGHT.rotated(angle + rng.randf_range(-0.12, 0.12)) \
+			* r * rng.randf_range(1.02, 1.14)
+		draw_line(start, finish, _shade(STRAW_DARK), 1.4)
+
+## Strip-mall unit: seeded flat roof and one explicitly authored shop front.
+## Signage remains a level-owned child; this paint supplies no words.
+func storefront_hvac_count() -> int:
+	if minf(size.x, size.y) < 192.0:
+		return 0
+	return 2 if maxf(size.x, size.y) >= 320.0 else 1
+
+func _draw_storefront() -> void:
+	var rng := _seed_rng()
+	var roof: Color = STOREFRONT_ROOFS[rng.randi() % STOREFRONT_ROOFS.size()]
+	var stripe := _storefront_livery(rng)
+	var half := size * 0.5
+	draw_rect(Rect2(-half + SHADOW_OFFSET, size), SHADOW)
+	draw_rect(Rect2(-half, size), _shade(roof))
+	# Old tar repairs interrupt the gravel field differently on every unit.
+	for i in 2 + rng.randi() % 2:
+		var patch_size := Vector2(rng.randf_range(12.0, 28.0),
+			rng.randf_range(12.0, 28.0))
+		var inset := patch_size * 0.5 + Vector2(9, 9)
+		var center := Vector2(rng.randf_range(-half.x + inset.x, half.x - inset.x),
+			rng.randf_range(-half.y + inset.y, half.y - inset.y))
+		draw_rect(Rect2(center - patch_size * 0.5, patch_size),
+			_shade(roof.darkened(rng.randf_range(0.12, 0.22))))
+	# Sparse two-tone grit keeps the broad roof plane from reading as a slab.
+	for i in int(size.x * size.y / 3500.0):
+		var grit := Vector2(rng.randf_range(-half.x + 8.0, half.x - 11.0),
+			rng.randf_range(-half.y + 8.0, half.y - 11.0))
+		var grit_color := GRAVEL_DARK if rng.randf() < 0.6 else GRAVEL_LIGHT
+		draw_rect(Rect2(grit, Vector2(3, 3)), _shade(grit_color))
+	var hvac_count := storefront_hvac_count()
+	for i in hvac_count:
+		var unit_size := Vector2(rng.randf_range(42.0, 58.0), rng.randf_range(36.0, 48.0))
+		var lane := 0.0 if hvac_count == 1 else lerpf(-0.22, 0.22, float(i))
+		var center := Vector2(size.x * lane, rng.randf_range(-size.y * 0.18, size.y * 0.18)) \
+			if size.x >= size.y else \
+			Vector2(rng.randf_range(-size.x * 0.18, size.x * 0.18), size.y * lane)
+		var unit := Rect2(center - unit_size * 0.5, unit_size)
+		draw_rect(Rect2(unit.position + Vector2(3, 4), unit.size), HVAC_SHADOW)
+		draw_rect(unit, _shade(HVAC))
+		draw_rect(unit, _shade(HVAC_EDGE), false, 1.5)
+		var fan_radius := minf(unit_size.x, unit_size.y) * 0.28
+		draw_circle(center, fan_radius, _shade(METAL_DARK))
+		draw_line(center - Vector2(fan_radius * 0.75, 0),
+			center + Vector2(fan_radius * 0.75, 0), _shade(HVAC_EDGE), 1.5)
+		draw_line(center - Vector2(0, fan_radius * 0.75),
+			center + Vector2(0, fan_radius * 0.75), _shade(HVAC_EDGE), 1.5)
+	# Little vent stacks, each with a soot-dark opening.
+	for i in 2 + rng.randi() % 2:
+		var vent := Vector2(rng.randf_range(-half.x + 24.0, half.x - 24.0),
+			rng.randf_range(-half.y + 24.0, half.y - 24.0))
+		draw_rect(Rect2(vent - Vector2(5, 4), Vector2(10, 8)),
+			_shade(roof.darkened(0.24)))
+		draw_circle(vent, 2.0, _shade(roof.darkened(0.55)))
+	var corner: Vector2 = [Vector2(-1, -1), Vector2(1, -1),
+		Vector2(1, 1), Vector2(-1, 1)][rng.randi() % 4]
+	var drain := corner * (half - Vector2(rng.randf_range(15.0, 23.0),
+		rng.randf_range(15.0, 23.0)))
+	draw_rect(Rect2(drain - Vector2(4, 4), Vector2(8, 8)), _shade(roof.darkened(0.48)))
+	# Bright outside lip plus the dark inner tar seam gives the parapet its height.
+	draw_rect(Rect2(-half, size), _shade(roof.lightened(0.12)), false, 5.0)
+	draw_rect(Rect2(-half + Vector2(7, 7), size - Vector2(14, 14)),
+		_shade(roof.darkened(0.32)), false, 2.0)
+	_draw_storefront_front(stripe)
+
+func _draw_storefront_front(stripe: Color) -> void:
+	var cream := _shade(AWNING_CREAM)
+	var accent := _shade(stripe)
+	var mat := _shade(Color(0.22, 0.16, 0.12))
+	var edge := _shade(METAL_DARK)
+	var glass := _shade(Color(0.13, 0.20, 0.24))
+	var glint := _shade(Color(0.42, 0.55, 0.62))
+	var front_width := size.x if front == "north" or front == "south" else size.y
+	var wall_distance := size.y * 0.5 if front == "north" or front == "south" \
+		else size.x * 0.5
+	var angle := 0.0
+	match front:
+		"north":
+			angle = PI
+		"west":
+			angle = PI * 0.5
+		"east":
+			angle = -PI * 0.5
+	draw_set_transform(Vector2.ZERO, angle, Vector2.ONE)
+	var depth := 18.0
+	var length := front_width - 32.0
+	var stripes := clampi(roundi(length / 32.0), 6, 10)
+	var stripe_width := length / float(stripes)
+	for i in stripes:
+		var color := accent if i % 2 == 0 else cream
+		draw_rect(Rect2(Vector2(-length * 0.5 + stripe_width * i, wall_distance),
+			Vector2(stripe_width, depth)), color)
+	draw_rect(Rect2(Vector2(-length * 0.5, wall_distance), Vector2(length, depth)),
+		edge, false, 1.5)
+	var window_width := front_width * 0.4
+	var shopfront_y := wall_distance + depth
+	draw_rect(Rect2(Vector2(-window_width * 0.5, shopfront_y),
+		Vector2(window_width, 8.0)), glass)
+	draw_line(Vector2(-window_width * 0.36, shopfront_y + 2.0),
+		Vector2(-window_width * 0.08, shopfront_y + 2.0), glint, 1.5)
+	draw_line(Vector2(window_width * 0.08, shopfront_y + 5.0),
+		Vector2(window_width * 0.34, shopfront_y + 5.0), glint, 1.5)
+	var mat_width := minf(24.0, maxf(length * 0.5 - window_width * 0.5 - 8.0, 8.0))
+	draw_rect(Rect2(Vector2(window_width * 0.5 + 4.0, shopfront_y),
+		Vector2(mat_width, 8.0)), mat)
+	draw_line(Vector2(-length * 0.5, wall_distance),
+		Vector2(length * 0.5, wall_distance), edge, 2.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
