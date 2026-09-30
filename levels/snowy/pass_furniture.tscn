@@ -1,0 +1,611 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://environment/boulder.gd" id="1_wpt8f"]
+[ext_resource type="PackedScene" path="res://environment/derelict_car.tscn" id="2_xge5k"]
+[ext_resource type="Script" path="res://environment/derelict_car.gd" id="3_uxl25"]
+[ext_resource type="PackedScene" path="res://environment/clutter.tscn" id="4_yqbmo"]
+[ext_resource type="Script" path="res://environment/clutter.gd" id="5_fwyhj"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5d17l"]
+size = Vector2(128, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_f6h7s"]
+size = Vector2(128, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_02lli"]
+size = Vector2(128, 128)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wkuxx"]
+size = Vector2(128, 128)
+
+[node name="Furniture" type="Node2D" unique_id=1]
+
+[node name="Boulders" type="Node2D" parent="." unique_id=2]
+
+[node name="RockTrailhead" type="StaticBody2D" parent="Boulders" unique_id=3]
+position = Vector2(-1344, 1216)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_wpt8f")
+paint_seed = 11
+
+[node name="Col" type="CollisionShape2D" parent="Boulders/RockTrailhead" unique_id=4]
+shape = SubResource("RectangleShape2D_5d17l")
+
+[node name="RockSouthGate" type="StaticBody2D" parent="Boulders" unique_id=5]
+position = Vector2(-1024, 1856)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_wpt8f")
+paint_seed = 12
+
+[node name="Col" type="CollisionShape2D" parent="Boulders/RockSouthGate" unique_id=6]
+shape = SubResource("RectangleShape2D_f6h7s")
+
+[node name="RockSaddle" type="StaticBody2D" parent="Boulders" unique_id=7]
+position = Vector2(640, 128)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_wpt8f")
+paint_seed = 13
+
+[node name="Col" type="CollisionShape2D" parent="Boulders/RockSaddle" unique_id=8]
+shape = SubResource("RectangleShape2D_02lli")
+
+[node name="RockOverlook" type="StaticBody2D" parent="Boulders" unique_id=9]
+position = Vector2(704, -1408)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_wpt8f")
+paint_seed = 14
+
+[node name="Col" type="CollisionShape2D" parent="Boulders/RockOverlook" unique_id=10]
+shape = SubResource("RectangleShape2D_wkuxx")
+
+[node name="Wrecks" type="Node2D" parent="." unique_id=11]
+
+[node name="WreckBendLow" type="StaticBody2D" parent="Wrecks" unique_id=12 instance=ExtResource("2_xge5k")]
+position = Vector2(-1130, 1060)
+rotation = 0.45
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("3_uxl25")
+floor_index = 2
+arena_net_id = 50
+
+[node name="WreckBendMid" type="StaticBody2D" parent="Wrecks" unique_id=13 instance=ExtResource("2_xge5k")]
+position = Vector2(200, -1216)
+rotation = -0.35
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("3_uxl25")
+floor_index = 2
+arena_net_id = 51
+
+[node name="WreckTrailhead" type="StaticBody2D" parent="Wrecks" unique_id=14 instance=ExtResource("2_xge5k")]
+position = Vector2(-1780, 1850)
+rotation = 1.5707964
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("3_uxl25")
+floor_index = 2
+arena_net_id = 52
+
+[node name="PineGroves" type="Node2D" parent="." unique_id=15]
+
+[node name="PineTrailhead1" type="StaticBody2D" parent="PineGroves" unique_id=16 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1700, 1880)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineTrailhead2" type="StaticBody2D" parent="PineGroves" unique_id=17 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1540, 1885)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineTrailhead3" type="StaticBody2D" parent="PineGroves" unique_id=18 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1420, 1885)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineTrailhead4" type="StaticBody2D" parent="PineGroves" unique_id=19 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1290, 1840)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineTrailhead5" type="StaticBody2D" parent="PineGroves" unique_id=20 instance=ExtResource("4_yqbmo")]
+position = Vector2(-760, 1870)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineWestWall1" type="StaticBody2D" parent="PineGroves" unique_id=21 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1885, 1400)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineWestWall2" type="StaticBody2D" parent="PineGroves" unique_id=22 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1880, 1540)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineWestWall3" type="StaticBody2D" parent="PineGroves" unique_id=23 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1750, 1290)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineNook1" type="StaticBody2D" parent="PineGroves" unique_id=24 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1490, 1000)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineNook2" type="StaticBody2D" parent="PineGroves" unique_id=25 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1400, 1080)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineNook3" type="StaticBody2D" parent="PineGroves" unique_id=26 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1580, 1180)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineNook4" type="StaticBody2D" parent="PineGroves" unique_id=27 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1230, 1180)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSaddle1" type="StaticBody2D" parent="PineGroves" unique_id=28 instance=ExtResource("4_yqbmo")]
+position = Vector2(-800, 170)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSaddle2" type="StaticBody2D" parent="PineGroves" unique_id=29 instance=ExtResource("4_yqbmo")]
+position = Vector2(-670, 165)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSaddle3" type="StaticBody2D" parent="PineGroves" unique_id=30 instance=ExtResource("4_yqbmo")]
+position = Vector2(-540, 160)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSaddle4" type="StaticBody2D" parent="PineGroves" unique_id=31 instance=ExtResource("4_yqbmo")]
+position = Vector2(-730, 270)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSaddle5" type="StaticBody2D" parent="PineGroves" unique_id=32 instance=ExtResource("4_yqbmo")]
+position = Vector2(-340, 40)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineEast1" type="StaticBody2D" parent="PineGroves" unique_id=33 instance=ExtResource("4_yqbmo")]
+position = Vector2(560, 300)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineEast2" type="StaticBody2D" parent="PineGroves" unique_id=34 instance=ExtResource("4_yqbmo")]
+position = Vector2(690, 300)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineEast3" type="StaticBody2D" parent="PineGroves" unique_id=35 instance=ExtResource("4_yqbmo")]
+position = Vector2(780, 330)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineEast4" type="StaticBody2D" parent="PineGroves" unique_id=36 instance=ExtResource("4_yqbmo")]
+position = Vector2(710, 420)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeS1" type="StaticBody2D" parent="PineGroves" unique_id=37 instance=ExtResource("4_yqbmo")]
+position = Vector2(640, -140)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeS2" type="StaticBody2D" parent="PineGroves" unique_id=38 instance=ExtResource("4_yqbmo")]
+position = Vector2(760, -90)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeS3" type="StaticBody2D" parent="PineGroves" unique_id=39 instance=ExtResource("4_yqbmo")]
+position = Vector2(680, -20)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeN1" type="StaticBody2D" parent="PineGroves" unique_id=40 instance=ExtResource("4_yqbmo")]
+position = Vector2(640, -760)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeN2" type="StaticBody2D" parent="PineGroves" unique_id=41 instance=ExtResource("4_yqbmo")]
+position = Vector2(770, -720)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineBridgeN3" type="StaticBody2D" parent="PineGroves" unique_id=42 instance=ExtResource("4_yqbmo")]
+position = Vector2(700, -640)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineApron1" type="StaticBody2D" parent="PineGroves" unique_id=43 instance=ExtResource("4_yqbmo")]
+position = Vector2(-225, -850)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineApron2" type="StaticBody2D" parent="PineGroves" unique_id=44 instance=ExtResource("4_yqbmo")]
+position = Vector2(-228, -640)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineApron3" type="StaticBody2D" parent="PineGroves" unique_id=45 instance=ExtResource("4_yqbmo")]
+position = Vector2(-222, -130)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineApron4" type="StaticBody2D" parent="PineGroves" unique_id=46 instance=ExtResource("4_yqbmo")]
+position = Vector2(-226, 60)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSwitchback1" type="StaticBody2D" parent="PineGroves" unique_id=47 instance=ExtResource("4_yqbmo")]
+position = Vector2(30, -1250)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineSwitchback2" type="StaticBody2D" parent="PineGroves" unique_id=48 instance=ExtResource("4_yqbmo")]
+position = Vector2(340, -1245)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook1" type="StaticBody2D" parent="PineGroves" unique_id=49 instance=ExtResource("4_yqbmo")]
+position = Vector2(560, -1890)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook2" type="StaticBody2D" parent="PineGroves" unique_id=50 instance=ExtResource("4_yqbmo")]
+position = Vector2(720, -1880)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook3" type="StaticBody2D" parent="PineGroves" unique_id=51 instance=ExtResource("4_yqbmo")]
+position = Vector2(1100, -1885)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook4" type="StaticBody2D" parent="PineGroves" unique_id=52 instance=ExtResource("4_yqbmo")]
+position = Vector2(1300, -1870)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook5" type="StaticBody2D" parent="PineGroves" unique_id=53 instance=ExtResource("4_yqbmo")]
+position = Vector2(1500, -1890)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="PineOverlook6" type="StaticBody2D" parent="PineGroves" unique_id=54 instance=ExtResource("4_yqbmo")]
+position = Vector2(1700, -1860)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"pine"
+footprint = 36.0
+floor_index = 2
+
+[node name="Drifts" type="Node2D" parent="." unique_id=55]
+
+[node name="Drift1" type="StaticBody2D" parent="Drifts" unique_id=56 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1100, 1200)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift2" type="StaticBody2D" parent="Drifts" unique_id=57 instance=ExtResource("4_yqbmo")]
+position = Vector2(-720, 1200)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift3" type="StaticBody2D" parent="Drifts" unique_id=58 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1250, 1370)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift4" type="StaticBody2D" parent="Drifts" unique_id=59 instance=ExtResource("4_yqbmo")]
+position = Vector2(300, 330)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift5" type="StaticBody2D" parent="Drifts" unique_id=60 instance=ExtResource("4_yqbmo")]
+position = Vector2(820, -1240)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift6" type="StaticBody2D" parent="Drifts" unique_id=61 instance=ExtResource("4_yqbmo")]
+position = Vector2(600, -880)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift7" type="StaticBody2D" parent="Drifts" unique_id=62 instance=ExtResource("4_yqbmo")]
+position = Vector2(1200, -1380)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift8" type="StaticBody2D" parent="Drifts" unique_id=63 instance=ExtResource("4_yqbmo")]
+position = Vector2(500, -1700)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift9" type="StaticBody2D" parent="Drifts" unique_id=64 instance=ExtResource("4_yqbmo")]
+position = Vector2(1700, -1450)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Drift10" type="StaticBody2D" parent="Drifts" unique_id=65 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1180, 1700)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"drift"
+footprint = 48.0
+floor_index = 2
+
+[node name="Markers" type="Node2D" parent="." unique_id=66]
+
+[node name="Cone1" type="StaticBody2D" parent="Markers" unique_id=67 instance=ExtResource("4_yqbmo")]
+position = Vector2(128, -190)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone2" type="StaticBody2D" parent="Markers" unique_id=68 instance=ExtResource("4_yqbmo")]
+position = Vector2(512, -190)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone3" type="StaticBody2D" parent="Markers" unique_id=69 instance=ExtResource("4_yqbmo")]
+position = Vector2(128, -578)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone4" type="StaticBody2D" parent="Markers" unique_id=70 instance=ExtResource("4_yqbmo")]
+position = Vector2(512, -578)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone5" type="StaticBody2D" parent="Markers" unique_id=71 instance=ExtResource("4_yqbmo")]
+position = Vector2(-150, -190)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="Cone6" type="StaticBody2D" parent="Markers" unique_id=72 instance=ExtResource("4_yqbmo")]
+position = Vector2(-150, -578)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"cone"
+floor_index = 2
+
+[node name="SignBridgeS" type="StaticBody2D" parent="Markers" unique_id=73 instance=ExtResource("4_yqbmo")]
+position = Vector2(560, -160)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"sign"
+floor_index = 2
+
+[node name="SignBridgeN" type="StaticBody2D" parent="Markers" unique_id=74 instance=ExtResource("4_yqbmo")]
+position = Vector2(560, -610)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"sign"
+floor_index = 2
+
+[node name="SignRunaway" type="StaticBody2D" parent="Markers" unique_id=75 instance=ExtResource("4_yqbmo")]
+position = Vector2(-1100, 590)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("5_fwyhj")
+kind = &"sign"
+floor_index = 2

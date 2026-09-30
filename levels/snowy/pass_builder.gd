@@ -9,6 +9,9 @@ const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 const PitScene := preload("res://environment/pit_zone.tscn")
 const CurbScene := preload("res://environment/hazard_curb.tscn")
 const DestructibleBlockScene := preload("res://environment/destructible_block.tscn")
+const BoulderScript := preload("res://environment/boulder.gd")
+const ClutterScene := preload("res://environment/clutter.tscn")
+const DerelictCarScene := preload("res://environment/derelict_car.tscn")
 
 static func build_snow() -> Node2D:
 	var root := TerrainFieldScript.new() as Node2D
@@ -112,3 +115,68 @@ static func build_rails() -> Node2D:
 		root.add_child(rail)
 		rail.owner = root
 	return root
+
+static func build_furniture() -> Node2D:
+	var root := Node2D.new()
+	root.name = "Furniture"
+	var boulders := _add_group(root, &"Boulders")
+	var wrecks := _add_group(root, &"Wrecks")
+	var pines := _add_group(root, &"PineGroves")
+	var drifts := _add_group(root, &"Drifts")
+	var markers := _add_group(root, &"Markers")
+	for entry: Dictionary in PassGrid.FURNITURE[&"boulder"]:
+		var rock := StaticBody2D.new()
+		rock.name = entry["name"]
+		rock.position = entry["center"]
+		rock.collision_layer = 4
+		rock.collision_mask = 0
+		rock.set_script(BoulderScript)
+		rock.set("size", entry["size"])
+		rock.set("floor_index", entry["floor"])
+		rock.set("paint_seed", entry["paint_seed"])
+		boulders.add_child(rock)
+		rock.owner = root
+		var col := CollisionShape2D.new()
+		col.name = "Col"
+		var shape := RectangleShape2D.new()
+		shape.size = entry["size"]
+		col.shape = shape
+		rock.add_child(col)
+		col.owner = root
+	for entry: Dictionary in PassGrid.FURNITURE[&"wreck"]:
+		var wreck := DerelictCarScene.instantiate() as Node2D
+		wreck.name = entry["name"]
+		wreck.position = entry["center"]
+		wreck.rotation = entry["rotation"]
+		wreck.set("max_hp", entry["max_hp"])
+		wreck.set("floor_index", entry["floor"])
+		wreck.set("arena_net_id", entry["arena_net_id"])
+		wrecks.add_child(wreck)
+		wreck.owner = root
+	for entry: Dictionary in PassGrid.FURNITURE[&"pine"]:
+		_add_clutter(pines, root, entry, &"pine")
+	for entry: Dictionary in PassGrid.FURNITURE[&"drift"]:
+		_add_clutter(drifts, root, entry, &"drift")
+	for entry: Dictionary in PassGrid.FURNITURE[&"cone"]:
+		_add_clutter(markers, root, entry, &"cone")
+	for entry: Dictionary in PassGrid.FURNITURE[&"sign"]:
+		_add_clutter(markers, root, entry, &"sign")
+	return root
+
+static func _add_group(root: Node2D, group_name: StringName) -> Node2D:
+	var group := Node2D.new()
+	group.name = group_name
+	root.add_child(group)
+	group.owner = root
+	return group
+
+static func _add_clutter(group: Node2D, root: Node2D, entry: Dictionary,
+		kind: StringName) -> void:
+	var clutter := ClutterScene.instantiate() as Node2D
+	clutter.name = entry["name"]
+	clutter.position = entry["center"]
+	clutter.set("kind", kind)
+	clutter.set("footprint", entry["footprint"])
+	clutter.set("floor_index", entry["floor"])
+	group.add_child(clutter)
+	clutter.owner = root

@@ -11,6 +11,7 @@ const TerrainFieldScript := preload("res://environment/terrain_field.gd")
 const TerrainZoneScript := preload("res://environment/terrain_zone.gd")
 const RoadMarksScript := preload("res://environment/road_marks.gd")
 const UnionSkin := preload("res://environment/union_skin.gd")
+const FurnitureChecks := preload("res://tests/mountain_pass_furniture_checks.gd")
 
 const GOLDEN := [
 	"################################################################",
@@ -841,6 +842,18 @@ func test_rail_segments_cover_samples_except_jump_lane() -> void:
 	t.check(blocked_jump.is_empty(),
 		"pass rails: west-pit pad lane stays open on both faces; blocked %s" % [blocked_jump])
 
+func test_furniture_geometry_contract() -> void:
+	var errors := FurnitureChecks.geometry_errors()
+	t.check(errors.is_empty(), "pass furniture: placement geometry is safe; %s" % [errors])
+
+func test_furniture_generated_scene_contract() -> void:
+	var errors := FurnitureChecks.scene_errors()
+	t.check(errors.is_empty(), "pass furniture: builder and generated scene agree; %s" % [errors])
+
+func test_furniture_economy_and_ambient_contract() -> void:
+	var errors := FurnitureChecks.level_errors()
+	t.check(errors.is_empty(), "pass furniture: economy and ambient routes are safe; %s" % [errors])
+
 func test_built_rails_are_floor_stamped_and_networked() -> void:
 	var root := PassBuilder.build_rails()
 	var ids: Array[int] = []
@@ -1423,9 +1436,8 @@ func test_level_removes_old_snowfield_layout() -> void:
 		&"CurbCliffE", &"CurbCliffN", &"CurbCliffS", &"CurbChasmN",
 		&"CurbChasmS", &"CurbChasmE", &"CurbChasmW", &"Jump", &"Rock1",
 		&"Rock3", &"Rock4", &"Rock5", &"SlopeBuilding", &"CenterN",
-		&"CenterMidW", &"CenterMidE", &"CenterS", &"Drift1", &"Drift2",
-		&"Drift3", &"Drift4", &"Drift5", &"Drift6", &"Drift7", &"PineGroves",
-		&"Cone1", &"Cone2", &"Sign1", &"Enemy5", &"Enemy6", &"AmmoPower2",
+		&"CenterMidW", &"CenterMidE", &"CenterS", &"Sign1", &"Enemy5",
+		&"Enemy6", &"AmmoPower2",
 	]
 	var survivors: Array[StringName] = []
 	for old_name: StringName in removed:

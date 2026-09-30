@@ -92,6 +92,177 @@ const RAIL_RIM_INSET := 8.0
 const RAIL_END_CLEARANCE := 16.0
 const RAIL_MAX_LENGTH := 256.0
 
+const FURNITURE := {
+	&"boulder": [
+		{"name": &"RockTrailhead", "center": Vector2(-1344, 1216),
+			"size": Vector2(128, 128), "floor": 2, "paint_seed": 11},
+		{"name": &"RockSouthGate", "center": Vector2(-1024, 1856),
+			"size": Vector2(128, 128), "floor": 2, "paint_seed": 12},
+		{"name": &"RockSaddle", "center": Vector2(640, 128),
+			"size": Vector2(128, 128), "floor": 2, "paint_seed": 13},
+		{"name": &"RockOverlook", "center": Vector2(704, -1408),
+			"size": Vector2(128, 128), "floor": 2, "paint_seed": 14},
+	],
+	&"wreck": [
+		{"name": &"WreckBendLow", "center": Vector2(-1130, 1060),
+			"size": Vector2(112, 64), "rotation": 0.45, "floor": 2,
+			"max_hp": 50.0, "arena_net_id": 50},
+		{"name": &"WreckBendMid", "center": Vector2(200, -1216),
+			"size": Vector2(112, 64), "rotation": -0.35, "floor": 2,
+			"max_hp": 50.0, "arena_net_id": 51},
+		{"name": &"WreckTrailhead", "center": Vector2(-1780, 1850),
+			"size": Vector2(112, 64), "rotation": PI / 2.0, "floor": 2,
+			"max_hp": 50.0, "arena_net_id": 52},
+	],
+	&"pine": [
+		{"name": &"PineTrailhead1", "center": Vector2(-1700, 1880),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineTrailhead2", "center": Vector2(-1540, 1885),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineTrailhead3", "center": Vector2(-1420, 1885),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineTrailhead4", "center": Vector2(-1290, 1840),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineTrailhead5", "center": Vector2(-760, 1870),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineWestWall1", "center": Vector2(-1885, 1400),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineWestWall2", "center": Vector2(-1880, 1540),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineWestWall3", "center": Vector2(-1750, 1290),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineNook1", "center": Vector2(-1490, 1000),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineNook2", "center": Vector2(-1400, 1080),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineNook3", "center": Vector2(-1580, 1180),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineNook4", "center": Vector2(-1230, 1180),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSaddle1", "center": Vector2(-800, 170),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSaddle2", "center": Vector2(-670, 165),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSaddle3", "center": Vector2(-540, 160),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSaddle4", "center": Vector2(-730, 270),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSaddle5", "center": Vector2(-340, 40),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineEast1", "center": Vector2(560, 300),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineEast2", "center": Vector2(690, 300),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineEast3", "center": Vector2(780, 330),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineEast4", "center": Vector2(710, 420),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeS1", "center": Vector2(640, -140),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeS2", "center": Vector2(760, -90),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeS3", "center": Vector2(680, -20),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeN1", "center": Vector2(640, -760),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeN2", "center": Vector2(770, -720),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineBridgeN3", "center": Vector2(700, -640),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineApron1", "center": Vector2(-225, -850),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineApron2", "center": Vector2(-228, -640),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineApron3", "center": Vector2(-222, -130),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineApron4", "center": Vector2(-226, 60),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSwitchback1", "center": Vector2(30, -1250),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineSwitchback2", "center": Vector2(340, -1245),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook1", "center": Vector2(560, -1890),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook2", "center": Vector2(720, -1880),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook3", "center": Vector2(1100, -1885),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook4", "center": Vector2(1300, -1870),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook5", "center": Vector2(1500, -1890),
+			"footprint": 36.0, "floor": 2},
+		{"name": &"PineOverlook6", "center": Vector2(1700, -1860),
+			"footprint": 36.0, "floor": 2},
+	],
+	&"drift": [
+		{"name": &"Drift1", "center": Vector2(-1100, 1200),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift2", "center": Vector2(-720, 1200),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift3", "center": Vector2(-1250, 1370),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift4", "center": Vector2(300, 330),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift5", "center": Vector2(820, -1240),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift6", "center": Vector2(600, -880),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift7", "center": Vector2(1200, -1380),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift8", "center": Vector2(500, -1700),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift9", "center": Vector2(1700, -1450),
+			"footprint": 48.0, "floor": 2},
+		{"name": &"Drift10", "center": Vector2(-1180, 1700),
+			"footprint": 48.0, "floor": 2},
+	],
+	&"cone": [
+		{"name": &"Cone1", "center": Vector2(128, -190),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"Cone2", "center": Vector2(512, -190),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"Cone3", "center": Vector2(128, -578),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"Cone4", "center": Vector2(512, -578),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"Cone5", "center": Vector2(-150, -190),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"Cone6", "center": Vector2(-150, -578),
+			"footprint": 40.0, "floor": 2},
+	],
+	&"sign": [
+		{"name": &"SignBridgeS", "center": Vector2(560, -160),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"SignBridgeN", "center": Vector2(560, -610),
+			"footprint": 40.0, "floor": 2},
+		{"name": &"SignRunaway", "center": Vector2(-1100, 590),
+			"footprint": 40.0, "floor": 2},
+	],
+}
+
+static func furniture_rects(kind: StringName) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for entry: Dictionary in FURNITURE.get(kind, []):
+		var center: Vector2 = entry["center"]
+		var size: Vector2
+		if entry.has("size"):
+			size = entry["size"]
+		else:
+			size = Vector2.ONE * float(entry["footprint"])
+		if kind == &"wreck":
+			var angle := float(entry["rotation"])
+			var c := absf(cos(angle))
+			var s := absf(sin(angle))
+			size = Vector2(c * size.x + s * size.y, s * size.x + c * size.y)
+		rects.append(Rect2(center - size * 0.5, size))
+	return rects
+
+static func solid_furniture_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for kind: StringName in [&"boulder", &"wreck", &"pine"]:
+		rects.append_array(furniture_rects(kind))
+	return rects
+
 static func kind_at(i: int, j: int) -> StringName:
 	if i < 0 or i >= N or j < 0 or j >= N:
 		return MOUNTAIN

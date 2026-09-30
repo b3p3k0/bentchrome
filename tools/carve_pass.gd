@@ -7,13 +7,16 @@ const SNOW_PATH := "res://levels/snowy/pass_snow.tscn"
 const MOUNTAIN_PATH := "res://levels/snowy/pass_mountain.tscn"
 const DROP_PATH := "res://levels/snowy/pass_drop.tscn"
 const RAILS_PATH := "res://levels/snowy/pass_rails.tscn"
+const FURNITURE_PATH := "res://levels/snowy/pass_furniture.tscn"
 
 func _init() -> void:
 	var roots: Array[Node2D] = [
 		PassBuilder.build_snow(), PassBuilder.build_mountain(), PassBuilder.build_drop(),
-		PassBuilder.build_rails(),
+		PassBuilder.build_rails(), PassBuilder.build_furniture(),
 	]
-	var paths := PackedStringArray([SNOW_PATH, MOUNTAIN_PATH, DROP_PATH, RAILS_PATH])
+	var paths := PackedStringArray([
+		SNOW_PATH, MOUNTAIN_PATH, DROP_PATH, RAILS_PATH, FURNITURE_PATH,
+	])
 	var checking := OS.get_cmdline_user_args().has("--check")
 	var failed := false
 	for i in roots.size():
@@ -61,37 +64,38 @@ func _matches_saved(path: String, expected: Node2D) -> bool:
 	return matches
 
 func _signature(root: Node2D) -> Array:
-	var script := root.get_script() as Script
-	var root_script_path := script.resource_path if script != null else ""
-	var result: Array = [root.name, root.get_class(), root_script_path,
-		root.get("bounds"), root.get("paint_seed")]
-	if root.name == &"Mountain":
-		result.append(root.get("chamfer_exclusions"))
-	for child: Node in root.get_children():
-		var node := child as Node2D
-		var child_script := node.get_script() as Script
-		var script_path := child_script.resource_path if child_script != null else ""
-		var row: Array = [
-			node.name, node.get_class(), node.position, node.scale, node.z_index, script_path,
-		]
-		if node is CollisionObject2D:
-			var collision := node as CollisionObject2D
-			row.append_array([collision.collision_layer, collision.collision_mask])
-		if node.name.begins_with("Block") or node.name.begins_with("Snow"):
-			var col := node.get_node_or_null(^"Col") as CollisionShape2D
-			var shape := col.shape as RectangleShape2D if col != null else null
-			row.append(col.name if col != null else &"")
-			row.append(shape.size if shape != null else Vector2.ZERO)
-			if node.name.begins_with("Snow"):
-				row.append(node.get("terrain_type"))
-		else:
-			row.append(node.get("size"))
-			if node.name.begins_with("Pit"):
-				row.append(node.get("paint"))
-			elif node.name.begins_with("Rail"):
-				row.append_array([
-					node.get("deco"), node.get("max_hp"), node.get("floor_index"),
-					node.get("arena_net_id"),
-				])
-		result.append(row)
+	return _node_signature(root)
+
+func _node_signature(node: Node) -> Array:
+	var script := node.get_script() as Script
+	var script_path := script.resource_path if script != null else ""
+	var result: Array = [node.name, node.get_class(), script_path]
+	if node is Node2D:
+		var node_2d := node as Node2D
+		result.append_array([
+			node_2d.position, node_2d.rotation, node_2d.scale, node_2d.z_index,
+		])
+	if node is CollisionObject2D:
+		var collision := node as CollisionObject2D
+		result.append_array([collision.collision_layer, collision.collision_mask])
+	for property: StringName in [
+			&"bounds", &"paint_seed", &"chamfer_exclusions", &"size", &"terrain_type",
+			&"paint", &"deco", &"max_hp", &"floor_index", &"arena_net_id", &"kind",
+			&"footprint",
+		]:
+		if _has_property(node, property):
+			result.append([property, node.get(property)])
+	if node is CollisionShape2D:
+		var shape := (node as CollisionShape2D).shape
+		result.append(shape.get_class() if shape != null else "")
+		if shape is RectangleShape2D:
+			result.append((shape as RectangleShape2D).size)
+	for child: Node in node.get_children():
+		result.append(_node_signature(child))
 	return result
+
+func _has_property(node: Node, property: StringName) -> bool:
+	for info: Dictionary in node.get_property_list():
+		if info["name"] == property:
+			return true
+	return false
