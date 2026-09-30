@@ -12,6 +12,7 @@ magnitude = 4.0
 [resource]
 script = ExtResource("1_def")
 display_name = "Blunt Blaze"
+element = &"fire"
 kind = 4
 cooldown = 15.0
 active_duration = 2.0

@@ -6,9 +6,10 @@ extends Node
 
 @onready var _health: Health = get_parent().get_node_or_null("Health") if get_parent() else null
 
-var _active: Array = []  # each: {kind: StringName, remaining: float, magnitude: float}
+var _active: Array = []  # each: {kind, remaining, magnitude, source, hit_id}
 
-func apply(spec: StatusEffectSpec) -> void:
+func apply(spec: StatusEffectSpec, source: Node = null,
+		hit_id: StringName = &"") -> void:
 	if spec == null:
 		return
 	# Bosses keep their trigger fingers (and their momentum): fixed_loadout
@@ -21,8 +22,11 @@ func apply(spec: StatusEffectSpec) -> void:
 			if spec.refresh:     # then the running effect finishes untouched.
 				e.remaining = maxf(e.remaining, spec.duration)
 				e.magnitude = spec.magnitude
+				e.source = source
+				e.hit_id = hit_id
 			return
-	_active.append({"kind": spec.kind, "remaining": spec.duration, "magnitude": spec.magnitude})
+	_active.append({"kind": spec.kind, "remaining": spec.duration, "magnitude": spec.magnitude,
+		"source": source, "hit_id": hit_id})
 
 func _physics_process(delta: float) -> void:
 	tick(delta)
@@ -34,6 +38,10 @@ func tick(delta: float) -> void:
 	while i >= 0:
 		var e = _active[i]
 		if e.kind == &"burn" and _health:
+			var parent := get_parent()
+			if parent and parent.has_method(&"note_hit") and is_instance_valid(e.source) \
+					and parent.get("last_attacker") == e.source:
+				parent.call(&"note_hit", e.hit_id)
 			_health.take_damage(e.magnitude * delta * _burn_taken())
 		e.remaining -= delta
 		if e.remaining <= 0.0:
@@ -72,7 +80,8 @@ func has_effect(kind: StringName) -> bool:
 func set_cosmetic(kind: StringName, on: bool) -> void:
 	if on:
 		if not has_effect(kind):
-			_active.append({"kind": kind, "remaining": 3600.0, "magnitude": 0.0})
+			_active.append({"kind": kind, "remaining": 3600.0, "magnitude": 0.0,
+				"source": null, "hit_id": &""})
 	else:
 		clear_kind(kind)
 

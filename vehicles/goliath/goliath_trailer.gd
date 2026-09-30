@@ -105,7 +105,9 @@ func _swing_strike() -> void:
 			continue  # airborne cars sail over the tail
 		body.apply_impact(_main.global_position, JACKKNIFE_DMG,
 			JACKKNIFE_KNOCKBACK, JACKKNIFE_SPIN, JACKKNIFE_STUN)
-		if "last_attacker" in body:
+		if body.has_method(&"stamp_hit"):
+			body.call(&"stamp_hit", _cab, &"jackknife")
+		elif "last_attacker" in body:
 			body.last_attacker = _cab  # the grudge lands on the boss
 		_swing_cd = SWING_HIT_COOLDOWN
 		return  # one bite per swing

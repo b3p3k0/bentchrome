@@ -9,6 +9,7 @@ extends Node
 
 const Combat := preload("res://game/combat.gd")  # dependency-free damage rules
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates (same rules)
+const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
 # Garage Improved Lock: tracking_scale widens every lock reach in this file
 # (twin pick, taser latch + hold, dash) — boss Turret excluded (bosses never
@@ -77,8 +78,10 @@ var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
 var _dash_forward := Vector2.RIGHT  # the nose at launch (the forward-only cone's axis)
 var _dash_damage_mult := 1.0  # terrain snapshot; consumed by first landed ram
+var _dash_def: WeaponDef = null
 var _armed := false
 var _armed_t := 0.0               # Toe Jam use-it-or-lose-it countdown
+var _armed_def: WeaponDef = null
 var _armed_fx: CPUParticles2D = null
 var _flame_t := 0.0
 var _flame_vis: Polygon2D = null
@@ -210,7 +213,7 @@ func activate(pressed: bool, origin: Vector2, direction: Vector2, shooter: Node)
 					_play_special_sfx(def)  # AI positional / assetless placeholder
 			return beam_ok
 		WeaponDef.Kind.DASH:
-			var dash_ok := _dash(pressed, origin, direction, shooter)
+			var dash_ok := _dash(pressed, origin, direction, shooter, def)
 			if dash_ok:
 				_play_special_sfx(def)
 			return dash_ok
@@ -255,6 +258,8 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 	mine.global_position = vehicle.global_position - Vector2.RIGHT.rotated(heading) * 48.0
 	mine.damage = def.damage
 	mine.dropper = shooter
+	if "hit_id" in mine:
+		mine.hit_id = HitTags.id_for_def(def)
 	if "floor_index" in mine:
 		mine.floor_index = Floors.floor_of(shooter)  # armed for the dropper's terrace
 		if mine is CanvasItem and int(mine.floor_index) >= 3:
@@ -333,7 +338,8 @@ func _beam_tick(delta: float) -> void:
 		return
 	if _beam_target.has_method("take_ram_damage"):
 		# Damage authored as dps; AI-on-AI runs through the governor.
-		_beam_target.take_ram_damage(_beam_def.damage * delta * Combat.scale(vehicle, _beam_target), vehicle)
+		_beam_target.take_ram_damage(_beam_def.damage * delta * Combat.scale(vehicle, _beam_target),
+			vehicle, HitTags.id_for_def(_beam_def))
 	if _beam_target.has_method("apply_effect"):
 		var slow := StatusEffectSpec.new()
 		slow.kind = &"slow"
@@ -392,6 +398,7 @@ func _exit_tree() -> void:
 	_end_pulse()
 	_dash_t = 0.0
 	_dash_target = null
+	_dash_def = null
 	_dash_damage_mult = 1.0
 
 ## Leap: lock the nearest vehicle in range and full-throttle body-check it
@@ -399,7 +406,8 @@ func _exit_tree() -> void:
 ## sails over obstacles, and on connecting drains the victim's speed and grants
 ## the caster brief invulnerability. Ram damage itself comes from the existing
 ## ram loop — at dash speed that's already a massive hit.
-func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
+func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node,
+		def: WeaponDef = null) -> bool:
 	if not pressed or _dash_t > 0.0:
 		return false
 	var from := (shooter as Node2D).global_position
@@ -412,6 +420,7 @@ func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -
 	_dash_dir = direction
 	_dash_forward = direction
 	_dash_t = DASH_DURATION
+	_dash_def = def
 	_dash_damage_mult = 1.0
 	if shooter.has_method(&"terrain_factor"):
 		_dash_damage_mult = float(shooter.terrain_factor(&"dash_damage"))
@@ -421,6 +430,9 @@ func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -
 
 func is_dashing() -> bool:
 	return _dash_t > 0.0
+
+func dash_def() -> WeaponDef:
+	return _dash_def if _dash_t > 0.0 else null
 
 func dash_damage_multiplier() -> float:
 	return _dash_damage_mult if _dash_t > 0.0 else 1.0
@@ -441,6 +453,7 @@ func cancel_dash() -> void:
 	else:
 		_dash_t = 0.0
 		_dash_target = null
+		_dash_def = null
 		_dash_damage_mult = 1.0
 
 ## A world interaction has taken the wheel. Running sustained effects end as a
@@ -497,6 +510,7 @@ func _dash_tick(delta: float) -> void:
 func _end_dash(vehicle: CharacterBody2D) -> void:
 	_dash_t = 0.0
 	_dash_target = null
+	_dash_def = null
 	_dash_damage_mult = 1.0
 	# Restore the mask to match the car's air state, same split as
 	# Vehicle._set_airborne. Grounded values come from the car's own mask
@@ -557,14 +571,13 @@ func _flame_tick(delta: float) -> void:
 			continue  # the torch doesn't reach up to roofs or down to the shore
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body:
-					body.last_attacker = vehicle
+				_stamp_body(body, vehicle, _flame_def)
 				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_flame_def.damage * delta * Combat.scale(vehicle, body))
 				break
 		if body.has_method("apply_effect"):
 			for spec in _flame_def.on_hit_effects:
-				body.apply_effect(spec)
+				body.apply_effect(spec, vehicle, HitTags.id_for_def(_flame_def))
 	_flame_t -= delta
 	if _flame_t <= 0.0:
 		_end_flame()
@@ -668,8 +681,7 @@ func _tornado_tick(delta: float) -> void:
 			continue  # the funnel stays on its own terrace
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body:
-					body.last_attacker = vehicle
+				_stamp_body(body, vehicle, _tornado_def)
 				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_tornado_def.damage * delta * Combat.scale(vehicle, body))
 				break
@@ -832,8 +844,7 @@ func _pulse_tick(delta: float) -> void:
 		var falloff := lerpf(1.0, PULSE_EDGE_FRAC, dist / range_px)
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body:
-					body.last_attacker = vehicle
+				_stamp_body(body, vehicle, _pulse_def)
 				body.set_meta(&"bc_hit_kind", &"special")  # botlab telemetry breadcrumb
 				child.take_damage(_pulse_def.damage * falloff * Combat.scale(vehicle, body))
 				break
@@ -868,6 +879,7 @@ func _trigger(pressed: bool, def: WeaponDef) -> bool:
 		return false
 	_armed = true
 	_armed_t = TRIGGER_WINDOW
+	_armed_def = def
 	_armed_damage = def.damage if def else 0.0  # captured: swaps can't re-price it
 	_armed_sfx = special_sfx_event(def)         # voiced when the hit LANDS
 	_set_armed_fx(true)
@@ -880,6 +892,7 @@ func take_armed_hit() -> float:
 		return 0.0
 	_armed = false
 	_armed_t = 0.0
+	_armed_def = null
 	_set_armed_fx(false)
 	if _armed_sfx != &"":
 		var audio := get_node_or_null(^"/root/AudioDirector")
@@ -895,9 +908,19 @@ func take_armed_hit() -> float:
 		_armed_sfx = &""
 	return _armed_damage
 
+func armed_def() -> WeaponDef:
+	return _armed_def if _armed else null
+
 func _disarm_expired() -> void:
 	_armed = false
+	_armed_def = null
 	_set_armed_fx(false)  # the charge stays spent — window's closed
+
+func _stamp_body(body: Node, attacker: Node2D, def: Resource) -> void:
+	if body.has_method(&"stamp_hit"):
+		body.call(&"stamp_hit", attacker, HitTags.id_for_def(def))
+	elif "last_attacker" in body:
+		body.last_attacker = attacker
 
 ## Armed indicator: dark exhaust smoke off the stacks. Positions match
 ## hammertoe's painted stacks (his signature special); on any other hull it

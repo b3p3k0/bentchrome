@@ -10,6 +10,7 @@ enum Kind { PROJECTILE, BEAM, DASH, TRIGGER, FLAME, DROP, TORNADO, PULSE }
 enum LaunchSide { FORWARD, REAR }
 
 @export var display_name: String = "Special"
+@export var element: StringName = &""  # sticker family: &"fire", &"electric", or empty
 @export var kind := Kind.PROJECTILE     # dispatched by SpecialController
 @export var launch_side := LaunchSide.FORWARD  # projectile origin + initial direction
 @export var on_hit_effects: Array[StatusEffectSpec] = []  # applied to what a projectile hits

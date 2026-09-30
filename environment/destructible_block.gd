@@ -63,6 +63,7 @@ const BLAST_RADIUS := 130.0   # fuel barrels: everything Health-bearing inside c
 const BLAST_DAMAGE := 25.0    # impartial — chains into other barrels, cars, you
 
 const Floors := preload("res://game/floors.gd")  # terraced-floor gates
+const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const ArenaState := preload("res://game/net/arena_state.gd")
 const RemainsPaint := preload("res://environment/remains_paint.gd")
 
@@ -237,6 +238,8 @@ func _barrel_blast() -> void:
 			if child is Health:
 				# Kind breadcrumb only — barrel kills stay deliberately creditless
 				# (no last_attacker, no Combat.scale): shoot a barrel, walk away.
+				if body.has_method(&"note_hit"):
+					body.call(&"note_hit", HitTags.ENVIRONMENT)
 				body.set_meta(&"bc_hit_kind", &"environment")
 				child.take_damage(BLAST_DAMAGE)
 				break

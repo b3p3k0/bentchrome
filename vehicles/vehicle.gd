@@ -35,6 +35,7 @@ const FLOOR_LIFT := 32.0  # px of visual lift per floor above the baseline (2) �
 const Combat := preload("res://game/combat.gd")  # AI-vs-AI governor/mercy rules
 const Difficulty := preload("res://game/difficulty.gd")  # tier knob table (leaf)
 const Floors := preload("res://game/floors.gd")  # terraced-floor math (dependency-free)
+const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const IR := preload("res://game/input_router.gd")  # input names only (leaf)
 const ExplosionScene := preload("res://environment/explosion.tscn")
 const PitFallFXScript := preload("res://environment/pit_fall_fx.gd")
@@ -166,8 +167,26 @@ const REPAIR_IMMUNITY := &"health_station"
 var last_attacker: Node2D = null:
 	set(v):
 		last_attacker = v
+		last_hit_id = &""
 		last_attacker_ms = Time.get_ticks_msec()
 var last_attacker_ms := 0
+# Bumper-sticker bookkeeping ONLY: which weapon (game/hit_tags.gd id) landed the
+# last hit, and when. Kept apart from last_attacker/_ms on purpose — MP kill
+# credit reads those, and sticker tracking must never move them. A plain
+# last_attacker assignment clears the id so a stale weapon can't linger.
+var last_hit_id: StringName = &""
+var last_hit_ms := 0
+
+## Attacker + weapon in one stamp (the setter runs exactly as a bare assignment).
+func stamp_hit(attacker: Node2D, id: StringName) -> void:
+	last_attacker = attacker
+	last_hit_id = id
+	last_hit_ms = Time.get_ticks_msec()
+
+## Sticker fields only — burn ticks, barrel blasts, ledge drops. Never credits.
+func note_hit(id: StringName) -> void:
+	last_hit_id = id
+	last_hit_ms = Time.get_ticks_msec()
 
 # Chilblain encasement: a frozen car loses all intent while its momentum
 # skates down to a dead stop under this damping (px/s^2).
@@ -887,6 +906,7 @@ func _resolve_landing_floor() -> void:
 	if sensed != floor_index:
 		_adopt_floor(sensed)
 	if from >= 1 and from - sensed > Floors.FALL_FREE_FLOORS and _health:
+		note_hit(HitTags.FALL)
 		_health.take_damage(_health.max_hp * fall_damage_frac)
 		add_shake(6.0)
 
@@ -1193,9 +1213,10 @@ func _set_net_repairing(on: bool, at: Vector2) -> void:
 func terrain_factor(property: StringName, surface: StringName = current_terrain) -> float:
 	return stats.terrain_factor(surface, property) if stats else 1.0
 
-func apply_effect(spec: StatusEffectSpec) -> void:
+func apply_effect(spec: StatusEffectSpec, source: Node = null,
+		hit_id: StringName = &"") -> void:
 	if _status:
-		_status.apply(spec)
+		_status.apply(spec, source, hit_id)
 
 func is_burning() -> bool:
 	return _status != null and _status.has_effect(&"burn")
@@ -1332,9 +1353,10 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 		_shadow.scale = Vector2.ONE * body_scale
 	grant_spawn_shield(shield_seconds)
 
-func take_ram_damage(amount: float, source: Node2D = null) -> void:
+func take_ram_damage(amount: float, source: Node2D = null,
+		hit_id: StringName = &"ram") -> void:
 	if source:
-		last_attacker = source
+		stamp_hit(source, hit_id)
 	set_meta(&"bc_hit_kind", &"ram")  # telemetry breadcrumb (botlab recorder)
 	if _health:
 		_health.take_damage(amount)
@@ -1371,14 +1393,26 @@ func _update_ram(delta: float, pre_slide_vel: Vector2) -> void:
 			if rel > ram_min_speed:
 				# An armed Toe Jam charge replaces the speed-scaled hit (its
 				# own economy — the slide bonus never compounds it).
+				var charged_def: Resource = _special.armed_def() if _special else null
 				var charged: float = _special.take_armed_hit() if _special else 0.0
+				var hit_id := HitTags.RAM
+				if charged > 0.0:
+					hit_id = HitTags.id_for_def(charged_def)
+					if hit_id == HitTags.UNKNOWN:
+						hit_id = &"toe_jam"
+				elif is_dashing():
+					hit_id = HitTags.id_for_def(_special.dash_def())
+					if hit_id == HitTags.UNKNOWN:
+						hit_id = &"leap"
+				elif is_side_sliding():
+					hit_id = HitTags.SIDE_SLIDE
 				var hit: float = charged if charged > 0.0 \
 					else (rel - ram_min_speed) * ram_damage_scale \
 						* (side_slide_bonus if is_side_sliding() else 1.0)
 				if _special:
 					hit *= _special.take_dash_ram_multiplier()
 				hit = ram_clamp(hit * Combat.scale(self, other), self, other)
-				other.take_ram_damage(hit, self)
+				other.take_ram_damage(hit, self, hit_id)
 				if smash_and_pass and other.get_hp() <= 0.0:
 					# Smash and pass, car edition: a ram that WRECKS the other
 					# car punches through the wreck like any other road debris.

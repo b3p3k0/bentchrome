@@ -7,6 +7,7 @@ extends Node
 ## on_hit_effects (from the WeaponDef) ride along on each projectile.
 
 const Floors := preload("res://game/floors.gd")  # floor-mask stamping (dependency-free)
+const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")  # duck-typed stat scales
 const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
@@ -132,6 +133,7 @@ func _wave_params() -> Dictionary:
 		"scene": projectile_scene,
 		"tint": projectile_tint,
 		"hot": heat_per_shot > 0.0,
+		"hit_id": HitTags.MG if heat_per_shot > 0.0 else HitTags.id_for_def(weapon),
 		"sfx_override": sfx_override,
 		"turn_rate_deg": turn_rate_deg,
 		"acquisition_radius": acquisition_radius,
@@ -212,6 +214,7 @@ func _fire_wave(origin: Vector2, direction: Vector2, shooter: Node, wp: Dictiona
 		var p := (spawner.acquire(proj_scene) if spawner
 			else proj_scene.instantiate()) as Projectile
 		p.modulate = wp["tint"]
+		p.hit_id = wp["hit_id"]
 		p.hit_sfx = &"hit_mg" if hot else &"hit_weapon"
 		# One shared mask path keeps legacy, straight, tracking, and explicit
 		# cover-piercing semantics aligned. Tracking shots arc over intermediate

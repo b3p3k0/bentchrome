@@ -10,6 +10,7 @@ extends Node2D
 
 const CarPaintScript := preload("res://vehicles/car_paint.gd")  # FLEET_SCALE only
 const Floors := preload("res://game/floors.gd")
+const HitTags := preload("res://game/hit_tags.gd")  # sticker-only hit identity (leaf)
 const Difficulty := preload("res://game/difficulty.gd")  # turrets only fire AI-side
 const FlashScene := preload("res://weapons/muzzle_flash.tscn")
 
@@ -88,6 +89,7 @@ func _fire() -> void:
 	var p := (spawner.acquire(_def.projectile_scene) if spawner
 		else _def.projectile_scene.instantiate()) as Projectile
 	p.modulate = _def.projectile_tint
+	p.hit_id = HitTags.id_for_def(_def)
 	p.hit_sfx = &"hit_weapon"
 	var shooter := _vehicle()
 	var shooter_floor := Floors.floor_of(shooter)

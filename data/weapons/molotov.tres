@@ -13,6 +13,7 @@ magnitude = 3.0
 [resource]
 script = ExtResource("1_def")
 display_name = "Molotov Cocktail"
+element = &"fire"
 cooldown = 2.0
 damage = 12.0
 projectile_speed = 850.0

@@ -24,6 +24,7 @@ const JUMP_TRIGGER_RADIUS := 26.0
 
 var damage := 20.0
 var dropper: Node = null
+var hit_id: StringName = &"mine_land"  # dropper overwrites from its live WeaponDef
 var floor_index := -1  # stamped at drop; the mine only arms for its own terrace
 var net_id := 0        # MP: stamped at drop so clients can twin + clear it
 var cosmetic := false  # MP client twin: draws and arms, never scans or bills
@@ -91,8 +92,11 @@ func _trigger(body: CharacterBody2D) -> void:
 		var belly: float = float(soft) if soft is float else 1.0
 		for child in body.get_children():
 			if child is Health:
-				if "last_attacker" in body and is_instance_valid(attacker) and attacker is Node2D:
-					body.last_attacker = attacker
+				if is_instance_valid(attacker) and attacker is Node2D:
+					if body.has_method(&"stamp_hit"):
+						body.call(&"stamp_hit", attacker, hit_id)
+					elif "last_attacker" in body:
+						body.last_attacker = attacker
 				body.set_meta(&"bc_hit_kind", &"mine")  # botlab telemetry breadcrumb
 				child.take_damage(damage * belly * Combat.scale(attacker, body))
 				break

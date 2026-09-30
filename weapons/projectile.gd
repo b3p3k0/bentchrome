@@ -31,6 +31,7 @@ var turn_rate := 0.0   # radians/sec; 0 = straight
 var target: Node2D = null
 var shooter: Node = null
 var on_hit_effects: Array = []
+var hit_id: StringName = &""
 var hit_sfx: StringName = &"hit_weapon"  # stamped by the mount (hit_mg for MG fire)
 var _homing := false
 var _age := 0.0
@@ -130,7 +131,7 @@ func _on_body_entered(body: Node) -> void:
 		var status := _find_status(body)
 		if status:
 			for spec in on_hit_effects:
-				status.apply(spec)
+				status.apply(spec, shooter, hit_id)
 	_spawn_impact(impact_style, true)
 	_despawn()
 
@@ -190,6 +191,7 @@ func pool_reset() -> void:
 	target = null
 	shooter = null
 	on_hit_effects = []
+	hit_id = &""
 	modulate = Color.WHITE
 	hit_sfx = &"hit_weapon"
 	harms_ambient = true
@@ -212,7 +214,9 @@ func _stamp_attacker(body: Node) -> void:
 		var owner: Node = body.get_node_or_null(owner_path)
 		if owner:
 			victim = owner
-	if "last_attacker" in victim:
+	if victim.has_method(&"stamp_hit"):
+		victim.call(&"stamp_hit", shooter, hit_id)
+	elif "last_attacker" in victim:
 		victim.last_attacker = shooter
 	# Damage-kind breadcrumb for the botlab recorder — hit_sfx already splits
 	# MG fire from everything else; nothing in the game reads this meta.
