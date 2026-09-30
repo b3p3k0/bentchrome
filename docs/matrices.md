@@ -44,16 +44,16 @@ Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS
 
 | Bird | Accel | Top (× player road top) | Handling | Armor | Mass | HP (scaled) | Armament | Behavior |
 |---|---|---|---|---|---|---|---|---|
-| Scrambler (bike) | 15 | ×1.10 | 8 | 1 | 1 | ~38 (×0.55) | scrapgun MG, 0.5s bursts / 1.8s gaps, range 420 | swoops to −60/+190 dy on a 4.5s rhythm; yo-yos to keep up |
-| Beater (sedan) | 11 | ×1.04 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts + Scrap Rocket (8 dmg, 90°/s, ~6s clock, cap 2/9s) | holds +260..430 behind (clamped north of the dust crest), wobbly steer, aims at a 0.45s-stale snapshot; yo-yos |
+| Scrambler (bike) | 15 | ×1.10 | 8 | 1 | 1 | ~38 (×0.55) | scrapgun MG, 0.4s bursts / 1.1s gaps while harassing, range 420 | SORTIE: rushes to −80 dy beside you, harasses 1.4-2.4s, peels home; yo-yos on the rush |
+| Beater (sedan) | 11 | ×1.04 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts (0.6/2.0) + ONE Scrap Rocket per sortie (8 dmg, 90°/s, 6s clock) | SORTIE: rushes to +40 dy alongside, harasses 2-3s, wobbly steer, aims at a 0.45s-stale snapshot, peels home; yo-yos on the rush |
 | Technical (pickup) | 3 | ×0.62 | 3 | 3 | 6 | ~90 (×0.95) | Bed Gun turret: 12 dmg / 2.2s / 700 px/s, auto-aim ≤1100, 120°/s traverse | spawns AHEAD, falls back through the field into the pack; driver never fires; no yo-yo |
 | Blocker (sedan hull, hazard orange) | 11 | ×0.72 | 4 | 2 | 4 | ~80 (×1.0) | none — never fires | spawns AHEAD, steers into the PLAYER'S lane on a 0.6s-stale snapshot (a late juke beats it), gives the lane up once passed, fades into the pack; no yo-yo |
 
-Incoming damage is probe-tuned (2026-09-29, a no-dodge autopilot over 42 runs): before — 2 wins / 5 caught / 35 wrecked; after — 18 / 14 / 10. The pack is the leading way to lose; gunfire is the pressure that makes you fight back.
+Incoming damage is probe-tuned (2026-09-29, a no-dodge autopilot over 42 runs): before — 2 wins / 5 caught / 35 wrecked; after — 18 / 14 / 10. After the 2026-09-30 polish (sorties, smash-and-pass, lane wheel, curve tax): 30 / 11 / 1. The pack is the leading way to lose; gunfire is the pressure that makes you fight back.
 
 **Balance probe**: `tools/chase_probe.sh [--runs N] [--skill S] [--tank] [--verbose] [car ...]` runs full 120s chases on autopilot, headless, ~3s each (`tools/probes/chase_run.gd` + `chase_autopilot.gd`), and tallies won / caught / wrecked. The autopilot never dodges fire, hunts pickups, or uses rear weapons — its win rate is a FLOOR for a real player. `--tank` measures a whole run's incoming damage; `--verbose` adds a 15s ticker and the damage sources. Re-run it after touching any knob in this section.
 
-Station keeping: the pedal asks for the player's pace + `HOLD_GAIN` 1.2 px/s per px behind the mark, never under `MIN_PACE` 0.35 of own top, through `speed_band.gd` — a Buzzard ahead of its station BRAKES back to it. Yo-yo (bike/sedan): >380px behind → max_speed rides player+80, capped at `YOYO_CAP` ×1.15 of the honest ceiling (a boost's ×1.5 always shakes them); <180px → honest ceiling. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
+Sorties (`chase_driver.Stage` RUSH → HARASS → PEEL): a harasser fires ONLY while harassing, peels home to the pack when its seconds are up (the director absorbs it and sends the next), and peels early after `FLINCH_DAMAGE` 10 in one sortie — a timid hyena. `RUSH_TIMEOUT` 5s, `ARRIVE_DIST` 70, `PEEL_DEPTH` 260. Station keeping: the pedal asks for the player's pace + `HOLD_GAIN` 1.2 px/s per px behind the mark, never under `MIN_PACE` 0.35 of own top, through `speed_band.gd` — a Buzzard ahead of its station BRAKES back to it. Yo-yo (bike/sedan): >380px behind → max_speed rides player+80, capped at `YOYO_CAP` ×1.15 of the honest ceiling (a boost's ×1.5 always shakes them); <180px → honest ceiling. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
 
 ### StatCurves: design stat → engine units
 
@@ -558,9 +558,9 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | Breath | 25s | 0.84 | 3 | 5.0s | 410px |
 | Squeeze | 32s | 0.90 | 6 | 3.0s | 335px |
 | Breath | 55s | 0.88 | 4 | 4.5s | 360px |
-| Frenzy | 62s | 0.94 | 8 | 2.6s | 285px |
-| All in | 90s | 0.97 | 8 | 2.2s | 248px |
-| Last mile | 110s | 1.00 | 8 | 2.0s | 210px |
+| Frenzy | 62s | 0.96 | 8 | 2.6s | 260px |
+| All in | 90s | 1.00 | 8 | 2.2s | 210px |
+| Last mile | 110s | 1.02 | 8 | 2.0s | closes 10 px/s: a clean dry run just makes it |
 
 | Knob | Value | Where | Detail |
 |---|---|---|---|
@@ -572,11 +572,15 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | Clamp / start | 760 / 600px | `MAX_GAP` / `START_GAP` | a boost pushes the pack off screen for ~2s |
 | Catch | gap ≤ 50px | `CATCH_MARGIN` | REPORTED by `caught()`; the wall never touches Health, no backstop |
 | Danger zone | gap < 180px | `DANGER_GAP` | rumble, HUD strobe, war horn, daredevil accrual |
-| Mercy | < 200px: closing ≤ 30 px/s | `MERCY_GAP` / `MERCY_CLOSE` | over the car's own northward speed — a 5s stretch; one dead-stop crash survivable in every car at every beat |
+| Mercy | < 200px: closing ≤ 45 px/s | `MERCY_GAP` / `MERCY_CLOSE` | over the car's own northward speed — a 3.3s stretch (dead stops no longer exist; it covers a bad smash) |
+| Curve tax | pack speed × `road_cos` | horde_wall `road_cos()` | through a sweeper the front covers less north per second, exactly like the car |
+| Lane wheel | ±24° off the ROAD's heading | chase_player_driver `LANE_YAW_DEG` / `LANE_GAIN` 4 / `ROAD_LEAD` 120 | L/R = a lane change; hands-off follows the sweeper; handbrake eaten; player keeps the 2s bay lock |
+| Smash and pass | prop dies on contact; momentum × heft clamp; bite 0.12 × prop HP | Vehicle `smash_and_pass` / `smash_bite`, chase_player.tscn + buzzard.tscn | nothing on the road stops a car; pillars are 60 HP `pillar` destructibles |
 | Pedal band | cruise 0.80 / floor 0.55 | speed_band `CRUISE_FRAC` / `FLOOR_FRAC` | W flat out; hands-off settles at cruise; S brakes to the floor and HOLDS; never reverse; live boost ungoverned |
 | Pace keeper | floor 0.45 at 1400 px/s² | pace_keeper `KEEP_FRAC` / `KEEP_PUSH` | level-side northward floor after crashes and whips; skips airborne / dashing / dead |
 | Pin escape | 0.15s → lean 1800 px/s², max 260 px/s | `PIN_TIME` / `NUDGE_PUSH` / `NUDGE_MAX` | toward the free side; hands-off dead-centre hit on a 200px obstacle clears in ~1.7s |
-| Spawns | emerge 90px inside the crest / ahead −1600 (tech) | chase_director `EMERGE_DEPTH` / `SPAWN_AHEAD` | pace-matched entry |
+| Spawns | emerge 90px inside the crest / ahead −1600 (tech, blocker) | chase_director `EMERGE_DEPTH` / `SPAWN_AHEAD` | pace-matched entry |
+| The picture | 11 riders, 150 + 80 dust particles | horde_deco `RIDERS` / `LOW_DUST` / `HIGH_DUST` | real Buzzard paint bodies lead the dust; billows are ragged lumps; flashes and tracers scale with pressure |
 | Absorb | 180px inside the crest | `ABSORB_DEPTH` | freed quietly: no wreck, no bounty, no nitro |
 | Nitro on kill | +6 fuel | `KILL_NITRO` | of 100 (5/s burn) — ~1.2s of boost per wreck |
 | Purse | 3000 bolts | buzzard_run `PURSE` | `Economy.award_flat`, paid at the line only |
@@ -585,7 +589,7 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 | Camera | lead −140, zoom pinned 0.55 | chase_player.tscn / Vehicle `camera_zoom_lock` | overview toggle still works; smoothing lag costs ~0.2 × speed px of look-ahead |
 | Course pre-roll | 130k px, seeded | chase_course `TARGET_LEN` | pickup lane ≤ every ~9k (`PICKUP_EVERY`), landmarks ≥ 15k apart (`RARE_SPACING`), meander ±800 (`SPINE_BOUND`) |
 | Road | half_w 360 (narrow 260) + 90px verge | chunk_defs / chunk_builder | verge = grass/dirt grip penalty; embankment wall past it |
-| Obstacles | rails 20 HP · logs 15 · junk 20 · barriers 25 · pumps 40 · potholes r36 dirt | chunk defs/builder | a dead stop now costs ~300px of gap — mistakes cost position |
+| Obstacles | rails 20 HP · logs 15 · junk 20 · barriers 25 · pumps 40 · pillars 60 · oil slicks r44 dirt | chunk defs/builder | smash and pass: a derelict costs a quarter of your momentum, a log a tenth; slicks cost grip, never HP |
 | Pickups | heal +25 · nitro +35 · M/P crates | heal/boost_pickup + ammo | player-only, one-shot, no respawn |
 | Speed streaks | fade in 0.90 → full 1.35 of top | speed_lines `THRESHOLD_FRAC` / `FULL_FRAC` | nothing at cruise, a whisper flat out, full on the boost |
 | GPS window | −800..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; horde drawn at its true position, pulses in danger |
