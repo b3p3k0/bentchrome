@@ -125,6 +125,7 @@ const SUITES := [
 	preload("res://tests/test_floor_props.gd"),
 	preload("res://tests/test_economy.gd"),
 	preload("res://tests/test_garage_catalog.gd"),
+	preload("res://tests/test_garage_shop.gd"),
 	preload("res://tests/test_car_deck.gd"),
 	preload("res://tests/test_boot_splash.gd"),
 	preload("res://tests/test_stall_probe.gd"),
