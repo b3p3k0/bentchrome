@@ -6,20 +6,26 @@ extends RefCounted
 ## itself — splice, halt, hand-off, splashes, card.
 
 const BirdScript := preload("res://levels/chase/finale_bird_driver.gd")
+const FinaleDriver := preload("res://levels/chase/finale_driver.gd")
 const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 
 var t
 
 class FakeController:
 	var max_speed := 500.0
+	var boosting := false
 
 class FakeVehicle extends Node2D:
 	var heading := -PI / 2.0
 	var velocity := Vector2.ZERO
 	var height := 0.0
 	var ctrl = FakeController.new()
+	var popped_vz := 0.0
 	func get_controller():
 		return ctrl
+	func pop_airborne(vz: float) -> void:
+		popped_vz = vz
+		height = 1.0
 
 ## A dead-straight course down x = 0.
 class FakeCourse:
@@ -119,3 +125,65 @@ func test_bike_launch_falls_short() -> void:
 		"numbers: a bike off the lip lands in the channel from anywhere on it (%d..%d inside %d..%d)"
 		% [int(earliest + flight), int(latest + flight), int(kill_from), int(kill_to)])
 	t.check(700.0 * air + earliest < kill_to, "numbers: even an unforced sedan-sprint launch off the lip's entry falls short")
+
+## The locked-in player: centres and governs to the launch speed on the
+## approach (nitro lit), owns the velocity on the deck, pops exactly once at
+## the brink, holds the arc in the air, and keeps driving north after.
+func test_finale_driver_locks_in_and_pops() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var vehicle := FakeVehicle.new()
+	container.add_child(vehicle)
+	var driver = FinaleDriver.new()
+	container.add_child(driver)
+	var deck_y := -3000.0
+	var brink_y := -3400.0
+	driver.setup(FakeCourse.new(), deck_y, brink_y)
+	var pops := [0]   # a box: lambdas capture locals by value
+	driver.popped.connect(func() -> void: pops[0] += 1)
+	vehicle.global_position = Vector2(120, -2000)
+	vehicle.velocity = Vector2(0, -500)
+	var approach: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(not driver.is_forcing(), "lock-in: on the approach the controller still drives")
+	t.check(approach["steer"] < 0.0, "lock-in: it steers for the centreline")
+	t.check(approach["throttle"] > 0.0 and approach["boost"], "lock-in: pedal down, nitro lit")
+	vehicle.velocity = Vector2(0, -FinaleDriver.LAUNCH_SPEED - 60.0)
+	t.check(driver.get_intent(vehicle, 0.016)["throttle"] < 0.0, "lock-in: over the launch speed it eases off — the speed is set")
+	t.check(not approach["fire_mg"] and not approach["fire_selected"], "lock-in: no guns in the show")
+	vehicle.global_position = Vector2(40, deck_y - 5.0)
+	driver.get_intent(vehicle, 0.016)
+	t.check(driver.is_forcing() and driver.stage == FinaleDriver.Stage.DECK, "lock-in: on the deck it takes the velocity outright")
+	t.check(is_equal_approx(vehicle.velocity.y, -FinaleDriver.LAUNCH_SPEED) and vehicle.velocity.x < 0.0,
+		"lock-in: the launch speed north, easing to the centre")
+	t.check(vehicle.ctrl.boosting, "lock-in: the flame stays lit while forcing")
+	t.check(pops[0] == 0, "lock-in: no pop before the brink")
+	vehicle.global_position = Vector2(0, brink_y - 1.0)
+	driver.get_intent(vehicle, 0.016)
+	t.check(pops[0] == 1 and is_equal_approx(vehicle.popped_vz, FinaleDriver.FINALE_VZ),
+		"lock-in: at the brink it pops FINALE_VZ once")
+	t.check(driver.stage == FinaleDriver.Stage.AIR and vehicle.velocity.is_equal_approx(Vector2(0, -FinaleDriver.LAUNCH_SPEED)),
+		"lock-in: airborne at exactly the launch speed")
+	vehicle.global_position = Vector2(30, brink_y - 400.0)
+	driver.get_intent(vehicle, 0.016)
+	t.check(vehicle.velocity.is_equal_approx(Vector2(0, -FinaleDriver.LAUNCH_SPEED)) and pops[0] == 1,
+		"lock-in: in the air the velocity is held exactly — no steering, no second pop")
+	vehicle.height = 0.0
+	driver.get_intent(vehicle, 0.016)
+	t.check(driver.stage == FinaleDriver.Stage.LANDED and driver.is_forcing(), "lock-in: landed, it keeps driving north")
+	t.root.remove_child(container)
+	container.free()
+
+## The numbers: the forced arc clears the channel with room to spare and
+## comes down on the road past the far shallows, whatever the car.
+func test_player_jump_clears_the_river() -> void:
+	var stock = load("res://levels/chase/chase_player.tscn").instantiate()
+	var g: float = stock.gravity_z
+	stock.free()
+	var air := 2.0 * FinaleDriver.FINALE_VZ / g
+	var flight: float = FinaleDriver.LAUNCH_SPEED * air
+	var r: Dictionary = ChunkDefs.DEFS[&"bridge_out"]["river"]
+	var landing: float = float(r["brink"]) + flight
+	var kill_to: float = float(r["deep_to"]) - 24.0
+	t.check(landing >= kill_to + 150.0, "numbers: the car lands %dpx past the channel's kill rect" % int(landing - kill_to))
+	t.check(landing >= float(r["shallow_to"]), "numbers: and past the far shallows, on the road")
+	t.check(landing < float(ChunkDefs.DEFS[&"bridge_out"]["len"]), "numbers: and still inside the river mile")
