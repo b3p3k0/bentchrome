@@ -23,7 +23,7 @@ const MP_SCOREBOARD := "res://ui/mp_scoreboard.tscn"
 ## stand down; the chase course and custom JSON levels stay campaign-side.
 const MP_MAPS := [
 	{"scene": "res://levels/downtown/downtown.tscn", "name": "Downtown Derby", "cars": 5},
-	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight", "cars": 7},
+	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight", "cars": 8},
 	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburban Savagery", "cars": 7},
 	{"scene": "res://levels/snowy/snowy.tscn", "name": "Mountainside Mayhem", "cars": 5},
 	{"scene": "res://levels/dock/dock.tscn", "name": "Piers of Pain", "cars": 8},
@@ -51,7 +51,7 @@ const CAMPAIGN := [
 		"arena_size": Vector2(3712, 3584), "target_cars": 5, "stations": 1, "mp_ready": true},
 	{"scene": "res://levels/freeway/freeway.tscn", "name": "Freeway Firefight",
 		"mode": &"arena", "size_class": &"large", "encounter": &"melee",
-		"arena_size": Vector2(4096, 5376), "target_cars": 7, "stations": 3, "mp_ready": true},
+		"arena_size": Vector2(4096, 5376), "target_cars": 8, "stations": 3, "mp_ready": true},
 	{"scene": "res://levels/depot/depot.tscn", "name": "Lackey's Arena",
 		"mode": &"arena", "size_class": &"medium", "encounter": &"miniboss",
 		"arena_size": Vector2(3072, 3072), "target_cars": 4, "stations": 1, "mp_ready": false,
