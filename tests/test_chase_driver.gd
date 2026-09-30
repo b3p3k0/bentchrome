@@ -314,6 +314,52 @@ func test_technical_holds_lane_and_never_fires() -> void:
 		"chase-ai: it always chases its ahead-mark flat out")
 	_done(r[0])
 
+## The blocker: steals YOUR lane while it's ahead of you, on a stale read a
+## late juke beats; gives the lane up once passed; never touches a trigger.
+func test_blocker_steals_the_lane_then_gives_it_up() -> void:
+	var r := _rig()
+	var driver = r[2]
+	driver.role = &"blocker"
+	driver.lane_offset = 200.0   # its own lane is far right
+	var vehicle: FakeVehicle = r[1]
+	var player: Node2D = r[3]
+	player.global_position = Vector2(-250, 0)      # the player runs far LEFT
+	vehicle.global_position = Vector2(100, -600)   # blocker ahead (north), to the right
+	var ahead: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(ahead["steer"] < 0.0, "blocker: ahead of you, it steers INTO your lane (%.2f)" % ahead["steer"])
+	# The read is stale: the player jukes right, the blocker keeps heading left.
+	player.global_position = Vector2(250, 0)
+	var fooled: Dictionary = driver.get_intent(vehicle, 0.016)
+	t.check(fooled["steer"] < 0.0, "blocker: a late juke beats the stale snapshot")
+	var caught_up := false
+	for i in 60:   # a second later the snapshot has refreshed
+		var later: Dictionary = driver.get_intent(vehicle, 0.016)
+		if later["steer"] > 0.0:
+			caught_up = true
+	t.check(caught_up, "blocker: but it does catch on, eventually")
+	var fired := false
+	vehicle.global_position = Vector2(250, -200)
+	for i in 200:
+		var intent: Dictionary = driver.get_intent(vehicle, 0.016)
+		if intent["fire_mg"] or intent["fire_selected"]:
+			fired = true
+	t.check(not fired, "blocker: never touches a trigger")
+	# Passed: it gives the lane up and heads for its own.
+	_done(r[0])
+	var r2 := _rig()
+	r2[2].role = &"blocker"
+	r2[2].lane_offset = 200.0
+	r2[3].global_position = Vector2(-250, -1000)   # the player is now AHEAD of it
+	r2[1].global_position = Vector2(0, -600)
+	var passed: Dictionary = r2[2].get_intent(r2[1], 0.016)
+	t.check(passed["steer"] > 0.0, "blocker: once passed it gives up your lane for its own (%.2f)" % passed["steer"])
+	var base: float = r2[1].ctrl.max_speed
+	r2[1].global_position = Vector2(0, 1000)       # far behind: yo-yo range for a bike
+	for i in 40:
+		r2[2].get_intent(r2[1], 0.1)
+	t.check(is_equal_approx(r2[1].ctrl.max_speed, base), "blocker: no yo-yo — falling back is the job")
+	_done(r2[0])
+
 func test_buzzard_data_shape() -> void:
 	var bike = load("res://data/vehicles/buzz_bike.tres")
 	var sedan = load("res://data/vehicles/buzz_sedan.tres")

@@ -40,13 +40,16 @@ HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge d
 
 ### The Buzzardz (chase mode, roster-external)
 
-Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS_TABLE`; all `no_mines`, all `ai_cooldown_scale 1.4` (buzzard.tscn), MG overridden to 1.7 dmg / 10 rate / 12° spread. Brains: `chase_driver.gd` ROLES (not EnemyDriver). **Top speed is NOT the .tres stat**: the director re-prices every Buzzard's ceiling at spawn to `ROLE_PACE` × the PLAYER'S honest top on asphalt, so the pack is always relevant to the car it chases (the .tres top still shapes acceleration).
+Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS_TABLE`; all `no_mines`, all `ai_cooldown_scale 1.4` and `ram_damage_scale 0.02` (buzzard.tscn — a third of the arena ram bill: car-to-car rams price post-collision speed difference, and at chase speeds every tap cost 20-30 HP), MG overridden to 1.3 dmg / 10 rate / 12° spread. Brains: `chase_driver.gd` ROLES (not EnemyDriver). **Top speed is NOT the .tres stat**: the director re-prices every Buzzard's ceiling at spawn to `ROLE_PACE` × the PLAYER'S honest top on asphalt, so the pack is always relevant to the car it chases (the .tres top still shapes acceleration).
 
 | Bird | Accel | Top (× player road top) | Handling | Armor | Mass | HP (scaled) | Armament | Behavior |
 |---|---|---|---|---|---|---|---|---|
 | Scrambler (bike) | 15 | ×1.10 | 8 | 1 | 1 | ~38 (×0.55) | scrapgun MG, 0.5s bursts / 1.8s gaps, range 420 | swoops to −60/+190 dy on a 4.5s rhythm; yo-yos to keep up |
-| Beater (sedan) | 11 | ×1.04 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts + Scrap Rocket (12 dmg, 90°/s, ~4.5s clock, cap 2/9s) | holds +260..430 behind (clamped north of the dust crest), wobbly steer, aims at a 0.45s-stale snapshot; yo-yos |
+| Beater (sedan) | 11 | ×1.04 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts + Scrap Rocket (8 dmg, 90°/s, ~6s clock, cap 2/9s) | holds +260..430 behind (clamped north of the dust crest), wobbly steer, aims at a 0.45s-stale snapshot; yo-yos |
 | Technical (pickup) | 3 | ×0.62 | 3 | 3 | 6 | ~90 (×0.95) | Bed Gun turret: 12 dmg / 2.2s / 700 px/s, auto-aim ≤1100, 120°/s traverse | spawns AHEAD, falls back through the field into the pack; driver never fires; no yo-yo |
+| Blocker (sedan hull, hazard orange) | 11 | ×0.72 | 4 | 2 | 4 | ~80 (×1.0) | none — never fires | spawns AHEAD, steers into the PLAYER'S lane on a 0.6s-stale snapshot (a late juke beats it), gives the lane up once passed, fades into the pack; no yo-yo |
+
+Incoming damage is probe-tuned (2026-09-29, a no-dodge autopilot over 42 runs): before — 2 wins / 5 caught / 35 wrecked; after — 18 / 14 / 10. The pack is the leading way to lose; gunfire is the pressure that makes you fight back.
 
 Station keeping: the pedal asks for the player's pace + `HOLD_GAIN` 1.2 px/s per px behind the mark, never under `MIN_PACE` 0.35 of own top, through `speed_band.gd` — a Buzzard ahead of its station BRAKES back to it. Yo-yo (bike/sedan): >380px behind → max_speed rides player+80, capped at `YOYO_CAP` ×1.15 of the honest ceiling (a boost's ×1.5 always shakes them); <180px → honest ceiling. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
 

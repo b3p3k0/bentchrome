@@ -66,8 +66,10 @@ func test_spawn_cull_grace_and_kills() -> void:
 		"director: a bike tops out at %.2f of the player's top" % DirectorScript.ROLE_PACE[&"bike"])
 	t.check(DirectorScript.ROLE_PACE[&"bike"] > 1.0 and DirectorScript.ROLE_PACE[&"sedan"] > 1.0,
 		"director: pursuers can always catch an honest car")
-	t.check(DirectorScript.ROLE_PACE[&"technical"] < 1.0,
-		"director: ahead-spawns are slow by design — they fall back through the field")
+	for kind in DirectorScript.CLASS_TABLE:
+		if DirectorScript.CLASS_TABLE[kind].get("ahead", false):
+			t.check(DirectorScript.ROLE_PACE[kind] < 1.0,
+				"director: %s spawns ahead, so it is slow by design — it falls back through the field" % kind)
 	for kind in DirectorScript.CLASS_TABLE:
 		t.check(DirectorScript.ROLE_PACE.has(kind), "director: %s has a pace" % kind)
 	var bike_hp: float = bike.get_node(^"Health").max_hp
@@ -81,6 +83,17 @@ func test_spawn_cull_grace_and_kills() -> void:
 		"director: technical rolls in from ahead (dy %d)" % int(tech_dy))
 	t.check(tech.get_node_or_null(^"Visual/Turret") != null,
 		"director: the bed turret grew from stats")
+	var blocker = director.spawn(&"blocker")
+	var blocker_dy: float = blocker.global_position.y - player.global_position.y
+	t.check(absf(blocker_dy + DirectorScript.SPAWN_AHEAD) < 50.0,
+		"director: the blocker rolls in from the top too (dy %d)" % int(blocker_dy))
+	t.check(blocker.get_node(^"Driver").role == &"blocker", "director: blocker role set")
+	t.check(blocker.get_node_or_null(^"Visual/Turret") == null, "director: a blocker carries no bed gun")
+	t.check(is_equal_approx(blocker.get_controller().max_speed, player_top * DirectorScript.ROLE_PACE[&"blocker"]),
+		"director: a blocker is slower than the car it blocks")
+	t.check(DirectorScript.ROLE_PACE[&"blocker"] < 1.0 and DirectorScript.ROLE_PACE[&"blocker"] > DirectorScript.ROLE_PACE[&"technical"],
+		"director: slow enough to pass, fast enough to be in the way for a while")
+	blocker.queue_free()
 	tech.queue_free()  # keep the cap math below at two live birds
 	await t.physics_frame
 	t.check(sedan.get_node(^"Driver").lane_offset * bike.get_node(^"Driver").lane_offset < 0.0,

@@ -3,7 +3,8 @@ extends Driver
 ## wrong instinct for a forced chase). One script, role-tabled: bikes swoop in
 ## on the player and lay back out on a personal rhythm; sedans hold a wobbly
 ## station behind and lob lazy rockets at a STALE snapshot of where you were
-## (aim_delay — the "poor driver" tell). Course-guided steering keeps them
+## (aim_delay — the "poor driver" tell); technicals and blockers roll in from
+## the TOP of the screen and fall back through the field. Course-guided steering keeps them
 ## inside the embankments by construction; the pedal holds a STATION off the
 ## player through the shared speed band (speed_band.gd) — match the mark's
 ## pace, faster when behind the station, brake when ahead of it, never under
@@ -25,7 +26,7 @@ static var ROLES := {
 		"hold_far": 430.0, "hold_near": 260.0,
 		"swoop_period": 7.0, "swoop_frac": 0.35,
 		"range": 760.0, "burst_len": 0.9, "burst_gap": 2.6,
-		"aim_delay": 0.45, "wobble": 0.3, "use_secondary": true, "secondary_cd": 4.5,
+		"aim_delay": 0.45, "wobble": 0.3, "use_secondary": true, "secondary_cd": 6.0,
 		"yoyo": true,
 	},
 	# The technical never chases and never self-fires: it aims to hold a mark
@@ -38,6 +39,18 @@ static var ROLES := {
 		"range": 0.0, "burst_len": 0.0, "burst_gap": 1.0,
 		"aim_delay": 0.5, "wobble": 0.1, "use_secondary": false, "secondary_cd": 0.0,
 		"yoyo": false,
+	},
+	# The blocker rolls in from the top like the technical, but it isn't there
+	# to shoot: it parks itself in YOUR lane and makes you lift, go around, or
+	# go through it. It steers at where you WERE (a long stale snapshot), so a
+	# late juke beats it every time. Never fires, never yo-yos; once you're
+	# past, it gives up the lane and fades back into the pack.
+	&"blocker": {
+		"hold_far": -260.0, "hold_near": -260.0,
+		"swoop_period": 8.0, "swoop_frac": 0.0,
+		"range": 0.0, "burst_len": 0.0, "burst_gap": 1.0,
+		"aim_delay": 0.6, "wobble": 0.0, "use_secondary": false, "secondary_cd": 0.0,
+		"yoyo": false, "block": true,
 	},
 }
 
@@ -91,8 +104,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	var swooping: bool = cycle_t < p["swoop_period"] * p["swoop_frac"]
 	var hold_dy: float = p["hold_near"] if swooping else p["hold_far"]
 	var target_x: float
-	if swooping:
-		target_x = _clamp_to_road(vehicle, own, _aim_pos.x)   # the swerve-in
+	var blocking: bool = p.get("block", false) and own.y < player.global_position.y
+	if swooping or blocking:
+		target_x = _clamp_to_road(vehicle, own, _aim_pos.x)   # the swerve-in / the lane steal
 	else:
 		target_x = _road_target(vehicle, own, lane_offset)
 	var target_y := hold_mark(player.global_position.y, hold_dy, _front_y(vehicle))

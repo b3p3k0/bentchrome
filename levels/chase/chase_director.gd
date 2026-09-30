@@ -19,11 +19,11 @@ static var PHASES := [
 	{"t": 0.0,   "cap": 2, "interval": 4.0, "weights": {&"bike": 1.0},                "pace": 0.80},
 	{"t": 8.0,   "cap": 4, "interval": 3.5, "weights": {&"bike": 0.7, &"sedan": 0.3}, "pace": 0.86},
 	{"t": 25.0,  "cap": 3, "interval": 5.0, "weights": {&"bike": 1.0},                "pace": 0.84},
-	{"t": 32.0,  "cap": 6, "interval": 3.0, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.90},
-	{"t": 55.0,  "cap": 4, "interval": 4.5, "weights": {&"sedan": 0.7, &"technical": 0.3},              "pace": 0.88},
-	{"t": 62.0,  "cap": 8, "interval": 2.6, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.94},
-	{"t": 90.0,  "cap": 8, "interval": 2.2, "weights": {&"bike": 0.4, &"sedan": 0.4, &"technical": 0.2}, "pace": 0.97},
-	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.5, &"sedan": 0.3, &"technical": 0.2}, "pace": 1.00},
+	{"t": 32.0,  "cap": 6, "interval": 3.0, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.90},
+	{"t": 55.0,  "cap": 4, "interval": 4.5, "weights": {&"sedan": 0.6, &"technical": 0.2, &"blocker": 0.2},                  "pace": 0.88},
+	{"t": 62.0,  "cap": 8, "interval": 2.6, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.94},
+	{"t": 90.0,  "cap": 8, "interval": 2.2, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.97},
+	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.45, &"sedan": 0.30, &"technical": 0.10, &"blocker": 0.15}, "pace": 1.00},
 ]
 
 static var EMERGE_DEPTH := 90.0     # px inside the dust crest where pursuers are born
@@ -33,12 +33,14 @@ static var SPAWN_AHEAD := 1600.0    # technicals roll in from up the road
 static var CULL_BEHIND := 2600.0    # wall-less fallback: matches the streamer's free line
 
 ## Per-class spawn tuning: StatCurves HP × hp_scale ⇒ bike ~38, sedan ~70,
-## technical ~90. ahead = enters from the top of the screen, falls back;
-## everyone else boils up out of the dust bank.
+## technical ~90, blocker ~80. ahead = enters from the top of the screen and
+## falls back through the field (the technical shoots, the blocker steals
+## your lane); everyone else boils up out of the dust bank.
 static var CLASS_TABLE := {
 	&"bike": {"stats": null, "hp_scale": 0.55, "ahead": false},
 	&"sedan": {"stats": null, "hp_scale": 0.85, "ahead": false},
 	&"technical": {"stats": null, "hp_scale": 0.95, "ahead": true},
+	&"blocker": {"stats": null, "hp_scale": 1.0, "ahead": true, "tint": Color(0.78, 0.46, 0.1)},
 }
 
 ## What a Buzzard's engine is worth, as a fraction of the PLAYER'S top speed —
@@ -47,7 +49,7 @@ static var CLASS_TABLE := {
 ## them; ahead-spawns are slow by design and fall back through the field.
 ## The .tres top_speed stats still shape acceleration and the garage card;
 ## this overrides the ceiling at spawn.
-static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62}
+static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62, &"blocker": 0.72}
 ## Shoot -> boost -> breathe: every Buzzard you WRECK siphons this much nitro
 ## into the tank (of 100; 5/s burn, so a kill is ~1.2s of boost). Combat feeds
 ## the escape. Absorbed stragglers pay nothing — outrunning isn't killing.
@@ -69,6 +71,7 @@ func _ready() -> void:
 	CLASS_TABLE[&"bike"]["stats"] = BikeStats
 	CLASS_TABLE[&"sedan"]["stats"] = SedanStats
 	CLASS_TABLE[&"technical"]["stats"] = TechnicalStats
+	CLASS_TABLE[&"blocker"]["stats"] = SedanStats  # a beater with a different job
 
 static func phase_at(t: float) -> Dictionary:
 	var current: Dictionary = PHASES[0]
@@ -117,6 +120,8 @@ func spawn(kind: StringName) -> Node:
 	stats.primary_color = rust.lerp(Color(0.42, 0.4, 0.38), rng.randf_range(0.0, 0.55)) \
 		.darkened(rng.randf_range(0.0, 0.2))
 	stats.accent_color = stats.accent_color.darkened(rng.randf_range(0.0, 0.3))
+	if row.has("tint"):  # a class that must be told apart at a glance wears its colour
+		stats.primary_color = (row["tint"] as Color).darkened(rng.randf_range(0.0, 0.15))
 	b.stats = stats
 	b.hp_scale = row["hp_scale"]
 	b.weapon_lock_exempt = true  # chase pacing lives in chase_driver, not the bay lock

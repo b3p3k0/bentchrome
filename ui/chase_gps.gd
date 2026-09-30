@@ -79,10 +79,13 @@ func _draw() -> void:
 			continue
 		var ep := _panel(enemy.global_position, player_d, center_x, sy)
 		var edriver = enemy.get_node_or_null(^"Driver")
-		if edriver != null and edriver.get("role") == &"technical":
+		var erole: Variant = edriver.get("role") if edriver != null else null
+		if erole == &"technical":
 			draw_colored_polygon(PackedVector2Array([  # amber diamond — the truck
 				ep + Vector2(0, -5), ep + Vector2(5, 0), ep + Vector2(0, 5), ep + Vector2(-5, 0),
 			]), TECH)
+		elif erole == &"blocker":
+			draw_rect(Rect2(ep - Vector2(6, 2), Vector2(12, 4)), TECH)  # amber bar — a lane, taken
 		else:
 			draw_rect(Rect2(ep - Vector2(3, 3), Vector2(6, 6)), ENEMY)
 	# The player chevron (fixed BACK / (BACK + AHEAD) up from the south edge).
