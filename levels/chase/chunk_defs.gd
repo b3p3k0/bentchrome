@@ -158,6 +158,25 @@ const DEFS := {
 			{"kind": &"heal", "at": [720.0, 0.0]},
 		],
 	},
+	# --- the finale (never rolled: buzzard_run splices it in at 0:00) -------
+	# The bridge is out. A straight mile with a river across it: the deck runs
+	# from the near `bank` to the `brink` where it breaks off, the DEEP channel
+	# (a deep_water_zone — grounded cars sink) runs brink..deep_to, far
+	# shallows to shallow_to, then the road resumes. `pad_d` is the launch lip
+	# on the deck's last stretch (bikes launch off it; the player pops at the
+	# brink under the finale driver). World y of any key: river_y(entry, key).
+	&"bridge_out": {
+		"len": 2400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"bridge_out", "shoulder": &"dirt",
+		"set_piece": &"bridge_out",
+		"river": {"bank": 600.0, "brink": 1000.0, "deep_to": 1650.0, "shallow_to": 1750.0, "pad_d": 878.0},
+		"props": [
+			{"kind": &"barrier", "at": [420.0, -300.0]},
+			{"kind": &"barrier", "at": [420.0, 300.0]},
+			{"kind": &"cone", "at": [480.0, -200.0]},
+			{"kind": &"cone", "at": [480.0, 200.0]},
+		],
+	},
 	# --- set pieces (RARE: the picker spaces them ≥15k apart) ---------------
 	&"overpass": {
 		"len": 1100.0, "exit_dx": 0.0, "half_w": 360.0,
@@ -224,6 +243,12 @@ const WEIGHTS := {
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
 	&"washout_l", &"washout_r"]
+
+## World y of a river landmark (`bank`, `brink`, `deep_to`, `shallow_to`,
+## `pad_d`) of a bridge_out plan entry — north is -y, so deeper into the
+## chunk is more negative.
+static func river_y(entry: Dictionary, key: String) -> float:
+	return -(float(entry["start_d"]) + float(entry["def"]["river"][key]))
 
 ## A washout's surviving paved ribbon: its centre at chunk-local d, as an
 ## offset from the road centreline. Shared by the builder and by anything

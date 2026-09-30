@@ -24,6 +24,15 @@ func test_defs_sane() -> void:
 	for name in ChunkDefs.DEFS:
 		var def: Dictionary = ChunkDefs.DEFS[name]
 		t.check(def["len"] > 0.0 and def["half_w"] > 0.0, "course: %s has positive extents" % name)
+		if def.has("river"):
+			var r: Dictionary = def["river"]
+			t.check(r["bank"] < r["brink"] and r["brink"] < r["deep_to"] and r["deep_to"] < r["shallow_to"]
+				and r["shallow_to"] < def["len"], "course: %s's river runs bank < brink < deep < shallows < end" % name)
+			t.check(r["pad_d"] > r["bank"] and r["pad_d"] + 112.0 <= r["brink"],
+				"course: %s's launch lip sits on the deck, short of the brink" % name)
+			t.check(not def.has("path") and is_zero_approx(def["exit_dx"]), "course: %s is dead straight (the channel is an axis-aligned rect)" % name)
+			t.check(not ChunkDefs.WEIGHTS.has(name) and not (name in ChunkDefs.RARE) and not (name in ChunkDefs.NO_REPEAT),
+				"course: %s is never rolled — the finale splices it in" % name)
 		if def.has("path"):
 			var last := 0.0
 			for pt in def["path"]:
