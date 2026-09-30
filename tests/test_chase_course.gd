@@ -407,7 +407,10 @@ func test_builder_cutoff() -> void:
 		var flair_on_trail := false
 		for child in chunk.get_children():
 			if child is Polygon2D and child.z_index == 0 and child.position == Vector2.ZERO and child.polygon.size() > 0:
-				if side * (child.polygon[0].x - float(cf["trail"][1][1]) * 0.5) > 0.0 and -child.polygon[0].y > 300.0 and -child.polygon[0].y < 1700.0:
+				var px: float = side * child.polygon[0].x
+				# Between the road's edge and the treeline is the trail's corridor: nothing sprouts there.
+				if px > float(def["half_w"]) + Builder.SHOULDER_W and px < absf(float(cf["trees_x"])) - 30.0 \
+						and -child.polygon[0].y > 300.0 and -child.polygon[0].y < 1700.0:
 					flair_on_trail = true
 		t.check(not flair_on_trail, "cutoff: %s: no roadside scrub sprouts across the trail" % name)
 		chunk.free()

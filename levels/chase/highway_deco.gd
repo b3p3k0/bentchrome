@@ -26,6 +26,8 @@ const SIGN_COPY := [
 ]
 const TOLL_COPY := 12   # the tollbooth's sign is always this line (copy_seed TOLL_SEED)
 const TOLL_SEED := 66601
+const DINER_COPY := ["MERCY DINER", "OPEN 24 HRS", "since the accident"]
+const DINER_SEED := 66602   # the truckstop's board is always the diner's
 const BILLBOARD_COPY := [
 	["SLO MO'S", "PARTS FOR THE ROAD", "next stop, or the one after"],
 	["KANDY KANE", "ICE CREAM", "we deliver. we do not stop."],
@@ -64,7 +66,7 @@ func _ready() -> void:
 		&"sign":
 			_copy = SIGN_COPY[TOLL_COPY] if copy_seed == TOLL_SEED else SIGN_COPY[_rng.randi() % SIGN_COPY.size()]
 		&"billboard":
-			_copy = BILLBOARD_COPY[_rng.randi() % BILLBOARD_COPY.size()]
+			_copy = DINER_COPY if copy_seed == DINER_SEED else BILLBOARD_COPY[_rng.randi() % BILLBOARD_COPY.size()]
 			_tint = BOARD_TINTS[_rng.randi() % BOARD_TINTS.size()]
 		&"vultures":
 			z_index = 3

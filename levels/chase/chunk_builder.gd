@@ -550,6 +550,30 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 	clearing.color = SLOPE_FILL[&"grass"].lightened(0.08)
 	clearing.z_index = -1
 	root.add_child(clearing)
+	# Past the treeline the ground darkens into the woods instead of ending
+	# on a hard edge: two bands, each a little darker and a little ragged.
+	var prev := far
+	for band in 2:
+		var next := PackedVector2Array()
+		for p in prev:
+			next.append(Vector2(p.x + side * (110.0 + rng.randf_range(-20.0, 20.0)), p.y))
+		var woods := Polygon2D.new()
+		woods.name = "Woods%d" % band
+		woods.polygon = _strip(prev, next)
+		woods.color = SLOPE_FILL[&"grass"].darkened(0.25 + 0.3 * float(band))
+		woods.z_index = -1
+		root.add_child(woods)
+		prev = next
+	# A second, sparser row of scrub and pines beyond the fence: paint only.
+	var dd := d_from - 40.0
+	while dd < d_to + 40.0:
+		var at := Vector2(trees_x + side * rng.randf_range(70.0, 150.0), -dd)
+		var r := rng.randf_range(16.0, 34.0)
+		var crown := Polygon2D.new()
+		crown.polygon = _blob(at, r, rng)
+		crown.color = Color(0.1, 0.2, 0.1).darkened(rng.randf_range(0.0, 0.3))
+		root.add_child(crown)
+		dd += rng.randf_range(90.0, 170.0)
 	# The ditch: a dark rut between the embankment's foot and the trail,
 	# along the straight where the two run side by side. Mud: stray and stick.
 	var ditch_a := PackedVector2Array()
@@ -952,6 +976,29 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 	neon.kind = &"neon"
 	neon.position = Vector2(c + 430, -840)
 	root.add_child(neon)
+	# The lot: a diner board on the apron, a dumpster round the back, and two
+	# rigs that parked here a long time ago.
+	var diner := Node2D.new()
+	diner.set_script(HighwayDecoScript)
+	diner.kind = &"billboard"
+	diner.side = 1.0
+	diner.copy_seed = HighwayDecoScript.DINER_SEED
+	diner.position = Vector2(c + 560.0, -980.0)
+	root.add_child(diner)
+	var bin := BlockScene.instantiate()
+	bin.name = "Dumpster"
+	bin.position = Vector2(c + 500.0, -420.0)
+	bin.size = Vector2(70, 40)
+	bin.max_hp = 40.0
+	bin.deco = &"crate"
+	root.add_child(bin)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 808
+	for k in 2:
+		var parked := DerelictScene.instantiate()
+		parked.position = Vector2(c + 340.0 + float(k) * 90.0, -(560.0 + float(k) * 250.0))
+		parked.rotation = -PI / 2.0 + rng.randf_range(-0.2, 0.2)
+		root.add_child(parked)
 	# Real light under the paint: once the sky goes, the stop is the one lit
 	# thing on the road (the Coliseum's tower idiom).
 	var glow := LightKit.make_light(150.0, 0.55, Color(1.0, 0.45, 0.7))
