@@ -268,14 +268,18 @@ func test_builder_set_pieces_and_flair() -> void:
 	var stop: Node2D = Builder.build(_entry_for(&"truckstop"))
 	var pumps := 0
 	var deco := 0
+	var lights := 0
 	for child in stop.get_children():
 		var script = child.get_script()
 		if script and script.resource_path.ends_with("destructible_block.gd") and child.deco == &"pump":
 			pumps += 1
 		if script and script.resource_path.ends_with("street_deco.gd"):
 			deco += 1
+		if child is PointLight2D:
+			lights += 1
 	t.check(pumps == 2, "builder: truckstop pumps in (got %d)" % pumps)
 	t.check(deco >= 3, "builder: neon + light pools dress the stop (got %d)" % deco)
+	t.check(lights >= 3, "builder: the stop is lit for real once the sky goes (got %d lights)" % lights)
 	stop.free()
 	var convoy: Node2D = Builder.build(_entry_for(&"convoy"))
 	var wrecks := 0

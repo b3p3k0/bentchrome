@@ -17,6 +17,7 @@ const BoostScene := preload("res://environment/boost_pickup.tscn")
 const JumpPadScript := preload("res://environment/jump_pad.gd")
 const StreetDecoScript := preload("res://environment/street_deco.gd")
 const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
+const LightKit := preload("res://environment/light_kit.gd")
 
 const STEP := 175.0        # geometry sample spacing along the chunk
 const FUNNEL_LEN := 260.0  # px a mouth's resuming embankment chamfers over (its inner corner trails its outer)
@@ -717,12 +718,22 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 	neon.kind = &"neon"
 	neon.position = Vector2(c + 430, -840)
 	root.add_child(neon)
+	# Real light under the paint: once the sky goes, the stop is the one lit
+	# thing on the road (the Coliseum's tower idiom).
+	var glow := LightKit.make_light(150.0, 0.55, Color(1.0, 0.45, 0.7))
+	glow.name = "NeonGlow"
+	glow.position = neon.position
+	root.add_child(glow)
 	for d in [460.0, 800.0]:
 		var lamp := Node2D.new()
 		lamp.set_script(StreetDecoScript)
 		lamp.kind = &"street_light"
 		lamp.position = Vector2(c + 440, -d)
 		root.add_child(lamp)
+		var pool := LightKit.make_light(210.0, 0.7, Color(1.0, 0.92, 0.7))
+		pool.name = "LampPool"
+		pool.position = lamp.position + Vector2(-40.0, 0.0)
+		root.add_child(pool)
 
 ## The two road hazards read as a pair: an OIL SLICK is TRUE BLACK with a
 ## smooth, curvy spill edge and one bright light reflection (a sky glint —
