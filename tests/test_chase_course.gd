@@ -412,6 +412,60 @@ func test_builder_cutoff() -> void:
 		t.check(not flair_on_trail, "cutoff: %s: no roadside scrub sprouts across the trail" % name)
 		chunk.free()
 
+## The dressing along the mile: every deco kind draws, signs come on their
+## course-wide cadence with the sides alternating, billboards rarer, the
+## wreck chunks get buzzards overhead, and nothing dressed ever collides.
+func test_builder_highway_dressing() -> void:
+	const Deco := preload("res://levels/chase/highway_deco.gd")
+	var container := Node2D.new()
+	t.root.add_child(container)
+	for kind in [&"sign", &"billboard", &"vultures", &"wreck_fire", &"tumbleweed"]:
+		var node := Node2D.new()
+		node.set_script(Deco)
+		node.kind = kind
+		node.position = Vector2(100, -200)
+		container.add_child(node)
+	await t.process_frame
+	await t.process_frame
+	t.check(container.get_child_count() == 5, "dressing: every kind stands up and draws")
+	for node in container.get_children():
+		t.check(not (node is CollisionObject2D), "dressing: %s is paint, nothing to hit" % node.kind)
+	t.root.remove_child(container)
+	container.free()
+	# Cadence over a whole course: signs every SIGN_EVERY, sides alternating.
+	var c = _course(31)
+	var signs := 0
+	var boards := 0
+	var flocks := 0
+	var last_side := 0.0
+	var alternates := true
+	var chunks := 0
+	for entry in c.plan:
+		if float(entry["start_d"]) > 30000.0:
+			break
+		chunks += 1
+		if entry["def"].has("cutoff"):
+			last_side = 0.0   # the trail side goes without a sign: the rhythm restarts after it
+		var chunk: Node2D = Builder.build(entry)
+		for child in chunk.get_children():
+			var script = child.get_script()
+			if script and script.resource_path.ends_with("highway_deco.gd"):
+				match child.kind:
+					&"sign":
+						signs += 1
+						if last_side != 0.0 and is_equal_approx(child.side, last_side) and not entry["def"].has("cutoff"):
+							alternates = false
+						last_side = child.side
+					&"billboard":
+						boards += 1
+					&"vultures":
+						flocks += 1
+		chunk.free()
+	t.check(signs >= 16 and signs <= 24, "dressing: a sign every %dpx over 30k (got %d)" % [int(Builder.SIGN_EVERY), signs])
+	t.check(alternates, "dressing: the signs alternate sides")
+	t.check(boards >= 5 and boards <= 8, "dressing: a billboard every %dpx (got %d)" % [int(Builder.BILLBOARD_EVERY), boards])
+	t.check(flocks >= 1, "dressing: buzzards wheel over the wrecks somewhere in 30k (got %d)" % flocks)
+
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch
 ## lip that launches the birds but never the player.

@@ -18,6 +18,9 @@ const JumpPadScript := preload("res://environment/jump_pad.gd")
 const StreetDecoScript := preload("res://environment/street_deco.gd")
 const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
 const LightKit := preload("res://environment/light_kit.gd")
+const HighwayDecoScript := preload("res://levels/chase/highway_deco.gd")
+const SIGN_EVERY := 1400.0        # course px between highway signs (sides alternate)
+const BILLBOARD_EVERY := 4300.0   # course px between billboards
 
 const STEP := 175.0        # geometry sample spacing along the chunk
 const FUNNEL_LEN := 260.0  # px a mouth's resuming embankment chamfers over (its inner corner trails its outer)
@@ -71,6 +74,7 @@ static func build(entry: Dictionary) -> Node2D:
 	_place_props(root, entry)
 	_place_pickups(root, entry)
 	_roadside_flair(root, entry, ds, cx, half)
+	_highway_dressing(root, entry, ds, cx, half)
 	match def.get("set_piece", &""):
 		&"overpass":
 			_overpass(root, entry)
@@ -357,6 +361,70 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 		(zone.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)   # the bed is the paint
 		root.add_child(zone)
 
+## The dressing along the mile: highway signs on a course-wide cadence
+## (sides alternate), a billboard now and then, buzzards wheeling over the
+## wreck-strewn chunks, and the odd tumbleweed crossing an empty straight.
+## All of it highway_deco.gd: paint and FX, nothing to hit.
+static func _highway_dressing(root: Node2D, entry: Dictionary, ds: Array, cx: Array, half: Array) -> void:
+	var def: Dictionary = entry["def"]
+	var start: float = entry["start_d"]
+	var chunk_len: float = def["len"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(start) + 555
+	var trail_side: float = float(def["cutoff"]["side"]) if def.has("cutoff") else 0.0
+	var river: bool = def.has("river")
+	# Signs: one for every multiple of SIGN_EVERY that falls in this chunk,
+	# nudged off the seams (chunk lengths and the cadence share factors).
+	var m := ceilf(start / SIGN_EVERY)
+	if m * SIGN_EVERY < start:
+		m += 1.0
+	while m * SIGN_EVERY < start + chunk_len:
+		var d := clampf(m * SIGN_EVERY - start, 120.0, chunk_len - 120.0)
+		var side := -1.0 if int(m) % 2 == 0 else 1.0
+		if not is_equal_approx(side, trail_side) and not (river and d > 500.0 and d < 1800.0):
+			var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+			var sign := Node2D.new()
+			sign.set_script(HighwayDecoScript)
+			sign.kind = &"sign"
+			sign.side = side
+			sign.copy_seed = int(m) * 31 + 7
+			sign.position = Vector2(cx[i] + side * (half[i] + SHOULDER_W + 46.0), -d)
+			root.add_child(sign)
+		m += 1.0
+	# Billboards: rarer, out on the embankment where the board clears the road.
+	var b := ceilf(start / BILLBOARD_EVERY)
+	if b * BILLBOARD_EVERY < start:
+		b += 1.0
+	while b * BILLBOARD_EVERY < start + chunk_len:
+		var d := clampf(b * BILLBOARD_EVERY - start, 200.0, chunk_len - 200.0)
+		var side := 1.0 if int(b) % 2 == 0 else -1.0
+		if not is_equal_approx(side, trail_side) and not river:
+			var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+			var board := Node2D.new()
+			board.set_script(HighwayDecoScript)
+			board.kind = &"billboard"
+			board.side = side
+			board.copy_seed = int(b) * 17 + 3
+			board.position = Vector2(cx[i] + side * (half[i] + SHOULDER_W + 40.0), -d)   # on the verge, board over the shoulder: it has to be READ
+			root.add_child(board)
+		b += 1.0
+	# Buzzards over the wrecks; a tumbleweed on an empty straight.
+	if def["kind"] in [&"convoy", &"log_run", &"jackknife"] or (def.get("props", []).size() >= 3 and rng.randf() < 0.4):
+		var i := ds.size() / 2
+		var flock := Node2D.new()
+		flock.set_script(HighwayDecoScript)
+		flock.kind = &"vultures"
+		flock.position = Vector2(cx[i] + rng.randf_range(-120.0, 120.0), -chunk_len * 0.5)
+		root.add_child(flock)
+	elif def["kind"] == &"straight" and rng.randf() < 0.3:
+		var d := rng.randf_range(300.0, chunk_len - 300.0)
+		var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+		var weed := Node2D.new()
+		weed.set_script(HighwayDecoScript)
+		weed.kind = &"tumbleweed"
+		weed.position = Vector2(cx[i], -d)
+		root.add_child(weed)
+
 ## The cutoff: a clearing beside the road with a dirt-bike trail through it,
 ## a ditch between the trail and the embankment's foot, and a treeline
 ## fencing the far side — solid pines on a layer-2 body, so the trail is a
@@ -574,6 +642,16 @@ static func _place_props(root: Node2D, entry: Dictionary) -> void:
 				wreck.rotation = -PI / 2.0 + (PI if rng.randf() < 0.35 else 0.0) \
 					+ rng.randf_range(-0.4, 0.4)
 				root.add_child(wreck)
+				if rng.randf() < 0.33:   # one wreck in three still burns
+					var fire := Node2D.new()
+					fire.set_script(HighwayDecoScript)
+					fire.kind = &"wreck_fire"
+					fire.position = pos + Vector2(rng.randf_range(-10.0, 10.0), rng.randf_range(-14.0, 4.0))
+					root.add_child(fire)
+					var glow := LightKit.make_light(110.0, 0.5, Color(1.0, 0.55, 0.2))
+					glow.name = "FireGlow"
+					glow.position = fire.position
+					root.add_child(glow)
 			&"barrel":
 				var barrel := BlockScene.instantiate()
 				barrel.position = pos
