@@ -256,7 +256,7 @@ func test_the_trail_loses_the_pack() -> void:
 	scene._physics_process(0.016)
 	t.check(not scene.on_trail() and not wall.lost_sight, "trail: back on the road they have you again")
 	# Out past the shoulder but beyond the trail's reach along the road: not the trail.
-	player.global_position = Vector2(float(entry["entry_x"]) - 600.0, -(start + 100.0))
+	player.global_position = Vector2(float(entry["entry_x"]) - 600.0, -(start + 40.0))
 	scene._physics_process(0.016)
 	t.check(not scene.on_trail(), "trail: the verge before the mouth is not the trail")
 	# A bird's steering never leaves the road, trail or no trail.

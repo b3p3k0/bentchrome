@@ -19,6 +19,7 @@ const StreetDecoScript := preload("res://environment/street_deco.gd")
 const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
 
 const STEP := 175.0        # geometry sample spacing along the chunk
+const FUNNEL_LEN := 260.0  # px a mouth's resuming embankment chamfers over (its inner corner trails its outer)
 const SHOULDER_W := 90.0   # drivable verge outside the asphalt (grip penalty)
 const EMBANK_W := 130.0    # painted slope width; the wall runs its inner edge
 const TAPER := 300.0       # must match chase_course.TAPER
@@ -59,12 +60,12 @@ static func build(entry: Dictionary) -> Node2D:
 		half.append(_half_w(entry, d))
 	_paint_road(root, ds, cx, half)
 	var shoulder: StringName = def.get("shoulder", &"grass")
+	_build_cutoff(root, entry)   # before the walls: its clearing paints UNDER the embankment
 	for side in [-1.0, 1.0]:
 		_build_shoulder(root, ds, cx, half, side, shoulder)
 		_build_embankment(root, entry, side, shoulder)
 	_build_medians(root, entry)
 	_build_washout(root, entry)
-	_build_cutoff(root, entry)
 	_place_props(root, entry)
 	_place_pickups(root, entry)
 	_roadside_flair(root, entry, ds, cx, half)
@@ -434,22 +435,34 @@ static func _build_embankment(root: Node2D, entry: Dictionary, side: float, shou
 		runs.append([d, chunk_len])
 	for k in runs.size():
 		var suffix := "" if runs.size() == 1 else str(k)
+		# A run that begins at a mouth starts with a CHAMFERED end: its outer
+		# corner leads and its inner corner trails by FUNNEL_LEN, so a car
+		# that missed the mouth is deflected back onto the road by a slanted
+		# face instead of stopped dead by a square one.
 		_embank_run(root, entry, side, shoulder, float(runs[k][0]), float(runs[k][1]),
-			("EmbankL" if side < 0.0 else "EmbankR") + suffix)
+			("EmbankL" if side < 0.0 else "EmbankR") + suffix, k > 0)
 
 static func _embank_run(root: Node2D, entry: Dictionary, side: float, shoulder: StringName,
-		d0: float, d1: float, wall_name: String) -> void:
+		d0: float, d1: float, wall_name: String, chamfer := false) -> void:
 	var inner := PackedVector2Array()
 	var outer := PackedVector2Array()
 	var crest := PackedVector2Array()
 	var n := maxi(int(ceilf((d1 - d0) / STEP)), 1)
+	var ds_run: Array = []
 	for i in n + 1:
-		var d := lerpf(d0, d1, float(i) / float(n))
-		var y := -d
+		ds_run.append(lerpf(d0, d1, float(i) / float(n)))
+	if chamfer and d0 + FUNNEL_LEN < d1:
+		ds_run.append(d0 + FUNNEL_LEN)
+		ds_run.sort()
+	for d in ds_run:
+		var y: float = -d
 		var e: float = _center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W)
+		var out_e: float = e + side * EMBANK_W
+		outer.append(Vector2(out_e, y))
+		if chamfer and d < d0 + FUNNEL_LEN - 0.5:
+			continue   # the inner edge starts FUNNEL_LEN in: the diagonal is the face
 		inner.append(Vector2(e, y))
-		outer.append(Vector2(e + side * EMBANK_W, y))
-		crest.append(Vector2(e + side * EMBANK_W * 0.62, y))
+		crest.append(Vector2(e + (out_e - e) * 0.62, y))
 	var wall := StaticBody2D.new()
 	wall.name = wall_name
 	wall.collision_layer = 2

@@ -10,6 +10,7 @@ extends SceneTree
 ##            pack), so TOOK reads the full run's incoming damage.
 ##   --mines  a land mine dropped off the tail every MINE_EVERY seconds (the
 ##            bot never uses the bay): measures what a flinch buys.
+##   --trail=F  the share of cutoff trails the bot takes (default 0.5).
 ##
 ## The autopilot (chase_autopilot.gd) never dodges fire, hunts pickups, or
 ## uses rear weapons: its results are a FLOOR for what a player will do.
@@ -25,6 +26,9 @@ var _skill := 1.0
 var _tank := false
 var _verbose := false
 var _mines := false
+var _trail := 0.5
+var _trails_taken := 0
+var _was_on_trail := false
 const MINE_EVERY := 15.0
 var _mine_t := MINE_EVERY * 0.5
 
@@ -59,6 +63,8 @@ func _init() -> void:
 			_tank = true
 		elif arg == "--mines":
 			_mines = true
+		elif arg.begins_with("--trail="):
+			_trail = float(arg.substr(8))
 		elif arg == "--verbose":
 			_verbose = true
 	process_frame.connect(_setup, CONNECT_ONE_SHOT)
@@ -78,6 +84,7 @@ func _setup() -> void:
 	var pilot = Autopilot.new()
 	pilot.host = _scene
 	pilot.skill = _skill
+	pilot.take_trails = _trail
 	player.set_driver(pilot)
 	var health = player.get_node(^"Health")
 	health.god = false
@@ -96,6 +103,10 @@ func _tick() -> void:
 		_watch_finale(player)
 	elif not over:
 		_watch(player)
+		var on_trail: bool = _scene.has_method(&"on_trail") and _scene.on_trail()
+		if on_trail and not _was_on_trail:
+			_trails_taken += 1
+		_was_on_trail = on_trail
 		if _mines:
 			_mine_t -= 1.0 / 60.0
 			if _mine_t <= 0.0:
@@ -198,10 +209,10 @@ func _report(player) -> void:
 		print("[finale] air %d  landed d %s (channel to %s, shallows to %s)  jumpers %d  gone %d  show %.1fs" % [
 			int(_finale_air), str(int(_finale_land)) if _finale_land != INF else "-",
 			str(r.get("deep_to", "?")), str(r.get("shallow_to", "?")), _jumpers, sunk, _scene.clock - _scene.RUN_SECONDS])
-	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d  flinches %d" % [
+	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d  flinches %d  trails %d" % [
 		verdict, _car, _scene.clock, int(_min_gap), _danger_frames / 60.0, _slowdowns,
 		_boost_frames / 60.0, int(maxf(_hp0 - _taken, 0.0)) if _tank else int(player.get_hp()),
-		int(_hp0), int(_taken), _heals, _scene.kills, _max_pack, _scene.daredevil_bonus(), _scene.flinches])
+		int(_hp0), int(_taken), _heals, _scene.kills, _max_pack, _scene.daredevil_bonus(), _scene.flinches, _trails_taken])
 	if _verbose:
 		for source in _by_source:
 			print("[src] %-32s %6.1f dmg in %3d hits (%.0f%%)" % [source, _by_source[source][0],
