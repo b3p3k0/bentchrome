@@ -30,9 +30,8 @@ static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
 static var MERCY_GAP := 200.0     # inside this the closing speed is capped...
 static var MERCY_CLOSE := 45.0    # ...to this many px/s: the last 150px take >= 3.3s
 
-const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
-const DUST_AMOUNT := 140          # particle budget: one system, under 200
+const DecoScript := preload("res://levels/chase/horde_deco.gd")
 const ROAR_FLOOR := 0.22          # the engines at their farthest: never silent
 const HORN_COOLDOWN := 6.0        # seconds between war-horn blasts, at least
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
@@ -45,33 +44,25 @@ var pace_frac := 0.80       # fraction of the target's top; the director's phase
 var front_y := 0.0          # world y of the dust crest
 var no_mercy := false       # the host sets this once the run is lost: swallow the car
 
-var _dust: CPUParticles2D = null
+var _deco: Node2D = null
 var _roaring := false
 var _was_danger := false
 var _horn_t := 0.0
 
 func _ready() -> void:
 	z_index = 1  # the dust looms over cars it swallows
-	# The rolling dust bank (snowfall-pattern CPUParticles; world-space so the
-	# cloud trails as the front advances).
-	_dust = CPUParticles2D.new()
-	_dust.name = "Dust"
-	_dust.amount = DUST_AMOUNT
-	_dust.lifetime = 2.6
-	_dust.local_coords = false
-	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_dust.emission_rect_extents = Vector2(950, 170)
-	_dust.position = Vector2(0, 230)
-	_dust.direction = Vector2(0, -1)
-	_dust.spread = 34.0
-	_dust.initial_velocity_min = 60.0
-	_dust.initial_velocity_max = 170.0
-	_dust.gravity = Vector2(0, -22)
-	_dust.scale_amount_min = 3.0
-	_dust.scale_amount_max = 7.5
-	_dust.color = Color(0.52, 0.42, 0.31, 0.32)
-	_dust.preprocess = 2.0
-	add_child(_dust)
+	# The picture (horde_deco.gd): riders, billows, lights, tracers, particles.
+	_deco = DecoScript.new()
+	_deco.name = "Deco"
+	_deco.half = road_half()
+	add_child(_deco)
+
+## The road's reach at the crest, plus the verge the dust spills over.
+func road_half() -> float:
+	if course != null:
+		var s: Dictionary = course.sample(-front_y)
+		return float(s["half_w"]) + 220.0
+	return ROAD_FALLBACK
 
 func gap() -> float:
 	if target == null or not is_instance_valid(target):
@@ -177,7 +168,9 @@ func _physics_process(delta: float) -> void:
 	if g < DANGER_GAP and target.has_method(&"add_shake"):
 		target.add_shake(minf((DANGER_GAP - g) * 0.006, 0.9))
 	_voice(delta, g)
-	queue_redraw()
+	if _deco != null:
+		_deco.half = road_half()
+		_deco.pressure = pressure_at(g)
 
 ## The pack's voice: engines whose gain rides the gap, and a war horn on the
 ## edge into the danger zone. Drop-in assets — silent no-ops until they land.
@@ -204,41 +197,3 @@ func _exit_tree() -> void:
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio != null:
 		audio.loop_set(&"horde_roar", false)
-
-func _draw() -> void:
-	var half := ROAD_FALLBACK
-	if course != null:
-		var s: Dictionary = course.sample(-front_y)
-		half = s["half_w"] + 220.0
-	# Dust: dense at the front line, thinning south into the haze.
-	for i in 4:
-		var t := float(i) / 4.0
-		var col := Color(0.45, 0.36, 0.28, 0.55 - t * 0.11)
-		draw_rect(Rect2(-half, BAND_DEPTH * t, half * 2.0, BAND_DEPTH * 0.28), col)
-	# Crest line — the hard edge you're actually racing.
-	draw_rect(Rect2(-half, -6.0, half * 2.0, 10.0), Color(0.55, 0.42, 0.3, 0.85))
-	var tms := Time.get_ticks_msec() * 0.001
-	# Silhouettes first — hulking shapes lurching in the murk, lights on top.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 977
-	for i in 5:
-		var sx := rng.randf_range(-half * 0.9, half * 0.9)
-		var sy := rng.randf_range(120.0, BAND_DEPTH * 0.9)
-		var rate := rng.randf_range(1.5, 3.0)
-		var bob := sin(tms * rate + float(i) * 1.7) * 6.0
-		var lurch := sin(tms * 0.7 + float(i) * 2.3) * 16.0
-		draw_rect(Rect2(sx - 34.0 + lurch, sy - 20.0 + bob, 68.0, 40.0),
-			Color(0.12, 0.1, 0.09, 0.75))
-		draw_rect(Rect2(sx - 18.0 + lurch, sy - 32.0 + bob, 36.0, 14.0),
-			Color(0.1, 0.09, 0.08, 0.7))
-	# Headlight pairs flickering in the dust (time-seeded jitter, no state).
-	rng.seed = int(Time.get_ticks_msec() / 140)
-	for i in 6:
-		var hx := rng.randf_range(-half * 0.85, half * 0.85)
-		var hy := rng.randf_range(60.0, BAND_DEPTH * 0.8)
-		var glow := Color(1.0, 0.9, 0.55, rng.randf_range(0.5, 0.95))
-		var halo := Color(1.0, 0.85, 0.5, 0.16)
-		draw_circle(Vector2(hx - 11.0, hy), 10.0, halo)
-		draw_circle(Vector2(hx + 11.0, hy), 10.0, halo)
-		draw_circle(Vector2(hx - 11.0, hy), 5.0, glow)
-		draw_circle(Vector2(hx + 11.0, hy), 5.0, glow)
