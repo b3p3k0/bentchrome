@@ -56,6 +56,29 @@ const WALLS := {
 
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
 
+const TRUCK_STOP := {
+	&"TruckStopLot": Rect2(1664, 320, 1344, 1856),
+	&"FrontageRoad": Rect2(2560, -640, 256, 960),
+}
+
+const TRUCK_STOP_IDS := {
+	&"Tanker": 200,
+	&"DieselPump1": 201,
+	&"DieselPump2": 202,
+	&"Barrel1": 203,
+	&"Barrel2": 204,
+	&"Barrel3": 205,
+	&"Pump1": 206,
+	&"Pump2": 207,
+	&"Pump3": 208,
+	&"Pump4": 209,
+	&"Store": 210,
+	&"GarageW": 211,
+	&"GarageE": 212,
+	&"Semi1": 213,
+	&"Semi2": 214,
+}
+
 const RAIL_THICKNESS := 12.0
 const RAIL_INSET := 8.0
 const RAIL_MAX_LENGTH := 256.0

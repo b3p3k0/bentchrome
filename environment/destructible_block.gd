@@ -277,11 +277,23 @@ func _boom_tint() -> Color:
 ## Fuel detonation: flat damage to every Health-bearing body in range —
 ## vehicles, pumps, other explosives (chain reactions welcome), and you.
 func _blast(radius: float, damage: float) -> void:
-	var shape := CircleShape2D.new()
-	shape.radius = radius
+	var shape: Shape2D
+	var query_rotation := 0.0
+	if deco == &"tanker" and not is_equal_approx(size.x, size.y):
+		# Radius follows the tank's cylindrical spine; a long hull must not eat
+		# most of its own blast reach. Square fixtures keep the legacy circle.
+		var capsule := CapsuleShape2D.new()
+		capsule.radius = radius
+		capsule.height = radius * 2.0 + absf(size.x - size.y)
+		shape = capsule
+		query_rotation = PI * 0.5 if size.x > size.y else 0.0
+	else:
+		var circle := CircleShape2D.new()
+		circle.radius = radius
+		shape = circle
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
-	params.transform = Transform2D(0.0, global_position)
+	params.transform = Transform2D(query_rotation, global_position)
 	params.collision_mask = 1 | 4 | (1 << 9)  # cars + obstacles + soft targets
 	params.collide_with_areas = true
 	params.exclude = [get_rid()]

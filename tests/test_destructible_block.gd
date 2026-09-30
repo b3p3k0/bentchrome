@@ -241,6 +241,37 @@ func test_tanker_chains_through_barrel() -> void:
 	t.root.remove_child(container)
 	container.free()
 
+func test_long_tanker_blast_follows_the_hull() -> void:
+	# A 320x72 tank's fireball is a capsule along its spine (the hull length
+	# minus its width): 200px from the axis all the way round, so the reach
+	# past the ends is ~164px instead of the 40px a centred circle would leave.
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var tanker = BlockScene.instantiate()
+	tanker.deco = &"tanker"
+	tanker.size = Vector2(320, 72)
+	tanker.max_hp = 100.0
+	container.add_child(tanker)
+	var off_the_end = _blast_block(container, &"", Vector2(300, 0), 100.0)
+	var past_the_end = _blast_block(container, &"", Vector2(340, 0), 100.0)
+	var beside = _blast_block(container, &"", Vector2(0, 190), 100.0)
+	var wide = _blast_block(container, &"", Vector2(0, 210), 100.0)
+	await t.physics_frame
+	tanker.get_node("Health").take_damage(999.0)
+	await t.physics_frame
+	t.check_approx(off_the_end.get_node("Health").hp, 60.0,
+		"long tanker: 300px along the spine is 176px off the hull and takes 40")
+	t.check_approx(past_the_end.get_node("Health").hp, 100.0,
+		"long tanker: 340px along the spine is past the 200px reach")
+	t.check_approx(beside.get_node("Health").hp, 60.0,
+		"long tanker: 190px beside the hull takes 40")
+	t.check_approx(wide.get_node("Health").hp, 100.0,
+		"long tanker: 210px beside the hull stays outside the blast")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func test_road_styles_draw_alive_dead_and_report_remains() -> void:
 	var holder := Node2D.new()
 	t.root.add_child(holder)

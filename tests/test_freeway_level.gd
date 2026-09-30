@@ -25,6 +25,82 @@ const F4_WALLS := [
 const F5_WALLS := [&"LandingN", &"LandingS", &"RampBN", &"RampBS"]
 const F6_RAMPS := [&"RampA", &"RampW"]
 const F6_WALLS := [&"RampAN", &"RampAS", &"DeckEastStop"]
+const TRUCK_STOP_SOLIDS := [
+	&"Store", &"Pump1", &"Pump2", &"Pump3", &"Pump4",
+	&"DieselPump1", &"DieselPump2", &"Tanker",
+	&"Barrel1", &"Barrel2", &"Barrel3", &"Semi1", &"Semi2",
+	&"GarageW", &"GarageE", &"Crate1", &"Crate2",
+]
+const TRUCK_STOP_BLOCKS := {
+	&"Store": {
+		"position": Vector2(2400, 448), "size": Vector2(384, 256),
+		"deco": &"storefront", "hp": 260.0, "front": "south", "livery": 0,
+	},
+	&"Pump1": {
+		"position": Vector2(2208, 816), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"Pump2": {
+		"position": Vector2(2208, 912), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"Pump3": {
+		"position": Vector2(2592, 816), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"Pump4": {
+		"position": Vector2(2592, 912), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"DieselPump1": {
+		"position": Vector2(2880, 1152), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"DieselPump2": {
+		"position": Vector2(2880, 1248), "size": Vector2(64, 64),
+		"deco": &"pump", "hp": 40.0,
+	},
+	&"Tanker": {
+		"position": Vector2(2624, 1200), "size": Vector2(320, 72),
+		"deco": &"tanker", "hp": 90.0, "livery": 2,
+	},
+	&"Barrel1": {
+		"position": Vector2(2900, 1340), "size": Vector2(40, 40),
+		"deco": &"barrel", "hp": 30.0,
+	},
+	&"Barrel2": {
+		"position": Vector2(2952, 1372), "size": Vector2(40, 40),
+		"deco": &"barrel", "hp": 30.0,
+	},
+	&"Barrel3": {
+		"position": Vector2(2916, 1424), "size": Vector2(40, 40),
+		"deco": &"barrel", "hp": 30.0,
+	},
+	&"Semi1": {
+		"position": Vector2(2016, 1650), "size": Vector2(320, 72),
+		"deco": &"semi", "hp": 120.0, "livery": 0,
+	},
+	&"Semi2": {
+		"position": Vector2(2496, 1650), "size": Vector2(320, 72),
+		"deco": &"semi", "hp": 120.0, "livery": 1,
+	},
+	&"GarageW": {
+		"position": Vector2(2176, 2048), "size": Vector2(256, 256),
+		"deco": &"storefront", "hp": 260.0, "front": "east",
+	},
+	&"GarageE": {
+		"position": Vector2(2688, 2048), "size": Vector2(256, 256),
+		"deco": &"storefront", "hp": 260.0, "front": "west",
+	},
+	&"Crate1": {
+		"position": Vector2(2660, 600), "size": Vector2(64, 64),
+		"deco": &"crate", "hp": 50.0,
+	},
+	&"Crate2": {
+		"position": Vector2(2730, 640), "size": Vector2(64, 64),
+		"deco": &"crate", "hp": 50.0,
+	},
+}
 
 var t
 var _shared_freeway: Node
@@ -51,6 +127,23 @@ class ThrottleAfterPadEntryDriver:
 			"steer": 0.0, "fire_mg": false, "fire_selected": false,
 			"weapon_prev": false, "weapon_next": false, "handbrake": false,
 		}
+
+class BlastProbe:
+	extends StaticBody2D
+	var floor_index := 1
+	var health: Health
+
+	func _init() -> void:
+		collision_layer = 1
+		collision_mask = 0
+		var shape := CircleShape2D.new()
+		shape.radius = 8.0
+		var collision := CollisionShape2D.new()
+		collision.shape = shape
+		add_child(collision)
+		health = Health.new()
+		health.max_hp = 100.0
+		add_child(health)
 
 func _init(runner) -> void:
 	t = runner
@@ -121,6 +214,21 @@ func _toward_vector(toward: StringName) -> Vector2:
 func _has_point_inclusive(rect: Rect2, point: Vector2) -> bool:
 	return point.x >= rect.position.x and point.x <= rect.end.x \
 		and point.y >= rect.position.y and point.y <= rect.end.y
+
+func _point_rect_distance(point: Vector2, rect: Rect2) -> float:
+	return point.distance_to(point.clamp(rect.position, rect.end))
+
+func _block_rect(block: Node2D) -> Rect2:
+	var block_size: Vector2 = block.get("size")
+	return Rect2(block.position - block_size * 0.5, block_size)
+
+func _truck_stop_solids(freeway: Node) -> Array[Node2D]:
+	var solids: Array[Node2D] = []
+	for node_name: StringName in TRUCK_STOP_SOLIDS:
+		var solid := freeway.get_node_or_null(NodePath(node_name)) as Node2D
+		if solid:
+			solids.append(solid)
+	return solids
 
 func _floor_at_structure(freeway: Node, point: Vector2) -> int:
 	var best := -1
@@ -345,7 +453,7 @@ func test_freeway_floor_stamps_and_counts() -> void:
 	t.check(counts.clutter == 15, "freeway: 15 clutter props (got %d)" % counts.clutter)
 	t.check(counts.wrecks == 2, "freeway: 2 wrecks (got %d)" % counts.wrecks)
 	t.check(counts.stations == 3, "freeway: 3 stations (got %d)" % counts.stations)
-	t.check(counts.pickups == 8, "freeway: 8 ammo pickups (got %d)" % counts.pickups)
+	t.check(counts.pickups == 10, "freeway: 10 ammo pickups (got %d)" % counts.pickups)
 	t.check(counts.pads == 3, "freeway: 3 jump pads (got %d)" % counts.pads)
 	t.check(counts.cars == 8, "freeway: 8 cars (got %d)" % counts.cars)
 	t.check(counts.rivals == 7, "freeway: 7 rivals (got %d)" % counts.rivals)
@@ -476,6 +584,235 @@ func test_freeway_lowland_matches_plan() -> void:
 			var shoulder_vis := freeway.get_node(^"ShoulderN/Vis") as Polygon2D
 			t.check(vis.material == shoulder_vis.material,
 				"freeway: LowlandDirt uses the shared dirt paint")
+
+func test_freeway_truck_stop_surfaces_match_plan() -> void:
+	var freeway := _freeway_structure()
+	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
+	for road_name: StringName in Plan.TRUCK_STOP:
+		var road := freeway.get_node_or_null(NodePath(road_name)) as Area2D
+		var expected: Rect2 = Plan.TRUCK_STOP[road_name]
+		t.check(road != null, "freeway truck stop: %s exists" % road_name)
+		if road == null:
+			continue
+		var collision := road.get_node_or_null(^"Col") as CollisionShape2D
+		var vis := road.get_node_or_null(^"Vis") as Polygon2D
+		t.check(road.get("terrain_type") == &"road"
+				and int(road.get("terrain_priority")) == 10,
+			"freeway truck stop: %s is priority-10 road" % road_name)
+		t.check(collision != null and _collision_rect(road, collision) == expected,
+			"freeway truck stop: %s rectangle matches the plan" % road_name)
+		t.check(vis != null and vis.material == asphalt.material,
+			"freeway truck stop: %s uses SM_asphalt" % road_name)
+
+	var dirt := freeway.get_node(^"LowlandDirt")
+	var lot := freeway.get_node(^"TruckStopLot")
+	var frontage := freeway.get_node(^"FrontageRoad")
+	var marks := freeway.get_node_or_null(^"LotMarks") as Node2D
+	t.check(lot.get_index() == dirt.get_index() + 1
+			and frontage.get_index() == lot.get_index() + 1,
+		"freeway truck stop: lot and frontage follow LowlandDirt")
+	t.check(marks != null and marks.get_index() == frontage.get_index() + 1,
+		"freeway truck stop: LotMarks follows both road zones")
+	if marks:
+		t.check(marks.position == Vector2(1832, 1950)
+				and marks.get("kind") == &"lot_marks"
+				and marks.get("size") == Vector2(336, 200),
+			"freeway truck stop: parking marks match the signed-off rectangle")
+
+func test_freeway_truck_stop_props_match_layout() -> void:
+	var freeway := _freeway_structure()
+	for node_name: StringName in TRUCK_STOP_BLOCKS:
+		var cfg: Dictionary = TRUCK_STOP_BLOCKS[node_name]
+		var block := freeway.get_node_or_null(NodePath(node_name))
+		t.check(block != null, "freeway truck stop: %s exists" % node_name)
+		if block == null:
+			continue
+		t.check(String(block.scene_file_path).ends_with("destructible_block.tscn"),
+			"freeway truck stop: %s uses DestructibleBlock" % node_name)
+		t.check(block.position == cfg["position"] and block.get("size") == cfg["size"],
+			"freeway truck stop: %s position and size match" % node_name)
+		t.check(block.get("deco") == cfg["deco"]
+				and block.get("floor_index") == 1
+				and is_equal_approx(float(block.get("max_hp")), float(cfg["hp"])),
+			"freeway truck stop: %s style, floor, and HP match" % node_name)
+		if cfg.has("front"):
+			t.check(block.get("front") == cfg["front"],
+				"freeway truck stop: %s front faces %s" % [node_name, cfg["front"]])
+		if cfg.has("livery"):
+			t.check(block.get("livery") == cfg["livery"],
+				"freeway truck stop: %s uses livery %d" % [node_name, cfg["livery"]])
+
+	var station := freeway.get_node_or_null(^"HealthStation2") as Area2D
+	var enemy := freeway.get_node_or_null(^"Enemy7") as Vehicle
+	var standard := freeway.get_node_or_null(^"AmmoStandard3") as Area2D
+	var mine := freeway.get_node_or_null(^"AmmoMine2") as Area2D
+	t.check(station != null and station.position == Vector2(2432, 2048),
+		"freeway truck stop: HealthStation2 is centred in the garage bay")
+	t.check(enemy != null and enemy.position == Vector2(1792, 1088)
+			and enemy.start_floor == 1,
+		"freeway truck stop: Enemy7 moves to the floor-1 lot spawn")
+	t.check(standard != null and standard.position == Vector2(2048, 1300)
+			and standard.get("kind") == "standard",
+		"freeway truck stop: AmmoStandard3 supplies fire missiles")
+	t.check(mine != null and mine.position == Vector2(2912, 2040)
+			and mine.get("kind") == "mine" and mine.get("amount") == 2,
+		"freeway truck stop: AmmoMine2 supplies two mines")
+
+func test_freeway_truck_stop_signage_canopy_and_draw_order() -> void:
+	var freeway := _freeway_structure()
+	var store := freeway.get_node(^"Store")
+	var band := store.get_node_or_null(^"Signage") as Node2D
+	t.check(band != null, "freeway truck stop: Store owns its Signage child")
+	if band:
+		t.check(band.get_parent() == store and band.get("kind") == &"band",
+			"freeway truck stop: Store signage is a band")
+		t.check(band.position == Vector2(0, 96) and band.z_index == 0
+				and band.get("size") == Vector2(340, 56)
+				and band.get("text") == "HATE'S TRAVEL STOP",
+			"freeway truck stop: Store band copy and placement match")
+
+	var canopy := freeway.get_node_or_null(^"Canopy") as Node2D
+	var pylon := freeway.get_node_or_null(^"PylonSign") as Node2D
+	t.check(canopy != null and canopy.position == Vector2(2400, 864)
+			and canopy.z_index == 1 and canopy.get("kind") == &"canopy"
+			and canopy.get("size") == Vector2(512, 288),
+		"freeway truck stop: Canopy matches its signed-off roof")
+	t.check(pylon != null and pylon.position == Vector2(1760, 400)
+			and pylon.z_index == 1 and pylon.get("kind") == &"pylon"
+			and pylon.get("size") == Vector2(256, 200)
+			and pylon.get("text") == "HATE'S"
+			and pylon.get("sub_text") == "DIESEL 4.99",
+		"freeway truck stop: PylonSign copy and placement match")
+	if canopy == null or pylon == null:
+		return
+	for node_name: StringName in TRUCK_STOP_SOLIDS + [
+			&"HealthStation2", &"AmmoStandard3", &"AmmoMine2",
+		]:
+		var prop := freeway.get_node(NodePath(node_name))
+		t.check(prop.get_index() < canopy.get_index()
+				and prop.get_index() < pylon.get_index(),
+			"freeway truck stop: %s renders beneath overhead paint" % node_name)
+	for child in freeway.get_children():
+		if child is Vehicle:
+			t.check(child.get_index() > canopy.get_index()
+					and child.get_index() > pylon.get_index(),
+				"freeway truck stop: %s renders above overhead paint" % child.name)
+
+func test_freeway_truck_stop_network_id_ledger() -> void:
+	var freeway := _freeway_structure()
+	var truck_stop_ids := {}
+	for node_name: StringName in Plan.TRUCK_STOP_IDS:
+		var node := freeway.get_node_or_null(NodePath(node_name))
+		t.check(node != null, "freeway truck stop IDs: %s exists" % node_name)
+		if node == null:
+			continue
+		var net_id := int(node.get("arena_net_id"))
+		truck_stop_ids[node_name] = net_id
+		t.check(net_id == int(Plan.TRUCK_STOP_IDS[node_name]),
+			"freeway truck stop IDs: %s owns %d" % [node_name, net_id])
+	t.check(truck_stop_ids == Plan.TRUCK_STOP_IDS,
+		"freeway truck stop IDs: scene ledger exactly matches the plan")
+
+	var nodes: Array = []
+	_walk(freeway, nodes)
+	var seen := {}
+	var live_ids := 0
+	var duplicate_ids := 0
+	for node in nodes:
+		var id_v: Variant = node.get("arena_net_id")
+		if id_v == null or int(id_v) <= 0:
+			continue
+		live_ids += 1
+		if seen.has(int(id_v)):
+			duplicate_ids += 1
+		seen[int(id_v)] = node.name
+	t.check(duplicate_ids == 0 and seen.size() == live_ids,
+		"freeway truck stop IDs: ledger is unique across the whole scene")
+	t.check(live_ids == Plan.RAILS.size() + Plan.TRUCK_STOP_IDS.size(),
+		"freeway truck stop IDs: only deck rails and truck-stop props are synced")
+
+func test_freeway_truck_stop_clearances() -> void:
+	var freeway := _freeway_structure()
+	var solids := _truck_stop_solids(freeway)
+	for child in freeway.get_children():
+		if not child is Vehicle:
+			continue
+		for solid in solids:
+			var clearance := _point_rect_distance(child.position, _block_rect(solid))
+			t.check(clearance >= 256.0,
+				"freeway truck stop: %s is %.0fpx clear of spawn %s" %
+					[solid.name, clearance, child.name])
+
+	var pad := freeway.get_node(^"JumpLowland") as JumpPad
+	var runup := Rect2(Vector2(pad.position.x, pad.position.y - 192.0),
+		Vector2(450, 384))
+	for solid in solids:
+		t.check(not _block_rect(solid).intersects(runup),
+			"freeway truck stop: %s stays outside the lowland-pad run-up" % solid.name)
+
+	for child in freeway.get_children():
+		if String(child.scene_file_path).get_file() != "ammo_pickup.tscn":
+			continue
+		for solid in solids:
+			var clearance := _point_rect_distance(child.position, _block_rect(solid))
+			t.check(clearance >= 96.0,
+				"freeway truck stop: %s is %.0fpx clear of pickup %s" %
+					[solid.name, clearance, child.name])
+
+	var west := freeway.get_node(^"GarageW")
+	var east := freeway.get_node(^"GarageE")
+	var station := freeway.get_node(^"HealthStation2") as Node2D
+	var west_inner: float = west.position.x + (west.get("size") as Vector2).x * 0.5
+	var east_inner: float = east.position.x - (east.get("size") as Vector2).x * 0.5
+	t.check(is_equal_approx(east_inner - west_inner, 256.0)
+			and is_equal_approx(station.position.x, (west_inner + east_inner) * 0.5),
+		"freeway truck stop: garage bay is 256px wide with the station centred")
+	t.check(is_equal_approx(station.position.x - west.position.x, 256.0)
+			and is_equal_approx(east.position.x - station.position.x, 256.0),
+		"freeway truck stop: station has equal 256px garage-side spacing")
+
+func test_freeway_truck_stop_tanker_chain_reaction() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var tanker := freeway.get_node(^"Tanker")
+	var diesel_pumps := [
+		freeway.get_node(^"DieselPump1"),
+		freeway.get_node(^"DieselPump2"),
+	]
+	var barrels := [
+		freeway.get_node(^"Barrel1"),
+		freeway.get_node(^"Barrel2"),
+		freeway.get_node(^"Barrel3"),
+	]
+	var probe := BlastProbe.new()
+	probe.position = tanker.position + Vector2(0, 300)
+	freeway.add_child(probe)
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	await t.physics_frame
+	var probe_hp := probe.health.hp
+	(tanker.get_node(^"Health") as Health).take_damage(999.0)
+	var pumps_dead := false
+	var barrel_dead := false
+	for i in 60:
+		await t.physics_frame
+		pumps_dead = true
+		for pump in diesel_pumps:
+			pumps_dead = pumps_dead and (pump.get_node(^"Health") as Health).hp <= 0.0
+		barrel_dead = false
+		for barrel in barrels:
+			barrel_dead = barrel_dead or (barrel.get_node(^"Health") as Health).hp <= 0.0
+		if pumps_dead and barrel_dead:
+			break
+	t.check(pumps_dead,
+		"freeway truck stop: tanker blast kills both diesel pumps within 60 frames")
+	t.check(barrel_dead,
+		"freeway truck stop: tanker blast starts the barrel chain within 60 frames")
+	t.check(is_equal_approx(probe.health.hp, probe_hp),
+		"freeway truck stop: a Health body 300px off the tanker flank is unhurt")
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
 
 func test_freeway_f4_floor_zones_and_ramps_match_plan() -> void:
 	var freeway := _freeway_structure()
@@ -1041,6 +1378,59 @@ func test_freeway_campaign_size_matches_plan() -> void:
 		mp_found = true
 		t.check(profile.cars == 8, "freeway: multiplayer harvests all 8 cars")
 	t.check(mp_found, "freeway: multiplayer profile exists")
+
+func test_freeway_frontage_road_reaches_the_lot_live() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	player.position = Vector2(2688, -500)
+	player.start_floor = 1
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	player.heading = Vector2.DOWN.angle()
+	player.velocity = Vector2.DOWN * LIVE_ENTRY_SPEED
+	player.set_driver(FullThrottleDriver.new())
+	var stayed_low := true
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		var floor := Floors.floor_of(player)
+		stayed_low = stayed_low and (floor < 1 or floor == 1)
+		if player.position.y > Plan.TRUCK_STOP[&"TruckStopLot"].position.y:
+			break
+	t.check(stayed_low and player.position.y > 320.0,
+		"freeway truck stop: southbound frontage-road car reaches the lot on floor 1 "
+			+ "(floor %d at %s)" % [Floors.floor_of(player), player.position])
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+
+func test_freeway_live_car_drives_through_repair_garage() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	var station := freeway.get_node(^"HealthStation2") as Node2D
+	player.position = Vector2(2432, 2300)
+	player.start_floor = 1
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	player.heading = Vector2.UP.angle()
+	player.velocity = Vector2.UP * LIVE_ENTRY_SPEED
+	player.set_driver(FullThrottleDriver.new())
+	var passed_station := false
+	var stayed_low := true
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		var floor := Floors.floor_of(player)
+		stayed_low = stayed_low and (floor < 1 or floor == 1)
+		passed_station = passed_station or player.position.y < station.position.y
+		if player.position.y < 1900.0:
+			break
+	t.check(passed_station and stayed_low and player.position.y < 1900.0,
+		"freeway truck stop: northbound car passes the repair station and exits the bay "
+			+ "(floor %d at %s)" % [Floors.floor_of(player), player.position])
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
 
 func test_freeway_jump_w_lands_southbound_on_deck() -> void:
 	var result := await _simulate_pad_landing(&"JumpW", Vector2.DOWN, 2)
