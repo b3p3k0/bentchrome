@@ -48,8 +48,12 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_dodge = 0.0
 	var want_x: float = road_x if _dodge == 0.0 else own.x + _dodge * DODGE_SIDE
 	want_x = clampf(want_x, road_x - half + 60.0, road_x + half - 60.0)
-	# The same lane-change wheel the player has: a sidestep is an axis push.
-	var steer := Pedal.lane_steer(vehicle.heading, clampf((want_x - own.x) / 120.0, -1.0, 1.0))
+	# The same lane-change wheel the player has: a sidestep is an axis push,
+	# the road's own heading is the wheel's zero.
+	var road := Pedal.road_heading(host.course, -own.y + Pedal.ROAD_LEAD)
+	# Gentle on the wheel: full lock only for a big correction (every degree
+	# of yaw is northward speed spent, and a human holds a lane).
+	var steer := Pedal.lane_steer(vehicle.heading, clampf((want_x - own.x) / 240.0, -1.0, 1.0), road)
 	var ctrl = vehicle.get_controller()
 	var boosting: bool = host.wall_gap() < boost_gap and ctrl.boost_fuel > 0.0
 	var fwd: float = vehicle.velocity.dot(Vector2.RIGHT.rotated(vehicle.heading))

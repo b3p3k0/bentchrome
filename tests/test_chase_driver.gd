@@ -26,6 +26,12 @@ class FakeHost extends Node:
 	func wall_front_y() -> float:
 		return front
 
+## A course whose centreline drifts `slope` px of x per px of distance.
+class FakeCourse:
+	var slope := 0.0
+	func sample(d: float) -> Dictionary:
+		return {"x": slope * d, "half_w": 360.0}
+
 func _init(runner) -> void:
 	t = runner
 
@@ -61,15 +67,15 @@ func test_steer_converges_on_target() -> void:
 	var vehicle: FakeVehicle = r[1]
 	var player: Node2D = r[3]
 	vehicle.global_position = Vector2.ZERO
-	player.global_position = Vector2(-300, -800)   # ahead-left; swoop opens the cycle
+	player.global_position = Vector2(-300, -800)   # ahead-left; the rush goes beside them
 	var intent: Dictionary = r[2].get_intent(vehicle, 0.016)
-	t.check(intent["steer"] < 0.0, "chase-ai: swoop steers left toward the mark")
+	t.check(intent["steer"] < 0.0, "chase-ai: the rush steers left toward the mark")
 	_done(r[0])  # two players in the tree = the wrong mark — clear before rig 2
 	var r2 := _rig()
 	r2[1].global_position = Vector2.ZERO
 	r2[3].global_position = Vector2(300, -800)
 	var intent2: Dictionary = r2[2].get_intent(r2[1], 0.016)
-	t.check(intent2["steer"] > 0.0, "chase-ai: swoop steers right toward the mark")
+	t.check(intent2["steer"] > 0.0, "chase-ai: the rush steers right toward the mark")
 	_done(r2[0])
 
 func test_pace_hold_never_stops() -> void:
@@ -122,7 +128,7 @@ func test_hold_mark_stays_north_of_the_crest() -> void:
 	r[0].add_child(host)
 	var driver = r[2]
 	driver.role = &"sedan"
-	driver.phase = 3.0  # outside the swoop window: the far station is live
+	driver.phase = 3.0
 	r[3].global_position = Vector2.ZERO
 	r[1].global_position = Vector2(0, 260)
 	var intent: Dictionary = driver.get_intent(r[1], 0.016)
@@ -130,21 +136,69 @@ func test_hold_mark_stays_north_of_the_crest() -> void:
 		"chase-ai: behind the clamped mark = on the gas (%.2f)" % intent["throttle"])
 	_done(r[0])
 
-func test_burst_duty_cycle() -> void:
+## The sortie: rush (no fire), harass (bursts, not a hose), peel (no fire,
+## home to the pack) — and a bird that never reaches its station still gets
+## its turn once it runs out of patience.
+func test_sortie_rush_harass_peel() -> void:
 	var r := _rig()
 	var vehicle: FakeVehicle = r[1]
 	var player: Node2D = r[3]
+	var driver = r[2]
 	vehicle.global_position = Vector2.ZERO
 	player.global_position = Vector2(0, -300)      # in range, dead ahead (north)
+	t.check(driver.stage == DriverScript.Stage.RUSH, "sortie: born rushing")
+	var fired_rushing := 0
+	for i in 60:
+		if driver.get_intent(vehicle, 0.016)["fire_mg"]:
+			fired_rushing += 1
+	t.check(fired_rushing == 0, "sortie: no potshots on the way up")
+	# The station is never reached (the fixture doesn't move): patience runs out.
+	var waited := 0
+	while driver.stage == DriverScript.Stage.RUSH and waited < 400:
+		driver.get_intent(vehicle, 0.016)
+		waited += 1
+	t.check(driver.stage == DriverScript.Stage.HARASS, "sortie: a rush that runs out of road harasses anyway")
+	t.check(waited >= int(DriverScript.RUSH_TIMEOUT * 60.0) - 65 and waited <= int(DriverScript.RUSH_TIMEOUT * 60.0) + 2,
+		"sortie: patience is RUSH_TIMEOUT (%d ticks)" % waited)
 	var fired := 0
-	var ticks := 400
-	for i in ticks:
-		var intent: Dictionary = r[2].get_intent(vehicle, 0.016)
-		if intent["fire_mg"]:
+	var ticks := 0
+	while driver.stage == DriverScript.Stage.HARASS and ticks < 400:
+		if driver.get_intent(vehicle, 0.016)["fire_mg"]:
 			fired += 1
-	var duty := float(fired) / float(ticks)
-	t.check(duty > 0.1 and duty < 0.35,
-		"chase-ai: bike fires in bursts, not a hose (duty %.2f)" % duty)
+		ticks += 1
+	var seconds := float(ticks) / 60.0
+	var span: Array = DriverScript.ROLES[&"bike"]["harass"]
+	t.check(seconds >= float(span[0]) - 0.05 and seconds <= float(span[1]) + 0.05,
+		"sortie: a bike harasses for a second or two (%.1fs)" % seconds)
+	var duty := float(fired) / float(maxi(ticks, 1))
+	t.check(duty > 0.1 and duty < 0.5, "sortie: potshots in bursts, not a hose (duty %.2f)" % duty)
+	t.check(driver.stage == DriverScript.Stage.PEEL, "sortie: then it peels off")
+	var fired_peeling := 0
+	vehicle.velocity = Vector2(0, -400.0)
+	var eased := false
+	for i in 60:
+		var intent: Dictionary = driver.get_intent(vehicle, 0.016)
+		if intent["fire_mg"]:
+			fired_peeling += 1
+		if float(intent["throttle"]) < 0.0:
+			eased = true
+	t.check(fired_peeling == 0, "sortie: no fire on the way home")
+	t.check(eased, "sortie: peeling, the pedal comes off — home is the pack")
+	_done(r[0])
+
+## Timid hyena: real damage mid-sortie sends a bird home early.
+func test_flinch_peels_early() -> void:
+	var r := _rig()
+	var driver = r[2]
+	r[3].global_position = Vector2(0, -300)
+	driver.begin_harass()
+	t.check(driver.stage == DriverScript.Stage.HARASS, "flinch: harassing")
+	driver._on_hit(DriverScript.FLINCH_DAMAGE * 0.4, 50.0)
+	t.check(driver.stage == DriverScript.Stage.HARASS, "flinch: a scratch doesn't scare it")
+	driver._on_hit(DriverScript.FLINCH_DAMAGE * 0.7, 40.0)
+	t.check(driver.stage == DriverScript.Stage.PEEL, "flinch: enough damage in one sortie and it peels")
+	driver.peel()
+	t.check(driver.stage == DriverScript.Stage.PEEL, "flinch: peeling twice is harmless")
 	_done(r[0])
 
 func test_hold_fire_grace() -> void:
@@ -175,7 +229,7 @@ func test_sedan_rocket_cadence() -> void:
 			max_streak = maxi(max_streak, streak)
 		else:
 			streak = 0
-	t.check(pulses >= 1 and pulses <= 3, "chase-ai: sedan rockets on a lazy clock (%d in 8s)" % pulses)
+	t.check(pulses == 1, "chase-ai: one rocket per sortie, fired on station (%d in 8s)" % pulses)
 	t.check(max_streak <= 1, "chase-ai: rocket intent is a single-frame pulse")
 	_done(r[0])
 
@@ -253,6 +307,18 @@ func test_lane_steering() -> void:
 	t.check(Pedal.lane_steer(north + cone * 2.0, 1.0) < 0.0,
 		"lane: past the cone (a shove), even RIGHT steers back inside it")
 	t.check(Pedal.lane_steer(north + PI, 0.0) != 0.0, "lane: a car facing south is steered back around")
+	# The wheel's zero is the ROAD, not north: on a sweeper, hands off follows the bend.
+	var bend := north + deg_to_rad(15.0)
+	t.check(Pedal.lane_steer(north, 0.0, bend) > 0.0, "lane: hands off on a right-hand sweeper steers into it")
+	t.check(is_equal_approx(Pedal.lane_steer(bend, 0.0, bend), 0.0), "lane: on the bend's heading, the wheel rests")
+	t.check(is_equal_approx(Pedal.road_heading(null, 1000.0), north), "lane: no course reads as straight north")
+	var course := FakeCourse.new()
+	course.slope = 0.3   # x drifts 0.3 px per px of course: a right-hand sweeper
+	var road: float = Pedal.road_heading(course, 1000.0)
+	t.check(road > north and road < north + deg_to_rad(20.0),
+		"lane: the road heading leans with the sweeper (%.1f deg)" % rad_to_deg(road - north))
+	course.slope = -0.3
+	t.check(Pedal.road_heading(course, 1000.0) < north, "lane: and the other way on a left-hander")
 	# Through the real driver: the arena's free wheel and whip are gone.
 	var container := Node2D.new()
 	t.root.add_child(container)

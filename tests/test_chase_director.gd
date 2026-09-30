@@ -17,8 +17,8 @@ func test_phase_table_sane() -> void:
 		t.check(ph["t"] > last_t, "director: phase starts ascend (t=%s)" % ph["t"])
 		last_t = ph["t"]
 		t.check(int(ph["cap"]) >= 1 and int(ph["cap"]) <= 8, "director: cap within the perf budget")
-		t.check(ph["pace"] >= 0.7 and ph["pace"] <= 1.0,
-			"director: pace stays a fraction of the chased car's top (%.2f)" % ph["pace"])
+		t.check(ph["pace"] >= 0.7 and ph["pace"] <= 1.05,
+			"director: pace stays within a whisker of the chased car's top (%.2f)" % ph["pace"])
 		t.check(ph["t"] < RunScript.RUN_SECONDS, "director: every beat starts inside the run")
 		t.check(not ph["weights"].is_empty(), "director: the spawns never stop (t=%s)" % ph["t"])
 		for kind in ph["weights"]:
@@ -26,7 +26,8 @@ func test_phase_table_sane() -> void:
 			t.check(ph["weights"][kind] > 0.0, "director: weights positive")
 	t.check(is_equal_approx(DirectorScript.PHASES[0]["t"], 0.0), "director: arc starts at zero")
 	var last: Dictionary = DirectorScript.PHASES[DirectorScript.PHASES.size() - 1]
-	t.check(is_equal_approx(last["pace"], 1.0), "director: the last mile runs at the car's own top")
+	t.check(last["pace"] >= 1.0 and last["pace"] <= 1.03,
+		"director: the last mile out-paces an honest car by a hair — a clean dry run just makes it (%.2f)" % last["pace"])
 
 func test_phase_lookup() -> void:
 	t.check(is_equal_approx(DirectorScript.phase_at(0.0)["pace"], 0.80), "director: green flag at t=0")
@@ -109,7 +110,7 @@ func test_spawn_cull_grace_and_kills() -> void:
 	scene.clock = 95.0
 	await t.physics_frame
 	await t.physics_frame
-	t.check(is_equal_approx(wall.pace_frac, 0.97), "director: all-in drives the pack's pace")
+	t.check(is_equal_approx(wall.pace_frac, 1.0), "director: all-in drives the pack's pace")
 	scene.clock = 20.0  # back off the crescendo for the rest of the test
 	# Park the dust front: the rest of this test is about the director, not
 	# the chase (a surging front rolls over its own outriders and absorbs them).

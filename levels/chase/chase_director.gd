@@ -21,9 +21,9 @@ static var PHASES := [
 	{"t": 25.0,  "cap": 3, "interval": 5.0, "weights": {&"bike": 1.0},                "pace": 0.84},
 	{"t": 32.0,  "cap": 6, "interval": 3.0, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.90},
 	{"t": 55.0,  "cap": 4, "interval": 4.5, "weights": {&"sedan": 0.6, &"technical": 0.2, &"blocker": 0.2},                  "pace": 0.88},
-	{"t": 62.0,  "cap": 8, "interval": 2.6, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.94},
-	{"t": 90.0,  "cap": 8, "interval": 2.2, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.97},
-	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.45, &"sedan": 0.30, &"technical": 0.10, &"blocker": 0.15}, "pace": 1.00},
+	{"t": 62.0,  "cap": 8, "interval": 2.6, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 0.96},
+	{"t": 90.0,  "cap": 8, "interval": 2.2, "weights": {&"bike": 0.35, &"sedan": 0.35, &"technical": 0.15, &"blocker": 0.15}, "pace": 1.00},
+	{"t": 110.0, "cap": 8, "interval": 2.0, "weights": {&"bike": 0.45, &"sedan": 0.30, &"technical": 0.10, &"blocker": 0.15}, "pace": 1.02},
 ]
 
 static var EMERGE_DEPTH := 90.0     # px inside the dust crest where pursuers are born

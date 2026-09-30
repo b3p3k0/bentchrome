@@ -12,6 +12,12 @@ var t
 class FakeController:
 	var max_speed := 500.0
 
+## A course whose centreline drifts `slope` px of x per px of distance.
+class FakeCourse:
+	var slope := 0.0
+	func sample(d: float) -> Dictionary:
+		return {"x": slope * d, "half_w": 360.0}
+
 class FakeCar extends Node2D:
 	var velocity := Vector2.ZERO
 	var hp := 0.0  # only the end-screen fixtures read it: a wreck by default
@@ -172,13 +178,13 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 	var rest: float = WallScript.LEASH_GAP + (1.0 - 0.9) / WallScript.SURGE_PER_PX
 	var lifted := _chase(TOP, 0.9, 0.8, rest, 1.0)
 	t.check(lifted < rest - 30.0, "wall: a one-second lift visibly costs gap (%d -> %d)" % [int(rest), int(lifted)])
-	# A car pinned dead on a pillar at the mercy line: the pack may close no
-	# faster than MERCY_CLOSE. The stretch is sized so ONE dead-stop crash is
-	# survivable in every car at every beat (probe-measured: a heavy ride
-	# needs ~4.3s from impact to pull clear in the last mile).
+	# A car crawling at the mercy line: the pack may close no faster than
+	# MERCY_CLOSE. Smash-and-pass means nothing on the road stops a car any
+	# more, so the stretch only has to cover a bad smash (a derelict costs a
+	# quarter of the momentum) — about three seconds.
 	var span: float = WallScript.MERCY_GAP - WallScript.CATCH_MARGIN
 	var floor_s: float = span / WallScript.MERCY_CLOSE
-	t.check(floor_s >= 4.5, "wall: the mercy stretch covers a heavy car's recovery (%.1fs)" % floor_s)
+	t.check(floor_s >= 3.0, "wall: the mercy stretch covers a bad smash (%.1fs)" % floor_s)
 	t.check(WallScript.MERCY_GAP < WallScript.LEASH_GAP,
 		"wall: clean driving never rests inside the mercy zone")
 	var pinned := _chase(TOP, 1.0, 0.0, WallScript.MERCY_GAP - 1.0, floor_s - 0.2)
@@ -235,6 +241,18 @@ func test_the_pack_has_a_voice() -> void:
 	t.check(not WallScript.horn_due(false, true, 0.0), "voice: not on the way out")
 	t.check(not WallScript.horn_due(true, false, 2.0), "voice: and never inside its cooldown")
 	t.check(WallScript.HORN_COOLDOWN >= 4.0, "voice: hovering on the line can't machine-gun the horn")
+
+## The curve tax: through a sweeper the pack, like the car, covers less
+## north per second of speed — otherwise it quietly gains on every bend.
+func test_curve_tax() -> void:
+	t.check(is_equal_approx(WallScript.road_cos(null, 500.0), 1.0), "curve: no course = a straight")
+	var course := FakeCourse.new()
+	t.check(is_equal_approx(WallScript.road_cos(course, 500.0), 1.0), "curve: a straight pays nothing")
+	course.slope = 0.33  # the course's own sweepers: 460px of x over 1400px
+	var taxed: float = WallScript.road_cos(course, 500.0)
+	t.check(taxed < 0.96 and taxed > 0.9, "curve: a sweeper costs the pack a few percent (%.3f)" % taxed)
+	course.slope = -0.33
+	t.check(is_equal_approx(WallScript.road_cos(course, 500.0), taxed), "curve: left or right, the same tax")
 
 func test_pressure_meter_and_danger_line() -> void:
 	t.check(is_equal_approx(WallScript.pressure_at(WallScript.MAX_GAP), 0.0), "wall: farthest = no pressure")

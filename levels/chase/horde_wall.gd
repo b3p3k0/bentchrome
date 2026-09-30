@@ -28,7 +28,7 @@ static var LEASH_GAP := 210.0     # the rubberband pivot: past this, the horde s
 static var SURGE_PER_PX := 0.0008 # extra pace (fraction of top) per px past the leash
 static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
 static var MERCY_GAP := 200.0     # inside this the closing speed is capped...
-static var MERCY_CLOSE := 30.0    # ...to this many px/s: the last 150px take >= 5s
+static var MERCY_CLOSE := 45.0    # ...to this many px/s: the last 150px take >= 3.3s
 
 const BAND_DEPTH := 500.0         # painted dust depth behind the front
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
@@ -123,6 +123,16 @@ func caught() -> bool:
 func tier_pace() -> float:
 	return pace_frac * Difficulty.knob(&"chase_pace")
 
+## cos of the road's bend at course distance d: 1 on a straight, less on a
+## sweeper (chase_course.sample slope over a short reach). 1 without a course.
+static func road_cos(course_ref, d: float) -> float:
+	if course_ref == null:
+		return 1.0
+	var a: Dictionary = course_ref.sample(d - 60.0)
+	var b: Dictionary = course_ref.sample(d + 60.0)
+	var slope: float = (float(b["x"]) - float(a["x"])) / 120.0
+	return 1.0 / sqrt(1.0 + slope * slope)
+
 ## The chased car's honest top speed on asphalt (SpeedBand.road_top), read
 ## live and duck-typed so bare test fixtures ride the fallback.
 func base_top() -> float:
@@ -145,7 +155,10 @@ func _physics_process(delta: float) -> void:
 	# Rubberband: cruise inside the leash, surge harder the farther it trails
 	# — no car outruns the horde globally; skill holds it at arm's length.
 	var gap_now := front_y - player_y
-	var speed := pack_speed(base_top(), tier_pace(), gap_now)
+	# The curve tax: the front advances up the y axis, but the road it rides
+	# bends — through a sweeper the pack, like the car, covers less north per
+	# second of speed. Without it the pack quietly gains on every curve.
+	var speed := pack_speed(base_top(), tier_pace(), gap_now) * road_cos(course, -front_y)
 	if not no_mercy and _target_alive():
 		speed = mercy_cap(speed, gap_now, _target_vn())
 	front_y -= speed * delta                         # north is -y
