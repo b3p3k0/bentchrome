@@ -622,6 +622,20 @@ Source: `horde_wall.flinch` / `pace_mult`, `horde_deco.flinch`, `buzzard_run._ph
 | The recoil | `FLINCH_RECOIL` 40px · `FLINCH_RECOIL_T` 0.6s | horde_deco | the riders are shoved south and ease back, headlights stutter, a one-shot puff of dust off the crest; the roar halves while flinching |
 | Probe | `--mines` | chase_run | a mine off the tail every `MINE_EVERY` 15s; every `[run]` line reports `flinches` — with eight of them a run's danger time roughly halves |
 
+### The back roads (cutoffs)
+
+Source: `chunk_defs.gd` `cutoff_l`/`cutoff_r` (`cutoff` block, `cutoff_x`), `chunk_builder._build_cutoff` / `_build_embankment` runs, `buzzard_run.on_trail`, `horde_wall.lost_sight`, `chase_gps`, `chase_autopilot`.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| The chunk | len 2000 · road `path` bulges ±200 over d 300–1700 · weight 0.6 each · `NO_REPEAT` | chunk_defs | rolled like any chunk (2-3 per run), never a landmark; the pair mirror |
+| The trail | stations [100, ∓200] → [860, ∓520] → [1180, ∓520] → [1760, ∓300] · width 150 | `cutoff.trail` (offsets from the chunk ENTRY x) | every leg ≤ tan 24° (test-locked); the first station is in the near lane — line up before the mouth (cones at d 240, TRAIL on the GPS) |
+| The mouths | gaps [300, 780] and [1280, 1700] on the trail side · `FUNNEL_LEN` 260 | `cutoff.gaps`, builder | the embankment is built in runs with the gaps open; each resuming run's end is chamfered — a late car is deflected back onto the road; the trail is inside the wall line at each mouth's road end and clear of the embankment at its wild end (test-locked) |
+| The fence | `trees_x` ∓690 ± 25 jitter · r 26 every ~85px · mud `Ditch` between trail and foot | builder | one layer-2 body, a circle per pine, too close to thread; the clearing paints under the walls |
+| Lost sight | `LOST_SIGHT_CUT` 0.3 · roar × 0.35 · headlights sweep ±30 | horde_wall, horde_deco | `on_trail()` = the chunk has a cutoff, the car inside the trail's reach and out past the shoulder on its side; the birds' road clamp never follows |
+| What it buys | dirt ×0.85 top vs pack ×0.7 pace | — | the gap opens ~150-170px over the trail, then the leash re-tightens: what a cutoff really buys is a beat out of the danger zone |
+| Bot | `take_trails` 0.5 · `TRAIL_LEAD` 700 | chase_autopilot, `--trail=F` | lines up from the chunk before with the whole cone; `trails` in every `[run]` line |
+
 ### The bridge is out (the clock-out finale)
 
 Source: `levels/chase/finale_director.gd`, `finale_driver.gd`, `finale_bird_driver.gd`, `horde_wall.halt_at`, `chunk_defs.gd` `bridge_out`, `chunk_builder._bridge_out`. Toggle: `buzzard_run.finale_enabled` (tests about "the line pays" turn it off for the instant win).
