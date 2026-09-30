@@ -36,6 +36,7 @@ const DUST_AMOUNT := 140          # particle budget: one system, under 200
 const ROAR_FLOOR := 0.22          # the engines at their farthest: never silent
 const HORN_COOLDOWN := 6.0        # seconds between war-horn blasts, at least
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
+const Difficulty := preload("res://game/difficulty.gd")
 const FALLBACK_TOP := SpeedBand.FALLBACK_TOP  # bare fixtures, freed targets
 
 var target: Node2D = null   # the player, set by the host
@@ -117,6 +118,11 @@ static func horn_due(danger: bool, was_danger: bool, cooldown_left: float) -> bo
 func caught() -> bool:
 	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
 
+## The phase pace as THIS tier runs it: easier tiers slow the whole pack
+## (HARD is x1.0 — the arc as authored). The surge and the mercy are untouched.
+func tier_pace() -> float:
+	return pace_frac * Difficulty.knob(&"chase_pace")
+
 ## The chased car's honest top speed on asphalt (SpeedBand.road_top), read
 ## live and duck-typed so bare test fixtures ride the fallback.
 func base_top() -> float:
@@ -139,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	# Rubberband: cruise inside the leash, surge harder the farther it trails
 	# — no car outruns the horde globally; skill holds it at arm's length.
 	var gap_now := front_y - player_y
-	var speed := pack_speed(base_top(), pace_frac, gap_now)
+	var speed := pack_speed(base_top(), tier_pace(), gap_now)
 	if not no_mercy and _target_alive():
 		speed = mercy_cap(speed, gap_now, _target_vn())
 	front_y -= speed * delta                         # north is -y

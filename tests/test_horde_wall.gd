@@ -191,6 +191,39 @@ func test_lifting_costs_gap_and_mercy_stretches_the_close() -> void:
 	t.check(is_equal_approx(WallScript.mercy_cap(200.0, 100.0, 400.0), 200.0),
 		"wall: mercy never speeds the pack up")
 
+## Easier tiers slow the whole pack; HARD runs the arc exactly as authored.
+func test_difficulty_slows_the_pack() -> void:
+	const Difficulty := preload("res://game/difficulty.gd")
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var car := FakeCar.new()
+	container.add_child(car)
+	var wall = WallScript.new()
+	wall.target = car
+	wall.pace_frac = 0.9
+	container.add_child(wall)
+	wall.set_physics_process(false)
+	Difficulty.tier = Difficulty.Tier.HARD
+	t.check(is_equal_approx(wall.tier_pace(), 0.9), "tier: HARD runs the authored pace")
+	Difficulty.tier = Difficulty.Tier.MEDIUM
+	var medium: float = wall.tier_pace()
+	Difficulty.tier = Difficulty.Tier.EASY
+	var easy: float = wall.tier_pace()
+	t.check(easy < medium and medium < 0.9, "tier: each easier tier slows the pack (%.3f < %.3f < 0.900)" % [easy, medium])
+	# On EASY even the last mile leaves air: flat out the driver GAINS ground.
+	wall.pace_frac = 1.0
+	t.check(wall.tier_pace() < 1.0, "tier: EASY's last mile runs under the car's own top (%.2f)" % wall.tier_pace())
+	wall.front_y = car.position.y + 400.0
+	wall._physics_process(0.1)
+	var easy_gap: float = wall.gap()
+	Difficulty.tier = Difficulty.Tier.HARD
+	wall.front_y = car.position.y + 400.0
+	wall._physics_process(0.1)
+	t.check(easy_gap > wall.gap(), "tier: the same tenth of a second closes less ground on EASY")
+	Difficulty.tier = Difficulty.Tier.HARD  # statics leak across suites
+	t.root.remove_child(container)
+	container.free()
+
 ## The pack's voice: gain rides the gap, the horn sounds on the edge only.
 func test_the_pack_has_a_voice() -> void:
 	t.check(is_equal_approx(WallScript.roar_gain(0.0), WallScript.ROAR_FLOOR), "voice: never silent, even at its farthest")

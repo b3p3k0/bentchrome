@@ -22,8 +22,9 @@ static var NAMES := {
 ## the HARD row is all 1.0 by definition and no consumer's const ever moves.
 ## Deliberately unscaled: enemy counts, lives, the mook RELENT valve, the
 ## AI-theater governors (AI_VS_AI_DAMAGE / AI_MERCY_HP), and environmental
-## flat damage (barrels, falls, pits, deep water, horde wall) — none of it
-## routes through Combat.scale.
+## flat damage (barrels, falls, pits, deep water) — none of it routes through
+## Combat.scale. Route 666's pack deals no damage at all (a catch is a
+## robbery); its PACE is the knob (chase_pace), read by horde_wall.gd.
 static var TIERS := {
 	Tier.EASY: {
 		&"player_damage_taken": 0.55,   # all AI->player damage, every path
@@ -37,6 +38,7 @@ static var TIERS := {
 		&"reward_scale": 1.0,           # economy: earning is identical on every tier
 		&"penalty_scale": 0.5,          # ...but easy tiers lose less on death/falls
 		&"price_scale": 0.75,           # ...and shop cheaper (docs/garage/economy.md)
+		&"chase_pace": 0.92,            # Route 666: the pack runs this much slower
 	},
 	Tier.MEDIUM: {
 		&"player_damage_taken": 0.75,
@@ -50,6 +52,7 @@ static var TIERS := {
 		&"reward_scale": 1.0,
 		&"penalty_scale": 0.75,
 		&"price_scale": 0.9,
+		&"chase_pace": 0.96,
 	},
 	Tier.HARD: {
 		&"player_damage_taken": 1.0,
@@ -63,6 +66,7 @@ static var TIERS := {
 		&"reward_scale": 1.0,
 		&"penalty_scale": 1.0,
 		&"price_scale": 1.0,
+		&"chase_pace": 1.0,
 	},
 }
 

@@ -156,7 +156,7 @@ func in_danger() -> bool:
 
 ## The pack's live pace as a fraction of the player's top (dev readout).
 func pack_pace() -> float:
-	return _wall.pace_frac if _wall else 0.0
+	return _wall.tier_pace() if _wall else 0.0
 
 ## Whole bolts of daredevil bonus on the table (the HUD ticker).
 func daredevil_bonus() -> int:
