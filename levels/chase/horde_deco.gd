@@ -14,6 +14,9 @@ extends Node2D
 ## the crest, road centre); the wall pushes `half` and `pressure` every tick.
 
 const CarPaintScript := preload("res://vehicles/car_paint.gd")
+const LightKit := preload("res://environment/light_kit.gd")
+const RIDER_BEAM_LENGTH := 260.0   # every rider drives with a real headlight once the sky goes
+const RIDER_BEAM_ENERGY := 0.45    # dimmer than a live car's: they burn through dust
 
 const RIDERS := 11
 const BAND_DEPTH := 520.0
@@ -86,6 +89,13 @@ func _build_riders() -> void:
 		body.position = Vector2(base.x * half, base.y)
 		add_child(body)
 		var style: Dictionary = CarPaintScript.STYLES.get(kind, {})
+		# A real beam off the nose (reads only once the sky's CanvasModulate
+		# darkens; by day it's just the painted lamps). Along +x, the body's own
+		# axis — the body is rotated to face north.
+		var beam := LightKit.make_beam(RIDER_BEAM_LENGTH, 50.0, RIDER_BEAM_ENERGY, LAMP)
+		beam.name = "Beam"
+		beam.position = Vector2(float(style.get("half_len", 20.0)) * CarPaintScript.FLEET_SCALE * 0.8 + float(beam.get_meta(&"center_ahead")), 0.0)
+		body.add_child(beam)
 		_riders.append({
 			"node": body, "base": base, "kind": kind,
 			"half_len": float(style.get("half_len", 20.0)) * CarPaintScript.FLEET_SCALE,

@@ -25,6 +25,7 @@ const RobberyScreen := preload("res://ui/robbery_screen.gd")
 const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 const FinaleScript := preload("res://levels/chase/finale_director.gd")
 const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
+const LightKit := preload("res://environment/light_kit.gd")
 
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
@@ -41,6 +42,26 @@ static var DAREDEVIL_CAP := 2000
 ## when the crest rolls over it.
 static var FLINCH_INSET := 40.0
 static var MISSILE_CUT := 0.18       # a missile's flinch is lighter than a mine's
+## Dusk to night: the sky over the run, keyed on the clock's fraction — golden
+## hour at the green flag, sunset, dusk, and full dark from NIGHT_FULL on,
+## so the last stretch and the finale play under headlights. A CanvasModulate
+## in group night_arena (the Ground Floor Gore idiom: explosions bloom, the
+## beams READ), driven from _process.
+static var SKY_KEYS: Array = [
+	[0.0, Color(1.0, 0.93, 0.82)],    # golden hour
+	[0.35, Color(0.92, 0.72, 0.6)],   # sunset
+	[0.65, Color(0.66, 0.58, 0.72)],  # dusk
+	[0.85, Color(0.48, 0.52, 0.74)],  # night (the Coliseum's night is 0.5/0.56/0.82 — obstacles must still read)
+]
+## Headlights on every car (the GFG lazy attach): the viewer's cool-white,
+## everyone else's warm. Beams ride the car's Visual — the node that carries
+## the 16-step heading.
+const BEAM_NOSE := 38.0
+const BEAM_LENGTH := 460.0
+const BEAM_SPREAD := 56.0
+const BEAM_ENERGY := 0.7
+const BEAM_VIEWER := Color(0.85, 0.9, 1.0)
+const BEAM_OTHERS := Color(1.0, 0.9, 0.7)
 
 signal jacked(cause: StringName)     # &"caught" | &"wrecked"
 signal rolled_on(next_index: int)    # the robbery is done; the campaign advanced
@@ -70,6 +91,7 @@ var _keeper = null
 var _end_screen = null
 var _robbery = null
 var _finale = null
+var _sky: CanvasModulate = null
 var _won := false
 var _jacked := false
 
@@ -81,6 +103,11 @@ func _ready() -> void:
 	course = CourseScript.new()
 	course.pre_roll(seed_val)
 	print("[chase] course seed %d, %d chunks" % [seed_val, course.plan.size()])
+	_sky = CanvasModulate.new()
+	_sky.name = "SkyTint"
+	_sky.color = sky_at(0.0)
+	_sky.add_to_group(&"night_arena")
+	add_child(_sky)
 	if _player == null or not is_instance_valid(_player):
 		# No car to chase (mp_managed strips the baked cars — the level-shot
 		# probe boots scenes that way): the plan is rolled, the run stands down.
@@ -125,6 +152,9 @@ func _ready() -> void:
 ## The host is the sole arbiter of how a run ends. A catch or a wreck beats
 ## the clock on a same-frame tie — the wasteland is unfair.
 func _process(delta: float) -> void:
+	if _sky != null:
+		_sky.color = sky_at(clock / RUN_SECONDS)
+	_light_the_cars()
 	if _won or _jacked or _player == null or not is_instance_valid(_player):
 		return
 	clock += delta
@@ -177,6 +207,40 @@ func _finish_run() -> void:
 
 func finale_running() -> bool:
 	return _finale != null and _finale.running
+
+## The sky's tint at a fraction of the run, pure: piecewise-linear through
+## SKY_KEYS, holding the last key past the line (the finale is night).
+static func sky_at(frac: float) -> Color:
+	var keys: Array = SKY_KEYS
+	if frac <= float(keys[0][0]):
+		return keys[0][1]
+	for i in keys.size() - 1:
+		var a: Array = keys[i]
+		var b: Array = keys[i + 1]
+		if frac <= float(b[0]):
+			return (a[1] as Color).lerp(b[1], (frac - float(a[0])) / (float(b[0]) - float(a[0])))
+	return keys[keys.size() - 1][1]
+
+## Every car on the road drives with headlights (GFG's group-scan attach:
+## covers the boot, every spawned bird, and the finale's swaps in one seam).
+func _light_the_cars() -> void:
+	for node in get_tree().get_nodes_in_group(&"vehicles"):
+		if not (node is Node2D):
+			continue
+		var car := node as Node2D
+		var beam: PointLight2D = null
+		if car.has_meta(&"chase_beam"):
+			beam = car.get_meta(&"chase_beam") as PointLight2D
+		if beam == null or not is_instance_valid(beam):
+			beam = LightKit.make_beam(BEAM_LENGTH, BEAM_SPREAD, BEAM_ENERGY, BEAM_OTHERS)
+			beam.position = Vector2(BEAM_NOSE + float(beam.get_meta(&"center_ahead")), 0.0)
+			var visual := car.get_node_or_null(^"Visual")
+			if visual:
+				visual.add_child(beam)
+			else:
+				car.add_child(beam)
+			car.set_meta(&"chase_beam", beam)
+		beam.color = BEAM_VIEWER if car.is_in_group(&"player") else BEAM_OTHERS
 
 ## Off the road on a cutoff's trail: the chunk under the car has one, the
 ## car is inside the trail's reach along the road and out past the shoulder

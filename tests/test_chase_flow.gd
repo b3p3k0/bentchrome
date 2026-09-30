@@ -7,6 +7,7 @@ extends RefCounted
 ## (auto_advance = false; nothing headless may reach SceneFlow.goto_scene).
 
 const WallScript := preload("res://levels/chase/horde_wall.gd")
+const RunScript := preload("res://levels/chase/buzzard_run.gd")
 const Economy := preload("res://game/economy.gd")
 const Robbery := preload("res://game/robbery.gd")
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
@@ -267,6 +268,44 @@ func test_the_trail_loses_the_pack() -> void:
 	var clamp_x: float = brain._clamp_to_road(bird, bird.global_position, player.global_position.x)
 	var s: Dictionary = scene.course.sample(td)
 	t.check(clamp_x >= float(s["x"]) - float(s["half_w"]), "trail: the birds' road clamp keeps them on the asphalt (%d)" % int(clamp_x))
+	_close(scene)
+
+## Dusk to night: the sky is golden at the green flag, dark from NIGHT_FULL
+## on, and every car on the road drives with a headlight that reads once it
+## is; the sky rides the clock.
+func test_dusk_to_night() -> void:
+	var golden: Color = RunScript.sky_at(0.0)
+	var night: Color = RunScript.sky_at(1.0)
+	t.check(golden.get_luminance() > 0.85, "sky: golden hour at the flag")
+	t.check(night.get_luminance() < 0.6 and night.get_luminance() > 0.35, "sky: dark by the end — but obstacles still have to read")
+	var last := 2.0
+	var monotone := true
+	for i in 21:
+		var lum: float = RunScript.sky_at(float(i) / 20.0).get_luminance()
+		if lum > last + 0.001:
+			monotone = false
+		last = lum
+	t.check(monotone, "sky: it only ever gets darker")
+	t.check(RunScript.sky_at(0.85).is_equal_approx(night), "sky: night arrives at 85% of the run — the last stretch and the finale are dark")
+	var scene = await _boot()
+	scene.catch_enabled = false
+	var sky := scene.get_node_or_null(^"SkyTint") as CanvasModulate
+	t.check(sky != null and sky.is_in_group(&"night_arena"), "sky: a CanvasModulate in night_arena (explosions bloom, beams read)")
+	scene.clock = scene.RUN_SECONDS * 0.5
+	scene._process(0.016)
+	t.check(sky != null and sky.color.is_equal_approx(RunScript.sky_at(0.5)), "sky: the tint rides the clock")
+	var player = scene.get_node(^"Vehicle")
+	var bird = scene.get_node(^"ChaseDirector").spawn(&"bike")
+	scene._process(0.016)
+	var pbeam = player.get_meta(&"chase_beam") if player.has_meta(&"chase_beam") else null
+	var bbeam = bird.get_meta(&"chase_beam") if bird.has_meta(&"chase_beam") else null
+	t.check(pbeam is PointLight2D and pbeam.get_parent() == player.get_node(^"Visual"), "lights: the car drives with a headlight on its Visual")
+	t.check(bbeam is PointLight2D and bbeam.color != pbeam.color, "lights: a spawned bird gets its own, in the warm colour")
+	var riders_lit := 0
+	for r in scene.get_node(^"HordeWall").get_node(^"Deco")._riders:
+		if r["node"].get_node_or_null(^"Beam") is PointLight2D:
+			riders_lit += 1
+	t.check(riders_lit == scene.get_node(^"HordeWall").get_node(^"Deco").RIDERS, "lights: every painted rider in the dust burns a headlight (%d)" % riders_lit)
 	_close(scene)
 
 ## The windshield streaks read "flat out" the same for every ride.
