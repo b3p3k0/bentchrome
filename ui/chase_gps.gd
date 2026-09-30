@@ -11,8 +11,12 @@ const AHEAD := 3500.0   # course px shown ahead — "a few turns"
 const SAMPLE := 150.0
 const BLIP_RANGE := 1500.0
 
+const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
+
 const BG := Color(0.05, 0.08, 0.06)
 const ROAD := Color(0.22, 0.24, 0.27)
+const TRAIL := Color(0.5, 0.36, 0.2)
+const RIVER := Color(0.07, 0.16, 0.28)
 const SPINE := Color(0.45, 0.75, 0.5, 0.7)
 const PLAYER := Color(1.0, 0.85, 0.2)
 const ENEMY := Color(0.85, 0.25, 0.2)
@@ -62,6 +66,7 @@ func _draw() -> void:
 		strip.append(right[i])
 	draw_colored_polygon(strip, ROAD)
 	draw_polyline(spine, SPINE, 1.5)
+	_draw_back_roads(course, d0, window, player_d, center_x, sy)
 	# Pickup markers in the window.
 	for pickup in get_tree().get_nodes_in_group(&"pickups"):
 		if not (pickup is Node2D) or not pickup.visible:
@@ -115,6 +120,39 @@ func _draw() -> void:
 			col.a = 0.55 + 0.45 * absf(sin(Time.get_ticks_msec() * 0.012))
 		draw_rect(Rect2(0, crest_y, size.x, size.y - crest_y), col)
 		draw_line(Vector2(0, crest_y), Vector2(size.x, crest_y), WALL.lightened(0.35), 2.0)
+
+## Chunk extras the ribbon can't show on its own: a cutoff's trail (a dirt
+## thread beside the road with its mouths) and the finale's river.
+func _draw_back_roads(course, d0: float, window: float, player_d: float, center_x: float, sy: float) -> void:
+	var first: int = course.chunk_index_at(maxf(d0, 0.0))
+	var i := first
+	while i < course.plan.size():
+		var entry: Dictionary = course.plan[i]
+		var start: float = entry["start_d"]
+		if start > d0 + window:
+			break
+		var def: Dictionary = entry["def"]
+		if def.has("cutoff"):
+			var cf: Dictionary = def["cutoff"]
+			var pts: Array = cf["trail"]
+			var line := PackedVector2Array()
+			var from_d: float = pts[0][0]
+			var to_d: float = pts[pts.size() - 1][0]
+			var k := int((to_d - from_d) / 120.0)
+			for j in k + 1:
+				var local := lerpf(from_d, to_d, float(j) / float(k))
+				var world := Vector2(float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, local), -(start + local))
+				line.append(_panel(world, player_d, center_x, sy))
+			draw_polyline(line, TRAIL, maxf(float(cf["width"]) * sy * 1.6, 2.0))
+			var font := ThemeDB.fallback_font
+			var mouth := line[0] + Vector2(-14.0 if float(cf["side"]) < 0.0 else 4.0, -4.0)
+			draw_string(font, mouth, "TRAIL", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, TRAIL.lightened(0.3))
+		if def.has("river"):
+			var r: Dictionary = def["river"]
+			var top := _panel(Vector2(0.0, -(start + float(r["deep_to"]))), player_d, center_x, sy).y
+			var bottom := _panel(Vector2(0.0, -(start + float(r["brink"]))), player_d, center_x, sy).y
+			draw_rect(Rect2(0.0, top, size.x, bottom - top), RIVER)
+		i += 1
 
 func _panel(world: Vector2, player_d: float, center_x: float, sy: float) -> Vector2:
 	var d := -world.y
