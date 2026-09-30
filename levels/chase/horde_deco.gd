@@ -32,6 +32,9 @@ const TRACER := Color(1.0, 0.8, 0.45)
 
 var half := 640.0      # road half-width + margin at the crest (the wall pushes it)
 var pressure := 0.0    # 0 far .. 1 contact: fire and fury scale with it
+var halted := false    # stopped at the brink: the riders lock up, the dust settles
+var skid_marks: Array = []   # [from, to] world-local streaks laid on the halt
+var _halt_t := 0.0
 
 var _riders: Array = []     # {node, base, kind, half_len, bob, lurch, sway, phase, flash}
 var _bank: Node2D = null    # drawn FIRST: the ground and the deep dust
@@ -118,21 +121,33 @@ func _dust(amount: int, life: float, extents: Vector2, at: Vector2, v0: float, v
 
 func _process(delta: float) -> void:
 	_t += delta
+	# The brink: motion damps to a settle over half a second, the skids are
+	# laid once under every rider, and the dust stops boiling up.
+	var motion := 1.0
+	if halted:
+		if _halt_t == 0.0:
+			_lay_skids()
+		_halt_t += delta
+		motion = 0.06 + 0.94 * (1.0 - clampf(_halt_t / 0.5, 0.0, 1.0))
+		if _low and _halt_t > 0.4:
+			_low.emitting = false
 	for r in _riders:
 		var node: Node2D = r["node"]
 		var base: Vector2 = r["base"]
-		var bob: float = sin(_t * r["bob"] + r["phase"]) * 5.0
-		var lurch: float = sin(_t * r["lurch"] + r["phase"] * 2.3) * 22.0
+		var bob: float = sin(_t * r["bob"] + r["phase"]) * 5.0 * motion
+		var lurch: float = sin(_t * r["lurch"] + r["phase"] * 2.3) * 22.0 * motion
 		node.position = Vector2(base.x * half + lurch, base.y + bob)
-		node.rotation = -PI / 2.0 + sin(_t * r["sway"] * 2.0 + r["phase"]) * 0.12
+		node.rotation = -PI / 2.0 + sin(_t * r["sway"] * 2.0 + r["phase"]) * 0.12 * motion
 		# Depth is murk: the deeper in the bank, the fainter the hull.
 		node.modulate = Color(1.0, 1.0, 1.0, clampf(1.15 - base.y / BAND_DEPTH, 0.4, 1.0))
-		# Potshots up the road: the closer the pack, the more of them.
-		r["flash"] -= delta * (0.6 + 1.6 * pressure)
-		if r["flash"] <= 0.0:
-			r["flash"] = _rng.randf_range(0.9, 3.5)
-			r["flashing"] = 0.09
-		elif r.get("flashing", 0.0) > 0.0:
+		# Potshots up the road: the closer the pack, the more of them. None
+		# once they've pulled up — they know it's over.
+		if not halted:
+			r["flash"] -= delta * (0.6 + 1.6 * pressure)
+			if r["flash"] <= 0.0:
+				r["flash"] = _rng.randf_range(0.9, 3.5)
+				r["flashing"] = 0.09
+		if r.get("flashing", 0.0) > 0.0:
 			r["flashing"] = float(r["flashing"]) - delta
 	if _low:
 		_low.emission_rect_extents.x = half * 0.9
@@ -140,6 +155,19 @@ func _process(delta: float) -> void:
 		_high.emission_rect_extents.x = half * 0.95
 	_bank.queue_redraw()
 	_lip.queue_redraw()
+
+## The lock-up: a pair of dark streaks trailing south from every rider that
+## was moving, laid once and painted by the bank layer from then on.
+func _lay_skids() -> void:
+	skid_marks.clear()
+	for r in _riders:
+		var node: Node2D = r["node"]
+		var w: float = float(r["half_len"])
+		var track := 6.0 if r["kind"] == &"buzz_bike" else 12.0
+		for side in ([0.0] if r["kind"] == &"buzz_bike" else [-1.0, 1.0]):
+			var from := node.position + Vector2(side * track, w * 0.6)
+			var length := _rng.randf_range(40.0, 90.0)
+			skid_marks.append([from, from + Vector2(_rng.randf_range(-8.0, 8.0), length)])
 
 ## The picture around the riders, redrawn every frame. BANK: ground bands
 ## and the deep billows under them. LIP: a thin sunlit haze over them, then
@@ -185,6 +213,9 @@ class Crest extends Node2D:
 			var node: Node2D = r["node"]
 			var w: float = float(r["half_len"])
 			draw_circle(node.position + Vector2(0, w * 0.9), w * 0.95, Color(0.16, 0.12, 0.08, 0.5))
+		# Pulled up at the brink: the skids they laid doing it.
+		for mark in deco.skid_marks:
+			draw_line(mark[0], mark[1], Color(0.1, 0.08, 0.06, 0.75), 3.5)
 
 	func _draw_lip() -> void:
 		var half: float = deco.half

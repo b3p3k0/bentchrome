@@ -242,6 +242,67 @@ func test_the_pack_has_a_voice() -> void:
 	t.check(not WallScript.horn_due(true, false, 2.0), "voice: and never inside its cooldown")
 	t.check(WallScript.HORN_COOLDOWN >= 4.0, "voice: hovering on the line can't machine-gun the horn")
 
+## The brink: told to halt at a line, the pack brakes over HALT_BRAKE px,
+## never crosses it, and stops dragging north after the escaping car; the
+## riders lock up and the engines die.
+func test_the_pack_halts_at_the_bank() -> void:
+	t.check(is_equal_approx(WallScript.halt_speed(500.0, -1000.0, -1160.0, 320.0), 250.0),
+		"halt: halfway into the braking ramp the pack runs at half speed")
+	t.check(is_equal_approx(WallScript.halt_speed(500.0, -1000.0, -1320.0, 320.0), 500.0), "halt: outside the ramp, full speed")
+	t.check(is_zero_approx(WallScript.halt_speed(500.0, -1000.0, -1000.0, 320.0)), "halt: on the line, stopped")
+	t.check(is_equal_approx(WallScript.halt_speed(500.0, -1000.0, -1002.0, 320.0), WallScript.HALT_CREEP),
+		"halt: a hair off the line it still creeps in — it arrives, never asymptotes")
+	t.check(is_equal_approx(WallScript.halt_speed(500.0, -1000.0, INF, 320.0), 500.0), "halt: no line, no ramp")
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var player := Node2D.new()
+	player.position = Vector2(0, -1000)
+	container.add_child(player)
+	var wall = WallScript.new()
+	wall.target = player
+	wall.pace_frac = 1.0
+	wall.front_y = player.position.y + 700.0
+	container.add_child(wall)
+	var line: float = player.position.y + 300.0   # outside the mercy zone: a bare fixture has no speed
+	wall.halt_at(line)
+	var crossed := false
+	for i in 120:
+		wall._physics_process(0.05)   # six seconds: plenty to arrive
+		if wall.front_y < line - 0.01:
+			crossed = true
+	t.check(not crossed, "halt: the crest never crosses the line")
+	t.check(wall.halted and is_equal_approx(wall.front_y, line), "halt: it arrives and stops on it")
+	t.check(wall.get_node(^"Deco").halted, "halt: the riders are told to lock up")
+	t.check(not wall.caught(), "halt: a halted pack catches nobody")
+	player.position.y -= 5000.0   # the car speeds off up the road
+	wall._physics_process(0.05)
+	t.check(is_equal_approx(wall.front_y, line), "halt: and the MAX_GAP drag no longer pulls it after the car")
+	# From the wrong side of the line (the car has passed the bank when the
+	# order comes): the crest snaps to the line, never past it.
+	wall.halted = false
+	wall.front_y = line - 300.0
+	wall._physics_process(0.05)
+	t.check(is_equal_approx(wall.front_y, line), "halt: a crest already past the line is held on it")
+	# The lock-up: the riders settle within half a second and lay skids once.
+	var deco = wall.get_node(^"Deco")
+	deco.halted = true
+	for i in 40:
+		deco._process(0.016)
+	var laid: int = deco.skid_marks.size()
+	t.check(laid >= 11, "halt: every rider lays a skid (%d streaks)" % laid)
+	var before: Array = []
+	for r in deco._riders:
+		before.append(r["node"].position)
+	for i in 10:
+		deco._process(0.016)
+	var drift := 0.0
+	for i in deco._riders.size():
+		drift = maxf(drift, deco._riders[i]["node"].position.distance_to(before[i]))
+	t.check(drift < 2.0, "halt: a locked-up rider barely moves (%.2f px in 10 ticks)" % drift)
+	t.check(deco.skid_marks.size() == laid, "halt: the skids are laid once")
+	t.root.remove_child(container)
+	container.free()
+
 ## The curve tax: through a sweeper the pack, like the car, covers less
 ## north per second of speed — otherwise it quietly gains on every bend.
 func test_curve_tax() -> void:

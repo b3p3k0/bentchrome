@@ -29,6 +29,9 @@ static var SURGE_PER_PX := 0.0008 # extra pace (fraction of top) per px past the
 static var DANGER_GAP := 180.0    # pack on the bumper: rumble, HUD alarm
 static var MERCY_GAP := 200.0     # inside this the closing speed is capped...
 static var MERCY_CLOSE := 45.0    # ...to this many px/s: the last 150px take >= 3.3s
+static var HALT_BRAKE := 320.0    # px before a halt line over which the pack's speed ramps to zero
+static var HALT_ROAR_FADE := 1.5  # seconds for the engines to die once the pack has stopped
+static var HALT_CREEP := 40.0     # px/s the braking pack keeps until it is on the line
 
 const ROAD_FALLBACK := 640.0      # half-width painted when no course is set
 const DecoScript := preload("res://levels/chase/horde_deco.gd")
@@ -43,6 +46,9 @@ var course = null           # chase_course.gd, set by the host (centers the band
 var pace_frac := 0.80       # fraction of the target's top; the director's phase drives this
 var front_y := 0.0          # world y of the dust crest
 var no_mercy := false       # the host sets this once the run is lost: swallow the car
+var halt_y := INF           # a world y the crest never passes (the finale's river bank)
+var halted := false         # the pack has reached its halt line and stopped
+var _halt_gain := 1.0       # the engines' fade once halted
 
 var _deco: Node2D = null
 var _roaring := false
@@ -109,6 +115,22 @@ static func horn_due(danger: bool, was_danger: bool, cooldown_left: float) -> bo
 func caught() -> bool:
 	return target != null and is_instance_valid(target) and gap() <= CATCH_MARGIN
 
+## Stop the pack at a world y (north is -y): the finale's river bank. From
+## HALT_BRAKE px out the speed ramps down, the crest never crosses the line,
+## and the MAX_GAP drag stops pulling it north after the escaping car.
+func halt_at(y: float) -> void:
+	halt_y = y
+
+## The braking ramp, pure: full speed HALT_BRAKE px from the line, zero on it,
+## and never under a creep in between so the pack actually arrives.
+static func halt_speed(speed: float, front: float, line: float, brake: float) -> float:
+	if line == INF:
+		return speed
+	var left := front - line
+	if left <= 0.0:
+		return 0.0
+	return maxf(speed * clampf(left / maxf(brake, 1.0), 0.0, 1.0), minf(speed, HALT_CREEP))
+
 ## The phase pace as THIS tier runs it: easier tiers slow the whole pack
 ## (HARD is x1.0 — the arc as authored). The surge and the mercy are untouched.
 func tier_pace() -> float:
@@ -152,8 +174,15 @@ func _physics_process(delta: float) -> void:
 	var speed := pack_speed(base_top(), tier_pace(), gap_now) * road_cos(course, -front_y)
 	if not no_mercy and _target_alive():
 		speed = mercy_cap(speed, gap_now, _target_vn())
+	speed = halt_speed(speed, front_y, halt_y, HALT_BRAKE)
 	front_y -= speed * delta                         # north is -y
-	front_y = minf(front_y, player_y + MAX_GAP)      # never out of the mirrors
+	if halt_y == INF:
+		front_y = minf(front_y, player_y + MAX_GAP)  # never out of the mirrors
+	else:
+		front_y = maxf(front_y, halt_y)              # the bank: this far and no farther
+		if not halted and front_y <= halt_y + 0.5:
+			front_y = halt_y
+			_halt()
 	var road_x := 0.0
 	if course != null:
 		var s: Dictionary = course.sample(-front_y)
@@ -172,6 +201,18 @@ func _physics_process(delta: float) -> void:
 		_deco.half = road_half()
 		_deco.pressure = pressure_at(g)
 
+## The brink: the crest stops dead, the riders lock up, the engines die.
+func _halt() -> void:
+	halted = true
+	if _deco != null:
+		_deco.halted = true
+	var audio := get_node_or_null(^"/root/AudioDirector")
+	if audio != null and audio.has_method(&"play_at"):
+		for i in 3:
+			var at := global_position + Vector2(road_half() * (-0.5 + 0.5 * float(i)), 40.0 * float(i))
+			get_tree().create_timer(0.12 * float(i)).timeout.connect(
+				func() -> void: audio.play_at(&"brake", at), CONNECT_ONE_SHOT)
+
 ## The pack's voice: engines whose gain rides the gap, and a war horn on the
 ## edge into the danger zone. Drop-in assets — silent no-ops until they land.
 func _voice(delta: float, gap_px: float) -> void:
@@ -181,6 +222,11 @@ func _voice(delta: float, gap_px: float) -> void:
 	if not _roaring:
 		audio.loop_set(&"horde_roar", true)
 		_roaring = true
+	if halted:
+		# Stopped at the brink: the engines die away, and no horn — they lost.
+		_halt_gain = move_toward(_halt_gain, 0.0, delta / HALT_ROAR_FADE)
+		audio.loop_gain(&"horde_roar", roar_gain(pressure_at(gap_px)) * _halt_gain)
+		return
 	audio.loop_gain(&"horde_roar", roar_gain(pressure_at(gap_px)))
 	_horn_t = maxf(_horn_t - delta, 0.0)
 	var danger := gap_px < DANGER_GAP
