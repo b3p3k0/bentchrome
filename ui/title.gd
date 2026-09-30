@@ -19,10 +19,12 @@ var _quit: Control
 var _quit_index := 1  # NO
 var _quit_entries: Array[Label] = []
 
-const ENTRY_NAMES := ["SINGLE PLAYER", "MULTIPLAYER", "STORY", "SETTINGS", "QUIT GAME"]
+const ENTRY_NAMES := ["SINGLE PLAYER", "MULTIPLAYER", "STORY", "BUMPER STICKERS",
+	"SETTINGS", "QUIT GAME"]
+const STICKER_INDEX := 3
 
 @onready var _entries: Array[Label] = [
-	$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Settings, $Menu/Quit]
+	$Menu/Start, $Menu/Multiplayer, $Menu/Story, $Menu/Stickers, $Menu/Settings, $Menu/Quit]
 
 func _ready() -> void:
 	var bg := $Bg as TextureRect
@@ -68,9 +70,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		_activate()
 
 func _highlight() -> void:
+	var stickers := get_node_or_null(^"/root/Stickers")
+	var has_new: bool = stickers != null and not stickers.unseen().is_empty()
 	for i in _entries.size():
 		_entries[i].modulate = AMBER if i == _index else DIM_TEXT
-		_entries[i].text = ("[ %s ]" if i == _index else "%s") % ENTRY_NAMES[i]
+		var title: String = ENTRY_NAMES[i]
+		if i == STICKER_INDEX and has_new:
+			title += " ★NEW"
+		_entries[i].text = ("[ %s ]" if i == _index else "%s") % title
 
 func _activate() -> void:
 	# Autoload fetched by path: bare identifiers fail to compile when this
@@ -90,8 +97,12 @@ func _activate() -> void:
 		3:
 			_done = true
 			if flow:
-				flow.to_settings()
+				flow.to_sticker_book()
 		4:
+			_done = true
+			if flow:
+				flow.to_settings()
+		5:
 			_open_quit_confirm()
 
 ## The quit confirm's own input loop: any nav key toggles YES/NO, confirm

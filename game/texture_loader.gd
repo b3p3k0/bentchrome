@@ -11,10 +11,11 @@ static func load_texture(path: String) -> Texture2D:
 	if _cache.has(path):
 		return _cache[path]
 	var tex: Texture2D = null
-	var res := ResourceLoader.load(path, "Texture2D")
-	if res is Texture2D:
-		tex = res
-	else:
+	if ResourceLoader.exists(path):
+		var res := ResourceLoader.load(path, "Texture2D")
+		if res is Texture2D:
+			tex = res
+	if tex == null:
 		var img := Image.new()
 		var err := img.load(path)
 		if err != OK:

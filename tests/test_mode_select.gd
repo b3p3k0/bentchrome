@@ -97,9 +97,9 @@ func test_sub_dialog_explicit_back() -> void:
 func test_title_quit_entry_uses_safe_confirm() -> void:
 	var title: Control = (load("res://ui/title.tscn") as PackedScene).instantiate()
 	t.root.add_child(title)
-	t.check(title._entries.size() == 5 and title.ENTRY_NAMES[4] == "QUIT GAME",
-		"title: QUIT GAME is a visible fifth entry")
-	title._index = 4
+	t.check(title._entries.size() == 6 and title.ENTRY_NAMES[5] == "QUIT GAME",
+		"title: QUIT GAME is a visible sixth entry")
+	title._index = 5
 	title._activate()
 	t.check(title._quit != null and title._quit_index == 1,
 		"title: explicit quit opens the existing confirm on NO")

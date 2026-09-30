@@ -30,6 +30,7 @@ const SENTINELS: Array[StringName] = [UPCOMING, RESOLVE_CHILD, SILENT]
 const TRACKS := {
 	"res://ui/boot_splash.tscn": SILENT,
 	"res://ui/title.tscn": &"bgm_menu",
+	"res://ui/sticker_book.tscn": &"bgm_menu",
 	"res://ui/mode_select.tscn": &"bgm_menu",
 	"res://ui/difficulty_select.tscn": &"bgm_menu",
 	"res://ui/car_select.tscn": &"bgm_menu",

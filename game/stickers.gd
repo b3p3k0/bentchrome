@@ -126,6 +126,13 @@ func catalog() -> Array:
 	return _catalog_rows.duplicate(true)
 
 
+## Gallery-safe catalog boot. Headless runs deliberately skip _ready(), but a
+## screen may still need the authored rows; profile state remains untouched.
+func ensure_catalog() -> void:
+	if _catalog_rows.is_empty():
+		load_catalog()
+
+
 func unseen() -> Array:
 	var result: Array = []
 	for row_v in _catalog_rows:

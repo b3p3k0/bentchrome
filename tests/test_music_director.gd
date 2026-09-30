@@ -60,7 +60,7 @@ func test_tracks_cover_flows() -> void:
 		t.check(MusicScript.TRACKS.has(entry.scene),
 			"bgm: MP map mapped: " + str(entry.scene))
 	for path in [flow.BOOT, flow.TITLE, flow.MODE_SELECT, flow.DIFFICULTY,
-			flow.SELECT, flow.SETTINGS, flow.MP_MENU,
+			flow.SELECT, flow.SETTINGS, flow.STICKER_BOOK, flow.MP_MENU,
 			flow.MP_LOBBY, flow.MP_SCOREBOARD, flow.TUTORIAL,
 			flow.CUSTOM, flow.INTERSTITIAL, flow.MP_MATCH]:
 		t.check(MusicScript.TRACKS.has(path), "bgm: flow scene mapped: " + path)

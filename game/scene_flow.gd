@@ -4,6 +4,7 @@ extends Node
 
 const BOOT := "res://ui/boot_splash.tscn"  # the main scene; hands off to TITLE
 const TITLE := "res://ui/title.tscn"
+const STICKER_BOOK := "res://ui/sticker_book.tscn"
 const MODE_SELECT := "res://ui/mode_select.tscn"
 const DIFFICULTY := "res://ui/difficulty_select.tscn"
 const LEVEL_SELECT := "res://ui/level_select.tscn"
@@ -87,6 +88,9 @@ const CAMPAIGN := [
 
 func to_title() -> void:
 	goto_scene(TITLE)
+
+func to_sticker_book() -> void:
+	goto_scene(STICKER_BOOK)
 
 func to_mode_select() -> void:
 	goto_scene(MODE_SELECT)

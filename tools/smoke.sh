@@ -64,6 +64,15 @@ if echo "$LVLSEL_OUT" | grep -qiE "$ERR_RE"; then
   echo "== smoke: FAIL (level select)"; exit 1
 fi
 
+# Sticker book: the gallery builds its full catalog and procedural/art ladder
+# at runtime, so cold-load it for a few frames just like the fight card.
+echo "== smoke: sticker book"
+STICKER_OUT="$("$GODOT" --headless --path "$PROJECT_DIR" res://ui/sticker_book.tscn --quit-after 10 2>&1)"
+if echo "$STICKER_OUT" | grep -qiE "$ERR_RE"; then
+  echo "$STICKER_OUT" | grep -iE "$ERR_RE"
+  echo "== smoke: FAIL (sticker book)"; exit 1
+fi
+
 # Cold roster load: car_select pulls every vehicle .tres -> weapon defs ->
 # projectile scenes. This entry path exposes circular resource loads (the
 # boot stage never touches the roster, and the test runner warms the class
