@@ -34,6 +34,12 @@ static var JACK_BEAT := 1.2      # seconds the pack swallows the car before the 
 static var PURSE := 3000
 static var DAREDEVIL_RATE := 100.0   # bolts per second in the danger zone
 static var DAREDEVIL_CAP := 2000
+## Ordnance in the dust: a mine or a missile of YOURS that ends up this far
+## inside the crest goes off under the pack and makes it flinch
+## (horde_wall.flinch). The poll is the fuse — a mine dropped early pops
+## when the crest rolls over it.
+static var FLINCH_INSET := 40.0
+static var MISSILE_CUT := 0.18       # a missile's flinch is lighter than a mine's
 
 signal jacked(cause: StringName)     # &"caught" | &"wrecked"
 signal rolled_on(next_index: int)    # the robbery is done; the campaign advanced
@@ -41,6 +47,7 @@ signal rolled_on(next_index: int)    # the robbery is done; the campaign advance
 var course = null
 var clock := 0.0
 var kills := 0   # director bumps this; the chase HUD reads it
+var flinches := 0   # bangs in the dust that backed the pack off (the probe reads it)
 var daredevil := 0.0   # bolts accrued living dangerously; paid at the line
 ## Suites that boot this scene to test something else stand the pack down so
 ## a slow fixture can't be jacked mid-test. Wrecks still end the run.
@@ -169,6 +176,31 @@ func _finish_run() -> void:
 
 func finale_running() -> bool:
 	return _finale != null and _finale.running
+
+## The dust has no body, so nothing you throw at it can hit it — the host
+## watches instead: every physics tick, any live mine you dropped or missile
+## you fired that is inside the crest goes off there and the pack flinches.
+func _physics_process(_delta: float) -> void:
+	if _player == null or not is_instance_valid(_player) or _wall == null or _jacked:
+		return
+	var line: float = _wall.front_y + FLINCH_INSET
+	for child in get_children():
+		if not (child is Node2D) or child.is_queued_for_deletion() or child.global_position.y <= line:
+			continue
+		if child.get("dropper") == _player and child.has_method(&"blow"):
+			child.blow()
+			_wall.flinch()
+			flinches += 1
+		elif child.get("shooter") == _player and child.has_method(&"_despawn") \
+				and child.get("_spent") == false and child.get("hit_sfx") != &"hit_mg":
+			var boom := preload("res://environment/explosion.tscn").instantiate()
+			boom.global_position = child.global_position
+			boom.size_scale = 0.45
+			boom.tint = Color(0.5, 0.75, 0.95)
+			add_child(boom)
+			child._despawn()
+			_wall.flinch(MISSILE_CUT)
+			flinches += 1
 
 ## &"wrecked" (0 HP), &"caught" (the pack has the car), or &"" (still running).
 func loss_cause() -> StringName:

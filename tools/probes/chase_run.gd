@@ -8,6 +8,8 @@ extends SceneTree
 ##        --car=hornet [--skill=1.0] [--tank] [--verbose]
 ##   --tank   a bottomless hull: the run always reaches the clock (or the
 ##            pack), so TOOK reads the full run's incoming damage.
+##   --mines  a land mine dropped off the tail every MINE_EVERY seconds (the
+##            bot never uses the bay): measures what a flinch buys.
 ##
 ## The autopilot (chase_autopilot.gd) never dodges fire, hunts pickups, or
 ## uses rear weapons: its results are a FLOOR for what a player will do.
@@ -22,6 +24,9 @@ var _car := "hornet"
 var _skill := 1.0
 var _tank := false
 var _verbose := false
+var _mines := false
+const MINE_EVERY := 15.0
+var _mine_t := MINE_EVERY * 0.5
 
 var _scene: Node = null
 var _frame := 0
@@ -52,6 +57,8 @@ func _init() -> void:
 			_skill = float(arg.substr(8))
 		elif arg == "--tank":
 			_tank = true
+		elif arg == "--mines":
+			_mines = true
 		elif arg == "--verbose":
 			_verbose = true
 	process_frame.connect(_setup, CONNECT_ONE_SHOT)
@@ -89,6 +96,14 @@ func _tick() -> void:
 		_watch_finale(player)
 	elif not over:
 		_watch(player)
+		if _mines:
+			_mine_t -= 1.0 / 60.0
+			if _mine_t <= 0.0:
+				_mine_t = MINE_EVERY
+				var mine = load("res://environment/mine_land.tscn").instantiate()
+				mine.dropper = player
+				mine.global_position = player.global_position + Vector2(0.0, 60.0)
+				_scene.add_child(mine)
 	if _verbose and _frame % 900 == 0 and not over:
 		print("[t=%3ds] gap %3d  pace %.2f  speed %3d  hp %3d  kills %2d  pack %d  fuel %3d  took %.1f hp/s" % [
 			int(_scene.clock), int(_scene.wall_gap()), _scene.pack_pace(), int(player.velocity.length()),
@@ -183,10 +198,10 @@ func _report(player) -> void:
 		print("[finale] air %d  landed d %s (channel to %s, shallows to %s)  jumpers %d  gone %d  show %.1fs" % [
 			int(_finale_air), str(int(_finale_land)) if _finale_land != INF else "-",
 			str(r.get("deep_to", "?")), str(r.get("shallow_to", "?")), _jumpers, sunk, _scene.clock - _scene.RUN_SECONDS])
-	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d" % [
+	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d  flinches %d" % [
 		verdict, _car, _scene.clock, int(_min_gap), _danger_frames / 60.0, _slowdowns,
 		_boost_frames / 60.0, int(maxf(_hp0 - _taken, 0.0)) if _tank else int(player.get_hp()),
-		int(_hp0), int(_taken), _heals, _scene.kills, _max_pack, _scene.daredevil_bonus()])
+		int(_hp0), int(_taken), _heals, _scene.kills, _max_pack, _scene.daredevil_bonus(), _scene.flinches])
 	if _verbose:
 		for source in _by_source:
 			print("[src] %-32s %6.1f dmg in %3d hits (%.0f%%)" % [source, _by_source[source][0],

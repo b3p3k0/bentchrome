@@ -100,6 +100,11 @@ func _trigger(body: CharacterBody2D) -> void:
 				body.set_meta(&"bc_hit_kind", &"mine")  # botlab telemetry breadcrumb
 				child.take_damage(damage * belly * Combat.scale(attacker, body))
 				break
+	blow()
+
+## The bang without a victim: the explosion, the LAN twin's clear, and gone.
+## Also what Route 666 calls when a mine ends up under the horde's dust.
+func blow() -> void:
 	var scene := get_tree().current_scene
 	if scene:
 		var boom := preload("res://environment/explosion.tscn").instantiate()

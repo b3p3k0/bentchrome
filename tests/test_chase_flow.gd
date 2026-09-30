@@ -164,6 +164,65 @@ func test_ram_swats_a_bird() -> void:
 		"ram: the car never stopped — slowest %d px/s against a floor of %d" % [int(slowest), int(floor_speed)])
 	_close(scene)
 
+## Ordnance in the dust makes the pack flinch: a mine of yours the crest
+## rolls over goes off under it, a missile of yours that flies into it goes
+## off there; the pack's own mines, your MG rounds and anything still in
+## front of the crest are left alone.
+func test_ordnance_in_the_dust_makes_the_pack_flinch() -> void:
+	var scene = await _boot()
+	scene.catch_enabled = false
+	scene.get_node(^"ChaseDirector").frozen = true
+	var wall = scene.get_node(^"HordeWall")
+	wall.set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	var road_x: float = scene.course.sample(-wall.front_y)["x"]
+	var inside := Vector2(road_x, wall.front_y + 100.0)
+	var outside := Vector2(road_x, wall.front_y - 100.0)
+	var MineScene := load("res://environment/mine_land.tscn")
+	var mine = MineScene.instantiate()
+	mine.dropper = player
+	mine.global_position = inside
+	scene.add_child(mine)
+	var early = MineScene.instantiate()
+	early.dropper = player
+	early.global_position = outside
+	scene.add_child(early)
+	var theirs = MineScene.instantiate()
+	theirs.dropper = scene.get_node(^"ChaseDirector").spawn(&"bike")
+	theirs.global_position = inside
+	scene.add_child(theirs)
+	var kills_before: int = scene.kills
+	scene._physics_process(0.016)
+	t.check(mine.is_queued_for_deletion(), "flinch: a mine of yours under the dust goes off")
+	t.check(wall.flinching(), "flinch: and the pack flinches")
+	t.check(scene.flinches == 1, "flinch: the host counts it")
+	t.check(not early.is_queued_for_deletion(), "flinch: a mine still in front of the crest waits for it")
+	t.check(not theirs.is_queued_for_deletion(), "flinch: the pack's own mines don't scare it")
+	t.check(scene.kills == kills_before, "flinch: a bang in the dust is no kill")
+	# The crest rolls over the early mine later: the poll is the fuse.
+	wall.front_y = outside.y - 100.0
+	scene._physics_process(0.016)
+	t.check(early.is_queued_for_deletion() and scene.flinches == 2, "flinch: a mine dropped early pops when the crest reaches it")
+	# A missile of yours flying into the dust goes off there; an MG round is nothing.
+	wall._flinch_t = 0.0
+	var missile = load("res://weapons/missile.tscn").instantiate()
+	scene.add_child(missile)
+	missile.setup(inside, Vector2.DOWN, 0.0, 26.0, 4.0, player)
+	var retired := [false]
+	missile.retired.connect(func(_id: int) -> void: retired[0] = true)
+	scene._physics_process(0.016)
+	t.check(retired[0] and wall.flinching(), "flinch: a missile of yours in the dust goes off there")
+	var round_ = load("res://weapons/projectile.tscn").instantiate()
+	scene.add_child(round_)
+	round_.setup(inside, Vector2.DOWN, 0.0, 2.0, 1.0, player)
+	round_.hit_sfx = &"hit_mg"
+	var mg_retired := [false]
+	round_.retired.connect(func(_id: int) -> void: mg_retired[0] = true)
+	wall._flinch_t = 0.0
+	scene._physics_process(0.016)
+	t.check(not mg_retired[0] and not wall.flinching(), "flinch: an MG round in the dust is nothing")
+	_close(scene)
+
 ## The windshield streaks read "flat out" the same for every ride.
 func test_speed_streaks_scale_to_the_car() -> void:
 	const Lines := preload("res://ui/speed_lines.gd")

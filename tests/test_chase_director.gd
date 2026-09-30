@@ -150,10 +150,11 @@ func test_spawn_cull_grace_and_kills() -> void:
 	var Economy := preload("res://game/economy.gd")
 	var econ_was: bool = Economy.enabled
 	Economy.enabled = true
+	player.global_position.y -= 6000.0
+	player.set_physics_process(false)   # parked: a teleport onto a prop would pay salvage and muddy the wallet checks
+	await t.physics_frame
 	var funds_before: int = Economy.funds
 	var kills_at_absorb: int = scene.kills
-	player.global_position.y -= 6000.0
-	await t.physics_frame
 	t.check(straggler.global_position.y > wall.front_y + DirectorScript.ABSORB_DEPTH,
 		"director: the dust front rolled over the straggler")
 	director._absorb()

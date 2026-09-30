@@ -6,6 +6,7 @@
 #   tools/chase_probe.sh                     # every roster car, 3 runs each
 #   tools/chase_probe.sh --runs 5 hornet warpig
 #   tools/chase_probe.sh --tank --verbose hornet   # measure incoming damage
+#   tools/chase_probe.sh --mines hornet            # a mine every 15s: what a flinch buys
 #
 # Flags: --runs N (default 3) | --skill S (default 1.0; lower = later
 #        reactions) | --tank (bottomless hull: TOOK = the whole run's damage)
@@ -34,7 +35,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --runs) RUNS="$2"; shift 2 ;;
     --skill) SKILL="$2"; shift 2 ;;
-    --tank|--verbose) EXTRA+=("$1"); shift ;;
+    --tank|--verbose|--mines) EXTRA+=("$1"); shift ;;
     -*) echo "unknown flag: $1" >&2; exit 2 ;;
     *) CARS+=("$1"); shift ;;
   esac
