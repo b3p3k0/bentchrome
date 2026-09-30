@@ -15,7 +15,9 @@ TBD — a hex-nut/bolt mark; ⚙ is the mockup placeholder). Players start at
 | enemy kill (mook) | 1000 | attribution: victim's `last_attacker` is the player |
 | enemy kill (mini_boss archetype) | 2500 | kandykane-class |
 | boss kill (Lackey — Goliath pays no bounty v1, finale) | 5000 | finale money is mostly ceremonial |
-| chase-mode kill (buzzards) | 250 | 180s clock self-caps farming |
+| chase-mode kill (buzzards) | 250 | 120s clock self-caps farming; absorbed stragglers pay nothing |
+| Route 666 survival purse | 3000 | `Economy.award_flat`, paid at the line only |
+| Route 666 daredevil bonus | 100/s, cap 2000 | accrues with the pack on the bumper; dies with the run if caught |
 | destructible smashed | `clamp(round(max_hp × 2.0), 1, 300)` | fence 15→30, barrel ~80, derelict 50→100, container 140→280, generator 220→300 |
 | soft target / clutter (1 HP) | 1 | ambient folk & street furniture |
 | **per-level SALVAGE CAP** | **3000** | applies to destructibles + soft targets ONLY; kills never capped. HUD shows a subtle "salvage tapped" once hit |
@@ -31,6 +33,7 @@ penalties. Prices below assume that envelope.
 | player destroyed | −20% | charged per death, at respawn |
 | player falls in a pit / sinks | −30% | the wasteland taxes clumsiness harder than combat |
 | health station activation | −10% | charged at refill START; chase drive-over medkits exempt |
+| caught or wrecked on Route 666 | the robbery wheel | 25% / 50% / 100% of the wallet, OR a part, OR the weapon bay, OR a life — never the destroyed −20% (docs/matrices.md "The robbery wheel") |
 
 Properties worth keeping: percentages never bankrupt to negative, floor at 0
 via `floori`, and DEVGOD makes all penalties inert (matches "pits cost no
@@ -81,6 +84,11 @@ death-heavy run visibly shops lighter. Tune in playtest.
 - Buy-to-own for the rest of the run; **parts survive death — money is the
   only thing you lose** (decided). The % penalty is the sting; the build is
   never bricked.
+- **The one exception is Route 666 (decided 2026-09-29).** Getting caught or
+  wrecked there is a robbery, and three of the wheel's ten wedges unbolt a
+  part. It takes ONE part per robbery, only a part nothing else you own
+  depends on (the top of a chain, or a loose part), and the level is
+  optional with no retry, so a build can be dented but never bricked.
 - Chains: must own stage N−1 to buy stage N; price = that step's increment.
 - Swap items within a category slot replace each other (tires); chains and
   swaps can coexist where physical sense allows — catalog data decides.

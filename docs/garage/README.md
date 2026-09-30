@@ -51,7 +51,8 @@ application). Start here; each doc owns one concern.
   per-level salvage cap); lost as a PERCENTAGE of current funds (destroyed
   −20%; falls/sinks harsher −30%; health station use −10%); difficulty =
   identical earnings, gentler penalties + cheaper prices on easier tiers;
-  **parts survive death** (money is the only loss); staged parts are
+  **parts survive death** (money is the only loss — except a Route 666
+  robbery, which can unbolt one; see economy.md); staged parts are
   prerequisite chains priced per increment (NA→boost → blower → injectors);
   garage opens BETWEEN levels off the win screen (KEEP ROLLIN' / PIT STOP).
 - **UI:** two SVG concepts in ui_concepts.md — soft rec: build Concept B's

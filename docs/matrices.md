@@ -5,7 +5,7 @@ modifiers that glue them together. Use it for balance passes — spot the outlie
 then edit the source file listed at the top of each section.
 
 Numbers pulled from source on 2026-07-09 (Buzzard Run batches A/D/B); car-contract
-pass 2026-07-12. This file is hand-maintained: when a `.tres` or a const changes,
+pass 2026-07-12; Route 666 rebuilt 2026-09-29 (the gap is the health bar). This file is hand-maintained: when a `.tres` or a const changes,
 update the matching row here.
 
 ---
@@ -40,15 +40,15 @@ HP derives from Armor via StatCurves (see mapping below). Special Cap/Recharge d
 
 ### The Buzzardz (chase mode, roster-external)
 
-Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS_TABLE`; all `no_mines`, all `ai_cooldown_scale 1.4` (buzzard.tscn), MG overridden to 1.7 dmg / 10 rate / 12° spread. Brains: `chase_driver.gd` ROLES (not EnemyDriver).
+Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS_TABLE`; all `no_mines`, all `ai_cooldown_scale 1.4` (buzzard.tscn), MG overridden to 1.7 dmg / 10 rate / 12° spread. Brains: `chase_driver.gd` ROLES (not EnemyDriver). **Top speed is NOT the .tres stat**: the director re-prices every Buzzard's ceiling at spawn to `ROLE_PACE` × the PLAYER'S honest top on asphalt, so the pack is always relevant to the car it chases (the .tres top still shapes acceleration).
 
-| Bird | Accel | Top | Handling | Armor | Mass | HP (scaled) | Armament | Behavior |
+| Bird | Accel | Top (× player road top) | Handling | Armor | Mass | HP (scaled) | Armament | Behavior |
 |---|---|---|---|---|---|---|---|---|
-| Scrambler (bike) | 9 | 8 | 8 | 1 | 1 | ~38 (×0.55) | scrapgun MG, 0.5s bursts / 1.8s gaps, range 420 | swoops to −60/+190 dy on a 4.5s rhythm; yo-yos to keep up |
-| Beater (sedan) | 5 | 6 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts + Scrap Rocket (12 dmg, 90°/s, ~4.5s clock, cap 2/9s) | holds +260..430 behind, wobbly steer, aims at a 0.45s-stale snapshot; yo-yos |
-| Technical (pickup) | 3 | 2 | 3 | 3 | 6 | ~90 (×0.95) | Bed Gun turret: 12 dmg / 2.2s / 700 px/s, auto-aim ≤1100, 120°/s traverse | spawns AHEAD, falls back through the field; driver never fires; no yo-yo |
+| Scrambler (bike) | 15 | ×1.10 | 8 | 1 | 1 | ~38 (×0.55) | scrapgun MG, 0.5s bursts / 1.8s gaps, range 420 | swoops to −60/+190 dy on a 4.5s rhythm; yo-yos to keep up |
+| Beater (sedan) | 11 | ×1.04 | 4 | 2 | 4 | ~70 (×0.85) | MG bursts + Scrap Rocket (12 dmg, 90°/s, ~4.5s clock, cap 2/9s) | holds +260..430 behind (clamped north of the dust crest), wobbly steer, aims at a 0.45s-stale snapshot; yo-yos |
+| Technical (pickup) | 3 | ×0.62 | 3 | 3 | 6 | ~90 (×0.95) | Bed Gun turret: 12 dmg / 2.2s / 700 px/s, auto-aim ≤1100, 120°/s traverse | spawns AHEAD, falls back through the field into the pack; driver never fires; no yo-yo |
 
-Yo-yo (bike/sedan): >600px behind → max_speed rides player+80; <250px → honest stats. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
+Station keeping: the pedal asks for the player's pace + `HOLD_GAIN` 1.2 px/s per px behind the mark, never under `MIN_PACE` 0.35 of own top, through `speed_band.gd` — a Buzzard ahead of its station BRAKES back to it. Yo-yo (bike/sedan): >380px behind → max_speed rides player+80, capped at `YOYO_CAP` ×1.15 of the honest ceiling (a boost's ×1.5 always shakes them); <180px → honest ceiling. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
 
 ### StatCurves: design stat → engine units
 
@@ -289,8 +289,9 @@ Source: `game/difficulty.gd` — ONE static table, every value a multiplier on t
 | `boss_break_time` | ×1.6 (3.2-8.8s) | ×1.25 (2.5-6.9s) | ×1.0 (2.0-5.5s) | enemy_driver.gd `_boss_break_time` — scales the lerp output, dominance shape intact |
 | `goliath_hp` | ×0.7 (700/630) | ×0.85 (850/765) | ×1.0 (1000/900) | goliath_boss.gd — both phase pools + the sentinel refill |
 | `goliath_ram_cooldown` | ×1.5 (67.5s) | ×1.2 (54s) | ×1.0 (45s) | goliath_driver.gd — phase-2 charge spacing |
+| `chase_pace` | ×0.92 | ×0.96 | ×1.0 | horde_wall.gd `tier_pace()` — Route 666's pack runs slower; surge and mercy untouched |
 
-Deliberately unscaled: enemy counts, lives (3), mook RELENT valve, AI theater governors (×0.35 / mercy), environmental flat damage (barrels, falls, pits, deep water, horde wall — none route through `Combat.scale`), jackknife cadence (first follow-up knob if easy Goliath still runs hot). A mine whose dropper died deals full damage on every tier (null shooter — pre-existing shape).
+Deliberately unscaled: enemy counts, lives (3), mook RELENT valve, AI theater governors (×0.35 / mercy), environmental flat damage (barrels, falls, pits, deep water — none route through `Combat.scale`; Route 666's pack deals no damage at all), jackknife cadence (first follow-up knob if easy Goliath still runs hot). A mine whose dropper died deals full damage on every tier (null shooter — pre-existing shape).
 
 ---
 
@@ -360,7 +361,7 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 6 | Suburban Savagery | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
 | 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
 | 8 | Slaughter on the Strip | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into Route 666 |
-| 9 | Route 666 Roulette | SPECIALTY ~130k px streamed | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR) |
+| 9 | Route 666 Roulette | SPECIALTY ~130k px streamed, 120s | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR); caught or wrecked = robbed, then the tour rolls on (no retry) |
 | 10 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
 | 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
 | 12 | Capital City Carnage | LARGE 6144×3840 (biggest interior; FLAT — knoll only) | 8 | 7 | 3 | THUNDERSTORM (night_arena StormTint, flash/dip cycle, slashing rain, headlight beams); Potomac shallow banks + lethal deep channel, 2 straight bridges w/ destructible rails + VISIBLE 20-HP rim guardrails (ids 60-65); Lincoln/Capitol flat painted plazas, Monument `DriveableHill` knoll w/ summit crates; Penn Ave K-to-Capitol diagonal + traffic circle + Maryland diagonal + 5 side streets + 3 pocket parks + tan sidewalk trails on road ribbons; 1024px Reflecting Pool w/ coping + algae (`pool_surround`); WH iron-fence ring (8×30 HP, ids 10-17) around **Marine One** (id 1: breach→POTUS+3-guard sprint→spool 6s→2-stage floor-bit climb→sky; air kill = spiral crash + Ellipse cache; any kill = 2500 mini_boss); 6 food trucks (128×60) + vendors on Constitution; net ids 1,10-17,20-23,30-35,40-65 sparse (43 total); `optional: true` while in test |
@@ -406,25 +407,65 @@ Yard fixtures: CENTER helipad (`tutorial_deco` kind `helipad`, 380px worn H-ring
 
 ## Route 666 Roulette (chase mode knobs)
 
-Sources: `levels/chase/*.gd` static vars, `ui/hud_chase.gd`, `ui/speed_lines.gd`. Course distance d = −world_y; north is up.
+Sources: `levels/chase/*.gd` static vars, `game/robbery.gd`, `ui/hud_chase.gd`, `ui/speed_lines.gd`. Course distance d = −world_y; north is up. **The gap is the health bar**: every speed below is a fraction of ONE number, `SpeedBand.road_top()` — the car's controller ceiling on asphalt (garage build + road terrain profile in, boost out), read live.
+
+Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. Flat-out resting gap = `LEASH_GAP + (1 − pace) / SURGE_PER_PX` = `210 + 1250 × (1 − pace)`, identical for every car.
+
+| Beat | Start | Pace | Cap | Spawn every | Resting gap |
+|---|---|---|---|---|---|
+| Green flag | 0s | 0.80 | 2 | 4.0s | 460px |
+| First blood | 8s | 0.86 | 4 | 3.5s | 385px |
+| Breath | 25s | 0.84 | 3 | 5.0s | 410px |
+| Squeeze | 32s | 0.90 | 6 | 3.0s | 335px |
+| Breath | 55s | 0.88 | 4 | 4.5s | 360px |
+| Frenzy | 62s | 0.94 | 8 | 2.6s | 285px |
+| All in | 90s | 0.97 | 8 | 2.2s | 248px |
+| Last mile | 110s | 1.00 | 8 | 2.0s | 210px |
 
 | Knob | Value | Where | Detail |
 |---|---|---|---|
-| Run length / win | 180s | buzzard_run `RUN_SECONDS` | timed win drives the end screen directly (`suppress_group_win`) |
-| Rolling respawn | 300 px/s (~45 mph), in place | `ROLL_SPEED` | x clamped onto the asphalt, nose north, shield 2s, clock keeps running |
-| Pace floor | throttle ≥ 0.45 (no-input) | chase_player_driver `MIN_THROTTLE` | S passes through — real braking, stop allowed; W sprints |
-| Wall comfort / surge | 900 px / +0.35 px/s per px | horde_wall `COMFORT_GAP` / `CATCHUP_RATE` | ~855 px/s closure from the clamp — globally inescapable |
-| Wall clamp / kill / reset | 2400 / 50 / 1400 px | `MAX_GAP` / `KILL_MARGIN` / `RESPAWN_GAP` | kill via Health (shield + DEVGOD respected); backstop blocks reversing through |
-| Wall rumble | gap < 500 px | `RUMBLE_GAP` | add_shake ramp, screen-shake toggle respected |
-| Director arc | 7 phases, cap 2→8 | chase_director `PHASES` | wall cruise 300→420; breathers @50 & @110; finale @168 = no spawns, wall surge |
-| Spawns | behind +1100 / ahead −1600 (tech) | `SPAWN_BEHIND` / `SPAWN_AHEAD` | pace-matched entry; cull 2600 behind; 2.5s held fire after a player death |
-| Buzzard yo-yo | far 600 / near 250 / +80 px/s | chase_driver `YOYO_*` | bikes+sedans only |
+| Run length / win | 120s | buzzard_run `RUN_SECONDS` | timed win drives the end screen directly; `suppress_group_win` + `suppress_loss` make the host the sole arbiter |
+| Run end | caught OR wrecked | buzzard_run `loss_cause()` | no lives loop, no respawn, no retry; a tie with the clock goes to the pack |
+| Jack beat | 1.2s | `JACK_BEAT` | the pack swallows the car (`no_mercy`, keeper off, caught driver's hands off the wheel) before the robbery card |
+| Rolling start | cruise (0.80 × top) | `_roll_speed()` | the green flag only — nobody respawns |
+| Leash / surge | 210px / +0.0008 of top per px | horde_wall `LEASH_GAP` / `SURGE_PER_PX` | surge time constant `1 / (top × 0.0008)` ≈ 2.0-2.8s |
+| Clamp / start | 760 / 600px | `MAX_GAP` / `START_GAP` | a boost pushes the pack off screen for ~2s |
+| Catch | gap ≤ 50px | `CATCH_MARGIN` | REPORTED by `caught()`; the wall never touches Health, no backstop |
+| Danger zone | gap < 180px | `DANGER_GAP` | rumble, HUD strobe, war horn, daredevil accrual |
+| Mercy | < 200px: closing ≤ 30 px/s | `MERCY_GAP` / `MERCY_CLOSE` | over the car's own northward speed — a 5s stretch; one dead-stop crash survivable in every car at every beat |
+| Pedal band | cruise 0.80 / floor 0.55 | speed_band `CRUISE_FRAC` / `FLOOR_FRAC` | W flat out; hands-off settles at cruise; S brakes to the floor and HOLDS; never reverse; live boost ungoverned |
+| Pace keeper | floor 0.45 at 1400 px/s² | pace_keeper `KEEP_FRAC` / `KEEP_PUSH` | level-side northward floor after crashes and whips; skips airborne / dashing / dead |
+| Pin escape | 0.15s → lean 1800 px/s², max 260 px/s | `PIN_TIME` / `NUDGE_PUSH` / `NUDGE_MAX` | toward the free side; hands-off dead-centre hit on a 200px obstacle clears in ~1.7s |
+| Spawns | emerge 90px inside the crest / ahead −1600 (tech) | chase_director `EMERGE_DEPTH` / `SPAWN_AHEAD` | pace-matched entry |
+| Absorb | 180px inside the crest | `ABSORB_DEPTH` | freed quietly: no wreck, no bounty, no nitro |
+| Nitro on kill | +6 fuel | `KILL_NITRO` | of 100 (5/s burn) — ~1.2s of boost per wreck |
+| Purse | 3000 bolts | buzzard_run `PURSE` | `Economy.award_flat`, paid at the line only |
+| Daredevil | 100/s in danger, cap 2000 | `DAREDEVIL_RATE` / `DAREDEVIL_CAP` | dies with the run if caught |
+| Difficulty | pace ×0.92 / ×0.96 / ×1.0 | difficulty `chase_pace` | EASY / MEDIUM / HARD |
+| Camera | lead −140, zoom pinned 0.55 | chase_player.tscn / Vehicle `camera_zoom_lock` | overview toggle still works; smoothing lag costs ~0.2 × speed px of look-ahead |
 | Course pre-roll | 130k px, seeded | chase_course `TARGET_LEN` | pickup lane ≤ every ~9k (`PICKUP_EVERY`), landmarks ≥ 15k apart (`RARE_SPACING`), meander ±800 (`SPINE_BOUND`) |
 | Road | half_w 360 (narrow 260) + 90px verge | chunk_defs / chunk_builder | verge = grass/dirt grip penalty; embankment wall past it |
-| Obstacles | rails 20 HP · logs 15 · junk 20 · pumps 40 · potholes r36 dirt | chunk defs/builder | low HP by design — blow through at a momentum cost |
+| Obstacles | rails 20 HP · logs 15 · junk 20 · barriers 25 · pumps 40 · potholes r36 dirt | chunk defs/builder | a dead stop now costs ~300px of gap — mistakes cost position |
 | Pickups | heal +25 · nitro +35 · M/P crates | heal/boost_pickup + ammo | player-only, one-shot, no respawn |
-| Speed streaks | fade in 480 → full 640 px/s | speed_lines `THRESHOLD`/`FULL` | play-square overlay |
-| GPS window | −500..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; wall band pulses < 600 gap |
+| Speed streaks | fade in 0.90 → full 1.35 of top | speed_lines `THRESHOLD_FRAC` / `FULL_FRAC` | nothing at cruise, a whisper flat out, full on the boost |
+| GPS window | −800..+3500 px of course | chase_gps `BACK`/`AHEAD` | blips ≤1500; technicals = amber diamond; horde drawn at its true position, pulses in danger |
+| Audio | roar gain 0.22 → 1.0 · horn ≥6s apart | horde_wall `ROAR_FLOOR` / `HORN_COOLDOWN` | `horde_roar` loop via `AudioDirector.loop_gain`; `jacked` sting on the robbery card |
+
+### The robbery wheel
+
+Source: `game/robbery.gd` (`WHEEL`, `REDEAL_ORDER`, `REDEAL_BITE`). Ten wedges, uniform spin, landing rolled and billed before the card opens.
+
+| Wedge | Count | Takes | Unpayable when | Re-deals into |
+|---|---|---|---|---|
+| BOLTS 25% | 2 | a quarter of the wallet (× `penalty_scale`) | wallet is 0 | PARTS → BAY → DIGNITY |
+| BOLTS 50% | 2 | half the wallet | wallet is 0 | same |
+| EVERYTHING | 1 | the whole wallet | wallet is 0 | same |
+| PARTS | 3 | one random garage part nothing else you own `requires` | no removable part | BOLTS 25% → BAY → DIGNITY |
+| THE BAY | 1 | every rack counter (carry ammo = seven zeros) | nothing in the bay beyond the special's first round | BOLTS 25% → PARTS → DIGNITY |
+| BLOOD | 1 | one campaign life | on the last life | BOLTS 25% → PARTS → BAY → DIGNITY |
+| DIGNITY | re-deal only | nothing | — | — |
+
+BLOOD is never a re-deal target, so the wheel holds at most one. DEVGOD makes every wedge inert (the flow still plays). Splash art ladder: `assets/img/jacked/<car_id>.png` → `_generic.png` → bruised bio portrait → beat skipped.
 
 ---
 
