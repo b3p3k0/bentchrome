@@ -813,3 +813,23 @@ Sources: `ui/boot_splash.gd` static vars (the `run/main_scene`); sting recipe in
 | `ang_d` / `ang_w` | 21 / 19 deg | tools/boot_emblem.py | stroke axis above horizontal / across axis below it: the viewing angle |
 | `bands` | -0.34, 0.34 | tools/boot_emblem.py | yellow-teal and teal-blue edges, as a fraction of the S's reach |
 | `ext` | 8 px | tools/boot_emblem.py | how far each hidden terminal runs on under / behind the F |
+
+## Bumper Stickers (achievement knobs)
+
+Sources: `assets/data/stickers.json` (every goal is data — retune there, no code);
+`game/stickers.gd` constants; the family roll-up in `game/hit_tags.gd`. Single-player
+only; goals are hidden from players (the book shows locked stickers as `???`).
+
+| Knob | Value | Where | What it does |
+|---|---|---|---|
+| weapon goals | 50 kills each | stickers.json `kills.<id-or-family>` | Basic AF, No Place Like Home, Straight Shooter, Tailgunner, What's Mine Is Yours, Pepper Shaker, Backyard BBQ (`fire`), Shock Therapy (`electric`), Grille Kill Kult (`ram`) |
+| death goals | 25 each | stickers.json `deaths`, `deaths.fall/drown/enemy_fire` | My Other Car (any death), Thelma and Louise, Under da Sea, Target Practice |
+| splat goal | 100 | stickers.json `splats` | I Brake For Nobody (local player's run-overs and shots only) |
+| campaign goals | 1 win per tier | stickers.json `campaign_won.easy/medium/hard` | Day Tripper / Long Hauler / Road King; HARD cascades down |
+| roster goals | every roster car / every damaging special | `set_covers_roster` / `set_covers_specials` | Gotta Crash 'Em All (finish the campaign in each car), Special Delivery; both grow with roster.json |
+| `ATTRIBUTION_MS` | 10000 ms | stickers.gd | how fresh the local player's last hit must be for a kill (and a rival's for `enemy_fire`) |
+| `element` | `fire` / `electric` | WeaponDef .tres | family membership; any def with a burn effect must be `fire` (lint) |
+| `can_earn()` | campaign, single battle | stickers.gd | off in Net sessions, custom levels, and under DEVGOD; Driver's Ed records only graduation |
+| profile | `user://stickers.json` | stickers.gd `PROFILE_PATH` | saved on every change; headless runs never save |
+| notice sound delay | 0.9 s | end_screen.gd | `sticker_earned` waits for the win/lose sting |
+| art | 768x256 PNG | assets/img/stickers/ | drop-in; missing art paints a seeded vinyl stand-in |

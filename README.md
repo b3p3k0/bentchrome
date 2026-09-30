@@ -20,7 +20,7 @@ Bent Chrome is the busted-love letter to Twisted Metal we were promised on late-
 
 ## Getting Started & Controls
 
-The game powers on through two extremely official startup cards (any key skips them; Settings → Graphics → BOOT INTRO retires them for good), then lands on a splash screen offering Single Player, Multiplayer, Story, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD. That choice stays remembered while the breaker is off, but cannot affect a run until it is switched back on. (Want to jump straight to a particular arena? That's what Single Battle is for.) Settings is deliberately arrow-only: Up/Down selects, Left/Right changes values, Right enters `-->` rows, and Escape backs out with every change already saved. Choices persist between sessions.
+The game powers on through two extremely official startup cards (any key skips them; Settings → Graphics → BOOT INTRO retires them for good), then lands on a splash screen offering Single Player, Multiplayer, Story, Bumper Stickers, or Settings. The story screen shows game background with 'Press any key to return'. Settings keeps everyday display options up front; Developer Options opens a separate playtesting panel where Developer Mode is the master breaker for DEVGOD. That choice stays remembered while the breaker is off, but cannot affect a run until it is switched back on. (Want to jump straight to a particular arena? That's what Single Battle is for.) Settings is deliberately arrow-only: Up/Down selects, Left/Right changes values, Right enters `-->` rows, and Escape backs out with every change already saved. Choices persist between sessions.
 
 ### Pick Your Lane
 Single Player opens the garage door with three lanes, with **Road Trip** ready
@@ -105,6 +105,9 @@ The bench is a lifestyle: observers get a free camera (cycle drivers with the we
 
 **How does saving work?**  
 Campaign checkpoints between arenas, inventory persists, permadeath stays in the roguelike lane.
+
+**What are Bumper Stickers?**  
+The Rustbelt's achievements. Do something worth bragging about in a Road Trip or a Single Battle and a sticker goes on your bumper; the end screen tells you when you've earned one, and the whole collection lives under BUMPER STICKERS on the title screen. What earns them? That's for you to find out. (Multiplayer brawls don't count, and neither does anything done in god mode.)
 
 **Performance target?**  
 Locked 60 FPS on mid-range GPUs. Send logs and specs if it dips; we’ll optimize instead of guessing.
