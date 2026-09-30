@@ -207,6 +207,46 @@ sized corner facets, translucent terrain painted twice, a binary midpoint
 height pop, props hidden behind the skin, and single-floor collision on a prop
 that crosses a grade seam.
 
+### Union skins: many rects, one skin
+
+- **MUST:** collision and hazards are authored nodes. A union skin paints their
+  union and never moves or resizes those authored rectangles. Static lints
+  instantiate packed scenes without running `_ready`, so topology cannot depend
+  on generated paint children.
+- **MUST:** a side on the arena bounds is closed. Its outline stays straight
+  and bleeds outward beyond the playfield instead of wandering inward.
+- **MUST:** all band and silhouette offsetting goes through
+  `Geometry2D.offset_polygon`, the clipper. Never offset a complex union edge by
+  edge; concave corners, holes, and collapsing bands must be resolved together.
+- **MUST:** mountain blocks carry wall, obstacle, floor-mid, and floor-high
+  collision bits. Grounded cars meet the correct terrace wall, airborne cars
+  still meet the obstacle, and nobody can land inside rock.
+- **MUST:** a generated main drop uses **one pit band per grid row**, with 64px
+  overlap into its neighbor. `PitZone.fall_target_for()` pulls a falling car to
+  the rectangle's short-axis centerline; a tall merged void would vacuum it
+  hundreds of pixels along the cliff.
+- **MUST:** void-side paint stays inside authored pit collision. Mountain-side
+  paint may overhang authored collision slightly to remove the surveyor-straight
+  silhouette.
+- **DEFAULT:** use `RectUnion.outline()` for the rectilinear source silhouette
+  and the shared `UnionSkin` helpers for closed-side bleed, clipped offsets,
+  softened open edges, details, and deterministic scatter. Keep gameplay
+  meaning in the wrapper: `MountainWall`, `DropField`, or `TerrainField`.
+- **EXCEPTION:** `MountainWall` derives notch-filling collision chamfers at
+  `_ready`. They may smooth a concave block corner, but they never replace the
+  authored blocks that static lints inspect as the mountain topology.
+
+### Generated geometry
+
+- **MUST:** when a level is generated from data, never hand-edit its generated
+  scenes. Change the data or builder and run the generator.
+- **MUST:** keep a test or check mode that builds the expected node trees and
+  compares them with the scenes on disk. Mountainside uses
+  `godot --headless --path . -s res://tools/carve_pass.gd -- --check`.
+- **DEFAULT:** make ownership obvious: immutable layout data owns coordinates
+  and counts, the builder owns node composition, and the hand-authored level
+  supplies materials, instances, encounter actors, and exceptions.
+
 ## Terraces and airborne routes
 
 - **MUST:** every occupied floor has a route up and a route down. A one-way drop
@@ -242,6 +282,8 @@ that crosses a grade seam.
   `hazard_curb` on the same lip — the player earns the yeet, the bots never
   lemming. The hazard-tape lip paint underneath stays readable after the rail
   dies.
+- **DEFAULT:** ground-level breakaway rails stay at `z_index = 0` so cars draw
+  over them. The `z_index = 2` recipe above is only for rails on floor-3 decks.
 - **MUST:** rails and AI hazard curbs agree. Protected edges show both; committed
   drops omit both only where a safe landing and recovery route exist.
 - **MUST:** floor-3 stations, pickups, props, and soft targets are explicitly
@@ -271,10 +313,17 @@ that crosses a grade seam.
   gated, and hazard-curbed for AI. Airborne bypass is intentional gameplay.
 - **DEFAULT:** pair severe hazards with a safer, slower route or a demanding but
   readable skill route.
+- **MUST:** an AI-only hazard rectangle that touches a wall can trap rivals
+  against that wall. Remove the behavior that sends them there instead of
+  layering another invisible blocker; Mountainside's human stunt pads use
+  `launch_rivals = false`, so rivals cross the pad as flat ground and never
+  commit to the unsafe jump.
 
 ## Cover and destruction
 
 - `StaticBody2D` walls define permanent topology.
+- `Boulder` is permanent Health-free hard cover with authored rectangle
+  collision and an organic paint skin.
 - `DestructibleBlock` is temporary cover that opens the match over time.
 - `Clutter` is 1HP pop-through flavor, not a tactical wall.
 - `DerelictCar` is readable medium-soft cover using the vehicle language.
@@ -286,6 +335,13 @@ that crosses a grade seam.
 - **DEFAULT:** cover clusters interrupt sightlines without fully enclosing a
   pocket. Destructible exits are a useful pressure valve, not a secret required
   for basic circulation.
+- **DEFAULT:** no solid furniture belongs in a jump lane's column, even when it
+  clears the painted pad itself.
+- **DEFAULT:** no solid piece belongs in a concave wall corner or in a strip
+  narrower than about 200px between a wall and a road or lethal rim.
+- **DEFAULT:** measure rival stalls after furnishing. A legal placement can
+  still combine with steering radius, nearby cover, and a hazard guard to make
+  a repeatable pin.
 - Fuel barrels and other explosive scenery need readable spacing and must not
   produce unavoidable spawn-chain damage.
 
@@ -406,7 +462,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
 | Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
 | Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
-| Mountainside Mayhem | Medium / 7 | switchbacks + exact-fit `DriveableHill` | ice, pits, relieved snow grades | one root/skin fits an 848 summit + 240 grades between roads; slope prop carries both floor bits |
+| Mountainside Mayhem | Medium / 5 | generated southwest-to-northeast mountain pass + bridge/jump chasm + floor-3 knoll and runaway ledge | ice bends, lethal drop, 12-HP breakaway rails, one-exit high rewards | one grid can own collision, hazards, rails, and furniture while union skins turn authored rectangles into a coherent mountain |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
 | Piers of Pain | Large / 8 | three-floor harbor network | water, ship stunt, bridges | vertical routes need complete connectors and floor-correct rewards |
 | Capital City Carnage | Large / 8 | monument capital: river + bridges + diagonal avenues + two terraces | thunderstorm flash/dip, lethal channel, Marine One evacuation race | road ribbons make organic streets one node each; a signature destructible can be a countdown the whole map watches |
@@ -494,3 +550,9 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 5. Run eight combatants and the authored ambience at 60 FPS.
 6. Host the same scene in a two-window LAN match and verify spawn/floor parity.
 7. Record any exception explicitly before calling the arena complete.
+8. Run a stock-rival Botlab sweep with the shipping governor and compare deaths,
+   environmental deaths, stationary car-time, wall hits, distance, and pickups
+   against the arena's recorded baseline.
+9. Run `tools/stalls.sh <scene.tscn>` at its standard seed set, then inspect the
+   longest episode, fall lead-ins, and worst 128px cells before accepting
+   furniture or route changes.

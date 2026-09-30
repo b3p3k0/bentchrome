@@ -183,7 +183,7 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 | Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
 | Suburban Savagery | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
 | Capital City Carnage | 21 | 6 stationary food-truck vendors, 8 mall/museum business figures, 2 police on the monument loop, 2 K St vagrants, 2 joggers, 1 Ellipse dog |
-| Mountainside Mayhem | 7 | 2 floor-2 skiers, 5 floor-3 plateau deer |
+| Mountainside Mayhem | 7 | 2 floor-2 skiers on the trailhead route, 5 floor-3 knoll deer |
 | Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
 | Ground Floor Gore | 16 baseline | 10 floor-1 workers, 4 floor-2 workers, 2 floor-3 carriers; up to 8 porta escapees |
 
@@ -333,17 +333,18 @@ The mutable archetype `PURE` table and all statics above live in `enemy_driver.g
 
 Floor navigator (multi-floor levels): cross-floor targets score −0.1 · NAVIGATE rides authored FloorConnectors (approach lead 220, exit lead 260, 6s timeout, boost on jump commits, grade commits never boost, commit leg ignores feelers) · ambusher/opportunist blends with an armed tracking secondary hold roof vantage up to 8s, raining missiles cross-floor (walls-only LoS), before descending · MG and non-tracking specials never fire cross-floor · hazard curbs (invisible, AI-feeler-only) rail every pit/deep-water rim — Snowy's cliffs included.
 
-Lethal-hazard avoidance (any level with deep water/pits): the kill zones are unraycastable (layer 0), so drivers query `game/hazards.gd` — zones join `&"lethal_hazards"`, rects cached once per physics frame across all drivers. Four layers: a post-ladder GUARD over every mode's intent (real-travel lookahead; steering overridden pre-clamp to the tangent along the entry face — unless the line to the committed goal is itself clear, then only speed is shed; throttle staged by time-to-impact; boost vetoed; fire untouched; airborne and NAVIGATE jump commits exempt) · endpoint validation (escape hops deflect their landing off the rim tangent, CLEAR directions and BREAK exits reroute or finish short) · soft scoring thumbs (never a veto — HUNT stays unfiltered) · `Mode.DETOUR` (a blocked same-floor beeline routes around the blocking rect's end — river-gap ends ARE the bridges, zero authored markers; committed two-phase bridgehead run on the NAVIGATE idiom, arrival by plane-crossing because a heavy's turning circle out-radiuses any arrive circle, phase 1 committed, greedy one-rect-per-leg replans; entry only from PURSUE).
+Lethal-hazard avoidance (any level with deep water/pits): the kill zones are unraycastable (layer 0), so drivers query `game/hazards.gd` — zones join `&"lethal_hazards"`, rects cached once per physics frame across all drivers. The service reads painted extents conservatively; its `KILL_INSET` is 24px per side, matching `PitZone.KILL_INSET = 48px` as the full collision-size reduction. Four layers: a post-ladder GUARD over every mode's intent (real-travel lookahead; steering overridden pre-clamp to the tangent along the face the car entered — unless the line to the committed goal is itself clear, then only speed is shed; throttle staged by time-to-impact; boost vetoed; fire untouched; airborne and NAVIGATE jump commits exempt) · endpoint validation (`escape_direction()` tries the requested bearing, an outward exit, both face tangents, then reverse; a hop is skipped when every landing is unsafe, while CLEAR directions and BREAK exits reroute or finish short) · soft scoring thumbs (never a veto — HUNT stays unfiltered) · `Mode.DETOUR` (a blocked same-floor beeline routes around the blocking rect's end — river-gap ends ARE the bridges, zero authored markers; committed two-phase bridgehead run on the NAVIGATE idiom, arrival by plane-crossing because a heavy's turning circle out-radiuses any arrive circle, phase 1 committed, greedy one-rect-per-leg replans; entry only from PURSUE).
 
 | Hazard static | Value | Purpose |
 |---|---:|---|
+| `Hazards.KILL_INSET` | 24px per side | Mirrors the `PitZone` kill shape's 48px full-size reduction when validating an escape from a forgiveness band |
 | `Hazards.GUARD_MARGIN` | 20px | hard-guard inflation (< the zones' 24px/side kill inset — bridge lanes stay legal) |
 | `Hazards.PLAN_MARGIN` / `Hazards.DETOUR_CLEARANCE` | 72px / 128px | detour/scoring inflation; waypoint reach past a rect end |
 | `HAZARD_REACT_TIME` / `HAZARD_REACT_BASE` | 0.9s / 120px | guard lookahead envelope (speed-scaled + floor) |
 | `HAZARD_CUT_TTI` / `HAZARD_BRAKE_TTI` | 1.2s / 0.5s | time-to-impact: throttle ×0.4 / brake −0.4 |
 | `HAZARD_GUARD_GAIN` | 2.5 | rim-tangent steering authority |
 | `HAZARD_LINE_PENALTY` / `HAZARD_CRATE_PENALTY_DIST` | −0.35 / 1500px | cross-hazard target / crate thumbs |
-| `ESCAPE_HOP_RANGE` | 280px | hop-landing validation reach (2·VZ/g at hop speed) |
+| `ESCAPE_HOP_RANGE` | 280px | `escape_direction()` landing reach; unsafe bearings deflect along the entered face and no safe result cancels the hop |
 | `DETOUR_TIMEOUT` / `DETOUR_ARRIVE` / `DETOUR_LANE_HALF` | 6s per leg / 90px / 140px | leg clock; radius + plane-crossing arrival corridor |
 | `DETOUR_ENTRY_LEAD` / `DETOUR_EXIT_LEAD` | 220px / 260px | bridgehead offsets along the gap normal |
 | `DETOUR_CHECK_TIME` / `DETOUR_REPLAN_MIN` | 0.5s / 1.0s | blocked/cleared cadence; replan throttle |
@@ -367,10 +368,144 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
 | 8 | Slaughter on the Strip | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into Route 666 |
 | 9 | Route 666 Roulette | SPECIALTY ~130k px streamed, 120s | — | runtime horde | medkits | excluded from arena contract; `optional: true` (STAY/DETOUR); caught or wrecked = robbed, then the tour rolls on (no retry) |
-| 10 | Mountainside Mayhem | MED 3456×3456 | 7 | 6 | 1 | snow/ice, west cliff + chasm (pits) + jump pad; `DriveableHill` at (896,−672), 848 summit + 240 grades = exact 1088 road-to-road footprint, pull 180; slope building blocks floors 2+3; paired AI routes all faces |
+| 10 | Mountainside Mayhem | MED 4096×4096 | 5 | 4 | 1 | generated SW→NE mountain pass on a 32×32×128 grid; 8 asphalt legs, snow infill, 3 ice bends; chasm rows 12–13 with 3-cell bridge + unrailed human jump lane; floor-3 knoll and one-exit runaway ledge; 42 breakaway 12-HP rails, ids 100–141; MP ready |
 | 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
 | 12 | Capital City Carnage | LARGE 6144×3840 (biggest interior; FLAT — knoll only) | 8 | 7 | 3 | THUNDERSTORM (night_arena StormTint, flash/dip cycle, slashing rain, headlight beams); Potomac shallow banks + lethal deep channel, 2 straight bridges w/ destructible rails + VISIBLE 20-HP rim guardrails (ids 60-65); Lincoln/Capitol flat painted plazas, Monument `DriveableHill` knoll w/ summit crates; Penn Ave K-to-Capitol diagonal + traffic circle + Maryland diagonal + 5 side streets + 3 pocket parks + tan sidewalk trails on road ribbons; 1024px Reflecting Pool w/ coping + algae (`pool_surround`); WH iron-fence ring (8×30 HP, ids 10-17) around **Marine One** (id 1: breach→POTUS+3-guard sprint→spool 6s→2-stage floor-bit climb→sky; air kill = spiral crash + Ellipse cache; any kill = 2500 mini_boss); 6 food trucks (128×60) + vendors on Constitution; net ids 1,10-17,20-23,30-35,40-65 sparse (43 total); `optional: true` while in test |
 | 13 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+
+---
+
+## Mountainside pass (generated geometry knobs)
+
+Sources: `levels/snowy/pass_grid.gd` owns the signed layout and furniture data;
+`levels/snowy/pass_builder.gd` turns it into the five generated scenes. The
+level instances those scenes and supplies its asphalt, snow, and ice materials
+in `levels/snowy/snowy.tscn`. Generated scenes are checked against the builder
+by `tests/test_mountain_pass.gd`.
+
+### Grid and rails
+
+| Grid constant | Value | What it changes |
+|---|---:|---|
+| `CELL` | 128px | Cell pitch used by every authored span and grid/world conversion |
+| `N` | 32 | Row and column count |
+| `OVERLAP` | 64px | Vertical overlap between neighboring main-drop pit bands |
+| `ORIGIN` | `(-2048,-2048)` | World position of grid cell `(0,0)` |
+| `ARENA_SIZE` | `4096×4096` | Playfield size |
+| `ARENA_RECT` | `Rect2(-2048,-2048,4096,4096)` | Bounds clipping and closed-side bleed |
+| `CHASM_ROWS` | `12–13` | Two grid rows replaced by west pit, bridge, and east pit |
+| `BRIDGE_COLS` | `17–19` | Three driveable bridge columns through the chasm |
+| `SOUTH_CAP_MOUNTAIN_COLS` | `10` | Last mountain column on the south cap row; later columns are drop |
+
+| Rail constant / builder value | Value | What it changes |
+|---|---:|---|
+| `RAIL_THICKNESS` | 12px | Short axis of every breakaway rail rectangle |
+| `RAIL_RIM_INSET` | 8px | Places a rail back from its lethal lip |
+| `RAIL_END_CLEARANCE` | 16px | Clears each generated run end |
+| `RAIL_MAX_LENGTH` | 256px | Splits a long run into damageable sections |
+| Rail count | 42 | Generated segments along the drop, chasm, and bridge sides |
+| `max_hp` | 12 | Durability of every generated segment |
+| `floor_index` / `z_index` | `2` / `0` | Floor-2 collision with ground-level draw order |
+| `arena_net_id` | `100–141` | Contiguous LAN identity range in generated order |
+
+### `MountainWall`
+
+The one Mountainside instance wraps 17 authored layer-54 mountain rectangles.
+The layer combines wall, obstacle, floor-mid, and floor-high bits; the skin
+paints their union and keeps the authored rectangles available to static
+inspection.
+
+| Export or knob | Mountainside value | What it changes |
+|---|---:|---|
+| `bounds` | `Rect2(-2048,-2048,4096,4096)` | Declares closed arena sides for straight outward bleed |
+| `bleed` | 96px | Extends blocks past a closed side before unioning |
+| `overhang` | 12px | Expands rock paint beyond the solid union |
+| `jitter` | 6px | Organic displacement range on open rim subdivisions |
+| `face_width` | 52px | Width of the exposed rock face between rim and snow cap |
+| `chamfer_leg` | 128px | Maximum leg of derived notch-filling corner chamfers |
+| `shadow_offset` | `(30,36)` | Southeast rock-skin shadow displacement |
+| `shadow_alpha` | 0.26 | Rock-skin shadow opacity |
+| `pine_spacing` | 150px | Candidate spacing for painted summit pines |
+| `rim_step` | 56px | Maximum span between organic rim samples |
+| `paint_seed` | 4096 | Deterministic rim, pine, and detail seed |
+| `substrate_material` | `SM_asphalt` | Repaints the mountain top substrate before snow |
+| `terrain_material` | `SM_snow` | Snow-cap material supplied by `snowy.tscn` |
+| `top_snow_opacity` | 0.82 | Alpha forced onto the copied snow-cap material |
+| `chamfer_exclusions` | `Rect2(-1920,640,640,256)` | Keeps the runaway spur and ledge notch square and open |
+| `CREST_WIDTH` | 3px | Lit snow-cap crest stroke |
+| `STRIATION_WIDTH` | 1.25px | Rock-face striation stroke |
+| `PINE_GROVE_THRESHOLD` | 0.40 | Value-noise cutoff for painted pine clusters |
+| `PINE_RADIUS_MIN` / `PINE_RADIUS_MAX` | 26px / 40px | Painted mountain-pine size band |
+| `MAX_PINES` | 220 | Uniform cap on painted mountain pines |
+
+### `DropField`
+
+One root wraps 33 authored `PitZone`s with `paint = false` and 34 authored AI
+curbs. The main southeast void uses one band per grid row, with the final row
+ending at the arena bound; the two chasm pits are the separate two-row bands.
+
+| Export or knob | Mountainside value | What it changes |
+|---|---:|---|
+| `bounds` | `Rect2(-2048,-2048,4096,4096)` | Declares closed arena sides for straight outward bleed |
+| `PitZone.paint` | `false` | Suppresses each pit's standalone paint so `DropField` can draw one continuous skin; leave it true for a pit without a field wrapper |
+| `bleed` | 96px | Extends closed-side pit paint beyond the playfield |
+| `rim_step` | 56px | Maximum span between organic rim samples |
+| `rim_jitter` | 14px inward | Breaks up the lip without painting onto the driveable side |
+| `corner_round` | 40px | Rounds convex cliff-union corners |
+| `paint_seed` | 4096 | Deterministic rim, cracks, pines, and bottom detail seed |
+| `FLOOR_GROVE_THRESHOLD` | 0.45 | Value-noise cutoff for bottom-of-drop pine clusters |
+| `DEPTH_BAND_INSETS` | `[100,220,380,580]` px | Successive inset contours on the distant drop floor |
+| `DEPTH_BAND_DARKENING` | `[0.05,0.10,0.15,0.20]` | Darkening paired with the four depth contours |
+| `GAP_EROSION` | 32px | Insets the union for kill-gap validation |
+| `MAX_RIM_INSET` | 20px | Keeps the organic rim inside authored pit collision on the void side |
+| `PitZone.KILL_INSET` | 48px full-size reduction | Insets the lethal shape 24px from every painted edge; `Hazards.KILL_INSET` mirrors the per-side value |
+| `PitZone.SNOW_CAP_WIDTH` | 12px | Snow lip depth inside the authored pit boundary |
+| `PitZone.CLIFF_FACE_WIDTH` | 52px | Visible cliff-face depth between lip and void floor |
+| `PitZone.STRIATION_GAP` | 9px | Spacing of the rock-face depth strokes |
+| `PitZone.OCCLUSION_OFFSET` | `(0,12)` | Pulls the dark void and occlusion layers south beneath the rim |
+| `PitZone.BOTTOM_SNOW_COLOR` | `Color(0.29,0.34,0.43)` | Base color of the distant drop floor |
+| `PitZone.BOTTOM_PINE_SPACING` | 28px | Candidate spacing for bottom-of-drop pines |
+| `PitZone.BOTTOM_PINE_MIN_RADIUS` / `MAX_RADIUS` | 4px / 6.5px | Painted bottom-pine size band |
+| `MAX_PINES` | 280 | Uniform cap on painted bottom pines |
+
+### `TerrainField`
+
+The `SnowCover` root wraps 35 collision-only snow `TerrainZone` rectangles and
+produces one warning-free surface silhouette. Grip and radar continue to read
+the rectangles, not the paint.
+
+| Export or knob | Mountainside value | What it changes |
+|---|---:|---|
+| `terrain_material` | `SM_snow` | Material used by the generated union polygon |
+| `fill_color` | `Color(0.82,0.85,0.92,0.55)` | Fallback fill when no material is supplied; unused here |
+| `corner_radius` | 48px | Pull-in distance for softened union corners |
+| `edge_step` | 96px | Approximate spacing between organic edge samples |
+| `edge_jitter` | 10px | Perpendicular wobble on open surface edges |
+| `bounds` | `Rect2(-2048,-2048,4096,4096)` | Declares closed sides that remain straight |
+| `bleed` | 96px | Extends a tile beyond a closed arena side before unioning |
+| `paint_seed` | 4096 | Deterministic softened-edge seed |
+
+### `Boulder`
+
+All four Mountainside boulders are permanent Health-free obstacle cover. Their
+authored `Col` rectangles remain the collision truth; the script stamps the
+floor bit and paints the organic rock.
+
+| Export or knob | Mountainside value | What it changes |
+|---|---:|---|
+| `size` | `128×128` | Required authored collision rectangle and paint footprint |
+| `floor_index` | 2 | Adds the floor-mid collision bit |
+| `paint_seed` | `11, 12, 13, 14` | Unique deterministic outlines for Trailhead, SouthGate, Saddle, Overlook |
+| `snow` | `true` | Enables the partial snow cap |
+| `shadow_offset` | `(12,14)` | Southeast contact-shadow displacement |
+| `shadow_alpha` | 0.26 | Contact-shadow opacity |
+| `EDGE_STEP` | 40px | Maximum straight-edge subdivision length |
+| `SMALL_CORNER_CUT_RANGE` | `16–30` px | Seeded cut range for three corners |
+| `LARGE_CORNER_CUT_RANGE` | `40–52` px | Seeded cut range for the fourth corner |
+| `EDGE_JITTER` | 7px | Organic edge and corner displacement |
+| `PAINT_BLEED` | 6px | Maximum paint extension outside the authored rectangle |
+| `CAP_INSET` | 8px | Pulls the snow cap inside the rock rim |
+| `TOP_SNOW_OPACITY` | 0.82 | Snow-cap alpha shared with `MountainWall` |
 
 ---
 
