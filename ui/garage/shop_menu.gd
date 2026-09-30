@@ -19,6 +19,7 @@ const BAR_LABELS := {
 
 var _wallet: Label
 var _tabs: Array = []
+var _tabs_row: HBoxContainer
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _art: TextureRect
@@ -39,7 +40,8 @@ func _ready() -> void:
 	_ignore_controls(self)
 
 func refresh(shell) -> void:
-	_wallet.text = "⚙ %s" % shell._fmt(shell.wallet())
+	_wallet.text = "⚙ %s" % shell.fmt(shell.wallet())
+	_ensure_tabs(shell.categories.size())
 	for index in _tabs.size():
 		var category: String = shell.categories[index]
 		var total := 0
@@ -93,10 +95,10 @@ func _paint_list(shell) -> void:
 				price_label.text = "OWNED"
 				price_label.modulate = GOOD
 			&"short":
-				price_label.text = "⚙ %s" % shell._fmt(shell.price_for(item))
+				price_label.text = "⚙ %s" % shell.fmt(shell.price_for(item))
 				price_label.modulate = RED
 			_:
-				price_label.text = "⚙ %s" % shell._fmt(shell.price_for(item))
+				price_label.text = "⚙ %s" % shell.fmt(shell.price_for(item))
 				price_label.modulate = UiStyle.AMBER if state == &"buyable" else LOCKED
 		line.add_child(price_label)
 		_list.add_child(row)
@@ -133,20 +135,20 @@ func _paint_detail(shell) -> void:
 			_part_state.modulate = LOCKED
 		&"short":
 			_part_state.text = "SHORT ⚙ %s" % \
-				shell._fmt(shell.price_for(item) - shell.wallet())
+				shell.fmt(shell.price_for(item) - shell.wallet())
 			_part_state.modulate = RED
 		&"owned":
 			_part_state.text = "OWNED — bolted on"
 			_part_state.modulate = GOOD
 		_:
-			_part_state.text = "⚙ %s — READY" % shell._fmt(shell.price_for(item))
+			_part_state.text = "⚙ %s — READY" % shell.fmt(shell.price_for(item))
 			_part_state.modulate = UiStyle.AMBER
 
 func _paint_ride(shell) -> void:
 	_ride_name.text = "%s\n%s" % [shell.stats.car_name.to_upper(), shell.next_level_name]
 	_turntable.apply(shell.stats.id, shell.stats.primary_color, shell.stats.accent_color)
-	var current: VehicleStats = shell._composed()
-	var preview: VehicleStats = shell._composed(shell.selected_item())
+	var current: VehicleStats = shell.composed()
+	var preview: VehicleStats = shell.composed(shell.selected_item())
 	for stat in BAR_STATS:
 		var base_value := int(current.get(stat))
 		var preview_value := int(preview.get(stat))
@@ -222,7 +224,7 @@ func _build() -> void:
 	column.add_child(_mo)
 	var hint := Label.new()
 	hint.name = "Hint"
-	hint.text = "←/→ category    ↑/↓ browse    [ENTER] buy    [ESC] keep rollin'"
+	hint.text = "←/→ category    ↑/↓ browse    [ENTER] buy    [ESC] back"
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.modulate = UiStyle.DIM_TEXT
 	column.add_child(hint)
@@ -243,16 +245,22 @@ func _build_header(parent: VBoxContainer) -> void:
 	header.add_child(_wallet)
 
 func _build_tabs(parent: VBoxContainer) -> void:
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 12)
-	parent.add_child(tabs)
-	for index in 5:
+	_tabs_row = HBoxContainer.new()
+	_tabs_row.add_theme_constant_override("separation", 12)
+	parent.add_child(_tabs_row)
+
+func _ensure_tabs(count: int) -> void:
+	while _tabs.size() < count:
 		var label := Label.new()
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.add_theme_font_size_override("font_size", 14)
-		tabs.add_child(label)
+		_tabs_row.add_child(label)
 		_tabs.append(label)
+	while _tabs.size() > count:
+		var label: Label = _tabs.pop_back()
+		_tabs_row.remove_child(label)
+		label.queue_free()
 
 func _build_list(parent: HBoxContainer) -> void:
 	_scroll = ScrollContainer.new()

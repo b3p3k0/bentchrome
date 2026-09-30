@@ -1,6 +1,6 @@
 extends Control
 ## The live PIT STOP opened by the end screen: a keyboard-only shop whose
-## state and purchase rules live here while shop_menu.gd paints the catalog.
+## state and purchase rules live here while its room and catalog views paint.
 ## The real VehicleLoadout.compose seam drives every highlighted preview.
 ##
 ## API: setup(stats, owned, next_level_name) — `owned` is the caller's array
@@ -12,9 +12,10 @@ signal bought(item_id: String)
 
 const Economy := preload("res://game/economy.gd")
 const Catalog := preload("res://ui/garage/garage_catalog.gd")
+const ShopRoom := preload("res://ui/garage/shop_room.gd")
 const ShopMenu := preload("res://ui/garage/shop_menu.gd")
 
-enum Mode { MENU, CONFIRM }
+enum Mode { ROOM, MENU, CONFIRM }
 
 static var GUARD_SEC := 0.25
 static var MO_LINES := {
@@ -29,14 +30,15 @@ static var MO_LINES := {
 var stats: VehicleStats
 var owned: Array = []
 var next_level_name := ""
-var mode: Mode = Mode.MENU
+var mode: Mode = Mode.ROOM
 var category_index := 0
 var item_index := 0
 var mo_line: String = MO_LINES[&"idle"]
 var items: Array = []
 var by_id: Dictionary = {}
-var categories: Array = Catalog.categories()
+var categories: Array = []
 
+var _room: Control
 var _menu: Control
 var _guard_left := 0.0
 var _saved_mouse_mode := Input.MOUSE_MODE_VISIBLE
@@ -48,8 +50,13 @@ func _ready() -> void:
 	items = Catalog.load_catalog()
 	for item in items:
 		by_id[String(item.id)] = item
-	_build_backdrop()
+	categories = _categories_from_hotspots()
+	_room = ShopRoom.new()
+	_room.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_room)
 	_menu = ShopMenu.new()
+	_menu.name = "ShopMenu"
 	_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_menu)
@@ -61,10 +68,12 @@ func setup(ride: VehicleStats, owned_ref: Array, next_name: String) -> void:
 	stats = ride
 	owned = owned_ref
 	next_level_name = next_name
-	mode = Mode.MENU
+	mode = Mode.ROOM
 	category_index = 0
 	item_index = 0
 	mo_line = MO_LINES[&"idle"]
+	if is_instance_valid(_room):
+		_room.focus(0, true)
 	_arm_guard()
 	refresh()
 
@@ -83,12 +92,30 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if mode == Mode.CONFIRM:
 		_handle_confirm(code)
+	elif mode == Mode.ROOM:
+		_handle_room(code)
 	else:
 		_handle_menu(code)
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouse:
 		accept_event()
+
+func _handle_room(code: Key) -> void:
+	match code:
+		KEY_LEFT:
+			_move_category(-1)
+		KEY_RIGHT:
+			_move_category(1)
+		KEY_ENTER, KEY_KP_ENTER:
+			item_index = 0
+			mo_line = MO_LINES[&"idle"]
+			UiSfx.select(self)
+			_set_mode(Mode.MENU)
+			refresh()
+		KEY_ESCAPE:
+			UiSfx.back(self)
+			left.emit()
 
 func _handle_menu(code: Key) -> void:
 	match code:
@@ -104,7 +131,9 @@ func _handle_menu(code: Key) -> void:
 			_select_item()
 		KEY_ESCAPE:
 			UiSfx.back(self)
-			left.emit()
+			mo_line = MO_LINES[&"idle"]
+			_set_mode(Mode.ROOM)
+			refresh()
 
 func _handle_confirm(code: Key) -> void:
 	match code:
@@ -125,6 +154,8 @@ func _move_item(direction: int) -> void:
 	refresh()
 
 func _move_category(direction: int) -> void:
+	if categories.is_empty():
+		return
 	category_index = wrapi(category_index + direction, 0, categories.size())
 	item_index = 0
 	UiSfx.move(self)
@@ -134,9 +165,10 @@ func _select_item() -> void:
 	var item := selected_item()
 	var state := item_state(item)
 	if state == &"buyable":
-		mo_line = MO_LINES[&"confirm"] % [_fmt(price_for(item)), item.display_name]
+		mo_line = MO_LINES[&"confirm"] % [fmt(price_for(item)), item.display_name]
 		UiSfx.select(self)
 		_set_mode(Mode.CONFIRM)
+		refresh()
 	else:
 		mo_line = rejection_line(item, state)
 		UiSfx.back(self)
@@ -175,13 +207,16 @@ func wallet() -> int:
 func is_confirming() -> bool:
 	return mode == Mode.CONFIRM
 
+func is_room() -> bool:
+	return mode == Mode.ROOM
+
 func rejection_line(item: Dictionary, state: StringName) -> String:
 	match state:
 		&"locked":
 			var required: Dictionary = by_id.get(String(item.get("requires", "")), {})
 			return MO_LINES[&"locked"] % String(required.get("display_name", "that part"))
 		&"short":
-			return MO_LINES[&"short"] % _fmt(price_for(item) - Economy.funds)
+			return MO_LINES[&"short"] % fmt(price_for(item) - Economy.funds)
 		&"owned":
 			return MO_LINES[&"owned"]
 	return MO_LINES[&"idle"]
@@ -215,13 +250,13 @@ func _owned_mods() -> Array:
 			mods.append(Catalog.as_mod(by_id[id]))
 	return mods
 
-func _composed(with_item: Dictionary = {}) -> VehicleStats:
+func composed(with_item: Dictionary = {}) -> VehicleStats:
 	var mods := _owned_mods()
 	if not with_item.is_empty() and item_state(with_item) in [&"buyable", &"short", &"locked"]:
 		mods.append(Catalog.as_mod(with_item))
 	return VehicleLoadout.compose(stats, mods)
 
-func _fmt(number: int) -> String:
+func fmt(number: int) -> String:
 	var source := str(number)
 	var output := ""
 	for index in source.length():
@@ -231,7 +266,13 @@ func _fmt(number: int) -> String:
 	return output
 
 func refresh() -> void:
-	if stats != null and is_instance_valid(_menu):
+	if is_instance_valid(_menu):
+		_menu.visible = mode != Mode.ROOM
+	if stats == null:
+		return
+	if is_instance_valid(_room):
+		_room.refresh(self)
+	if is_instance_valid(_menu):
 		_menu.refresh(self)
 
 func _set_mode(next_mode: Mode) -> void:
@@ -243,22 +284,23 @@ func _set_mode(next_mode: Mode) -> void:
 func _arm_guard() -> void:
 	_guard_left = GUARD_SEC
 
-func _build_backdrop() -> void:
-	var background := ColorRect.new()
-	background.color = Color(0.03, 0.03, 0.05)
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
-	var texture: Texture2D = TextureLoader.load_texture("res://assets/img/garage/bg.png")
-	if texture == null:
-		return
-	var art := TextureRect.new()
-	art.texture = texture
-	art.stretch_mode = TextureRect.STRETCH_SCALE
-	art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	art.modulate = Color(1.0, 1.0, 1.0, 0.5)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(art)
+func _categories_from_hotspots() -> Array:
+	var catalog: Array = Catalog.categories()
+	var spatial: Array = []
+	var counts: Dictionary = {}
+	for hotspot in ShopRoom.HOTSPOTS:
+		var category := String(hotspot.get("category", ""))
+		spatial.append(category)
+		counts[category] = int(counts.get(category, 0)) + 1
+	var valid := spatial.size() == catalog.size()
+	for category in catalog:
+		valid = valid and int(counts.get(category, 0)) == 1
+	for category in spatial:
+		valid = valid and category in catalog
+	if not valid:
+		push_error("garage: ShopRoom.HOTSPOTS must contain every catalog category exactly once")
+		return catalog.duplicate()
+	return spatial
 
 func _sync_mouse_mode() -> void:
 	if not is_inside_tree() or DisplayServer.get_name() == "headless":
