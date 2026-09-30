@@ -48,6 +48,10 @@ static var CLASS_TABLE := {
 ## The .tres top_speed stats still shape acceleration and the garage card;
 ## this overrides the ceiling at spawn.
 static var ROLE_PACE := {&"bike": 1.10, &"sedan": 1.04, &"technical": 0.62}
+## Shoot -> boost -> breathe: every Buzzard you WRECK siphons this much nitro
+## into the tank (of 100; 5/s burn, so a kill is ~1.2s of boost). Combat feeds
+## the escape. Absorbed stragglers pay nothing — outrunning isn't killing.
+static var KILL_NITRO := 6.0
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 
 var host = null            # buzzard_run host: clock, course, kills
@@ -146,6 +150,7 @@ func spawn(kind: StringName) -> Node:
 		# non-campaign lanes free; attribution rides the tally — chase combat
 		# is player-vs-horde by construction).
 		preload("res://game/economy.gd").award_kill(&"chase")
+		_siphon_nitro()
 		if is_instance_valid(b):
 			_tumble(b))
 	host.add_child(b)
@@ -159,6 +164,14 @@ func spawn(kind: StringName) -> Node:
 ## front prices itself against.
 func _player_top() -> float:
 	return SpeedBand.road_top(target)
+
+## A wreck's nitro goes into the player's tank, capped at full.
+func _siphon_nitro() -> void:
+	if target == null or not is_instance_valid(target) or not target.has_method(&"get_controller"):
+		return
+	var ctrl = target.get_controller()
+	if ctrl != null and "boost_fuel" in ctrl:
+		ctrl.boost_fuel = minf(ctrl.boost_fuel + KILL_NITRO, 100.0)
 
 ## The kill read: a dark hull spinning off with the wreck's momentum while the
 ## explosion pops. Director-side — arenas keep their untouched death path.

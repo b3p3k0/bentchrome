@@ -100,11 +100,19 @@ func test_spawn_cull_grace_and_kills() -> void:
 	# Park the dust front: the rest of this test is about the director, not
 	# the chase (a surging front rolls over its own outriders and absorbs them).
 	wall.set_physics_process(false)
-	# Kill tally.
+	# Kill tally — and the wreck's nitro goes into the player's tank.
 	var kills_before: int = scene.kills
+	var tank = player.get_controller()
+	tank.boost_fuel = 40.0
 	bike.get_node(^"Health").kill()
 	await t.physics_frame
 	t.check(scene.kills == kills_before + 1, "director: wrecked buzzard rings the bell")
+	t.check(is_equal_approx(tank.boost_fuel, 40.0 + DirectorScript.KILL_NITRO),
+		"director: a kill siphons nitro into the tank (%.1f)" % tank.boost_fuel)
+	tank.boost_fuel = 98.0
+	director._siphon_nitro()
+	t.check(is_equal_approx(tank.boost_fuel, 100.0), "director: the tank never overfills")
+	tank.boost_fuel = 40.0
 	var tumbling := false
 	for child in scene.get_children():
 		var script = child.get_script()
@@ -137,6 +145,7 @@ func test_spawn_cull_grace_and_kills() -> void:
 	await t.physics_frame
 	t.check(get_tree_enemies() == 0, "director: the pack absorbs what you outrun (got %d)" % get_tree_enemies())
 	t.check(scene.kills == kills_at_absorb, "director: an absorbed Buzzard rings no bell")
+	t.check(is_equal_approx(tank.boost_fuel, 40.0), "director: an absorbed Buzzard siphons no nitro")
 	t.check(Economy.funds == funds_before, "director: an absorbed Buzzard pays no bounty")
 	Economy.enabled = econ_was
 	Economy.funds = funds_before
