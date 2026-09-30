@@ -283,6 +283,68 @@ func test_builder_set_pieces_and_flair() -> void:
 	t.check(flair >= 4, "builder: roadside flair streams every chunk (got %d)" % flair)
 	plain.free()
 
+## The bridge is out: a real deep channel the finale's numbers are measured
+## against, shallows either side, the deck drawn OVER the water, and a launch
+## lip that launches the birds but never the player.
+func test_builder_bridge_out() -> void:
+	var def: Dictionary = ChunkDefs.DEFS[&"bridge_out"]
+	var r: Dictionary = def["river"]
+	var chunk: Node2D = Builder.build(_entry_for(&"bridge_out"))
+	var river: Node = null
+	var deck_i := -1
+	var river_i := -1
+	var pad: Node = null
+	var water := 0
+	var walls := 0
+	var kids := chunk.get_children()
+	for i in kids.size():
+		var child = kids[i]
+		var script = child.get_script()
+		var path: String = script.resource_path if script else ""
+		if path.ends_with("deep_water_zone.gd"):
+			river = child
+			river_i = i
+		elif path.ends_with("jump_pad.gd"):
+			pad = child
+		elif child is Area2D and child.collision_layer == 128 and child.terrain_type == &"water":
+			water += 1
+		elif child is StaticBody2D and child.collision_layer == 2:
+			walls += 1
+		if child.name == "Deck":
+			deck_i = i
+	t.check(river != null, "bridge: the channel is a real deep_water_zone")
+	if river != null:
+		t.check(is_equal_approx(river.size.y, float(r["deep_to"]) - float(r["brink"])),
+			"bridge: the channel runs brink to deep_to (%d)" % int(river.size.y))
+		t.check(is_equal_approx(river.position.y, -(float(r["brink"]) + float(r["deep_to"])) * 0.5),
+			"bridge: and sits centred on it")
+		t.check(river.size.x > (float(def["half_w"]) + 90.0 + 130.0) * 2.0, "bridge: the river spans the whole corridor")
+		t.check(river.z_index == -1, "bridge: water paints under the cars")
+	t.check(deck_i > river_i, "bridge: the deck draws over the water")
+	t.check(water >= 3, "bridge: shallows on the far shore and either side of the deck (%d)" % water)
+	t.check(walls == 2, "bridge: the valley sides still run the whole mile")
+	t.check(pad != null and not pad.launch_player and pad.launch_rivals,
+		"bridge: the lip launches the birds, never the player")
+	if pad != null:
+		t.check(is_equal_approx(pad.position.y, -float(r["pad_d"])) and not pad.visible,
+			"bridge: the lip sits on the deck's last stretch and paints nothing of its own")
+		var col := pad.get_node_or_null(^"Col") as CollisionShape2D
+		t.check(col != null and col.shape is RectangleShape2D and float(r["pad_d"]) + col.shape.size.y * 0.5 < float(r["brink"]),
+			"bridge: the lip's rect ends short of the brink")
+	var flair := 0
+	for child in kids:
+		if child is Polygon2D and child.z_index == 0 and child.position == Vector2.ZERO:
+			for p in child.polygon:
+				if -p.y > float(r["bank"]) and -p.y < float(r["shallow_to"]):
+					flair += 1
+					break
+	t.check(flair == 0, "bridge: no bushes grow out of the river")
+	chunk.free()
+	# The pad's new gate, the other way round: an arena pad still launches everyone.
+	var stock: Node = load("res://environment/jump_pad.gd").new()
+	t.check(stock.launch_player and stock.launch_rivals, "bridge: a stock pad launches player and rivals alike")
+	stock.free()
+
 ## Washout: dirt edge to edge except for the surviving paved ribbon — two
 ## dirt zones, one each side of it, and a line a lane-wheel car can hold.
 func test_builder_washout() -> void:

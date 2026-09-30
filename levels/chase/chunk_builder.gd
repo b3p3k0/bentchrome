@@ -16,6 +16,7 @@ const HealScene := preload("res://environment/heal_pickup.tscn")
 const BoostScene := preload("res://environment/boost_pickup.tscn")
 const JumpPadScript := preload("res://environment/jump_pad.gd")
 const StreetDecoScript := preload("res://environment/street_deco.gd")
+const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
 
 const STEP := 175.0        # geometry sample spacing along the chunk
 const SHOULDER_W := 90.0   # drivable verge outside the asphalt (grip penalty)
@@ -29,7 +30,11 @@ const WASHOUT_DIRT := Color(0.36, 0.27, 0.17)
 const SHOULDER_VIS := {
 	&"grass": Color(0.25, 0.5, 0.22, 0.5),
 	&"dirt": Color(0.5, 0.36, 0.2, 0.5),
+	&"water": Color(0.2, 0.42, 0.58, 0.65),
 }
+const DECK := Color(0.2, 0.2, 0.23)
+const DECK_RAIL := Color(0.3, 0.3, 0.34)
+const REBAR := Color(0.45, 0.28, 0.16)
 const SLOPE_FILL := {
 	&"grass": Color(0.2, 0.29, 0.16),
 	&"dirt": Color(0.4, 0.3, 0.18),
@@ -67,6 +72,8 @@ static func build(entry: Dictionary) -> Node2D:
 			_overpass(root, entry)
 		&"truckstop":
 			_truckstop(root, entry)
+		&"bridge_out":
+			_bridge_out(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -441,7 +448,11 @@ static func _roadside_flair(root: Node2D, entry: Dictionary, ds: Array, cx: Arra
 	var chunk_len: float = def["len"]
 	var d := rng.randf_range(80.0, 240.0)
 	var side := 1.0
+	var river: Dictionary = def.get("river", {})
 	while d < chunk_len - 60.0:
+		if not river.is_empty() and d > float(river["bank"]) - 60.0 and d < float(river["shallow_to"]):
+			d = float(river["shallow_to"]) + 40.0   # no bushes growing out of the river
+			continue
 		var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
 		var base_x: float = cx[i] + side * (half[i] + SHOULDER_W + 60.0 + rng.randf_range(0.0, 50.0))
 		var pos := Vector2(base_x, -d)
@@ -692,6 +703,122 @@ static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, te
 	col.shape = shape
 	zone.add_child(col)
 	root.add_child(zone)
+
+## The bridge is out (the finale's mile): a river across the whole corridor
+## with a bridge deck that runs out from the near bank and breaks off at the
+## brink. Child order is draw order at z -1 — the river first (the zone's own
+## paint), the shallows, then the deck over them, then the launch lip. The
+## deep channel is a real deep_water_zone: a grounded car that lands in it
+## sinks; airborne ones sail over. The lip launches Buzzards only — the
+## player pops at the brink under the finale driver, so the arc is exact.
+static func _bridge_out(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	var r: Dictionary = def["river"]
+	var bank: float = r["bank"]
+	var brink: float = r["brink"]
+	var deep_to: float = r["deep_to"]
+	var shallow_to: float = r["shallow_to"]
+	var c := _center_x(entry, bank)
+	var half: float = def["half_w"]
+	var span := half + SHOULDER_W + EMBANK_W + 200.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 919
+	# The deep channel: size BEFORE add_child (its _ready builds the kill rect).
+	var river = DeepWaterScene.instantiate()
+	river.name = "River"
+	river.size = Vector2(span * 2.0, deep_to - brink)
+	river.position = Vector2(c, -(brink + deep_to) * 0.5)
+	river.z_index = -1
+	root.add_child(river)
+	# Shallows: the far shore, and the pools either side of the deck. Real
+	# water terrain (a crawl if you land short but dry), never lethal.
+	var far_a := PackedVector2Array([Vector2(c - span, -deep_to), Vector2(c - span, -shallow_to)])
+	var far_b := PackedVector2Array([Vector2(c + span, -deep_to), Vector2(c + span, -shallow_to)])
+	var shore := _zone_strip("ShallowsFar", &"water", far_a, far_b)
+	shore.soften_visual = false
+	root.add_child(shore)
+	for side in [-1.0, 1.0]:
+		var edge: float = c + side * half
+		var pool_a := PackedVector2Array([Vector2(edge, -(bank - 40.0)), Vector2(edge, -brink)])
+		var pool_b := PackedVector2Array([Vector2(c + side * span, -(bank - 40.0)), Vector2(c + side * span, -brink)])
+		var pool := _zone_strip("PoolL" if side < 0.0 else "PoolR", &"water", pool_a, pool_b)
+		pool.soften_visual = false
+		root.add_child(pool)
+	# The deck: bank to brink, breaking off in jagged teeth, rebar sticking out.
+	var deck_pts := PackedVector2Array()
+	deck_pts.append(Vector2(c - half, -bank))
+	deck_pts.append(Vector2(c + half, -bank))
+	var teeth := 9
+	for k in range(teeth, -1, -1):
+		var x := c - half + half * 2.0 * float(k) / float(teeth)
+		deck_pts.append(Vector2(x, -(brink + (rng.randf_range(-34.0, 6.0) if k % 2 == 1 else rng.randf_range(-6.0, 22.0)))))
+	var deck := Polygon2D.new()
+	deck.name = "Deck"
+	deck.polygon = deck_pts
+	deck.color = DECK
+	deck.z_index = -1
+	root.add_child(deck)
+	for side in [-1.0, 1.0]:
+		var rx: float = c + side * (half - 14.0)
+		var rail := Polygon2D.new()
+		rail.polygon = PackedVector2Array([
+			Vector2(rx - 6.0, -bank), Vector2(rx + 6.0, -bank),
+			Vector2(rx + 6.0, -(brink - 30.0)), Vector2(rx - 6.0, -(brink - 30.0)),
+		])
+		rail.color = DECK_RAIL
+		rail.z_index = -1
+		root.add_child(rail)
+	_add_marks(root, "DeckLine", PackedVector2Array([Vector2(c, -bank), Vector2(c, -(brink - 40.0))]), &"dashed_yellow")
+	for k in 7:
+		var bar := Polygon2D.new()
+		var bx := c - half + rng.randf_range(30.0, half * 2.0 - 30.0)
+		var by := -(brink + rng.randf_range(-20.0, 10.0))
+		var reach := rng.randf_range(18.0, 44.0)
+		var lean := rng.randf_range(-10.0, 10.0)
+		bar.polygon = PackedVector2Array([
+			Vector2(bx - 2.0, by), Vector2(bx + 2.0, by), Vector2(bx + 2.0 + lean, by - reach), Vector2(bx - 2.0 + lean, by - reach),
+		])
+		bar.color = REBAR
+		bar.z_index = -1
+		root.add_child(bar)
+	# Slabs of the old deck, drowned mid-channel.
+	for k in 5:
+		var slab := Polygon2D.new()
+		slab.polygon = _chunk_of_road(Vector2(c + rng.randf_range(-half, half), -rng.randf_range(brink + 60.0, deep_to - 60.0)),
+			rng.randf_range(16.0, 40.0), 0.5, 6, rng)
+		slab.color = DECK.darkened(0.25)
+		slab.z_index = -1
+		root.add_child(slab)
+	# The far stub: the other half of the bridge, breaking off toward us.
+	var stub_pts := PackedVector2Array()
+	for k in teeth + 1:
+		var x := c - half + half * 2.0 * float(k) / float(teeth)
+		stub_pts.append(Vector2(x, -(shallow_to - (rng.randf_range(0.0, 30.0) if k % 2 == 1 else rng.randf_range(20.0, 46.0)))))
+	stub_pts.append(Vector2(c + half, -(shallow_to + 140.0)))
+	stub_pts.append(Vector2(c - half, -(shallow_to + 140.0)))
+	var stub := Polygon2D.new()
+	stub.name = "FarDeck"
+	stub.polygon = stub_pts
+	stub.color = DECK
+	stub.z_index = -1
+	root.add_child(stub)
+	# The launch lip: a jump pad the BIRDS take off from (the player is popped
+	# at the brink by the finale driver — the pad must not launch it early).
+	var pad := Area2D.new()
+	pad.set_script(JumpPadScript)
+	pad.name = "BrinkPad"
+	pad.position = Vector2(c, -float(r["pad_d"]))
+	pad.collision_layer = 0
+	pad.collision_mask = 1
+	pad.launch_player = false
+	pad.visible = false   # the deck's own paint is the ramp read
+	var col := CollisionShape2D.new()
+	col.name = "Col"
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(224, 224)
+	col.shape = shape
+	pad.add_child(col)
+	root.add_child(pad)
 
 static func _strip(forward: PackedVector2Array, back: PackedVector2Array) -> PackedVector2Array:
 	var out := PackedVector2Array()

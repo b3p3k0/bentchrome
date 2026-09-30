@@ -29,6 +29,9 @@ const Floors := preload("res://game/floors.gd")  # terrace gate (dependency-free
 @export var floor_index := -1  # ≥1: only cars on this terrace trigger the launch
 # False keeps rivals on flat ground; only human-driven cars in &"player" launch.
 @export var launch_rivals := true
+# False keeps the PLAYER on the ground (Route 666's bridge lip: the birds
+# launch off it, the player pops at the brink under a scripted driver).
+@export var launch_player := true
 
 var _size := Vector2.ZERO
 
@@ -43,8 +46,10 @@ func _ready() -> void:
 		queue_redraw()
 
 func _on_body_entered(body: Node) -> void:
-	if body is Vehicle and Floors.same_floor(self, body) \
-			and (launch_rivals or body.is_in_group(&"player")):
+	if not (body is Vehicle) or not Floors.same_floor(self, body):
+		return
+	var is_player: bool = body.is_in_group(&"player")
+	if (is_player and launch_player) or (not is_player and launch_rivals):
 		body.launch_from_jump()
 
 func _draw() -> void:
