@@ -51,6 +51,8 @@ Source: `data/vehicles/buzz_*.tres`, HP scaled at spawn by `chase_director.CLASS
 
 Incoming damage is probe-tuned (2026-09-29, a no-dodge autopilot over 42 runs): before — 2 wins / 5 caught / 35 wrecked; after — 18 / 14 / 10. The pack is the leading way to lose; gunfire is the pressure that makes you fight back.
 
+**Balance probe**: `tools/chase_probe.sh [--runs N] [--skill S] [--tank] [--verbose] [car ...]` runs full 120s chases on autopilot, headless, ~3s each (`tools/probes/chase_run.gd` + `chase_autopilot.gd`), and tallies won / caught / wrecked. The autopilot never dodges fire, hunts pickups, or uses rear weapons — its win rate is a FLOOR for a real player. `--tank` measures a whole run's incoming damage; `--verbose` adds a 15s ticker and the damage sources. Re-run it after touching any knob in this section.
+
 Station keeping: the pedal asks for the player's pace + `HOLD_GAIN` 1.2 px/s per px behind the mark, never under `MIN_PACE` 0.35 of own top, through `speed_band.gd` — a Buzzard ahead of its station BRAKES back to it. Yo-yo (bike/sedan): >380px behind → max_speed rides player+80, capped at `YOYO_CAP` ×1.15 of the honest ceiling (a boost's ×1.5 always shakes them); <180px → honest ceiling. Buzzard-vs-buzzard damage runs the standard ×0.35 AI governor.
 
 ### StatCurves: design stat → engine units
