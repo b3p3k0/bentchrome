@@ -34,6 +34,10 @@ func test_zero_assets_never_crash() -> void:
 		"sfx: sticker earned is catalogued at -2 dB with no pitch jitter")
 	t.check(DirectorScript.UI_EVENTS.has(&"sticker_earned"),
 		"sfx: sticker earned rides the pause-immune pool")
+	for event in [&"shop_enter", &"shop_buy", &"shop_deny", &"shop_hum"]:
+		t.check(DirectorScript.CATALOG.has(event) and DirectorScript.UI_EVENTS.has(event),
+			"sfx: Slo Mo's %s is catalogued and pause-immune (the shop runs paused)" % event)
+	t.check(DirectorScript.CATALOG[&"shop_hum"].get("loop", false), "sfx: the shop's room tone is a loop")
 	t.check(true, "sfx: full catalog no-ops cleanly with zero assets")
 	t.root.remove_child(director)
 	director.free()

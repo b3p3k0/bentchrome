@@ -15,7 +15,9 @@ const POOL_UI := 3          # pause-immune one-shots (menus run while the tree
 ## on purpose — a skid loop must freeze when the pause menu opens.
 const UI_EVENTS := {&"ui_move": true, &"ui_select": true, &"ui_back": true,
 	&"win_sting": true, &"lose_sting": true, &"mp_join": true, &"mp_leave": true,
-	&"jacked": true, &"sticker_earned": true}
+	&"jacked": true, &"sticker_earned": true,
+	# Slo Mo's shop lives under the end screen's paused tree — its loop too.
+	&"shop_enter": true, &"shop_buy": true, &"shop_deny": true, &"shop_hum": true}
 
 ## Event -> tuning knobs. volume_db trims per asset; pitch_jitter (±fraction)
 ## keeps rapid repeats (MG, hits) from sounding machine-stamped.
@@ -61,6 +63,12 @@ const CATALOG := {
 	&"ui_back": {"volume_db": -12.0, "pitch_jitter": 0.0},
 	&"mp_join": {"volume_db": -6.0, "pitch_jitter": 0.0},
 	&"mp_leave": {"volume_db": -6.0, "pitch_jitter": 0.0},
+	# Slo Mo's shop (ui/garage): the door bell on the way in, the after-hours
+	# room tone under the whole visit, the register's cha-ching and no-sale.
+	&"shop_enter": {"volume_db": -8.0, "pitch_jitter": 0.0},
+	&"shop_hum": {"volume_db": -20.0, "pitch_jitter": 0.0, "loop": true},
+	&"shop_buy": {"volume_db": -4.0, "pitch_jitter": 0.0},
+	&"shop_deny": {"volume_db": -8.0, "pitch_jitter": 0.04},
 	# Per-car specials: sp_<def basename> (SpecialController.special_sfx_event).
 	# Kandykane shares Hornet's molotov by sharing the def. Missing assets are
 	# the usual silent no-op (PROJECTILE specials fall back to missile_fire).
@@ -224,6 +232,8 @@ func loop_set(event: StringName, on: bool) -> void:
 	var p: AudioStreamPlayer = _loopers.get(event)
 	if p == null:
 		p = AudioStreamPlayer.new()
+		if UI_EVENTS.has(event):  # a UI loop (the shop's hum) plays under the pause
+			p.process_mode = Node.PROCESS_MODE_ALWAYS
 		p.bus = _bus(&"SFX")
 		p.stream = stream
 		p.volume_db = CATALOG[event]["volume_db"]

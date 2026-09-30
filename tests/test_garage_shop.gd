@@ -324,3 +324,17 @@ func test_control_tree_has_no_buttons_or_mouse_targets() -> void:
 	t.check(all_ignore, "garage: every descendant Control ignores mouse input")
 	_done(shop)
 	Economy.funds = saved_funds
+
+func test_room_tone_runs_only_while_the_shop_is_open() -> void:
+	var audio = t.root.get_node_or_null(^"AudioDirector")  # untyped: reads its private loop map
+	if audio == null:
+		t.check(true, "garage: no AudioDirector in this runner — room tone check skipped")
+		return
+	var shop := _shop([])
+	t.check(bool(audio._loop_on.get(&"shop_hum", false)), "garage: the room tone starts when the shop opens")
+	shop.visible = false
+	t.check(not bool(audio._loop_on.get(&"shop_hum", true)), "garage: hiding the shop stops the room tone")
+	shop.visible = true
+	t.check(bool(audio._loop_on.get(&"shop_hum", false)), "garage: showing it again resumes the room tone")
+	_done(shop)
+	t.check(not bool(audio._loop_on.get(&"shop_hum", true)), "garage: leaving the shop stops the room tone")

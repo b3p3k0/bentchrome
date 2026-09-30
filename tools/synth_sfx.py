@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Procedural SFX generator for Bent Chrome — the regeneration source for
-every assets/sfx/*.ogg. Usage: python3 tools/synth_sfx.py (re-renders all).
+every assets/sfx/*.ogg. Usage: python3 tools/synth_sfx.py (re-renders all), or name recipes to
+render just those: python3 tools/synth_sfx.py shop_buy shop_deny.
 
 Pure-numpy DSP -> wav (stdlib wave) -> ogg (ffmpeg, libvorbis), written
 straight into assets/sfx/ where AudioDirector's drop-in loader finds them.
@@ -1451,7 +1452,136 @@ def announcer():
                 peak=0.95, fade_ms=6.0)
 
 
+
+# ---- Slo Mo's shop: the PIT STOP after hours (2026-09-30) --------------------
+def _place(out, x, at):
+    """Mix x into out starting at `at` seconds, clipped to out's length."""
+    i0 = int(SR * at)
+    n = min(x.size, out.size - i0)
+    if n > 0:
+        out[i0:i0 + n] += x[:n]
+
+
+def _register_clack(seed, body_hz=700.0, thunk_hz=160.0):
+    """One brass cash-register key going down: tick, woody body, low thunk."""
+    tt = t(0.08)
+    r = np.random.default_rng(seed)
+    tick = one_pole_hp(r.uniform(-1, 1, tt.size), 2500.0) * np.exp(-tt / 0.003)
+    body = biquad_bp(r.uniform(-1, 1, tt.size), body_hz, 3.0) * np.exp(-tt / 0.018) * 0.9
+    thunk = sine(thunk_hz, 0.08) * np.exp(-tt / 0.02) * 0.5
+    return tick + body + thunk
+
+
+def shop_enter():
+    """~2s: the bell over Slo Mo's door, jangling on its spring as you
+    walk in after hours. Five strikes, each softer than the last, and the
+    spring's sway wobbling the ring. Nobody hurries to greet you."""
+    dur = 2.0
+    out = np.zeros(int(SR * dur))
+    r = np.random.default_rng(801)
+    for k, (at, amp) in enumerate([(0.00, 1.0), (0.11, 0.7), (0.25, 0.5),
+            (0.43, 0.3), (0.66, 0.16)]):
+        f0 = 1780.0 * (1.0 + r.uniform(-0.004, 0.004))
+        bell = metal_modes(dur - at, [f0, f0 * 2.32, f0 * 4.07, f0 * 5.94],
+            [0.38, 0.22, 0.12, 0.07], [1.0, 0.55, 0.3, 0.15], seed=810 + k)
+        clapper = one_pole_hp(r.uniform(-1, 1, int(SR * 0.006)), 3000.0) * 0.6
+        bell[:clapper.size] += clapper
+        _place(out, bell * amp, at)
+    sway = 1.0 + 0.25 * np.sin(2 * np.pi * 4.2 * t(dur))  # the spring swinging
+    write("shop_enter", one_pole_lp(out * sway, 9000.0), peak=0.9, fade_ms=80.0)
+
+
+def shop_buy():
+    """~1.9s cha-ching: Slo Mo rings it up on the old brass register. Two
+    key clacks, the gear train cranking, the bell, the drawer shunking open
+    against its stop, and the change settling in the till."""
+    dur = 1.9
+    out = np.zeros(int(SR * dur))
+    r = np.random.default_rng(820)
+    _place(out, _register_clack(821), 0.00)
+    _place(out, _register_clack(822) * 0.85, 0.10)
+    # the gear train: a fast ratchet, each tooth a hair higher
+    for k in range(7):
+        tt = t(0.02)
+        tooth = biquad_bp(r.uniform(-1, 1, tt.size), 3000.0 + 150.0 * k, 4.0) \
+            * np.exp(-tt / 0.004)
+        _place(out, tooth * (0.35 + 0.05 * k), 0.20 + 0.018 * k)
+    # the CHING: a bright struck bell, two close partials beating
+    f0 = 2093.0
+    ching = metal_modes(1.55, [f0, f0 * 1.003, f0 * 2.76, f0 * 5.40, f0 * 8.93],
+        [0.42, 0.42, 0.25, 0.12, 0.06], [0.7, 0.5, 0.45, 0.25, 0.12], seed=840)
+    ching[:int(SR * 0.004)] += one_pole_hp(r.uniform(-1, 1, int(SR * 0.004)), 4000.0)
+    _place(out, ching * 0.9, 0.33)
+    # the drawer: spring-release thump, a short slide, then its stop
+    tt = t(0.25)
+    thump = sweep(120.0, 60.0, 0.25, "exp") * np.exp(-tt / 0.04) * 0.8
+    slide = biquad_bp(r.uniform(-1, 1, tt.size), 900.0, 1.2) \
+        * np.sin(np.pi * tt / 0.25) ** 0.5 * 0.35
+    _place(out, thump + slide, 0.36)
+    _place(out, _register_clack(851, body_hz=450.0, thunk_hz=110.0) * 0.8, 0.60)
+    # the change: a few coins rattling into their cups
+    for k in range(5):
+        c0 = r.uniform(3800.0, 6000.0)
+        coin = metal_modes(0.25, [c0, c0 * 1.47, c0 * 2.09], [0.07, 0.05, 0.03],
+            [1.0, 0.6, 0.35], seed=860 + k) * (0.22 - 0.03 * k)
+        _place(out, coin, 0.64 + 0.045 * k + r.uniform(-0.01, 0.01))
+    write("shop_buy", one_pole_hp(out, 40.0), peak=0.94, fade_ms=80.0)
+
+
+def shop_deny():
+    """~380ms "no sale": the register key jams against its lock (a dead
+    clunk, no bell) and a short low buzzer grumbles. Mo shakes his head."""
+    dur = 0.38
+    out = np.zeros(int(SR * dur))
+    r = np.random.default_rng(870)
+    tt = t(0.12)
+    clunk = sine(140.0, 0.12) * np.exp(-tt / 0.03) \
+        + biquad_bp(r.uniform(-1, 1, tt.size), 420.0, 2.5) * np.exp(-tt / 0.02) * 0.8
+    _place(out, clunk, 0.0)
+    bt = t(0.2)
+    buzz = one_pole_lp(square(98.0, 0.2, 0.35), 900.0) \
+        * np.minimum(bt / 0.01, 1.0) * (1.0 - np.clip((bt - 0.15) / 0.05, 0, 1)) * 0.45
+    _place(out, buzz, 0.13)
+    write("shop_deny", softclip(out, 1.4), peak=0.88, fade_ms=4.0)
+
+
+def shop_hum():
+    """~6s SEAMLESS loop: Slo Mo's after-hours room tone. A tired
+    fluorescent ballast (120 Hz and its buzzy harmonics, every one a whole
+    number of cycles per loop), a low room rumble, one flicker and one distant
+    drip per pass. Mixed quiet: it sits under the menu, it never leads."""
+    body = 6.0
+    dur = body + 0.1
+    tt = t(dur)
+    r = np.random.default_rng(880)
+    hum = np.zeros(tt.size)
+    for h, a in [(120, 1.0), (240, 0.55), (360, 0.35), (480, 0.18), (600, 0.12), (720, 0.06)]:
+        hum += a * np.sin(2 * np.pi * h * tt + r.uniform(0.0, 6.28))
+    hum = softclip(hum * 0.6, 2.2)                       # the ballast's buzzy edge
+    hum *= 0.85 + 0.15 * np.sin(2 * np.pi * (2.0 / body) * tt)   # the tube breathing
+    # the flicker: the tube stutters out for a moment with a starter tick
+    gate = np.ones(tt.size)
+    for at, length in [(1.40, 0.05), (1.50, 0.03)]:
+        i0, i1 = int(SR * at), int(SR * (at + length))
+        gate[i0:i1] = 0.15
+    gate = one_pole_lp(gate, 120.0)
+    room = one_pole_lp(r.uniform(-1, 1, tt.size), 180.0)
+    room = room / (np.sqrt(np.mean(room ** 2)) + 1e-9) * 0.18
+    x = hum * gate * 0.5 + room
+    tick = one_pole_hp(r.uniform(-1, 1, int(SR * 0.01)), 2500.0) * np.exp(-t(0.01) / 0.002)
+    _place(x, tick * 0.35, 1.40)
+    # the drip, somewhere behind the counter
+    drip = sweep(1500.0, 850.0, 0.05, "exp") * np.exp(-t(0.05) / 0.012)
+    _place(x, drip * 0.3, 4.2)
+    write("shop_hum", loopify(x, body, xf=0.1), peak=0.8, fade_ms=0.0)
+
+
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:   # render only the named recipes: synth_sfx.py shop_buy shop_deny
+        for name in sys.argv[1:]:
+            globals()[name]()
+        sys.exit(0)
     print("[synth] rendering...")
     mg_fire()
     npc_death()
@@ -1505,5 +1635,9 @@ if __name__ == "__main__":
     horde_roar()
     horde_horn()
     jacked()
+    shop_enter()
+    shop_buy()
+    shop_deny()
+    shop_hum()
     announcer()
     print("[synth] done")

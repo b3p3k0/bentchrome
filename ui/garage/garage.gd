@@ -43,6 +43,7 @@ var _menu: Control
 var _guard_left := 0.0
 var _saved_mouse_mode := Input.MOUSE_MODE_VISIBLE
 var _cursor_claimed := false
+var _hum_on := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -61,6 +62,7 @@ func _ready() -> void:
 	_menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_menu)
 	visibility_changed.connect(_sync_mouse_mode)
+	visibility_changed.connect(_sync_ambience)
 	_sync_mouse_mode()
 	refresh()
 
@@ -76,6 +78,8 @@ func setup(ride: VehicleStats, owned_ref: Array, next_name: String) -> void:
 		_room.focus(0, true)
 	_arm_guard()
 	refresh()
+	UiSfx.cue(self, &"shop_enter")  # the bell over Slo Mo's door
+	_sync_ambience()
 
 func _process(delta: float) -> void:
 	_guard_left = maxf(_guard_left - delta, 0.0)
@@ -171,7 +175,7 @@ func _select_item() -> void:
 		refresh()
 	else:
 		mo_line = rejection_line(item, state)
-		UiSfx.back(self)
+		UiSfx.cue(self, &"shop_deny")
 	refresh()
 
 func category_items() -> Array:
@@ -224,7 +228,7 @@ func rejection_line(item: Dictionary, state: StringName) -> String:
 func _try_buy(item: Dictionary) -> void:
 	if item_state(item) != &"buyable":
 		mo_line = rejection_line(item, item_state(item))
-		UiSfx.back(self)
+		UiSfx.cue(self, &"shop_deny")
 		_set_mode(Mode.MENU)
 		refresh()
 		return
@@ -238,7 +242,7 @@ func _try_buy(item: Dictionary) -> void:
 	var item_id := String(item.id)
 	owned.append(item_id)
 	mo_line = MO_LINES[&"bought"]
-	UiSfx.select(self)
+	UiSfx.cue(self, &"shop_buy")
 	_set_mode(Mode.MENU)
 	refresh()
 	bought.emit(item_id)
@@ -318,5 +322,15 @@ func _restore_mouse_mode() -> void:
 	Input.mouse_mode = _saved_mouse_mode
 	_cursor_claimed = false
 
+## The after-hours room tone runs while an open shop is on screen.
+func _sync_ambience() -> void:
+	var on := visible and is_inside_tree() and stats != null
+	if on != _hum_on:
+		_hum_on = on
+		UiSfx.loop(self, &"shop_hum", on)
+
 func _exit_tree() -> void:
 	_restore_mouse_mode()
+	if _hum_on:
+		_hum_on = false
+		UiSfx.loop(self, &"shop_hum", false)

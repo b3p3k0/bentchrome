@@ -793,7 +793,7 @@ Assets are procedural: `tools/synth_sfx.py` regenerates every `assets/sfx/*.ogg`
 | SPLASH_MIN_SPEED | 200 px/s | vehicle.gd | min speed entering water terrain to cue a splash |
 | BRAKE_MIN_SPEED | 233 px/s (~35 mph) | drive_fx.gd | service-brake grind loop floor; phases with brake lights, never handbrake |
 | POOL_GLOBAL / POOL_POSITIONAL / POOL_UI | 8 / 6 / 3 | audio_director.gd | one-shot player pools; UI pool is PROCESS_MODE_ALWAYS (pause-immune — stingers + menu clicks) |
-| UI_EVENTS | ui_*/stings/mp_* | audio_director.gd | events routed through the pause-immune pool |
+| UI_EVENTS | ui_*/stings/mp_*/shop_* | audio_director.gd | events routed through the pause-immune pool; a UI_EVENTS loop (shop_hum) gets a pause-immune looper |
 | volume_db / pitch_jitter | per event | audio_director.gd CATALOG | per-asset trim + repeat-variation; tune here, not in the asset |
 | overheat cue | once per lock | weapon_mount.gd | player-only, fires when heat crosses heat_max |
 | pickup cue | player-only | ammo_pickup.gd / heal_pickup.gd | AI crate grabs stay silent |
@@ -884,6 +884,7 @@ Sources: `ui/garage/garage.gd` (state, input, purchase rules), `ui/garage/shop_r
 
 | Knob | Value | Where | What it does |
 |---|---|---|---|
+| sounds | shop_enter −8 / shop_hum −20 (loop) / shop_buy −4 / shop_deny −8 dB | audio_director.gd CATALOG | door bell on opening, room tone while visible, cha-ching on a deal, no-sale on a refused part; recipes in tools/synth_sfx.py |
 | `GUARD_SEC` | 0.25 s | garage.gd | after every mode change (and on opening), Enter/Escape are ignored this long |
 | `MO_LINES` | idle / confirm / locked / short / owned / bought | garage.gd | Slo Mo's lines at the bottom of the menu |
 | `HOTSPOTS` | 5 stations, left to right | shop_room.gd | category, label, flashlight rect (1280×720 px) and Mo's quip per station; order = ←/→ order |
