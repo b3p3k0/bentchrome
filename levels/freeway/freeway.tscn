@@ -591,6 +591,22 @@ to_floor = 3
 approach_dir = Vector2(0, 1)
 kind = &"jump"
 
+[node name="ConDeckJumpE" type="Node2D" parent="."]
+position = Vector2(640, -256)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 3
+approach_dir = Vector2(0, -1)
+kind = &"jump"
+
+[node name="ConLowlandJump" type="Node2D" parent="."]
+position = Vector2(1280, 1536)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"jump"
+
 [node name="ConPlateDownN" type="Node2D" parent="."]
 position = Vector2(1048, -2000)
 script = ExtResource("27_conn")
@@ -622,7 +638,7 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="JumpE" type="Area2D" parent="."]
-position = Vector2(640, 960)
+position = Vector2(640, -256)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
@@ -633,6 +649,20 @@ color = Color(0.9, 0.55, 0.15, 0.85)
 polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 
 [node name="Col" type="CollisionShape2D" parent="JumpE"]
+shape = SubResource("RectangleShape2D_ramp")
+
+[node name="JumpLowland" type="Area2D" parent="."]
+position = Vector2(1280, 1536)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("4_ramp")
+floor_index = 1
+
+[node name="Vis" type="Polygon2D" parent="JumpLowland"]
+color = Color(0.9, 0.55, 0.15, 0.85)
+polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
+
+[node name="Col" type="CollisionShape2D" parent="JumpLowland"]
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="PillarW" type="StaticBody2D" parent="."]

@@ -9,6 +9,11 @@ const Floors := preload("res://game/floors.gd")
 const FLOOR_BITS := 8 | 16 | 32
 const SAMPLE_STEP := 8
 const CONNECTOR_RUNUP := 220.0
+const LIVE_ENTRY_SPEED := 600.0
+const LIVE_SIM_FRAMES := 90
+const JUMP_RUNUP := 150.0
+const JUMP_ENTRY_SPEED := 450.0
+const JUMP_SIM_FRAMES := 120
 const EDGE_INSET := 40.0
 const SIDES := [&"north", &"east", &"south", &"west"]
 const F4_FLOOR_ZONES := [&"FZShelfN", &"FZShelfS"]
@@ -22,6 +27,7 @@ const F6_RAMPS := [&"RampA", &"RampW"]
 const F6_WALLS := [&"RampAN", &"RampAS", &"DeckEastStop"]
 
 var t
+var _shared_freeway: Node
 
 class FullThrottleDriver:
 	extends Driver
@@ -32,8 +38,32 @@ class FullThrottleDriver:
 			"handbrake": false,
 		}
 
+class ThrottleAfterPadEntryDriver:
+	extends Driver
+	var pad_entry: Dictionary
+
+	func _init(entry: Dictionary) -> void:
+		pad_entry = entry
+
+	func get_intent(_vehicle, _delta: float) -> Dictionary:
+		return {
+			"throttle": 1.0 if pad_entry.entered else 0.0,
+			"steer": 0.0, "fire_mg": false, "fire_selected": false,
+			"weapon_prev": false, "weapon_next": false, "handbrake": false,
+		}
+
 func _init(runner) -> void:
 	t = runner
+
+func _freeway_structure() -> Node:
+	if not is_instance_valid(_shared_freeway):
+		_shared_freeway = FreewayScene.instantiate()
+	return _shared_freeway
+
+func _free_freeway_structure() -> void:
+	if is_instance_valid(_shared_freeway):
+		_shared_freeway.free()
+	_shared_freeway = null
 
 func _walk(node: Node, out: Array) -> void:
 	out.append(node)
@@ -45,6 +75,30 @@ func _collision_rect(owner: Node2D, collision: CollisionShape2D) -> Rect2:
 	if rectangle == null:
 		return Rect2()
 	return Rect2(owner.position + collision.position - rectangle.size * 0.5, rectangle.size)
+
+func _shape_rect(collision: CollisionShape2D) -> Rect2:
+	if collision.shape == null or collision.disabled:
+		return Rect2()
+	var local := collision.shape.get_rect()
+	var corners := [
+		local.position,
+		Vector2(local.end.x, local.position.y),
+		local.end,
+		Vector2(local.position.x, local.end.y),
+	]
+	var first: Vector2 = collision.global_transform * corners[0]
+	var result := Rect2(first, Vector2.ZERO)
+	for corner in corners.slice(1):
+		result = result.expand(collision.global_transform * corner)
+	return result
+
+func _collect_shape_rects(node: Node, out: Array[Rect2]) -> void:
+	if node is CollisionShape2D:
+		var rect := _shape_rect(node)
+		if rect.has_area():
+			out.append(rect)
+	for child in node.get_children():
+		_collect_shape_rects(child, out)
 
 func _remove_other_cars(freeway: Node) -> void:
 	for child in freeway.get_children():
@@ -125,6 +179,60 @@ func _meets_wall_or_grade(point: Vector2) -> bool:
 			return true
 	return false
 
+func _point_on_wall(point: Vector2) -> bool:
+	for wall: Dictionary in Plan.WALLS.values():
+		if _has_point_inclusive(wall["rect"], point):
+			return true
+	return false
+
+func _simulate_pad_landing(pad_name: StringName, direction: Vector2,
+		start_floor: int, continue_north_drop := false) -> Dictionary:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	var pad := freeway.get_node(NodePath(pad_name)) as JumpPad
+	player.position = pad.position - direction * JUMP_RUNUP
+	player.start_floor = start_floor
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	player.heading = direction.angle()
+	player.velocity = direction * JUMP_ENTRY_SPEED
+	player.set_driver(FullThrottleDriver.new())
+	var result := {
+		"launched": false,
+		"landed": false,
+		"launch_speed": 0.0,
+		"landing": Vector2.INF,
+		"floor": -1,
+		"on_wall": false,
+		"dropped": false,
+		"drop_floor": -1,
+		"drop_position": Vector2.INF,
+	}
+	for i in JUMP_SIM_FRAMES:
+		await t.physics_frame
+		if not result.launched and player.height > 0.0:
+			result.launched = true
+			result.launch_speed = player.velocity.length()
+		elif result.launched and not result.landed and player.height <= 0.0 \
+				and is_zero_approx(player.vz):
+			result.landed = true
+			result.landing = player.position
+			result.floor = Floors.floor_of(player)
+			result.on_wall = _point_on_wall(player.position)
+			if not continue_north_drop:
+				break
+		elif result.landed and continue_north_drop and Floors.floor_of(player) == 2 \
+				and player.position.y < Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck").position.y:
+			result.dropped = true
+			result.drop_floor = Floors.floor_of(player)
+			result.drop_position = player.position
+			break
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+	return result
+
 func test_freeway_plan_grade_ends_and_spacing() -> void:
 	var ramp_names := Plan.RAMPS.keys()
 	for ramp_name in ramp_names:
@@ -164,9 +272,10 @@ func test_freeway_plan_plate_east_edge_is_closed() -> void:
 			"freeway plan: plate east edge is covered at y=%d" % y)
 
 func test_freeway_floor_stamps_and_counts() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var nodes: Array = []
 	_walk(freeway, nodes)
+	var pad_floors := {&"JumpW": 2, &"JumpE": 2, &"JumpLowland": 1}
 	var counts := {
 		"deck_rails": 0, "highway_rails": 0, "debris": 0, "clutter": 0, "wrecks": 0,
 		"pillars": 0, "stations": 0, "pickups": 0, "pads": 0,
@@ -183,7 +292,12 @@ func test_freeway_floor_stamps_and_counts() -> void:
 					[node.name, node.collision_layer, floor_value])
 		if node is JumpPad:
 			counts.pads += 1
-			t.check(node.floor_index == 2, "freeway: %s jump pad is on floor 2" % node.name)
+			t.check(pad_floors.has(node.name),
+				"freeway: %s is one of the three signed-off jump pads" % node.name)
+			if pad_floors.has(node.name):
+				t.check(node.floor_index == int(pad_floors[node.name]),
+					"freeway: %s jump pad is on floor %d" %
+						[node.name, pad_floors[node.name]])
 		if node is Vehicle:
 			counts.cars += 1
 			if String(node.name).begins_with("Enemy"):
@@ -232,15 +346,53 @@ func test_freeway_floor_stamps_and_counts() -> void:
 	t.check(counts.wrecks == 2, "freeway: 2 wrecks (got %d)" % counts.wrecks)
 	t.check(counts.stations == 3, "freeway: 3 stations (got %d)" % counts.stations)
 	t.check(counts.pickups == 8, "freeway: 8 ammo pickups (got %d)" % counts.pickups)
-	t.check(counts.pads == 2, "freeway: 2 jump pads (got %d)" % counts.pads)
+	t.check(counts.pads == 3, "freeway: 3 jump pads (got %d)" % counts.pads)
 	t.check(counts.cars == 8, "freeway: 8 cars (got %d)" % counts.cars)
 	t.check(counts.rivals == 7, "freeway: 7 rivals (got %d)" % counts.rivals)
 	t.check(floor_zones == Plan.FLOOR_ZONES.size(),
 		"freeway: every planned floor zone is live")
-	freeway.free()
+
+func test_freeway_jump_pad_construction_and_footprints_are_clear() -> void:
+	var freeway := _freeway_structure()
+	var expected := {
+		&"JumpW": {"position": Vector2(-640, -1280), "floor": 2},
+		&"JumpE": {"position": Vector2(640, -256), "floor": 2},
+		&"JumpLowland": {"position": Vector2(1280, 1536), "floor": 1},
+	}
+	var pads: Array[JumpPad] = []
+	var blockers: Array[Node] = []
+	for child in freeway.get_children():
+		var source := String(child.scene_file_path).get_file()
+		if child is JumpPad:
+			pads.append(child)
+		elif (child is StaticBody2D and child.collision_layer != 0) \
+				or source in ["health_station.tscn", "ammo_pickup.tscn"]:
+			blockers.append(child)
+	t.check(pads.size() == expected.size(),
+		"freeway: exactly three jump pads have clear footprints")
+	for pad in pads:
+		var cfg: Dictionary = expected.get(pad.name, {})
+		t.check(not cfg.is_empty(), "freeway: %s is a signed-off jump pad" % pad.name)
+		if cfg.is_empty():
+			continue
+		var collision := pad.get_node_or_null(^"Col") as CollisionShape2D
+		var rectangle := collision.shape as RectangleShape2D if collision else null
+		t.check(pad.position == cfg["position"] and pad.floor_index == int(cfg["floor"]),
+			"freeway: %s has its signed-off centre and floor" % pad.name)
+		t.check(rectangle != null and rectangle.size == Vector2(224, 224),
+			"freeway: %s uses the game-wide 224px square collision" % pad.name)
+		var pad_rects: Array[Rect2] = []
+		_collect_shape_rects(pad, pad_rects)
+		for blocker in blockers:
+			var blocker_rects: Array[Rect2] = []
+			_collect_shape_rects(blocker, blocker_rects)
+			for pad_rect in pad_rects:
+				for blocker_rect in blocker_rects:
+					t.check(not pad_rect.intersects(blocker_rect),
+						"freeway: %s does not overlap %s" % [pad.name, blocker.name])
 
 func test_freeway_scene_plate_matches_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var plate := freeway.get_node_or_null(^"FZPlate") as FloorZone
 	t.check(plate != null, "freeway: FZPlate exists")
 	if plate:
@@ -249,10 +401,9 @@ func test_freeway_scene_plate_matches_plan() -> void:
 			"freeway: FZPlate floor matches the plan")
 		t.check(actual == Plan.rect_of(Plan.FLOOR_ZONES, &"FZPlate"),
 			"freeway: FZPlate rectangle matches the plan")
-	freeway.free()
 
 func test_freeway_arena_shell_matches_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
 	var grid := freeway.get_node(^"GridFloor") as GridFloor
 	var arena := Plan.ARENA_RECT
@@ -267,10 +418,9 @@ func test_freeway_arena_shell_matches_plan() -> void:
 		t.check(corner in asphalt.polygon, "freeway: asphalt reaches arena corner %s" % corner)
 	t.check(grid.position == arena.get_center(), "freeway: grid is centred on the arena")
 	t.check(grid.extent == arena.size * 0.5, "freeway: grid lines reach every arena edge")
-	freeway.free()
 
 func test_freeway_boundary_encloses_arena_only() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var boundary := freeway.get_node(^"Boundary") as StaticBody2D
 	var arena := Plan.ARENA_RECT
 	var expected := {
@@ -297,10 +447,9 @@ func test_freeway_boundary_encloses_arena_only() -> void:
 		if rectangle and expected.has(collision.name):
 			t.check(_collision_rect(boundary, collision) == expected[collision.name],
 				"freeway: %s encloses the arena with a 20px stand-off" % collision.name)
-	freeway.free()
 
 func test_freeway_lowland_matches_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var lowland_plan: Dictionary = Plan.FLOOR_ZONES[&"FZLowland"]
 	var expected: Rect2 = lowland_plan["rect"]
 	var floor_zone := freeway.get_node_or_null(^"FZLowland") as FloorZone
@@ -327,10 +476,9 @@ func test_freeway_lowland_matches_plan() -> void:
 			var shoulder_vis := freeway.get_node(^"ShoulderN/Vis") as Polygon2D
 			t.check(vis.material == shoulder_vis.material,
 				"freeway: LowlandDirt uses the shared dirt paint")
-	freeway.free()
 
 func test_freeway_f4_floor_zones_and_ramps_match_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	for zone_name: StringName in F4_FLOOR_ZONES:
 		var zone := freeway.get_node_or_null(NodePath(zone_name)) as FloorZone
 		var expected: Dictionary = Plan.FLOOR_ZONES[zone_name]
@@ -368,10 +516,9 @@ func test_freeway_f4_floor_zones_and_ramps_match_plan() -> void:
 			"freeway: %s high end lands on floor %d" % [ramp_name, ramp.high_floor])
 		t.check(_floor_at_structure(freeway, low_end) == ramp.low_floor,
 			"freeway: %s low end lands on floor %d" % [ramp_name, ramp.low_floor])
-	freeway.free()
 
 func test_freeway_f4_walls_match_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var retaining_grey := Color(0.42, 0.42, 0.5, 1)
 	for wall_name: StringName in F4_WALLS:
 		var wall := freeway.get_node_or_null(NodePath(wall_name)) as StaticBody2D
@@ -391,10 +538,9 @@ func test_freeway_f4_walls_match_plan() -> void:
 
 	t.check(freeway.get_node_or_null(^"TempEastWall") == null,
 		"freeway: TempEastWall is gone")
-	freeway.free()
 
 func test_freeway_f4_shelf_roads_and_drop_shadows() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
 	for zone_name: StringName in F4_FLOOR_ZONES:
 		var suffix := String(zone_name).trim_prefix("FZShelf")
@@ -426,10 +572,9 @@ func test_freeway_f4_shelf_roads_and_drop_shadows() -> void:
 			"freeway: %s spans its retaining wall" % shadow_name)
 		t.check(Vector2.DOWN.rotated(shadow.rotation).is_equal_approx(Vector2.RIGHT),
 			"freeway: %s falls toward the lowland" % shadow_name)
-	freeway.free()
 
 func test_freeway_f4_connectors_have_valid_approaches() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var ramp_connectors := {
 		&"ConRampNUp": {"ramp": &"RampN", "from": 1, "to": 2, "up": true},
 		&"ConRampNDown": {"ramp": &"RampN", "from": 2, "to": 1, "up": false},
@@ -472,10 +617,9 @@ func test_freeway_f4_connectors_have_valid_approaches() -> void:
 		t.check(_floor_at_structure(freeway, entry) == connector.from_floor,
 			"freeway: %s approach run sits on floor %d" %
 				[connector_name, connector.from_floor])
-	freeway.free()
 
 func test_freeway_f5_landing_grade_and_walls_match_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var landing_cfg: Dictionary = Plan.FLOOR_ZONES[&"FZLanding"]
 	var landing := freeway.get_node_or_null(^"FZLanding") as FloorZone
 	t.check(landing != null, "freeway: FZLanding exists")
@@ -519,10 +663,9 @@ func test_freeway_f5_landing_grade_and_walls_match_plan() -> void:
 			"freeway: %s collision rectangle matches the plan" % wall_name)
 		t.check(vis != null and vis.color == retaining_grey,
 			"freeway: %s uses the retaining grey" % wall_name)
-	freeway.free()
 
 func test_freeway_f5_ramp_retrofit_structure() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var ramp := freeway.get_node_or_null(^"RampB") as Ramp
 	t.check(ramp != null, "freeway retrofit: RampB exists")
 	if ramp:
@@ -556,10 +699,9 @@ func test_freeway_f5_ramp_retrofit_structure() -> void:
 		t.check(_floor_at_structure(freeway, entry) == connector.from_floor,
 			"freeway retrofit: %s approach run sits on floor %d" %
 				[connector_name, connector.from_floor])
-	freeway.free()
 
 func test_freeway_f5_roads_shadows_and_removed_plugs() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
 	var road_rects := {
 		&"LandingRoad": Plan.rect_of(Plan.FLOOR_ZONES, &"FZLanding"),
@@ -620,10 +762,9 @@ func test_freeway_f5_roads_shadows_and_removed_plugs() -> void:
 	for plug_name: StringName in [&"TempLandingW", &"TempDeckGap"]:
 		t.check(freeway.get_node_or_null(NodePath(plug_name)) == null,
 			"freeway: %s is removed for the live overpass" % plug_name)
-	freeway.free()
 
 func test_freeway_f6_deck_grades_and_walls_match_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var deck_cfg: Dictionary = Plan.FLOOR_ZONES[&"FZDeck"]
 	var deck := freeway.get_node_or_null(^"FZDeck") as FloorZone
 	t.check(deck != null, "freeway: FZDeck exists")
@@ -672,10 +813,9 @@ func test_freeway_f6_deck_grades_and_walls_match_plan() -> void:
 	for plug_name: StringName in [&"TempLandingW", &"TempDeckGap"]:
 		t.check(freeway.get_node_or_null(NodePath(plug_name)) == null,
 			"freeway: %s stays gone" % plug_name)
-	freeway.free()
 
 func test_freeway_f6_deck_rails_match_plan() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var nodes: Array = []
 	_walk(freeway, nodes)
 	var rails: Array = []
@@ -752,10 +892,9 @@ func test_freeway_f6_deck_rails_match_plan() -> void:
 	t.check(north.back().end.x == east_clear.position.x
 			and south.back().end.x == east_clear.position.x,
 		"freeway: both rail runs end at the east clearance")
-	freeway.free()
 
 func test_freeway_f6_retrofit_structure_and_connectors() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	for ramp_name: StringName in F6_RAMPS:
 		var ramp := freeway.get_node_or_null(NodePath(ramp_name)) as Ramp
 		t.check(ramp != null, "freeway retrofit: %s exists" % ramp_name)
@@ -784,6 +923,10 @@ func test_freeway_f6_retrofit_structure_and_connectors() -> void:
 			"approach": Vector2.DOWN, "kind": &"edge"},
 		&"ConDeckJump": {"position": Vector2(-640, -1280), "from": 2, "to": 3,
 			"approach": Vector2.DOWN, "kind": &"jump"},
+		&"ConDeckJumpE": {"position": Vector2(640, -256), "from": 2, "to": 3,
+			"approach": Vector2.UP, "kind": &"jump"},
+		&"ConLowlandJump": {"position": Vector2(1280, 1536), "from": 1, "to": 2,
+			"approach": Vector2.LEFT, "kind": &"jump"},
 	}
 	for connector_name: StringName in connectors:
 		var connector := freeway.get_node_or_null(NodePath(connector_name)) as FloorConnector
@@ -802,10 +945,15 @@ func test_freeway_f6_retrofit_structure_and_connectors() -> void:
 		t.check(_floor_at_structure(freeway, entry) == connector.from_floor,
 			"freeway retrofit: %s approach run sits on floor %d" %
 				[connector_name, connector.from_floor])
-	freeway.free()
+	var jump_connectors := 0
+	for child in freeway.get_children():
+		if child is FloorConnector and child.kind == &"jump":
+			jump_connectors += 1
+	t.check(jump_connectors == 3,
+		"freeway retrofit: exactly three jump connectors are live")
 
 func test_freeway_f6_pillars_paint_reward_and_draw_order() -> void:
-	var freeway := FreewayScene.instantiate()
+	var freeway := _freeway_structure()
 	var deck_rect := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
 	var shoulder_w := _collision_rect(freeway.get_node(^"ShoulderW"),
 		freeway.get_node(^"ShoulderW/Col"))
@@ -872,7 +1020,6 @@ func test_freeway_f6_pillars_paint_reward_and_draw_order() -> void:
 	t.check(jump != null and jump.position == Vector2(-640, -1280)
 			and jump.floor_index == 2,
 		"freeway: JumpW launches south from its floor-2 run-up")
-	freeway.free()
 
 func test_freeway_campaign_size_matches_plan() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
@@ -895,25 +1042,100 @@ func test_freeway_campaign_size_matches_plan() -> void:
 		t.check(profile.cars == 8, "freeway: multiplayer harvests all 8 cars")
 	t.check(mp_found, "freeway: multiplayer profile exists")
 
+func test_freeway_jump_w_lands_southbound_on_deck() -> void:
+	var result := await _simulate_pad_landing(&"JumpW", Vector2.DOWN, 2)
+	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
+	t.check(result.launched and result.landed and int(result.floor) == 3
+			and _has_point_inclusive(deck, result.landing),
+		"freeway: JumpW southbound lands on floor-3 FZDeck "
+			+ "(launch %.1f, landing %s, floor %d)" %
+				[result.launch_speed, result.landing, result.floor])
+
+func test_freeway_jump_e_lands_northbound_on_deck() -> void:
+	var result := await _simulate_pad_landing(&"JumpE", Vector2.UP, 2, true)
+	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
+	t.check(result.launched and result.landed and int(result.floor) == 3
+			and _has_point_inclusive(deck, result.landing),
+		"freeway: JumpE northbound lands on floor-3 FZDeck "
+			+ "(launch %.1f, landing %s, floor %d)" %
+				[result.launch_speed, result.landing, result.floor])
+	var final_floor := int(result.drop_floor)
+	var final_position: Vector2 = result.drop_position
+	t.check(result.dropped and final_floor == 2 and final_position.y < deck.position.y,
+		"freeway: floor-3 car breaks through the north edge and lands on floor 2 "
+			+ "(floor %d at %s)" % [final_floor, final_position])
+
+func test_freeway_lowland_jump_lands_westbound_clear_of_walls() -> void:
+	var result := await _simulate_pad_landing(&"JumpLowland", Vector2.LEFT, 1)
+	var plate := Plan.rect_of(Plan.FLOOR_ZONES, &"FZPlate")
+	t.check(result.launched and result.landed and int(result.floor) == 2
+			and _has_point_inclusive(plate, result.landing)
+			and result.landing.x < 1064.0 and not result.on_wall,
+		"freeway: JumpLowland westbound lands on floor-2 FZPlate clear of walls "
+			+ "(launch %.1f, landing %s, floor %d, on wall %s)" %
+				[result.launch_speed, result.landing, result.floor, result.on_wall])
+
+func test_freeway_slow_lowland_car_is_not_launched_and_hits_wall() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	var pad := freeway.get_node(^"JumpLowland") as JumpPad
+	var wall := Plan.rect_of(Plan.WALLS, &"RetainE_4")
+	var slow_speed := player.min_launch_speed - 10.0
+	var pad_entry := {"entered": false, "speed": 0.0}
+	player.position = pad.position + Vector2(135, 0)
+	player.start_floor = 1
+	pad.body_entered.connect(func(body: Node) -> void:
+		if body == player:
+			pad_entry.entered = true
+			pad_entry.speed = player.velocity.length()
+	)
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	player.heading = Vector2.LEFT.angle()
+	player.velocity = Vector2.LEFT * slow_speed
+	player.set_driver(ThrottleAfterPadEntryDriver.new(pad_entry))
+	var launched := false
+	var reached_wall := false
+	var wall_speed_applied := false
+	var min_x := player.position.x
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		launched = launched or player.height > 0.0
+		if pad_entry.entered and not wall_speed_applied:
+			player.velocity = Vector2.LEFT * LIVE_ENTRY_SPEED
+			wall_speed_applied = true
+		min_x = minf(min_x, player.position.x)
+		reached_wall = reached_wall or player.position.x <= wall.end.x + 80.0
+		if pad_entry.entered and not launched and reached_wall and min_x >= wall.end.x:
+			break
+	t.check(pad_entry.entered and pad_entry.speed < player.min_launch_speed
+			and not launched and reached_wall and min_x >= wall.end.x,
+		("freeway: %.1f px/s lowland car crosses grounded and RetainE_4 stops it "
+			+ "(min x %.1f, wall end %.1f)") % [pad_entry.speed, min_x, wall.end.x])
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+
 func test_freeway_north_grade_climbs_live_car_to_shelf() -> void:
 	var freeway := FreewayScene.instantiate()
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var ramp := Plan.rect_of(Plan.RAMPS, &"RampN")
 	var shelf := Plan.rect_of(Plan.FLOOR_ZONES, &"FZShelfN")
-	var runup := Plan.rect_of(Plan.WALLS, &"ShelfN_N").size.x
-	player.position = Vector2(ramp.get_center().x, ramp.end.y + runup)
+	player.position = Vector2(ramp.get_center().x, ramp.end.y + 96.0)
 	player.start_floor = 1
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.UP.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.UP * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
-	for i in 180:
-		await t.physics_frame
 	var final_floor := Floors.floor_of(player)
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		final_floor = Floors.floor_of(player)
+		if final_floor == 2 and _has_point_inclusive(shelf, player.position):
+			break
 	t.check(final_floor == 2 and _has_point_inclusive(shelf, player.position),
 		"freeway: northbound lowland car climbs RampN onto floor-2 FZShelfN "
 			+ "(floor %d at %s)" % [final_floor, player.position])
@@ -926,18 +1148,20 @@ func test_freeway_ramp_a_climbs_live_car_onto_deck() -> void:
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
-	player.position = Vector2(1600, -768)
+	var ramp := Plan.rect_of(Plan.RAMPS, &"RampA")
+	player.position = Vector2(ramp.end.x + 96.0, ramp.get_center().y)
 	player.start_floor = 2
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.LEFT.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.LEFT * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
-	for i in 180:
-		await t.physics_frame
 	var final_floor := Floors.floor_of(player)
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		final_floor = Floors.floor_of(player)
+		if final_floor == 3 and _has_point_inclusive(deck, player.position):
+			break
 	t.check(final_floor == 3 and _has_point_inclusive(deck, player.position),
 		"freeway: westbound landing car climbs RampA onto the floor-3 deck "
 			+ "(floor %d at %s)" % [final_floor, player.position])
@@ -950,19 +1174,20 @@ func test_freeway_live_car_passes_under_deck_on_floor_two() -> void:
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
-	player.position = Vector2(-640, 200)
+	player.position = Vector2(-640, deck.end.y + 96.0)
 	player.start_floor = 2
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.UP.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.UP * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
 	var crossed_deck_xy := false
-	for i in 180:
+	for i in LIVE_SIM_FRAMES:
 		await t.physics_frame
 		crossed_deck_xy = crossed_deck_xy or _has_point_inclusive(deck, player.position)
+		if crossed_deck_xy and Floors.floor_of(player) == 2 \
+				and player.position.y < deck.position.y:
+			break
 	t.check(crossed_deck_xy and Floors.floor_of(player) == 2
 			and player.position.y < deck.position.y,
 		"freeway: northbound highway car passes beneath the deck on floor 2 "
@@ -976,18 +1201,20 @@ func test_freeway_ramp_w_climbs_live_car_onto_deck() -> void:
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
-	player.position = Vector2(-960, -100)
+	var ramp := Plan.rect_of(Plan.RAMPS, &"RampW")
+	player.position = Vector2(ramp.get_center().x, ramp.end.y + 96.0)
 	player.start_floor = 2
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.UP.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.UP * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
-	for i in 150:
-		await t.physics_frame
 	var final_floor := Floors.floor_of(player)
+	for i in LIVE_SIM_FRAMES:
+		await t.physics_frame
+		final_floor = Floors.floor_of(player)
+		if final_floor == 3 and _has_point_inclusive(deck, player.position):
+			break
 	t.check(final_floor == 3 and _has_point_inclusive(deck, player.position),
 		"freeway: northbound shoulder car climbs RampW onto the floor-3 deck "
 			+ "(floor %d at %s)" % [final_floor, player.position])
@@ -1000,19 +1227,28 @@ func test_freeway_landing_south_wall_holds_live_lowland_car() -> void:
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var landing := Plan.rect_of(Plan.FLOOR_ZONES, &"FZLanding")
-	player.position = Vector2(1600, -300)
+	var wall := Plan.rect_of(Plan.WALLS, &"LandingS")
+	player.position = Vector2(landing.get_center().x, wall.end.y + 96.0)
 	player.start_floor = 1
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.UP.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.UP * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
 	var entered_landing := false
-	for i in 180:
+	var best_y := player.position.y
+	var stalled_frames := 0
+	for i in LIVE_SIM_FRAMES:
 		await t.physics_frame
 		entered_landing = entered_landing or _has_point_inclusive(landing, player.position)
+		if player.position.y < best_y - 1.0:
+			best_y = player.position.y
+			stalled_frames = 0
+		else:
+			stalled_frames += 1
+		if player.position.y <= wall.end.y + 64.0 and not entered_landing \
+				and Floors.floor_of(player) == 1 and stalled_frames >= 3:
+			break
 	t.check(not entered_landing and Floors.floor_of(player) == 1,
 		"freeway: LandingS holds a northbound floor-1 car out of FZLanding "
 			+ "(floor %d at %s)" % [Floors.floor_of(player), player.position])
@@ -1025,46 +1261,44 @@ func test_freeway_plate_edge_drops_live_car_to_lowland() -> void:
 	_remove_other_cars(freeway)
 	var player := freeway.get_node(^"Vehicle") as Vehicle
 	var plate := Plan.rect_of(Plan.FLOOR_ZONES, &"FZPlate")
+	var wall := Plan.rect_of(Plan.WALLS, &"RetainE_4")
 	var ramp_width := Plan.rect_of(Plan.RAMPS, &"RampS").size.x
 	var connector := freeway.get_node(^"ConPlateDownS") as FloorConnector
 	player.position = Vector2(plate.end.x - ramp_width * 0.5, connector.position.y)
 	player.start_floor = 2
 	t.root.add_child(freeway)
 	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
 	player.heading = Vector2.RIGHT.angle()
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2.RIGHT * LIVE_ENTRY_SPEED
 	player.set_driver(FullThrottleDriver.new())
-	for i in 180:
+	var dropped := false
+	var drop_floor := -1
+	var drop_position := Vector2.INF
+	var min_x := INF
+	var best_x := INF
+	var stalled_frames := 0
+	for i in JUMP_SIM_FRAMES:
 		await t.physics_frame
-	t.check(Floors.floor_of(player) == 1 and player.position.x > plate.end.x,
+		if not dropped and Floors.floor_of(player) == 1 and player.position.x > plate.end.x:
+			dropped = true
+			drop_floor = Floors.floor_of(player)
+			drop_position = player.position
+			min_x = player.position.x
+			best_x = player.position.x
+			player.heading = Vector2.LEFT.angle()
+			player.velocity = Vector2.LEFT * LIVE_ENTRY_SPEED
+		elif dropped:
+			min_x = minf(min_x, player.position.x)
+			if player.position.x < best_x - 1.0:
+				best_x = player.position.x
+				stalled_frames = 0
+			else:
+				stalled_frames += 1
+			if player.position.x <= wall.end.x + 64.0 and min_x >= wall.end.x \
+					and stalled_frames >= 3:
+				break
+	t.check(dropped and drop_floor == 1 and drop_position.x > plate.end.x,
 		"freeway: eastbound highway car takes the free one-floor hop into the lowland")
-	t.current_scene = null
-	t.root.remove_child(freeway)
-	freeway.free()
-
-func test_freeway_retaining_wall_holds_live_lowland_car() -> void:
-	var freeway := FreewayScene.instantiate()
-	_remove_other_cars(freeway)
-	var player := freeway.get_node(^"Vehicle") as Vehicle
-	var wall := Plan.rect_of(Plan.WALLS, &"RetainE_4")
-	var ramp_width := Plan.rect_of(Plan.RAMPS, &"RampS").size.x
-	var connector := freeway.get_node(^"ConPlateDownS") as FloorConnector
-	player.position = Vector2(wall.end.x + ramp_width + SAMPLE_STEP * 4,
-		connector.position.y)
-	player.start_floor = 1
-	t.root.add_child(freeway)
-	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
-	player.heading = Vector2.LEFT.angle()
-	player.velocity = Vector2.ZERO
-	player.set_driver(FullThrottleDriver.new())
-	var min_x := player.position.x
-	for i in 180:
-		await t.physics_frame
-		min_x = minf(min_x, player.position.x)
 	t.check(min_x >= wall.end.x,
 		"freeway: RetainE_4 holds a westbound floor-1 car (min x %.1f)" % min_x)
 	t.current_scene = null
@@ -1081,31 +1315,11 @@ func test_freeway_lowland_sets_live_car_floor() -> void:
 	t.current_scene = freeway
 	for i in 6:
 		await t.physics_frame
+		if Floors.floor_of(player) == 1:
+			break
 	t.check(Floors.floor_of(player) == 1,
 		"freeway: a car spawned in the lowland adopts floor 1")
 	t.current_scene = null
 	t.root.remove_child(freeway)
 	freeway.free()
-
-func test_freeway_floor_three_car_breaks_north_rail_and_drops() -> void:
-	var freeway := FreewayScene.instantiate()
-	_remove_other_cars(freeway)
-	var player := freeway.get_node(^"Vehicle") as Vehicle
-	var deck := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
-	player.position = Vector2(0, -768)
-	player.start_floor = 3
-	t.root.add_child(freeway)
-	t.current_scene = freeway
-	for i in 4:
-		await t.physics_frame
-	player.heading = Vector2.UP.angle()
-	player.velocity = Vector2.UP * 450.0
-	player.set_driver(FullThrottleDriver.new())
-	for i in 90:
-		await t.physics_frame
-	t.check(Floors.floor_of(player) == 2 and player.position.y < deck.position.y,
-		"freeway: floor-3 car breaks through the north edge and lands on floor 2 "
-			+ "(floor %d at %s)" % [Floors.floor_of(player), player.position])
-	t.current_scene = null
-	t.root.remove_child(freeway)
-	freeway.free()
+	_free_freeway_structure()
