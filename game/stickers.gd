@@ -34,8 +34,10 @@ var _required_cache: Dictionary = {}  # rule type -> Array[String]; roster is st
 
 func _ready() -> void:
 	# Headless tests explicitly inject their catalog/profile paths. Never let a
-	# developer's real profile leak into a fixture.
+	# developer's real profile leak into a fixture — or a fixture's kills leak
+	# into the real profile: headless starts with NO save path (saves no-op).
 	if DisplayServer.get_name() == "headless":
+		_profile_path = ""
 		return
 	load_catalog()
 	load_profile()
@@ -241,6 +243,8 @@ func load_profile(path := PROFILE_PATH) -> void:
 
 
 func save_profile(path := PROFILE_PATH) -> void:
+	if path.is_empty():
+		return  # inert store (headless default, or a test that reset it)
 	var out := {
 		"schema_version": SCHEMA_VERSION,
 		"counters": counters,

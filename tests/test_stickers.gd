@@ -70,7 +70,7 @@ func _cleanup_temp() -> void:
 	var store: Node = t.root.get_node_or_null(^"/root/Stickers")
 	if store:
 		store.roster_path = "res://assets/data/roster.json"
-		store.load_profile(TMP_PROFILE)
+		store.load_profile("")  # back to an empty, inert store: later suites never save
 
 
 func _write_roster(characters: Array) -> void:
