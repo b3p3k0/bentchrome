@@ -122,6 +122,7 @@ const SUITES := [
 	preload("res://tests/test_garage_catalog.gd"),
 	preload("res://tests/test_car_deck.gd"),
 	preload("res://tests/test_boot_splash.gd"),
+	preload("res://tests/test_stall_probe.gd"),
 	preload("res://tests/test_stat_rebase.gd"),  # keep LAST: golden lock audits .tres hygiene
 ]
 
