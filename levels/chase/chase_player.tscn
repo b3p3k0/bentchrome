@@ -14,5 +14,8 @@ smash_and_pass = true
 [node name="Driver" parent="."]
 script = ExtResource("2_drv")
 
+[node name="SpecialController" parent="."]
+dash_cone_deg = 24.0
+
 [node name="Camera2D" parent="."]
 position = Vector2(0, -140)

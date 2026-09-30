@@ -57,6 +57,13 @@ static var PULSE_HOP_VZ := 200.0       # the caster's little launch kick
 
 const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
 
+## Forward-only Leap (Route 666 authors this on the chase car): > 0 locks
+## only a target inside this half-angle of the nose — never an about-face
+## into whatever is nearest — and an empty cone is a straight surge up the
+## road. A target that slips past the nose mid-leap is dropped, not chased.
+## 0 = the arena Leap: nearest car in range, any bearing.
+@export var dash_cone_deg := 0.0
+
 var _def: WeaponDef = null
 var _twin: WeaponDef = null       # second barrel sharing the SPECIAL ammo pool
 var _beam_def: WeaponDef = null   # running effects keep the def they latched
@@ -68,6 +75,7 @@ var _beam_fx: Node2D = null
 var _dash_t := 0.0
 var _dash_target: Node2D = null
 var _dash_dir := Vector2.RIGHT
+var _dash_forward := Vector2.RIGHT  # the nose at launch (the forward-only cone's axis)
 var _dash_damage_mult := 1.0  # terrain snapshot; consumed by first landed ram
 var _armed := false
 var _armed_t := 0.0               # Toe Jam use-it-or-lose-it countdown
@@ -394,9 +402,15 @@ func _exit_tree() -> void:
 func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node) -> bool:
 	if not pressed or _dash_t > 0.0:
 		return false
-	_dash_target = Targeting.nearest_other((shooter as Node2D).global_position, shooter,
-		DASH_LOCK_RANGE * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
+	var from := (shooter as Node2D).global_position
+	var reach: float = DASH_LOCK_RANGE * VehiclesHelper.stat_scale(shooter, &"tracking_scale")
+	if dash_cone_deg > 0.0:
+		_dash_target = Targeting.nearest_in_cone(from, direction, deg_to_rad(dash_cone_deg),
+			shooter, reach, shooter)
+	else:
+		_dash_target = Targeting.nearest_other(from, shooter, reach, shooter)
 	_dash_dir = direction
+	_dash_forward = direction
 	_dash_t = DASH_DURATION
 	_dash_damage_mult = 1.0
 	if shooter.has_method(&"terrain_factor"):
@@ -445,7 +459,12 @@ func _dash_tick(delta: float) -> void:
 		_dash_t = 0.0
 		return
 	if _dash_target and is_instance_valid(_dash_target):
-		_dash_dir = (_dash_target.global_position - vehicle.global_position).normalized()
+		var to := (_dash_target.global_position - vehicle.global_position).normalized()
+		if dash_cone_deg > 0.0 and to.dot(_dash_forward) < 0.5:
+			_dash_target = null       # it slipped past the nose: a forward leap never U-turns
+			_dash_dir = _dash_forward
+		else:
+			_dash_dir = to
 	vehicle.velocity = _dash_dir * DASH_SPEED
 	vehicle.set("heading", _dash_dir.angle())
 	for i in vehicle.get_slide_collision_count():

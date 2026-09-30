@@ -131,3 +131,54 @@ func test_dash_lock_scales() -> void:
 	ctrl.cancel_dash()
 	t.root.remove_child(container)
 	container.free()
+
+## The forward-only Leap (Route 666): with a cone authored, the lock is only
+## ever something in front of the nose — the nearest car BEHIND is ignored —
+## an empty cone is a straight surge, and a target that slips past the nose
+## mid-leap is dropped instead of chased through a U-turn.
+func test_dash_forward_cone() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var shooter := TrackShooter.new()
+	container.add_child(shooter)
+	var ctrl = ControllerScript.new()
+	shooter.add_child(ctrl)
+	var north := Vector2.UP
+	var behind := _prey(Vector2(0, 120))        # the nearest car: in the dust, on the tail
+	container.add_child(behind)
+	ctrl._dash(true, shooter.global_position, north, shooter)
+	t.check(ctrl._dash_target == behind, "dash: the arena leap takes the nearest car, any bearing")
+	ctrl.cancel_dash()
+	ctrl.dash_cone_deg = 24.0
+	ctrl._dash(true, shooter.global_position, north, shooter)
+	t.check(ctrl._dash_target == null and ctrl.is_dashing(), "cone: nothing ahead = a straight surge, never an about-face")
+	ctrl._dash_tick(0.016)
+	t.check(shooter.velocity.is_equal_approx(north * ControllerScript.DASH_SPEED), "cone: the surge runs up the road at leap speed")
+	ctrl.cancel_dash()
+	var wide := _prey(Vector2(300, -300))       # 45 degrees off the nose: outside the cone
+	container.add_child(wide)
+	ctrl._dash(true, shooter.global_position, north, shooter)
+	t.check(ctrl._dash_target == null, "cone: a car off to the side is not a target")
+	ctrl.cancel_dash()
+	var ahead := _prey(Vector2(60, -400))       # ~8.5 degrees off the nose
+	container.add_child(ahead)
+	ctrl._dash(true, shooter.global_position, north, shooter)
+	t.check(ctrl._dash_target == ahead, "cone: a car inside the cone is rammed")
+	ctrl._dash_tick(0.016)
+	t.check(shooter.velocity.y < 0.0 and shooter.velocity.x > 0.0, "cone: the leap homes on it")
+	ahead.position = Vector2(60, 200)           # it braked past the nose mid-leap
+	ctrl._dash_tick(0.016)
+	t.check(ctrl._dash_target == null and shooter.velocity.is_equal_approx(north * ControllerScript.DASH_SPEED),
+		"cone: a target that slips behind is dropped — the leap carries on up the road")
+	ctrl.cancel_dash()
+	t.root.remove_child(container)
+	container.free()
+	# The chase car authors the cone; the arena car never does.
+	const Pedal := preload("res://levels/chase/chase_player_driver.gd")
+	var chase_car = load("res://levels/chase/chase_player.tscn").instantiate()
+	t.check(is_equal_approx(chase_car.get_node(^"SpecialController").dash_cone_deg, Pedal.LANE_YAW_DEG),
+		"cone: Route 666's car leaps inside the lane wheel's cone")
+	chase_car.free()
+	var arena_car = load("res://vehicles/vehicle.tscn").instantiate()
+	t.check(is_zero_approx(arena_car.get_node(^"SpecialController").dash_cone_deg), "cone: everywhere else the Leap is untouched")
+	arena_car.free()
