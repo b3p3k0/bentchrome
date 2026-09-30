@@ -27,6 +27,8 @@ const TOP_STRIPE_GAP := 14.0
 const Floors := preload("res://game/floors.gd")  # terrace gate (dependency-free)
 
 @export var floor_index := -1  # ≥1: only cars on this terrace trigger the launch
+# False keeps rivals on flat ground; only human-driven cars in &"player" launch.
+@export var launch_rivals := true
 
 var _size := Vector2.ZERO
 
@@ -41,7 +43,8 @@ func _ready() -> void:
 		queue_redraw()
 
 func _on_body_entered(body: Node) -> void:
-	if body is Vehicle and Floors.same_floor(self, body):
+	if body is Vehicle and Floors.same_floor(self, body) \
+			and (launch_rivals or body.is_in_group(&"player")):
 		body.launch_from_jump()
 
 func _draw() -> void:

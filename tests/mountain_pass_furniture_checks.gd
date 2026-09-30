@@ -10,7 +10,7 @@ const DerelictCarScript := preload("res://environment/derelict_car.gd")
 const SOLID_KINDS := [&"boulder", &"wreck", &"pine"]
 const SOFT_KINDS := [&"drift", &"cone", &"sign"]
 const COUNTS := {
-	&"boulder": 4, &"wreck": 3, &"pine": 39, &"drift": 10, &"cone": 6,
+	&"boulder": 4, &"wreck": 3, &"pine": 31, &"drift": 10, &"cone": 6,
 	&"sign": 3,
 }
 
@@ -44,6 +44,7 @@ static func geometry_errors() -> PackedStringArray:
 		if node.scene_file_path.ends_with("ammo_pickup.tscn"):
 			pickups.append((node as Node2D).global_position)
 	var solids := pieces.filter(func(piece): return SOLID_KINDS.has(piece["kind"]))
+	_check_jump_lane_column(errors, solids)
 	for i in solids.size():
 		_check_solid(errors, solids[i], road, pickups, knoll)
 		for j in range(i + 1, solids.size()):
@@ -331,6 +332,35 @@ static func _pad_lane(pad: Dictionary) -> Rect2:
 	var vertical: bool = pad["launch"] == &"north" or pad["launch"] == &"south"
 	var size := Vector2(384.0, 900.0) if vertical else Vector2(900.0, 384.0)
 	return Rect2(center - size * 0.5, size)
+
+static func _check_jump_lane_column(errors: PackedStringArray, solids: Array) -> void:
+	var lane_start := PassGrid.N
+	var lane_end := -1
+	var first_row := PassGrid.N
+	var last_row := -1
+	for pad_name in PassGrid.PADS:
+		var pad: Dictionary = PassGrid.PADS[pad_name]
+		var columns: Vector2i = pad["lane_cols"]
+		var center: Vector2 = pad["center"]
+		var half_size: Vector2 = pad["size"] * 0.5
+		lane_start = mini(lane_start, columns.x)
+		lane_end = maxi(lane_end, columns.y)
+		first_row = mini(first_row, PassGrid.cell_of(center - half_size).y)
+		last_row = maxi(last_row, PassGrid.cell_of(center + half_size).y)
+	var column_start := -1
+	for row in range(first_row, last_row + 1):
+		var first_mountain := lane_start
+		while first_mountain >= 0 \
+				and PassGrid.kind_at(first_mountain, row) != PassGrid.MOUNTAIN:
+			first_mountain -= 1
+		column_start = maxi(column_start, first_mountain + 1)
+	var cells := Rect2i(column_start, first_row,
+		lane_end - column_start + 1, last_row - first_row + 1)
+	var column := _cell_span_rect(cells)
+	for piece: Dictionary in solids:
+		var rect: Rect2 = piece["rect"]
+		if rect.intersects(column):
+			errors.append("%s stands in the jump-lane column" % piece["name"])
 
 static func _runaway_run_in() -> Rect2:
 	var rect := _cell_span_rect(PassGrid.SPUR_DATA["cells"])

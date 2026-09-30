@@ -152,6 +152,44 @@ func test_jump_pad_launches_only_its_own_terrace() -> void:
 	t.check(f.car.vz > 0.0, "floors: the same-terrace jump pad launches")
 	_done(f)
 
+func test_jump_pad_can_leave_rivals_on_flat_ground() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var filtered_pad = load("res://environment/jump_pad.gd").new()
+	filtered_pad.launch_rivals = false
+	container.add_child(filtered_pad)
+	var filtered_player: Vehicle = VehicleScene.instantiate()
+	container.add_child(filtered_player)
+	filtered_player.add_to_group(&"player")
+	filtered_player.velocity = Vector2(300, 0)
+	var filtered_rival: Vehicle = VehicleScene.instantiate()
+	container.add_child(filtered_rival)
+	filtered_rival.remove_from_group(&"player")
+	filtered_rival.velocity = Vector2(300, 0)
+	filtered_pad._on_body_entered(filtered_player)
+	filtered_pad._on_body_entered(filtered_rival)
+	t.check(filtered_player.vz > 0.0,
+		"jump pad: a human-driven car still launches when rivals are disabled")
+	t.check(filtered_rival.vz == 0.0 and filtered_rival.height == 0.0,
+		"jump pad: a rival crosses a filtered pad as flat ground")
+	var default_pad = load("res://environment/jump_pad.gd").new()
+	container.add_child(default_pad)
+	var default_player: Vehicle = VehicleScene.instantiate()
+	container.add_child(default_player)
+	default_player.add_to_group(&"player")
+	default_player.velocity = Vector2(300, 0)
+	var default_rival: Vehicle = VehicleScene.instantiate()
+	container.add_child(default_rival)
+	default_rival.remove_from_group(&"player")
+	default_rival.velocity = Vector2(300, 0)
+	default_pad._on_body_entered(default_player)
+	default_pad._on_body_entered(default_rival)
+	t.check(default_pad.launch_rivals and default_player.vz > 0.0
+			and default_rival.vz > 0.0,
+		"jump pad: the default launches both human-driven cars and rivals")
+	t.root.remove_child(container)
+	container.free()
+
 func test_driveable_ramp_grades_both_ways() -> void:
 	var f := _fixture([{"floor": 2, "pos": Vector2.ZERO, "size": Vector2(900, 900)}])
 	var ramp = load("res://environment/ramp.gd").new()
