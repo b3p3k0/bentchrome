@@ -274,6 +274,50 @@ func test_builder_set_pieces_and_flair() -> void:
 	t.check(flair >= 4, "builder: roadside flair streams every chunk (got %d)" % flair)
 	plain.free()
 
+## Washout: dirt edge to edge except for the surviving paved ribbon — two
+## dirt zones, one each side of it, and a line a lane-wheel car can hold.
+func test_builder_washout() -> void:
+	const Pedal := preload("res://levels/chase/chase_player_driver.gd")
+	for name in [&"washout_l", &"washout_r"]:
+		var def: Dictionary = ChunkDefs.DEFS[name]
+		var w: Dictionary = def["washout"]
+		var chunk: Node2D = Builder.build(_entry_for(name))
+		var zones := {}
+		for child in chunk.get_children():
+			if child is Area2D and child.collision_layer == 128 and String(child.name).begins_with("Washout"):
+				zones[String(child.name)] = child
+		t.check(zones.size() == 2 and zones.has("WashoutL") and zones.has("WashoutR"),
+			"washout: %s lays a dirt zone each side of the ribbon" % name)
+		for zname in zones:
+			t.check(zones[zname].terrain_type == &"dirt", "washout: %s is dirt" % zname)
+		t.check(chunk.get_node_or_null(^"WashoutBedL") != null and chunk.get_node_or_null(^"WashoutBedR") != null,
+			"washout: %s paints both beds" % name)
+		chunk.free()
+		# The ribbon: wide enough to hold, inside the road, and its crossover is
+		# no steeper than the lane wheel can follow (give or take the ribbon's width).
+		t.check(float(w["lane_w"]) >= 160.0, "washout: the ribbon is a lane and a half wide")
+		var pts: Array = w["lane"]
+		var lock := tan(deg_to_rad(Pedal.LANE_YAW_DEG))
+		for i in pts.size() - 1:
+			var run: float = float(pts[i + 1][0]) - float(pts[i][0])
+			var rise: float = absf(float(pts[i + 1][1]) - float(pts[i][1]))
+			t.check(maxf(rise / run - lock, 0.0) * run < float(w["lane_w"]) * 0.25,
+				"washout: %s leg %d can be held at full lock" % [name, i])
+		for pt in pts:
+			t.check(absf(float(pt[1])) + float(w["lane_w"]) * 0.5 < float(def["half_w"]) - 20.0,
+				"washout: the ribbon stays on the road")
+		t.check(is_equal_approx(ChunkDefs.washout_lane(def, 0.0), float(pts[0][1]))
+			and is_equal_approx(ChunkDefs.washout_lane(def, float(def["len"])), float(pts[pts.size() - 1][1])),
+			"washout: the ribbon holds its first and last station past the ends")
+		var mid: float = ChunkDefs.washout_lane(def, (float(pts[1][0]) + float(pts[2][0])) * 0.5)
+		t.check(absf(mid) < 1.0, "washout: mid-crossover the ribbon is on the centreline (%.1f)" % mid)
+	var l: Dictionary = ChunkDefs.DEFS[&"washout_l"]
+	var r: Dictionary = ChunkDefs.DEFS[&"washout_r"]
+	t.check(is_equal_approx(ChunkDefs.washout_lane(l, 1400.0), ChunkDefs.washout_lane(r, 0.0)),
+		"washout: the pair chain — one ends on the side the other begins")
+	t.check(&"washout_l" in ChunkDefs.NO_REPEAT and &"washout_r" in ChunkDefs.NO_REPEAT,
+		"washout: never the same one twice running")
+
 func test_builder_momentum_obstacles() -> void:
 	var pchunk: Node2D = Builder.build(_entry_for(&"bad_road"))
 	var pits := 0

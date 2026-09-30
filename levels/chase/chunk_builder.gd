@@ -22,7 +22,10 @@ const SHOULDER_W := 90.0   # drivable verge outside the asphalt (grip penalty)
 const EMBANK_W := 130.0    # painted slope width; the wall runs its inner edge
 const TAPER := 300.0       # must match chase_course.TAPER
 
+const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
+
 const ASPHALT := Color(0.17, 0.17, 0.19)
+const WASHOUT_DIRT := Color(0.36, 0.27, 0.17)
 const SHOULDER_VIS := {
 	&"grass": Color(0.25, 0.5, 0.22, 0.5),
 	&"dirt": Color(0.5, 0.36, 0.2, 0.5),
@@ -55,6 +58,7 @@ static func build(entry: Dictionary) -> Node2D:
 		_build_shoulder(root, ds, cx, half, side, shoulder)
 		_build_embankment(root, ds, cx, half, side, shoulder)
 	_build_medians(root, entry)
+	_build_washout(root, entry)
 	_place_props(root, entry)
 	_place_pickups(root, entry)
 	_roadside_flair(root, entry, ds, cx, half)
@@ -193,6 +197,94 @@ static func _build_medians(root: Node2D, entry: Dictionary) -> void:
 				b.append(Vector2(c + w, -d2))
 			root.add_child(_zone_strip("Median%d" % idx, kind, a, b))
 		idx += 1
+
+## Washout: the asphalt crumbles to dirt edge to edge, except for the
+## surviving paved ribbon (chunk_defs.washout_lane). Two dirt TerrainZones —
+## one each side of the ribbon — under an opaque dirt bed whose edge against
+## the ribbon is torn, with slabs of the old road scattered across it.
+static func _build_washout(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	if not def.has("washout"):
+		return
+	var w: Dictionary = def["washout"]
+	var from_d: float = w["from"]
+	var to_d: float = w["to"]
+	var lane_half: float = float(w["lane_w"]) * 0.5
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 313
+	var n := maxi(int(ceilf((to_d - from_d) / 90.0)), 2)
+	for side in [-1.0, 1.0]:
+		var outer := PackedVector2Array()   # the road edge
+		var inner := PackedVector2Array()   # the ribbon's edge (the zone's true boundary)
+		var torn := PackedVector2Array()    # the painted edge: torn, never ruled
+		for i in n + 1:
+			var d := lerpf(from_d, to_d, float(i) / float(n))
+			var c := _center_x(entry, d)
+			var lane := c + ChunkDefs.washout_lane(def, d)
+			outer.append(Vector2(c + side * _half_w(entry, d), -d))
+			inner.append(Vector2(lane + side * lane_half, -d))
+			torn.append(Vector2(lane + side * (lane_half + rng.randf_range(-16.0, 12.0)), -d))
+		# The bed: both ends break off in ragged teeth instead of a saw cut.
+		var bed_pts := PackedVector2Array()
+		bed_pts.append_array(outer)
+		var teeth := 5
+		for k in range(1, teeth):
+			var f := float(k) / float(teeth)
+			bed_pts.append(outer[n].lerp(torn[n], f) + Vector2(0.0, (-46.0 if k % 2 == 1 else 18.0) * rng.randf_range(0.6, 1.0)))
+		for i in range(n, -1, -1):
+			bed_pts.append(torn[i])
+		for k in range(teeth - 1, 0, -1):
+			var f := float(k) / float(teeth)
+			bed_pts.append(outer[0].lerp(torn[0], f) + Vector2(0.0, (46.0 if k % 2 == 1 else -18.0) * rng.randf_range(0.6, 1.0)))
+		var bed := Polygon2D.new()
+		bed.name = "WashoutBedL" if side < 0.0 else "WashoutBedR"
+		bed.polygon = bed_pts
+		bed.color = WASHOUT_DIRT
+		bed.z_index = -1
+		root.add_child(bed)
+		# Texture: darker damp patches, pale wheel ruts, and slabs of the old road.
+		for i in n:
+			var a := outer[i].lerp(inner[i], rng.randf_range(0.15, 0.8))
+			var span := outer[i].distance_to(inner[i])
+			if span < 70.0:
+				continue
+			var patch := Polygon2D.new()
+			patch.polygon = _chunk_of_road(a + Vector2(0.0, -rng.randf_range(10.0, 70.0)), rng.randf_range(26.0, 54.0), 0.55, 8, rng)
+			patch.color = WASHOUT_DIRT.darkened(rng.randf_range(0.1, 0.22))
+			patch.z_index = -1
+			root.add_child(patch)
+			var rut := Polygon2D.new()
+			var rx := outer[i].lerp(inner[i], rng.randf_range(0.2, 0.85)).x
+			var ry := outer[i].y - rng.randf_range(0.0, 60.0)
+			var rl := rng.randf_range(50.0, 120.0)
+			rut.polygon = PackedVector2Array([
+				Vector2(rx - 2.5, ry), Vector2(rx + 2.5, ry),
+				Vector2(rx + 2.5 + rng.randf_range(-8.0, 8.0), ry - rl), Vector2(rx - 2.5 + rng.randf_range(-8.0, 8.0), ry - rl),
+			])
+			rut.color = WASHOUT_DIRT.lightened(0.14)
+			rut.z_index = -1
+			root.add_child(rut)
+			# Slabs: more of the old road survives near the ribbon than out by the verge.
+			for k in 2:
+				var near := rng.randf() < 0.65
+				var at := outer[i].lerp(inner[i], rng.randf_range(0.72, 0.97) if near else rng.randf_range(0.08, 0.7))
+				at.y -= rng.randf_range(0.0, 85.0)
+				var slab := Polygon2D.new()
+				slab.polygon = _chunk_of_road(at, rng.randf_range(9.0, 24.0) if near else rng.randf_range(6.0, 14.0), 0.5, 5, rng)
+				slab.color = ASPHALT.lightened(rng.randf_range(0.02, 0.1))
+				slab.z_index = -1
+				root.add_child(slab)
+		var zone := _zone_strip("WashoutL" if side < 0.0 else "WashoutR", &"dirt", outer, inner)
+		(zone.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)   # the bed is the paint
+		root.add_child(zone)
+
+## An irregular, squashed n-gon: a damp patch, or a slab of the old road.
+static func _chunk_of_road(center: Vector2, r: float, squash: float, n: int, rng: RandomNumberGenerator) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in n:
+		var a := TAU * float(i) / float(n) + rng.randf_range(-0.2, 0.2)
+		out.append(center + Vector2(cos(a), sin(a) * squash).rotated(rng.randf_range(-0.1, 0.1)) * r * rng.randf_range(0.65, 1.1))
+	return out
 
 ## Local road direction at d (north = -y), for aligning rail segments.
 static func _road_angle(entry: Dictionary, d: float) -> float:

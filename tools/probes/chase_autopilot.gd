@@ -9,6 +9,7 @@ extends Driver
 
 const SpeedBand := preload("res://levels/chase/speed_band.gd")
 const Pedal := preload("res://levels/chase/chase_player_driver.gd")
+const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 
 const LOOK := 520.0        # px of obstacle sight at skill 1.0
 const DODGE_HOLD := 0.45   # seconds a dodge is committed to
@@ -26,6 +27,14 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	var s: Dictionary = host.course.sample(-(own.y - 300.0))
 	var road_x: float = s["x"]
 	var half: float = s["half_w"]
+	# A washout has one paved ribbon left, and anyone with eyes drives on it.
+	var look_d: float = -own.y + 200.0
+	var chunk: Dictionary = host.course.plan[host.course.chunk_index_at(look_d)]
+	var cdef: Dictionary = chunk["def"]
+	if cdef.has("washout"):
+		var local: float = look_d - float(chunk["start_d"])
+		if local > float(cdef["washout"]["from"]) - 250.0 and local < float(cdef["washout"]["to"]):
+			road_x = float(host.course.sample(look_d)["x"]) + ChunkDefs.washout_lane(cdef, local)
 	var space: PhysicsDirectSpaceState2D = vehicle.get_world_2d().direct_space_state
 	var blocked := {-1: false, 0: false, 1: false}
 	for side in [-1, 0, 1]:

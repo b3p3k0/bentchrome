@@ -104,6 +104,38 @@ const DEFS := {
 			{"kind": &"pothole", "at": [1050.0, -180.0]},
 		],
 	},
+	# Washout: the county gave up on this mile. The asphalt has crumbled to
+	# DIRT edge to edge — except for one surviving paved ribbon that wanders
+	# from one side of the road to the other. Hold the ribbon and you keep
+	# your pace; miss it and you are on dirt while the pack is not (the one
+	# place on Route 666 where off-road tires earn their bolts). `washout`:
+	# from/to = the broken stretch, lane_w = the ribbon's width, lane = its
+	# centre as [d, x_off] stations. The pair mirror each other, and each
+	# ends on the side the other begins.
+	&"washout_l": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"washout", "shoulder": &"dirt",
+		"washout": {
+			"from": 160.0, "to": 1240.0, "lane_w": 190.0,
+			"lane": [[160.0, -130.0], [420.0, -130.0], [960.0, 130.0], [1240.0, 130.0]],
+		},
+		"props": [
+			{"kind": &"cone", "at": [120.0, -250.0]},
+			{"kind": &"cone", "at": [120.0, -10.0]},
+		],
+	},
+	&"washout_r": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"washout", "shoulder": &"dirt",
+		"washout": {
+			"from": 160.0, "to": 1240.0, "lane_w": 190.0,
+			"lane": [[160.0, 130.0], [420.0, 130.0], [960.0, -130.0], [1240.0, -130.0]],
+		},
+		"props": [
+			{"kind": &"cone", "at": [120.0, 250.0]},
+			{"kind": &"cone", "at": [120.0, 10.0]},
+		],
+	},
 	&"log_run": {
 		"len": 1300.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"log_run", "shoulder": &"grass",
@@ -181,6 +213,8 @@ const WEIGHTS := {
 	&"slalom": 1.0,
 	&"bad_road": 1.5,
 	&"log_run": 1.5,
+	&"washout_l": 0.7,
+	&"washout_r": 0.7,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -188,7 +222,22 @@ const WEIGHTS := {
 }
 
 ## No two of these back to back — breathers between technical sections.
-const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch"]
+const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
+	&"washout_l", &"washout_r"]
+
+## A washout's surviving paved ribbon: its centre at chunk-local d, as an
+## offset from the road centreline. Shared by the builder and by anything
+## that has to find the line (the balance probe's autopilot).
+static func washout_lane(def: Dictionary, d: float) -> float:
+	var pts: Array = def["washout"]["lane"]
+	if d <= float(pts[0][0]):
+		return float(pts[0][1])
+	for i in pts.size() - 1:
+		var a: Array = pts[i]
+		var b: Array = pts[i + 1]
+		if d <= float(b[0]):
+			return lerpf(float(a[1]), float(b[1]), (d - float(a[0])) / (float(b[0]) - float(a[0])))
+	return float(pts[pts.size() - 1][1])
 
 ## Landmark chunks: at most one per RARE_SPACING of course (chase_course).
 const RARE := [&"overpass", &"truckstop", &"convoy"]
