@@ -8,6 +8,7 @@ extends CanvasLayer
 
 const UiStyle := preload("res://ui/ui_style.gd")
 const Economy := preload("res://game/economy.gd")
+const Difficulty := preload("res://game/difficulty.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 
 const AMBER := Color(1.0, 0.85, 0.2)    # win — HUD selected-weapon amber
@@ -50,6 +51,7 @@ var _restart_btn: Button
 var _buttons: Array = []
 var _hint: Label            # mid-campaign: wallet line above the fork
 var _campaign_next := -1    # armed continue target (next level index)
+var _campaign_win_reported := false
 var _continue_armed := false
 var _fork_buttons: Array = []  # mid-campaign: KEEP ROLLIN' / PIT STOP
 var _garage: Control = null    # the PIT STOP shop overlay while open
@@ -105,6 +107,8 @@ func _show(win: bool) -> void:
 		# announcer events ride the pause-immune pool — the freeze can't mute it.
 		get_tree().create_timer(0.8, true).timeout.connect(
 			_announce.bind(false), CONNECT_ONE_SHOT)
+	if win:
+		_report_campaign_finale()
 	if win and win_keeps_rolling:
 		_show_rolling_win()
 		return
@@ -139,6 +143,25 @@ func _show(win: bool) -> void:
 	for b in _buttons:
 		b.disabled = true
 	get_tree().create_timer(INPUT_LOCK, true).timeout.connect(_arm_buttons, CONNECT_ONE_SHOT)
+
+func _report_campaign_finale() -> void:
+	if _campaign_win_reported:
+		return
+	var gs := get_node_or_null(^"/root/GameState")
+	var flow := get_node_or_null(^"/root/SceneFlow")
+	if gs == null or flow == null or gs.game_mode != &"campaign" \
+			or flow.CAMPAIGN.is_empty() or get_tree().current_scene == null:
+		return
+	var here: String = get_tree().current_scene.scene_file_path
+	if flow.CAMPAIGN[-1].scene != here:
+		return
+	_campaign_win_reported = true
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers:
+		stickers.record_event(&"campaign_won", {
+			"tier": Difficulty.tier,
+			"car": String(gs.selected_vehicle_id),
+		})
 
 ## The rolling win frames the shot on the 3x3: the parading car holds the
 ## center cell (the camera follows it), YOU WIN! rides the top-center cell,

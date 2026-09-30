@@ -6,6 +6,9 @@ const PopulationScript := preload("res://environment/ambient_population.gd")
 const ProjectileScene := preload("res://weapons/projectile.tscn")
 const SplatScene := preload("res://environment/ambient_splat.tscn")
 const DriveFXScript := preload("res://vehicles/drive_fx.gd")
+const VehiclesHelper := preload("res://vehicles/vehicles.gd")
+
+const TMP_STICKER_PROFILE := "user://_test_ambient_stickers.json"
 
 var t
 
@@ -31,6 +34,52 @@ class FxCar extends CharacterBody2D:
 
 func _init(runner) -> void:
 	t = runner
+
+func _begin_sticker_fixture() -> Dictionary:
+	DirAccess.remove_absolute(TMP_STICKER_PROFILE)
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var net: Node = t.root.get_node(^"/root/Net")
+	var store: Node = t.root.get_node(^"/root/Stickers")
+	var keep := {
+		"mode": gs.game_mode,
+		"pending": gs.pending_level_path,
+		"dev_mode": gs.dev_mode,
+		"devgod": gs.devgod,
+		"net_mode": net.mode,
+		"profile_path": store._profile_path,
+		"counters": store.counters.duplicate(true),
+		"sets": store.sets.duplicate(true),
+		"unlocked": store.unlocked.duplicate(true),
+		"seen": store.seen.duplicate(),
+		"fresh": store._fresh.duplicate(),
+	}
+	gs.game_mode = &"campaign"
+	gs.pending_level_path = ""
+	gs.dev_mode = false
+	gs.devgod = false
+	net.mode = 0
+	store.load_catalog()
+	store.load_profile(TMP_STICKER_PROFILE)
+	return {"store": store, "keep": keep}
+
+func _restore_sticker_fixture(fixture: Dictionary) -> void:
+	var keep: Dictionary = fixture.keep
+	var store: Node = fixture.store
+	store.counters = keep.counters
+	store.sets = keep.sets
+	store.unlocked = keep.unlocked
+	store.seen = keep.seen
+	store._fresh.clear()
+	for id in keep.fresh:
+		store._fresh.append(id)
+	store._profile_path = keep.profile_path
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	gs.game_mode = keep.mode
+	gs.pending_level_path = keep.pending
+	gs.dev_mode = keep.dev_mode
+	gs.devgod = keep.devgod
+	t.root.get_node(^"/root/Net").mode = keep.net_mode
+	DirAccess.remove_absolute(TMP_STICKER_PROFILE)
 
 func test_actor_is_one_hp_nonblocking_soft_target() -> void:
 	var actor = ActorScene.instantiate()
@@ -172,6 +221,56 @@ func test_vehicle_contact_requires_runover_speed_and_same_floor() -> void:
 	fast.free()
 	other_floor.free()
 	car.free()
+
+func test_splat_sticker_credits_only_local_player() -> void:
+	var stickers := _begin_sticker_fixture()
+	var store: Node = stickers.store
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var player := FloorCar.new()
+	player.add_to_group(&"vehicles")
+	player.floor_index = 1
+	player.velocity = Vector2(120, 0)
+	VehiclesHelper.mark_local(player)
+	container.add_child(player)
+	var ai := FloorCar.new()
+	ai.add_to_group(&"vehicles")
+	ai.floor_index = 1
+	ai.velocity = Vector2(120, 0)
+	container.add_child(ai)
+
+	var player_victim = ActorScene.instantiate()
+	player_victim.floor_index = 1
+	player_victim.leaves_splat = false
+	container.add_child(player_victim)
+	player_victim._on_body_entered(player)
+	t.check(int(store.counters.get("splats", 0)) == 1,
+		"ambient stickers: a local-player run-over records one splat")
+
+	store.reset_profile()
+	var ai_victim = ActorScene.instantiate()
+	ai_victim.floor_index = 1
+	ai_victim.leaves_splat = false
+	container.add_child(ai_victim)
+	ai_victim._on_body_entered(ai)
+	t.check(not store.counters.has("splats"),
+		"ambient stickers: an AI run-over records no splat")
+
+	store.reset_profile()
+	var projectile_victim = ActorScene.instantiate()
+	projectile_victim.floor_index = 1
+	projectile_victim.leaves_splat = false
+	container.add_child(projectile_victim)
+	var shot = ProjectileScene.instantiate()
+	container.add_child(shot)
+	shot.setup(Vector2.ZERO, Vector2.RIGHT, 100.0, 2.0, 1.0, player)
+	shot._on_area_entered(projectile_victim)
+	t.check(int(store.counters.get("splats", 0)) == 1,
+		"ambient stickers: a local-player projectile pop records one splat")
+
+	t.root.remove_child(container)
+	container.free()
+	_restore_sticker_fixture(stickers)
 
 func test_splat_lifetime_is_five_seconds() -> void:
 	var splat := AmbientSplat.new()

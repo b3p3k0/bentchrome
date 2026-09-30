@@ -7,11 +7,16 @@ const Difficulty := preload("res://game/difficulty.gd")
 const HitTags := preload("res://game/hit_tags.gd")
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
+const EndScreenScene := preload("res://ui/end_screen.tscn")
 
 const TMP_PROFILE := "user://_test_stickers.json"
 const TMP_ROSTER := "user://_test_stickers_roster.json"
 
 var t
+
+
+class CampaignFlowStub extends Node:
+	var CAMPAIGN: Array = []
 
 
 func _init(runner) -> void:
@@ -96,6 +101,23 @@ func _done_vehicle(fixture: Dictionary) -> void:
 	if is_instance_valid(container):
 		t.root.remove_child(container)
 		container.free()
+
+
+func _end_screen_fixture() -> Dictionary:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var screen := EndScreenScene.instantiate()
+	screen.win_keeps_rolling = true
+	container.add_child(screen)
+	return {"container": container, "screen": screen}
+
+
+func _done_end_screen(fixture: Dictionary) -> void:
+	t.current_scene = null
+	var container: Node = fixture.container
+	t.root.remove_child(container)
+	container.free()
 
 
 func test_catalog_lint() -> void:
@@ -303,6 +325,63 @@ func test_campaign_difficulty_cascade() -> void:
 	t.check(store.is_unlocked(&"day_tripper") and not store.is_unlocked(&"long_hauler")
 		and not store.is_unlocked(&"road_king"),
 		"stickers campaign: EASY unlocks only Day Tripper")
+	_restore_gate(keep)
+	_cleanup_temp()
+
+
+func test_end_screen_reports_only_campaign_finale_once() -> void:
+	var keep := _gate_state()
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var selected_was: StringName = gs.selected_vehicle_id
+	var tier_was: int = Difficulty.tier
+	var scene_was: Node = t.current_scene
+	var real_flow: Node = t.root.get_node(^"/root/SceneFlow")
+	t.root.remove_child(real_flow)
+	var flow := CampaignFlowStub.new()
+	flow.name = "SceneFlow"
+	t.root.add_child(flow)
+
+	_set_earnable()
+	gs.selected_vehicle_id = &"ghost"
+	Difficulty.tier = Difficulty.Tier.MEDIUM
+	var store := _store()
+	# The lightweight current scene has an empty scene_file_path. Put that path
+	# last in the stub campaign so the test exercises the same comparison as
+	# the real stadium entry without booting the whole boss arena.
+	flow.CAMPAIGN = [{"scene": "res://tests/mid.tscn"}, {"scene": ""}]
+	var finale := _end_screen_fixture()
+	finale.screen._show(true)
+	finale.screen._show(true)  # re-entry must never double-credit the same card
+	t.check(int(store.counters.get("campaign_won.medium", 0)) == 1
+		and int(store.counters.get("campaign_won.easy", 0)) == 1,
+		"end screen stickers: campaign finale records the selected tier exactly once")
+	t.check(store.sets.get("campaign_cars", []).count("ghost") == 1,
+		"end screen stickers: finale records the winning car exactly once")
+	_done_end_screen(finale)
+
+	store.reset_profile()
+	gs.game_mode = &"single_battle"
+	var battle := _end_screen_fixture()
+	battle.screen._show(true)
+	t.check(store.counters.is_empty() and store.sets.is_empty(),
+		"end screen stickers: a single battle in the finale scene records nothing")
+	_done_end_screen(battle)
+
+	store.reset_profile()
+	gs.game_mode = &"campaign"
+	flow.CAMPAIGN = [{"scene": ""}, {"scene": "res://tests/finale.tscn"}]
+	var middle := _end_screen_fixture()
+	middle.screen._show(true)
+	t.check(store.counters.is_empty() and store.sets.is_empty(),
+		"end screen stickers: a mid-campaign win records nothing")
+	_done_end_screen(middle)
+
+	t.root.remove_child(flow)
+	flow.free()
+	t.root.add_child(real_flow)
+	t.current_scene = scene_was
+	gs.selected_vehicle_id = selected_was
+	Difficulty.tier = tier_was
 	_restore_gate(keep)
 	_cleanup_temp()
 

@@ -56,6 +56,7 @@ var _anim_t := 0.0
 var _anim_accum := 0.0
 var _moving := false
 var _dead := false
+var _killer: Node = null
 var _rng := RandomNumberGenerator.new()
 var _police_cd := 0.0
 
@@ -169,10 +170,14 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	var speed: float = body.velocity.length() if "velocity" in body else 0.0
 	if speed >= RUN_OVER_SPEED:
+		_killer = body
 		_health.take_damage(1.0)
 	elif reacts_to_cars:
 		_panic_dir = (global_position - body.global_position).normalized()
 		_panic_t = PANIC_HOLD
+
+func note_killer(n: Node) -> void:
+	_killer = n
 
 func _position_blocked(at: Vector2) -> bool:
 	if not is_inside_tree():
@@ -260,6 +265,11 @@ func _die() -> void:
 	if _dead:
 		return
 	_dead = true
+	if is_instance_valid(_killer) \
+			and _killer == preload("res://vehicles/vehicles.gd").local(get_tree()):
+		var stickers := get_node_or_null(^"/root/Stickers")
+		if stickers:
+			stickers.record_event(&"splat")
 	var audio := get_node_or_null(^"/root/AudioDirector")
 	if audio:  # gore coinflip for living targets; ambient props stay dry
 		audio.play_at(&"splat" if leaves_splat and randf() < 0.5 else &"crunch",

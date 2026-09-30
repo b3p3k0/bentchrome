@@ -149,6 +149,8 @@ func _on_area_entered(area: Area2D) -> void:
 		return
 	var health := _find_health(area)
 	if health:
+		if area.has_method(&"note_killer"):
+			area.call(&"note_killer", shooter)
 		health.take_damage(1.0)
 		if health.hp <= 0.0 and is_instance_valid(shooter) and shooter.is_in_group(&"player"):
 			preload("res://game/economy.gd").award_salvage(health.max_hp)

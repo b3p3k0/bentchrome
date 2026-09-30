@@ -216,6 +216,9 @@ func _on_card_dismissed() -> void:
 ## Graduation: the closing card takes the stage; its dismissal drops the gate.
 func _finish() -> void:
 	completed = true
+	var stickers := get_node_or_null(^"/root/Stickers")
+	if stickers:
+		stickers.record_event(&"tutorial_done")
 	_card.show_card(CLOSING_TITLE, CLOSING_BODY)
 
 ## The exit tunnel. Zone entry is physically gated on the (now open) gate;

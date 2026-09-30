@@ -12,6 +12,7 @@ const CardScript := preload("res://levels/tutorial/tutorial_card.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
 
 const MOVE_ACTIONS: Array[StringName] = [&"move_up", &"move_down", &"move_left", &"move_right"]
+const TMP_STICKER_PROFILE := "user://_test_tutorial_stickers.json"
 
 var t
 
@@ -58,6 +59,42 @@ func _teardown(world: Node) -> void:
 	t.paused = false
 	t.root.remove_child(world)
 	world.free()
+
+func _begin_sticker_fixture(mode: StringName) -> Dictionary:
+	DirAccess.remove_absolute(TMP_STICKER_PROFILE)
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var net: Node = t.root.get_node(^"/root/Net")
+	var store: Node = t.root.get_node(^"/root/Stickers")
+	var keep := {
+		"mode": gs.game_mode,
+		"net_mode": net.mode,
+		"profile_path": store._profile_path,
+		"counters": store.counters.duplicate(true),
+		"sets": store.sets.duplicate(true),
+		"unlocked": store.unlocked.duplicate(true),
+		"seen": store.seen.duplicate(),
+		"fresh": store._fresh.duplicate(),
+	}
+	gs.game_mode = mode
+	net.mode = 0
+	store.load_catalog()
+	store.load_profile(TMP_STICKER_PROFILE)
+	return {"store": store, "keep": keep}
+
+func _restore_sticker_fixture(fixture: Dictionary) -> void:
+	var keep: Dictionary = fixture.keep
+	var store: Node = fixture.store
+	store.counters = keep.counters
+	store.sets = keep.sets
+	store.unlocked = keep.unlocked
+	store.seen = keep.seen
+	store._fresh.clear()
+	for id in keep.fresh:
+		store._fresh.append(id)
+	store._profile_path = keep.profile_path
+	t.root.get_node(^"/root/GameState").game_mode = keep.mode
+	t.root.get_node(^"/root/Net").mode = keep.net_mode
+	DirAccess.remove_absolute(TMP_STICKER_PROFILE)
 
 func test_card_arm_timer_and_dismiss() -> void:
 	var card: CanvasLayer = CardScript.new()
@@ -221,6 +258,7 @@ func test_jump_floors_terrain_lessons() -> void:
 	_teardown(w["world"])
 
 func test_smash_lesson_credits_the_whole_yard() -> void:
+	var stickers := _begin_sticker_fixture(&"tutorial")
 	var w := _world()
 	var director: Node = w["director"]
 	director.begin(true)
@@ -253,6 +291,8 @@ func test_smash_lesson_credits_the_whole_yard() -> void:
 	director._physics_process(0.016)
 	director._physics_process(director.ADVANCE_DELAY + 0.1)
 	t.check(director.completed, "smash: pre-lesson vandalism + barrel -> syllabus complete")
+	t.check(int(stickers.store.counters.get("tutorial_done", 0)) == 1,
+		"tutorial stickers: completing the real syllabus records graduation")
 	t.check(director._card.visible, "smash: the closing card takes the stage")
 	t.check((w["gate"] as Node2D).visible, "smash: gate stays barred until the card is read")
 	_dismiss(director._card)
@@ -260,6 +300,7 @@ func test_smash_lesson_credits_the_whole_yard() -> void:
 	t.check(String(director._hint_label.text).begins_with("head NORTH"),
 		"smash: free-play hint points at the exit")
 	_teardown(w["world"])
+	_restore_sticker_fixture(stickers)
 
 ## The exit confirm: inert before graduation, NO ("keep practicing") is the
 ## default, ESC cancels and restores the world, and a fresh zone entry
@@ -302,12 +343,15 @@ func test_exit_confirm_flow() -> void:
 	_teardown(w["world"])
 
 func test_test_drive_boots_precompleted() -> void:
+	var stickers := _begin_sticker_fixture(&"test_drive")
 	var w := _world()
 	var director: Node = w["director"]
 	director.begin(false)
 	t.check(director.completed, "test drive: syllabus stamped complete")
 	t.check(director.lesson_index == director.LESSONS.size(), "test drive: no live lesson")
 	t.check(not director._card.visible, "test drive: no card shown")
+	t.check(not stickers.store.counters.has("tutorial_done"),
+		"tutorial stickers: a pre-completed test drive records no graduation")
 	t.check(not t.paused, "test drive: world never freezes")
 	t.check(not director._hint_label.visible, "test drive: no hint line")
 	var gate: StaticBody2D = w["gate"]
@@ -316,3 +360,4 @@ func test_test_drive_boots_precompleted() -> void:
 	var col: CollisionShape2D = gate.get_node("Col")
 	t.check(col.disabled, "test drive: gate collision stands down")
 	_teardown(w["world"])
+	_restore_sticker_fixture(stickers)
