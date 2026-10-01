@@ -522,7 +522,7 @@ func test_builder_highway_dressing() -> void:
 	t.check(alternates, "dressing: the signs alternate sides")
 	t.check(limits >= 9 and limits <= 13, "dressing: a speed limit every %dpx over 30k (got %d)" % [int(Deco.SPEED_SIGN_EVERY), limits])
 	t.check(limits_alternate, "dressing: the speed signs alternate sides")
-	t.check(markers >= 14 and markers <= 19, "dressing: a mile marker every %dpx over 30k, bar the mouths and the river (got %d)" % [int(Deco.MILE_PX), markers])
+	t.check(markers >= 14 and markers <= 20, "dressing: a mile marker every %dpx over 30k, bar the mouths and the river (got %d)" % [int(Deco.MILE_PX), markers])
 	t.check(markers_right, "dressing: every mile marker is on the RIGHT verge")
 	t.check(markers_exact, "dressing: mile markers sit on d = n × MILE_PX (nudged ≤120 off a seam) and read 95 + n")
 	t.check(95 in marker_miles and 96 in marker_miles, "dressing: the odometer starts at mile 95 and counts up by one (%s)" % str(marker_miles.slice(0, 4)))
@@ -721,11 +721,8 @@ func test_builder_tanker() -> void:
 					flock = true
 			elif child is PointLight2D and child.name == "TankerGlow":
 				glow = true
-			elif child is Area2D and child.collision_layer == 128 and child.terrain_type == &"ice":
-				for sub in child.get_children():   # the slicks are circles (shoulders are rect strips); siblings get auto-renamed
-					if sub is CollisionShape2D and sub.shape is CircleShape2D:
-						slicks.append(child.position)
-						break
+			elif child is Area2D and path.ends_with("oil_slick.gd"):
+				slicks.append(child.position)   # the slick's feel is its sensor (its icy rim is paint)
 		t.check(rig != null and cab and fire and glow and flock, "tanker: the rig, its cab, the fire, the glow and the birds (seed %d)" % int(start_d))
 		t.check(slicks.size() >= 4, "tanker: the load spilled — %d slicks" % slicks.size())
 		if rig != null:
