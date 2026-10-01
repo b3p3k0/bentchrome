@@ -172,8 +172,8 @@ func _watch(player) -> void:
 		_last_stamp = stamp
 		if _verbose and hit >= 8.0 and source != "road":
 			var brain = who.get_node_or_null(^"Driver")
-			print("[hit] t=%5.1f  %4.1f from %s  stage %s  dy %4d  dx %4d  their v (%d, %d)  your v (%d, %d)" % [
-				_scene.clock, hit, source,
+			print("[hit] t=%5.1f  mile %5.1f  %4.1f from %s  stage %s  dy %4d  dx %4d  their v (%d, %d)  your v (%d, %d)" % [
+				_scene.clock, _scene.mile(), hit, source,
 				Brain.Stage.keys()[brain.stage] if brain != null and "stage" in brain else "-",
 				int(who.global_position.y - player.global_position.y), int(who.global_position.x - player.global_position.x),
 				int(who.velocity.x), int(who.velocity.y), int(player.velocity.x), int(player.velocity.y)])
@@ -206,8 +206,8 @@ func _report(player) -> void:
 		for j in fin.jumpers:
 			if not is_instance_valid(j):
 				sunk += 1
-		print("[finale] air %d  landed d %s (channel to %s, shallows to %s)  jumpers %d  gone %d  show %.1fs" % [
-			int(_finale_air), str(int(_finale_land)) if _finale_land != INF else "-",
+		print("[finale] mile %.1f  air %d  landed d %s (channel to %s, shallows to %s)  jumpers %d  gone %d  show %.1fs" % [
+			_scene.mile(), int(_finale_air), str(int(_finale_land)) if _finale_land != INF else "-",
 			str(r.get("deep_to", "?")), str(r.get("shallow_to", "?")), _jumpers, sunk, _scene.clock - _scene.RUN_SECONDS])
 	print("[run] %-16s car %-10s at %5.1fs  min gap %3d  danger %4.1fs  slowdowns %2d  boost %4.1fs  hp %3d/%d  TOOK %3d  heals %d  kills %d  max pack %d  dare %d  flinches %d  trails %d" % [
 		verdict, _car, _scene.clock, int(_min_gap), _danger_frames / 60.0, _slowdowns,

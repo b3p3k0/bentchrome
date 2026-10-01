@@ -415,33 +415,69 @@ func test_builder_cutoff() -> void:
 		t.check(not flair_on_trail, "cutoff: %s: no roadside scrub sprouts across the trail" % name)
 		chunk.free()
 
-## The dressing along the mile: every deco kind draws, signs come on their
-## course-wide cadence with the sides alternating, billboards rarer, the
-## wreck chunks get buzzards overhead, and nothing dressed ever collides.
+## The dressing along the mile: every deco kind draws, the signage comes on
+## its course-wide cadences (green signs and speed limits alternating sides,
+## mile markers EXACT on the right verge from 95 up), billboards rarer, the
+## wreck chunks get buzzards overhead, the billboards' snark never lands on a
+## highway sign, and nothing dressed ever collides.
 func test_builder_highway_dressing() -> void:
 	const Deco := preload("res://levels/chase/highway_deco.gd")
 	var container := Node2D.new()
 	t.root.add_child(container)
-	for kind in [&"sign", &"billboard", &"vultures", &"wreck_fire", &"tumbleweed"]:
+	var kinds: Array = [&"highway_sign", &"speed_sign", &"mile_marker", &"billboard", &"vultures", &"wreck_fire", &"tumbleweed"]
+	for kind in kinds:
 		var node := Node2D.new()
 		node.set_script(Deco)
 		node.kind = kind
 		node.position = Vector2(100, -200)
 		container.add_child(node)
+	var legacy := Node2D.new()
+	legacy.set_script(Deco)
+	legacy.kind = &"sign"
+	container.add_child(legacy)
 	await t.process_frame
 	await t.process_frame
-	t.check(container.get_child_count() == 5, "dressing: every kind stands up and draws")
+	t.check(container.get_child_count() == kinds.size() + 1, "dressing: every kind stands up and draws")
+	t.check(legacy.kind == &"highway_sign", "dressing: `sign` is still accepted as the green board's old name")
 	for node in container.get_children():
 		t.check(not (node is CollisionObject2D), "dressing: %s is paint, nothing to hit" % node.kind)
+		t.check(node.is_in_group(&"highway_deco"), "dressing: %s is in the highway_deco group (the host shades it by act)" % node.kind)
+		node.shadow_strength = 1.0
+	await t.process_frame
 	t.root.remove_child(container)
 	container.free()
+	# The voice: the highway table is the DOT's — none of the billboards' snark
+	# ever ends up on a green sign (two-line heads compared).
+	var ads: Array = []
+	for line in Deco.BILLBOARD_COPY:
+		ads.append([String(line[0]), String(line[1])])
+	var clean := true
+	for line in Deco.HIGHWAY_COPY:
+		if [String(line[0]), String(line[1])] in ads:
+			clean = false
+	t.check(clean, "signage: no billboard line is dealt onto a highway sign")
+	t.check(String(Deco.HIGHWAY_COPY[Deco.TOLL_COPY][0]) == "TOLL AHEAD", "signage: the toll plaza's line is where TOLL_COPY points")
+	for limit in Deco.SPEED_LIMITS:
+		t.check(int(limit) >= 15 and int(limit) <= 80 and int(limit) % 5 == 0, "signage: speed limit %s is a plausible number" % str(limit))
+	# The odometer, pure: 95 at the flag, +1 a mile, and back again.
+	t.check(is_equal_approx(Deco.mile_at(0.0), 95.0), "mile: 95 at d 0 (the first Twisted Metal was '95)")
+	t.check(is_equal_approx(Deco.mile_at(Deco.MILE_PX * 3.0), 98.0), "mile: +1 every MILE_PX")
+	t.check(is_equal_approx(Deco.d_of_mile(Deco.mile_at(12345.0)), 12345.0), "mile: mile_at and d_of_mile round-trip")
+	t.check(is_equal_approx(Deco.d_of_mile(95.0), 0.0), "mile: d_of_mile(95) is the flag")
 	# Cadence over a whole course: signs every SIGN_EVERY, sides alternating.
 	var c = _course(31)
 	var signs := 0
+	var limits := 0
+	var markers := 0
 	var boards := 0
 	var flocks := 0
 	var last_side := 0.0
 	var alternates := true
+	var limits_alternate := true
+	var last_limit_side := 0.0
+	var markers_right := true
+	var markers_exact := true
+	var marker_miles: Array = []
 	var chunks := 0
 	for entry in c.plan:
 		if float(entry["start_d"]) > 30000.0:
@@ -449,16 +485,32 @@ func test_builder_highway_dressing() -> void:
 		chunks += 1
 		if entry["def"].has("cutoff"):
 			last_side = 0.0   # the trail side goes without a sign: the rhythm restarts after it
+			last_limit_side = 0.0
 		var chunk: Node2D = Builder.build(entry)
 		for child in chunk.get_children():
 			var script = child.get_script()
 			if script and script.resource_path.ends_with("highway_deco.gd"):
 				match child.kind:
-					&"sign":
+					&"highway_sign":
 						signs += 1
 						if last_side != 0.0 and is_equal_approx(child.side, last_side) and not entry["def"].has("cutoff"):
 							alternates = false
 						last_side = child.side
+					&"speed_sign":
+						limits += 1
+						if last_limit_side != 0.0 and is_equal_approx(child.side, last_limit_side) and not entry["def"].has("cutoff"):
+							limits_alternate = false
+						last_limit_side = child.side
+					&"mile_marker":
+						markers += 1
+						if child.side < 0.0:
+							markers_right = false
+						# The post may be nudged ≤120px off a seam; the NUMBER is the truth.
+						var d_world: float = float(entry["start_d"]) - child.position.y
+						var n := roundf(d_world / Deco.MILE_PX)
+						if absf(d_world - n * Deco.MILE_PX) > 120.5 or child.mile_number != Deco.MILE_START + int(n):
+							markers_exact = false
+						marker_miles.append(child.mile_number)
 					&"billboard":
 						boards += 1
 					&"vultures":
@@ -466,6 +518,12 @@ func test_builder_highway_dressing() -> void:
 		chunk.free()
 	t.check(signs >= 16 and signs <= 24, "dressing: a sign every %dpx over 30k (got %d)" % [int(Builder.SIGN_EVERY), signs])
 	t.check(alternates, "dressing: the signs alternate sides")
+	t.check(limits >= 9 and limits <= 13, "dressing: a speed limit every %dpx over 30k (got %d)" % [int(Deco.SPEED_SIGN_EVERY), limits])
+	t.check(limits_alternate, "dressing: the speed signs alternate sides")
+	t.check(markers >= 14 and markers <= 19, "dressing: a mile marker every %dpx over 30k, bar the mouths and the river (got %d)" % [int(Deco.MILE_PX), markers])
+	t.check(markers_right, "dressing: every mile marker is on the RIGHT verge")
+	t.check(markers_exact, "dressing: mile markers sit on d = n × MILE_PX (nudged ≤120 off a seam) and read 95 + n")
+	t.check(95 in marker_miles and 96 in marker_miles, "dressing: the odometer starts at mile 95 and counts up by one (%s)" % str(marker_miles.slice(0, 4)))
 	t.check(boards >= 5 and boards <= 8, "dressing: a billboard every %dpx (got %d)" % [int(Builder.BILLBOARD_EVERY), boards])
 	t.check(flocks >= 1, "dressing: buzzards wheel over the wrecks somewhere in 30k (got %d)" % flocks)
 

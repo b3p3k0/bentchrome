@@ -5,8 +5,8 @@ extends "res://ui/hud.gd"
 ## horde-pressure meter that flashes once the pack is on the bumper, and the
 ## daredevil bonus ticking up while it is. Polls the chase host duck-typed
 ## via the &"chase_host" group (time_left / pressure / in_danger / kills /
-## daredevil_bonus). Dev mode adds a raw gap + pace readout for tuning the
-## squeeze.
+## daredevil_bonus). Dev mode adds a raw gap + pace + mile readout for tuning
+## the squeeze (the mile is the roadside markers' number).
 
 const GPSScript := preload("res://ui/chase_gps.gd")
 const SpeedLinesScript := preload("res://ui/speed_lines.gd")
@@ -97,6 +97,8 @@ func _update_opponents() -> void:
 		_dare_label.modulate = HORDE_HOT if hot else SELECTED
 	if _dev_label:
 		_dev_label.text = "GAP %d  PACE %.2f" % [int(host.wall_gap()), host.pack_pace()]
+		if host.has_method(&"mile"):
+			_dev_label.text += "  MILE %.1f" % host.mile()   # the markers' scale: "the clutter at mile 98"
 
 func _label_at(pos: Vector2, text: String, font_size: int) -> Label:
 	var l := Label.new()

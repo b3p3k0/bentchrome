@@ -1,33 +1,54 @@
 extends Node2D
 ## Route 666's roadside dressing: pure paint and FX — NOTHING here collides
 ## (the road is busy enough; AI feelers never have to know). Kinds:
-##   sign       — a post and a green highway sign with a line or two of copy
-##   billboard  — two posts and a big board with a parody ad on it
-##   vultures   — two to four buzzards circling overhead (z 3), animated
-##   wreck_fire — flame flicker and smoke wisps over a burning wreck
-##   tumbleweed — a dry ball rolling slowly across the road and back
+##   highway_sign — a post and a green highway sign: directions and distances
+##                  (`sign` is accepted as the old name for it)
+##   speed_sign   — a small white speed-limit sign, a big number over MPH
+##   mile_marker  — a small green post sign on the RIGHT verge, MILE and a number
+##   billboard    — two posts and a big board with a parody ad on it
+##   vultures     — two to four buzzards circling overhead (z 3), animated
+##   wreck_fire   — flame flicker and smoke wisps over a burning wreck
+##   tumbleweed   — a dry ball rolling slowly across the road and back
 ## Copy is dealt from the tables below by the seed, so a mile of Route 666
 ## never reads the same twice and a course seed always reads the same.
+##
+## THE VOICE, per kind: billboards are where the game is silly — snark, sass,
+## parody ads. Highway signs are the DOT's: they direct and inform, and any
+## laugh they get is unintentional (a town name, a distance). Speed signs are
+## plausible numbers, never jokes. Mile markers are the odometer.
+##
+## Every sign is in group `highway_deco` and casts a LONG SHADOW when the host
+## asks (`shadow_strength` 0..1 — buzzard_run's sunset act): a dark translucent
+## sweep of the board toward the north-east, the sun low in the west.
 
-const SIGN_COPY := [
+## Directional / informational only. Town names and distances carry the humour.
+const HIGHWAY_COPY := [
 	["ROUTE 666", "NORTH"],
 	["MERCY", "40"],
-	["NO STOPPING", "ANY TIME"],
-	["BUZZARD", "COUNTRY"],
-	["LAST GAS", "50 MI"],
-	["SPEED LIMIT", "WHATEVER"],
+	["DESPAIR", "12"],
+	["HOPE 3", "(CLOSED)"],
+	["LAST CHANCE", "28"],
+	["BUZZARD", "2"],
+	["GRIEF", "NEXT EXIT"],
 	["EXIT 0", "NO SERVICES"],
-	["BRIDGE OUT", "EVENTUALLY"],
-	["WRONG WAY", "PROBABLY"],
-	["SLOW", "CHILDREN? NO."],
-	["DEER", "XING"],
 	["REST AREA", "CLOSED"],
+	["DEER", "XING"],
 	["TOLL AHEAD", "CASH ONLY"],
+	["LAST GAS", "50 MI"],
+	["NO STOPPING", "ANY TIME"],
+	["BRIDGE OUT", "AHEAD"],
+	["PERDITION", "66"],
+	["LITTLE HOPE", "7"],
+	["MISERY", "POP. 12"],
+	["NEXT EXIT", "19 MI"],
+	["SLOW", "CURVES"],
+	["BUZZARD", "COUNTRY"],
 ]
-const TOLL_COPY := 12   # the tollbooth's sign is always this line (copy_seed TOLL_SEED)
+const TOLL_COPY := 10   # the tollbooth's sign is always TOLL AHEAD / CASH ONLY (copy_seed TOLL_SEED)
 const TOLL_SEED := 66601
 const DINER_COPY := ["MERCY DINER", "OPEN 24 HRS", "since the accident"]
 const DINER_SEED := 66602   # the truckstop's board is always the diner's
+## The ads. Snark lives here and nowhere else.
 const BILLBOARD_COPY := [
 	["SLO MO'S", "PARTS FOR THE ROAD", "next stop, or the one after"],
 	["KANDY KANE", "ICE CREAM", "we deliver. we do not stop."],
@@ -39,32 +60,78 @@ const BILLBOARD_COPY := [
 	["THE BUZZARDZ", "PLAY TONIGHT", "wherever you are"],
 	["FREE", "TOWING", "you won't need to call"],
 	["DRIVE SAFE", "", "ha ha"],
+	["SPEED LIMIT", "WHATEVER", "paid for by the buzzardz"],
+	["BRIDGE OUT", "EVENTUALLY", "mercy county dept. of roads"],
+	["HATE'S", "TRAVEL STOP", "showers. no questions."],
+	["ROADKILL", "CAFE", "you hit it, we grill it"],
+	["LAWYER?", "CALL SLO MO", "he knows a guy"],
+	["GET RIGHT", "WITH GOD", "or at least with your mechanic"],
 ]
+## Plausible limits, dealt by seed. Not jokes — the joke is that nobody obeys them.
+const SPEED_LIMITS := [55, 65, 45, 35, 80, 15]
 const BOARD_TINTS := [Color(0.82, 0.74, 0.5), Color(0.6, 0.72, 0.8), Color(0.85, 0.62, 0.5), Color(0.72, 0.8, 0.62)]
 const SIGN_GREEN := Color(0.1, 0.36, 0.2)
 const SIGN_TEXT := Color(0.94, 0.95, 0.9)
+const SIGN_WHITE := Color(0.93, 0.93, 0.9)
+const SIGN_INK := Color(0.06, 0.06, 0.07)
 const POST := Color(0.28, 0.28, 0.3)
 const SMOKE := Color(0.25, 0.23, 0.22)
 const FLAME := [Color(1.0, 0.55, 0.15), Color(1.0, 0.85, 0.3), Color(0.9, 0.3, 0.1)]
+## The long shadow: cast toward the north-east (the sun is low in the WEST),
+## full strength = SHADOW_REACH × the board's height.
+const SHADOW_DIR := Vector2(0.9, -0.44)
+const SHADOW_REACH := 1.5
+const SHADOW_INK := Color(0.05, 0.04, 0.09)
+const SHADOW_ALPHA := 0.42
 
-@export var kind: StringName = &"sign"
+## Cadences the builder places signs on (course px). Highway signs and
+## billboards keep theirs in chunk_builder (SIGN_EVERY / BILLBOARD_EVERY).
+const SPEED_SIGN_EVERY := 2500.0   # a speed limit every so often, sides alternating
+## The odometer: MILE_START at d = 0 (the first Twisted Metal shipped in '95),
+## +1 every MILE_PX of course. 1600px a mile puts ~40 markers under a 120s
+## run — a progress read, and a way to say "the clutter at mile 98".
+const MILE_START := 95
+static var MILE_PX := 1600.0
+
+@export var kind: StringName = &"highway_sign"
 @export var side := 1.0            # which verge: the post faces the road
 @export var copy_seed := 0         # picks the copy; 0 = from position
+@export var mile_number := MILE_START   # mile_marker: the number on the post
+## 0 = no shadow, 1 = the full sunset sweep. The host drives it by act.
+var shadow_strength := 0.0:
+	set(value):
+		if is_equal_approx(value, shadow_strength):
+			return
+		shadow_strength = value
+		queue_redraw()
 
 var _t := 0.0
 var _rng := RandomNumberGenerator.new()
 var _copy: Array = []
 var _tint := Color.WHITE
+var _limit := 55
 var _birds: Array = []             # vultures: {r, speed, phase, wing}
 var _weed_x := 0.0                 # tumbleweed: offset along its crossing
 var _weed_dir := 1.0
 var _smoke: CPUParticles2D = null
 
+## The odometer, pure: course distance → mile, and back.
+static func mile_at(d: float) -> float:
+	return float(MILE_START) + d / MILE_PX
+
+static func d_of_mile(mile: float) -> float:
+	return (mile - float(MILE_START)) * MILE_PX
+
 func _ready() -> void:
+	add_to_group(&"highway_deco")
+	if kind == &"sign":
+		kind = &"highway_sign"   # the old name for the green board
 	_rng.seed = copy_seed if copy_seed != 0 else int(absf(position.x * 7.0 + position.y * 13.0)) + 99
 	match kind:
-		&"sign":
-			_copy = SIGN_COPY[TOLL_COPY] if copy_seed == TOLL_SEED else SIGN_COPY[_rng.randi() % SIGN_COPY.size()]
+		&"highway_sign":
+			_copy = HIGHWAY_COPY[TOLL_COPY] if copy_seed == TOLL_SEED else HIGHWAY_COPY[_rng.randi() % HIGHWAY_COPY.size()]
+		&"speed_sign":
+			_limit = SPEED_LIMITS[_rng.randi() % SPEED_LIMITS.size()]
 		&"billboard":
 			_copy = DINER_COPY if copy_seed == DINER_SEED else BILLBOARD_COPY[_rng.randi() % BILLBOARD_COPY.size()]
 			_tint = BOARD_TINTS[_rng.randi() % BOARD_TINTS.size()]
@@ -115,8 +182,12 @@ const TUMBLE_REACH := 420.0  # px each way from the post: across the road and ba
 
 func _draw() -> void:
 	match kind:
-		&"sign":
-			_draw_sign()
+		&"highway_sign":
+			_draw_highway_sign()
+		&"speed_sign":
+			_draw_speed_sign()
+		&"mile_marker":
+			_draw_mile_marker()
 		&"billboard":
 			_draw_billboard()
 		&"vultures":
@@ -126,16 +197,28 @@ func _draw() -> void:
 		&"tumbleweed":
 			_draw_tumbleweed()
 
+## The long shadow of a board whose feet span x0..x1 at the post line (y 0):
+## a dark translucent sweep toward the north-east, SHADOW_REACH × its height
+## at full strength. Drawn FIRST, so posts and board sit on it.
+func _draw_long_shadow(x0: float, x1: float, height: float) -> void:
+	if shadow_strength <= 0.0:
+		return
+	var reach := SHADOW_DIR * height * SHADOW_REACH * shadow_strength
+	var a := Vector2(x0, 0.0)
+	var b := Vector2(x1, 0.0)
+	draw_colored_polygon(PackedVector2Array([a, b, b + reach, a + reach]), Color(SHADOW_INK, SHADOW_ALPHA * shadow_strength))
+
 ## A post at the origin, the board hanging over the verge toward the road.
 ## Big, like a highway sign: the camera sits at 0.55, so anything under 22
 ## world px of type is a smudge.
-func _draw_sign() -> void:
+func _draw_highway_sign() -> void:
 	var font := ThemeDB.fallback_font
-	draw_rect(Rect2(-4, -8, 8, 16), POST)
-	draw_circle(Vector2(0, 8), 7.0, Color(0.12, 0.1, 0.08, 0.5))   # the post's shadow
 	var w := 210.0
 	var h := 70.0
 	var board := Rect2(-w * 0.5 - side * 6.0, -12.0 - h, w, h)
+	_draw_long_shadow(board.position.x, board.end.x, h)
+	draw_rect(Rect2(-4, -8, 8, 16), POST)
+	draw_circle(Vector2(0, 8), 7.0, Color(0.12, 0.1, 0.08, 0.5))   # the post's shadow
 	draw_rect(board.grow(3.0), Color(0.05, 0.05, 0.06, 0.6))
 	draw_rect(board, SIGN_GREEN)
 	draw_rect(board.grow(-5.0), SIGN_TEXT.darkened(0.2), false, 2.0)
@@ -146,15 +229,53 @@ func _draw_sign() -> void:
 		draw_string(font, Vector2(board.position.x + 14.0, board.position.y + 58.0), String(_copy[1]),
 			HORIZONTAL_ALIGNMENT_LEFT, w - 28.0, 19, SIGN_TEXT.darkened(0.15))
 
+## White, black-bordered, a big number over MPH. The number is the read; the
+## word is there so it isn't mistaken for an exit number.
+func _draw_speed_sign() -> void:
+	var font := ThemeDB.fallback_font
+	var w := 90.0
+	var h := 110.0
+	var board := Rect2(-w * 0.5 - side * 4.0, -12.0 - h, w, h)
+	_draw_long_shadow(board.position.x, board.end.x, h)
+	draw_rect(Rect2(-3, -8, 6, 16), POST)
+	draw_circle(Vector2(0, 8), 6.0, Color(0.12, 0.1, 0.08, 0.5))
+	draw_rect(board.grow(3.0), Color(0.05, 0.05, 0.06, 0.6))
+	draw_rect(board, SIGN_WHITE)
+	draw_rect(board.grow(-4.0), SIGN_INK, false, 3.0)
+	draw_string(font, Vector2(board.position.x, board.position.y + 62.0), str(_limit),
+		HORIZONTAL_ALIGNMENT_CENTER, w, 44, SIGN_INK)
+	draw_string(font, Vector2(board.position.x, board.position.y + 94.0), "MPH",
+		HORIZONTAL_ALIGNMENT_CENTER, w, 20, SIGN_INK)
+
+## The odometer on a post: MILE over the number, green with a white rule.
+## Always the right-hand verge (the builder's job); small, but the number is
+## 30px so it reads at 0.55.
+func _draw_mile_marker() -> void:
+	var font := ThemeDB.fallback_font
+	var w := 72.0
+	var h := 64.0
+	var board := Rect2(-w * 0.5 - side * 4.0, -10.0 - h, w, h)
+	_draw_long_shadow(board.position.x, board.end.x, h)
+	draw_rect(Rect2(-3, -6, 6, 12), POST)
+	draw_circle(Vector2(0, 6), 5.0, Color(0.12, 0.1, 0.08, 0.5))
+	draw_rect(board.grow(2.0), Color(0.05, 0.05, 0.06, 0.6))
+	draw_rect(board, SIGN_GREEN)
+	draw_rect(board.grow(-3.0), SIGN_TEXT.darkened(0.2), false, 1.5)
+	draw_string(font, Vector2(board.position.x, board.position.y + 22.0), "MILE",
+		HORIZONTAL_ALIGNMENT_CENTER, w, 18, SIGN_TEXT.darkened(0.1))
+	draw_string(font, Vector2(board.position.x, board.position.y + 55.0), str(mile_number),
+		HORIZONTAL_ALIGNMENT_CENTER, w, 30, SIGN_TEXT)
+
 ## Two posts and a big board — the copy is the joke, the board is the read.
 func _draw_billboard() -> void:
 	var font := ThemeDB.fallback_font
 	var w := 340.0
 	var h := 130.0
+	var board := Rect2(-w * 0.5, -18.0 - h, w, h)
+	_draw_long_shadow(board.position.x, board.end.x, h)
 	for px in [-w * 0.4, w * 0.4]:
 		draw_rect(Rect2(px - 4.0, -12, 8, 24), POST)
 		draw_circle(Vector2(px, 12), 7.0, Color(0.12, 0.1, 0.08, 0.5))
-	var board := Rect2(-w * 0.5, -18.0 - h, w, h)
 	draw_rect(board.grow(4.0), Color(0.05, 0.05, 0.06, 0.65))
 	draw_rect(board, _tint)
 	draw_rect(board.grow(-8.0), _tint.darkened(0.55), false, 3.0)

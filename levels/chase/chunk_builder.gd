@@ -479,10 +479,12 @@ static func _jackknife(root: Node2D, entry: Dictionary) -> void:
 	glass.z_index = -1
 	root.add_child(glass)
 
-## The dressing along the mile: highway signs on a course-wide cadence
-## (sides alternate), a billboard now and then, buzzards wheeling over the
-## wreck-strewn chunks, and the odd tumbleweed crossing an empty straight.
-## All of it highway_deco.gd: paint and FX, nothing to hit.
+## The dressing along the mile: the SIGNAGE on course-wide cadences — green
+## highway signs (sides alternate), white speed-limit signs, mile markers on
+## the RIGHT verge every MILE_PX (95 at d 0, +1 a mile — the odometer), a
+## billboard now and then — plus buzzards wheeling over the wreck-strewn
+## chunks and the odd tumbleweed crossing an empty straight. All of it
+## highway_deco.gd: paint and FX, nothing to hit.
 static func _highway_dressing(root: Node2D, entry: Dictionary, ds: Array, cx: Array, half: Array) -> void:
 	var def: Dictionary = entry["def"]
 	var start: float = entry["start_d"]
@@ -503,12 +505,57 @@ static func _highway_dressing(root: Node2D, entry: Dictionary, ds: Array, cx: Ar
 			var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
 			var sign := Node2D.new()
 			sign.set_script(HighwayDecoScript)
-			sign.kind = &"sign"
+			sign.kind = &"highway_sign"
 			sign.side = side
 			sign.copy_seed = int(m) * 31 + 7
 			sign.position = Vector2(cx[i] + side * (half[i] + SHOULDER_W + 46.0), -d)
 			root.add_child(sign)
 		m += 1.0
+	# Speed limits: the same dance on their own cadence (even multiples go
+	# LEFT, so they never share a post with a mile marker), same skips.
+	var speed_every: float = HighwayDecoScript.SPEED_SIGN_EVERY
+	var k := ceilf(start / speed_every)
+	if k * speed_every < start:
+		k += 1.0
+	while k * speed_every < start + chunk_len:
+		var d := clampf(k * speed_every - start, 120.0, chunk_len - 120.0)
+		var side := -1.0 if int(k) % 2 == 0 else 1.0
+		if not is_equal_approx(side, trail_side) and not (river and d > 500.0 and d < 1800.0):
+			var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+			var limit := Node2D.new()
+			limit.set_script(HighwayDecoScript)
+			limit.kind = &"speed_sign"
+			limit.side = side
+			limit.copy_seed = int(k) * 13 + 5
+			limit.position = Vector2(cx[i] + side * (half[i] + SHOULDER_W + 38.0), -d)
+			root.add_child(limit)
+		k += 1.0
+	# Mile markers: EXACT cadence, right verge only — d = n × MILE_PX, number
+	# MILE_START + n (the number is dealt from the unnudged n, so a nudged
+	# post still says the truth). Skipped where the right verge isn't a
+	# verge: a right-hand cutoff's trail mouths, the river.
+	var mile_px: float = HighwayDecoScript.MILE_PX
+	var n := ceilf(start / mile_px)
+	if n * mile_px < start:
+		n += 1.0
+	while n * mile_px < start + chunk_len:
+		var raw := n * mile_px - start
+		var d := clampf(raw, 120.0, chunk_len - 120.0)
+		var blocked := river and d > 500.0 and d < 1800.0
+		if trail_side > 0.0:
+			for gap in def["cutoff"]["gaps"]:
+				if d >= float(gap[0]) - 60.0 and d <= float(gap[1]) + 60.0:
+					blocked = true
+		if not blocked:
+			var i := clampi(int(d / chunk_len * float(ds.size() - 1)), 0, ds.size() - 1)
+			var marker := Node2D.new()
+			marker.set_script(HighwayDecoScript)
+			marker.kind = &"mile_marker"
+			marker.side = 1.0
+			marker.mile_number = HighwayDecoScript.MILE_START + int(n)
+			marker.position = Vector2(cx[i] + half[i] + SHOULDER_W + 26.0, -d)
+			root.add_child(marker)
+		n += 1.0
 	# Billboards: rarer, out on the embankment where the board clears the road.
 	var b := ceilf(start / BILLBOARD_EVERY)
 	if b * BILLBOARD_EVERY < start:

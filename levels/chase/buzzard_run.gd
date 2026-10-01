@@ -26,6 +26,7 @@ const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 const FinaleScript := preload("res://levels/chase/finale_director.gd")
 const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 const LightKit := preload("res://environment/light_kit.gd")
+const HighwayDeco := preload("res://levels/chase/highway_deco.gd")
 
 static var RUN_SECONDS := 120.0
 static var ROLL_SPEED := 300.0   # rolling-start fallback when the car has no controller
@@ -326,6 +327,13 @@ func pack_pace() -> float:
 ## Whole bolts of daredevil bonus on the table (the HUD ticker).
 func daredevil_bonus() -> int:
 	return int(daredevil)
+
+## Where the car is on the odometer (the mile markers' scale: 95 at the
+## flag, +1 per MILE_PX) — the dev readout and the probe's place names.
+func mile() -> float:
+	if _player == null or not is_instance_valid(_player):
+		return float(HighwayDeco.MILE_START)
+	return HighwayDeco.mile_at(-_player.global_position.y)
 
 ## The line is crossed: the purse and whatever the driver dared to earn go in
 ## the wallet (Economy's valve and reward scale apply — off the tour it pays
