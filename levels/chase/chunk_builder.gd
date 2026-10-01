@@ -21,6 +21,7 @@ const LightKit := preload("res://environment/light_kit.gd")
 const HighwayDecoScript := preload("res://levels/chase/highway_deco.gd")
 const SurfacePaint := preload("res://levels/chase/surface_paint.gd")   # the arenas' surface dress
 const RoadTraps := preload("res://levels/chase/road_traps.gd")
+const Corridor := preload("res://levels/chase/cutoff_corridor.gd")   # a cutoff's bands: track + long-grass shoulders
 const SIGN_EVERY := 1400.0        # course px between highway signs (sides alternate)
 const BILLBOARD_EVERY := 4300.0   # course px between billboards
 
@@ -597,15 +598,16 @@ static func _highway_dressing(root: Node2D, entry: Dictionary, ds: Array, cx: Ar
 		weed.position = Vector2(cx[i], -d)
 		root.add_child(weed)
 
-## The cutoff: a clearing beside the road with a dirt-bike trail through it,
-## a ditch between the trail and the embankment's foot, and a treeline
-## fencing the far side — solid pines on a layer-2 body, so the trail is a
-## corridor you stay in or scrape. The mouths are the embankment's gaps
-## (_build_embankment); the trail's zone outranks the grass shoulder where
-## they meet. Two phases: the ground (clearing, woods) goes down before the
-## walls so the slope paints over it; the trail (_build_cutoff_trail) goes
-## down after the shoulders so its bed paints over the verge at the mouths —
-## sibling order is draw order, and the paint has to agree with the zones.
+## The cutoff: a clearing beside the road with a dirt-bike track through it,
+## a long-grass shoulder (mud underneath) each side of the track, and a
+## treeline fencing the far side — solid pines on a layer-2 body, so the
+## trail is a corridor you stay in or scrape. The mouths are the
+## embankment's gaps (_build_embankment); the corridor's bands are clipped
+## to the road's verge there. Two phases: the ground (clearing, woods) goes
+## down before the walls so the slope paints over it; the trail
+## (_build_cutoff_trail) goes down after the shoulders so its bands draw
+## over the clearing — sibling order is draw order, and the paint has to
+## agree with the zones.
 static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 	var def: Dictionary = entry["def"]
 	if not def.has("cutoff"):
@@ -658,7 +660,18 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 		root.add_child(crown)
 		dd += rng.randf_range(90.0, 170.0)
 
-## The cutoff's second phase — see _build_cutoff.
+## The cutoff's second phase — see _build_cutoff. The corridor between the
+## embankment's foot and the treeline is three bands riding the trail's
+## stations (cutoff_corridor.gd owns the geometry and the gamble's
+## reasoning): a packed dirt TRACK `width` wide, a long-grass SHOULDER
+## `shoulder` wide each side of it — grass to the eye, MUD to the tyre.
+## Every band is clipped to the corridor's FLOOR line (_corridor_floor: the
+## wall's foot where it stands, the road's verge through the mouths), so
+## the bed starts at the shoulder of the road and nothing spills onto the
+## asphalt or the verge — less of a tell, you have to catch the mouth
+## quick. (The first and last trail stations stay in the near lane for
+## steering; cutoff_x still returns the line there. Only paint and zones
+## clip.)
 static func _build_cutoff_trail(root: Node2D, entry: Dictionary) -> void:
 	var def: Dictionary = entry["def"]
 	if not def.has("cutoff"):
@@ -666,6 +679,7 @@ static func _build_cutoff_trail(root: Node2D, entry: Dictionary) -> void:
 	var cf: Dictionary = def["cutoff"]
 	var side: float = cf["side"]
 	var width: float = cf["width"]
+	var margin: float = float(cf.get("shoulder", 0.0))
 	var entry_x: float = entry["entry_x"]
 	var pts: Array = cf["trail"]
 	var d_from: float = pts[0][0]
@@ -674,57 +688,73 @@ static func _build_cutoff_trail(root: Node2D, entry: Dictionary) -> void:
 	var trees_x: float = entry_x + float(cf["trees_x"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(entry["start_d"]) + 1214
-	# The ditch: a mud rut between the embankment's foot and the trail,
-	# along the straight where the two run side by side. Mud: stray and
-	# stick. It outranks the clearing's grass under it.
-	var ditch_a := PackedVector2Array()
-	var ditch_b := PackedVector2Array()
-	var d0: float = gaps[0][1]
-	var d1: float = gaps[1][0]
+	# The trail sampled once: (d, track centre x, corridor floor x) per sample.
+	var samples: Array = []
+	for d in Corridor.sample_ds(cf):
+		samples.append(Vector3(float(d), entry_x + ChunkDefs.cutoff_x(def, float(d)), _corridor_floor(entry, cf, float(d))))
+	# The shoulders: mud under long grass, outranking the clearing. The inner
+	# one is the old ditch widened — from the wall's foot to the track; the
+	# outer runs from the track to the treeline.
+	if margin > 0.0:
+		for k in 2:
+			var o: float = -1.0 if k == 0 else 1.0
+			var b: Array = Corridor.band(samples, side, o * width * 0.5 + minf(o, 0.0) * margin, o * width * 0.5 + maxf(o, 0.0) * margin, null)
+			if b[0].size() < 2:
+				continue
+			var band_name := "ShoulderIn" if k == 0 else "ShoulderOut"
+			var sh := _zone_strip(band_name, &"mud", b[0], b[1])
+			Corridor.tighten_rects(sh, b[0], b[1])
+			SurfacePaint.dress(sh.get_node(^"Vis") as Polygon2D, &"grass")   # grass to the eye, mud to the tyre
+			sh.soften_visual = false   # its edges are the verge and the foot: nothing may spill
+			sh.terrain_priority = 1
+			root.add_child(sh)
+			Corridor.long_grass(root, band_name, b[0], b[1], rng)
+	# The ditch's rut stays as a detail: a dark seep along the wall's foot on
+	# the straight, where the slope drains into the shoulder.
+	var rut_a := PackedVector2Array()
+	var rut_b := PackedVector2Array()
+	var d0: float = float(gaps[0][1]) + 20.0
+	var d1: float = float(gaps[1][0]) - 20.0
 	var m := maxi(int(ceilf((d1 - d0) / 90.0)), 2)
 	for i in m + 1:
 		var d := lerpf(d0, d1, float(i) / float(m))
 		var foot: float = _center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W + EMBANK_W)
-		var trail_edge: float = entry_x + ChunkDefs.cutoff_x(def, d) - side * width * 0.5
-		ditch_a.append(Vector2(foot, -d))
-		ditch_b.append(Vector2(trail_edge - side * 10.0, -d))
-	var ditch := _zone_strip("Ditch", &"mud", ditch_a, ditch_b)
-	ditch.terrain_priority = 1
-	root.add_child(ditch)
-	# The trail: a torn-edged dirt bed and its zone, which outranks the
-	# grass shoulder at the mouths.
-	var inner := PackedVector2Array()
-	var outer := PackedVector2Array()
-	var torn_in := PackedVector2Array()
-	var torn_out := PackedVector2Array()
-	var k := maxi(int(ceilf((d_to - d_from) / 60.0)), 2)
-	for i in k + 1:
-		var d := lerpf(d_from, d_to, float(i) / float(k))
-		var tx: float = entry_x + ChunkDefs.cutoff_x(def, d)
-		inner.append(Vector2(tx - side * width * 0.5, -d))
-		outer.append(Vector2(tx + side * width * 0.5, -d))
-		torn_in.append(Vector2(tx - side * (width * 0.5 + rng.randf_range(-6.0, 14.0)), -d))
-		torn_out.append(Vector2(tx + side * (width * 0.5 + rng.randf_range(-6.0, 14.0)), -d))
+		rut_a.append(Vector2(foot, -d))
+		rut_b.append(Vector2(foot + side * (22.0 + rng.randf_range(-4.0, 8.0)), -d))
+	var seep := Polygon2D.new()
+	seep.name = "DitchRut"
+	seep.polygon = _strip(rut_a, rut_b)
+	seep.color = SurfacePaint.tone(&"mud").darkened(0.3)
+	seep.color.a = 0.7
+	seep.z_index = -1
+	root.add_child(seep)
+	# The track: a torn-edged dirt bed and its zone, outranking the shoulders
+	# where their rects touch — the track is the track to the last pixel.
+	var torn: Array = Corridor.band(samples, side, -width * 0.5, width * 0.5, rng)
 	var bed := Polygon2D.new()
 	bed.name = "TrailBed"
-	bed.polygon = _strip(torn_in, torn_out)
+	bed.polygon = _strip(torn[0], torn[1])
 	SurfacePaint.dress(bed, &"dirt")   # the arena's dirt, torn edge and all
 	bed.z_index = -1
 	root.add_child(bed)
+	var track: Array = Corridor.band(samples, side, -width * 0.5, width * 0.5, null)
+	var inner: PackedVector2Array = track[0]
+	var outer: PackedVector2Array = track[1]
 	var dirt: Color = SurfacePaint.tone(&"dirt")
-	for i in range(0, k, 2):   # twin ruts the bikes wore in
+	for i in range(0, inner.size() - 1, 2):   # twin ruts the bikes wore in
 		for lane in [-0.28, 0.28]:
 			var rut := Polygon2D.new()
 			var a: Vector2 = inner[i].lerp(outer[i], 0.5 + lane)
-			var b: Vector2 = inner[i + 1].lerp(outer[i + 1], 0.5 + lane) if i + 1 <= k else a
+			var b: Vector2 = inner[i + 1].lerp(outer[i + 1], 0.5 + lane)
 			rut.polygon = PackedVector2Array([a + Vector2(-3, 0), a + Vector2(3, 0), b + Vector2(3, 0), b + Vector2(-3, 0)])
 			rut.color = dirt.darkened(0.22)
 			rut.color.a = 0.8
 			rut.z_index = -1
 			root.add_child(rut)
 	var trail := _zone_strip("Trail", &"dirt", inner, outer)
+	Corridor.tighten_rects(trail, inner, outer)
 	_bare(trail)   # the bed is the paint
-	trail.terrain_priority = 1
+	trail.terrain_priority = 2
 	root.add_child(trail)
 	# The treeline: solid pines along the far side of the trail, close enough
 	# together that nothing drives between them.
@@ -756,6 +786,17 @@ static func _build_cutoff_trail(root: Node2D, entry: Dictionary) -> void:
 		trees.add_child(crown2)
 		d += rng.randf_range(78.0, 92.0)
 	root.add_child(trees)
+
+## The corridor's floor at d: the road-side limit of the ground a cutoff's
+## bands may cover — the embankment's foot where the wall stands, the
+## road's verge (half_w + SHOULDER_W) through a mouth.
+static func _corridor_floor(entry: Dictionary, cf: Dictionary, d: float) -> float:
+	var side: float = cf["side"]
+	var verge: float = _center_x(entry, d) + side * (_half_w(entry, d) + SHOULDER_W)
+	for g in cf["gaps"]:
+		if d >= float(g[0]) and d <= float(g[1]):
+			return verge
+	return verge + side * EMBANK_W
 
 ## An irregular, squashed n-gon: a damp patch, or a slab of the old road.
 static func _chunk_of_road(center: Vector2, r: float, squash: float, n: int, rng: RandomNumberGenerator) -> PackedVector2Array:

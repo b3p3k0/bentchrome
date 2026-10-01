@@ -375,6 +375,13 @@ func test_the_trail_loses_the_pack() -> void:
 	scene._physics_process(0.016)
 	t.check(scene.on_trail() and wall.lost_sight, "trail: off the road on the trail the pack loses sight of you")
 	t.check(wall.get_node(^"Deco").lost_sight, "trail: and the riders start looking")
+	# Bogged in a shoulder, either side of the track: slow, but still out of sight.
+	var cf: Dictionary = def["cutoff"]
+	var off_track: float = float(cf["width"]) * 0.5 + float(cf["shoulder"]) * 0.5
+	for o in [-1.0, 1.0]:
+		player.global_position = Vector2(float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, 1000.0) + float(cf["side"]) * o * off_track, -td)
+		scene._physics_process(0.016)
+		t.check(scene.on_trail() and wall.lost_sight, "trail: in the %s shoulder the pack still can't see you" % ("inner" if o < 0.0 else "outer"))
 	# The same d, back on the asphalt: found.
 	player.global_position = Vector2(scene.course.sample(td)["x"], -td)
 	scene._physics_process(0.016)

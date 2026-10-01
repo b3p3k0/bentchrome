@@ -40,8 +40,9 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	# A cutoff's trail: taken on the chunks it was dealt (a deterministic
 	# coin per chunk, so a course seed always plays the same way). Like a
 	# driver reading the GPS, it lines up for the mouth from the chunk
-	# before; on the trail the wheel follows it and the road clamp becomes
-	# the trail's.
+	# before; on the trail the wheel follows the packed TRACK (not the
+	# long-grass shoulders — mud, the gamble's price) and the road clamp
+	# narrows to the track's width.
 	var on_trail := false
 	var ray_mask := 2 | 4   # walls + obstacles
 	var idx: int = host.course.chunk_index_at(look_d)
@@ -82,7 +83,8 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 	elif _dodge_t <= 0.0:
 		_dodge = 0.0
 	var want_x: float = road_x if _dodge == 0.0 else own.x + _dodge * DODGE_SIDE
-	want_x = clampf(want_x, road_x - half + (60.0 if not on_trail else 30.0), road_x + half - (60.0 if not on_trail else 30.0))
+	var inset: float = 60.0 if not on_trail else half * 0.6   # on the track: a wheel's width of slack, no more
+	want_x = clampf(want_x, road_x - half + inset, road_x + half - inset)
 	# The same lane-change wheel the player has: a sidestep is an axis push,
 	# and a sweeper has to be driven. Gentle on the wheel: full lock only for
 	# a big correction (every degree of yaw is northward speed spent).

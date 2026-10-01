@@ -25,6 +25,7 @@ const RobberyScreen := preload("res://ui/robbery_screen.gd")
 const GarageItems := preload("res://ui/garage/garage_catalog.gd")
 const FinaleScript := preload("res://levels/chase/finale_director.gd")
 const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
+const Builder := preload("res://levels/chase/chunk_builder.gd")   # SHOULDER_W: where the road's verge ends
 const LightKit := preload("res://environment/light_kit.gd")
 const HighwayDeco := preload("res://levels/chase/highway_deco.gd")
 
@@ -303,9 +304,11 @@ func _shade_the_roadside() -> void:
 		node.set(&"shadow_strength", _shadows)
 
 ## Off the road on a cutoff's trail: the chunk under the car has one, the
-## car is inside the trail's reach along the road and out past the shoulder
-## on the trail's side — through the mouth, that is. The pack loses sight
-## of you there (horde_wall.lost_sight).
+## car is inside the trail's reach along the road and out past the road's
+## verge on the trail's side — through the mouth, that is. The WHOLE
+## corridor counts, the packed track and the long-grass shoulders either
+## side of it: bogged in the shoulder you are slow, but you are still out
+## of the pack's sight (horde_wall.lost_sight).
 func on_trail() -> bool:
 	if course == null or _player == null or not is_instance_valid(_player):
 		return false
@@ -321,7 +324,7 @@ func on_trail() -> bool:
 		return false
 	var s: Dictionary = course.sample(d)
 	var side: float = cf["side"]
-	return side * (_player.global_position.x - float(s["x"])) > float(s["half_w"]) + 90.0
+	return side * (_player.global_position.x - float(s["x"])) > float(s["half_w"]) + Builder.SHOULDER_W
 
 ## The dust has no body, so nothing you throw at it can hit it — the host
 ## watches instead: every physics tick, any live mine you dropped or missile

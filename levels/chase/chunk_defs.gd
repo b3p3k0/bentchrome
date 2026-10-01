@@ -234,20 +234,22 @@ const DEFS := {
 	# --- the back roads --------------------------------------------------
 	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
 	# straight along the inside — through a GAP in the shoulder and the
-	# embankment, fenced by a treeline and a ditch, and back through a
-	# second gap. The `cutoff` block: `side` (-1 = the trail is on the left),
-	# `trail` stations [d, x_off] from the chunk ENTRY x (not the bent
-	# centreline), `width`, the embankment `gaps` [from, to] on that side,
-	# `trees_x` the treeline's offset. Honest dirt (slower) — the pay-off is
-	# the pack losing sight of you (horde_wall.lost_sight) and the S-bend's
-	# curve tax you skip. The pair mirror each other.
+	# embankment, fenced by a treeline, and back through a second gap. The
+	# `cutoff` block: `side` (-1 = the trail is on the left), `trail`
+	# stations [d, x_off] from the chunk ENTRY x (not the bent centreline),
+	# `width` of the packed track, `shoulder` the long-grass band EACH side
+	# of it (mud underneath — the gamble: the track is the fast line, blow
+	# it and the shoulder bogs you), the embankment `gaps` [from, to] on
+	# that side, `trees_x` the treeline's offset. Honest dirt (slower) — the
+	# pay-off is the pack losing sight of you (horde_wall.lost_sight) and
+	# the S-bend's curve tax you skip. The pair mirror each other.
 	&"cutoff_l": {
 		"len": 2000.0, "exit_dx": 0.0, "half_w": 360.0,
 		"kind": &"cutoff", "shoulder": &"grass",
 		"path": [[300.0, 0.0], [760.0, 200.0], [1240.0, 200.0], [1700.0, 0.0]],
 		"cutoff": {
-			"side": -1.0, "width": 150.0, "trees_x": -690.0,
-			"trail": [[100.0, -200.0], [860.0, -520.0], [1180.0, -520.0], [1760.0, -300.0]],
+			"side": -1.0, "width": 70.0, "shoulder": 150.0, "trees_x": -790.0,
+			"trail": [[100.0, -230.0], [860.0, -565.0], [1180.0, -565.0], [1760.0, -330.0]],
 			"gaps": [[300.0, 780.0], [1280.0, 1700.0]],
 		},
 		"props": [
@@ -260,8 +262,8 @@ const DEFS := {
 		"kind": &"cutoff", "shoulder": &"grass",
 		"path": [[300.0, 0.0], [760.0, -200.0], [1240.0, -200.0], [1700.0, 0.0]],
 		"cutoff": {
-			"side": 1.0, "width": 150.0, "trees_x": 690.0,
-			"trail": [[100.0, 200.0], [860.0, 520.0], [1180.0, 520.0], [1760.0, 300.0]],
+			"side": 1.0, "width": 70.0, "shoulder": 150.0, "trees_x": 790.0,
+			"trail": [[100.0, 230.0], [860.0, 565.0], [1180.0, 565.0], [1760.0, 330.0]],
 			"gaps": [[300.0, 780.0], [1280.0, 1700.0]],
 		},
 		"props": [

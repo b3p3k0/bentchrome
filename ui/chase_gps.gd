@@ -143,7 +143,12 @@ func _draw_back_roads(course, d0: float, window: float, player_d: float, center_
 				var local := lerpf(from_d, to_d, float(j) / float(k))
 				var world := Vector2(float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, local), -(start + local))
 				line.append(_panel(world, player_d, center_x, sy))
-			draw_polyline(line, TRAIL, maxf(float(cf["width"]) * sy * 1.6, 2.0))
+			# The long-grass shoulders as a faint band, the packed track as a
+			# thin thread down its middle: the width you have to hold.
+			var shoulder: float = float(cf.get("shoulder", 0.0))
+			if shoulder > 0.0:
+				draw_polyline(line, Color(TRAIL, 0.3), maxf((float(cf["width"]) + 2.0 * shoulder) * sy * 1.6, 3.0))
+			draw_polyline(line, TRAIL, maxf(float(cf["width"]) * sy * 1.6, 1.5))
 			var font := ThemeDB.fallback_font
 			var mouth := line[0] + Vector2(-14.0 if float(cf["side"]) < 0.0 else 4.0, -4.0)
 			draw_string(font, mouth, "TRAIL", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, TRAIL.lightened(0.3))

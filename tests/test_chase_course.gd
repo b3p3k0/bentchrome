@@ -307,8 +307,9 @@ func test_builder_set_pieces_and_flair() -> void:
 
 ## The cutoff's geometry: the road's S and the trail's legs are holdable at
 ## the lane wheel's cone; the trail starts INSIDE the wall's inner edge at
-## each gap's mouth and is clear of the outer edge by its end; the two kinds
-## mirror.
+## each gap's mouth and is clear of the outer edge by its end; on the
+## straight the corridor holds a full shoulder each side of the track —
+## foot to track, track to treeline; the two kinds mirror.
 func test_cutoff_geometry() -> void:
 	const Pedal := preload("res://levels/chase/chase_player_driver.gd")
 	var lock := tan(deg_to_rad(Pedal.LANE_YAW_DEG))
@@ -341,6 +342,15 @@ func test_cutoff_geometry() -> void:
 		var outer_mid: float = Builder._center_x(entry, mid_d) + side * (float(def["half_w"]) + Builder.SHOULDER_W + Builder.EMBANK_W)
 		var near_edge: float = ChunkDefs.cutoff_x(def, mid_d) - side * float(cf["width"]) * 0.5
 		t.check(side * (near_edge - outer_mid) >= 60.0, "cutoff: %s: on the straight the trail clears the bulged embankment (%d)" % [name, int(side * (near_edge - outer_mid))])
+		# The gamble's geometry: a narrow track (≤ 80) with a shoulder as wide
+		# as the old whole trail (≥ 140) each side — the inner one filling
+		# foot to track exactly, the outer one reaching the treeline.
+		var margin: float = cf["shoulder"]
+		t.check(float(cf["width"]) <= 80.0 and margin >= 140.0, "cutoff: %s: a %dpx track between %dpx shoulders" % [name, int(cf["width"]), int(margin)])
+		t.check(absf(side * (near_edge - outer_mid) - margin) <= 1.0, "cutoff: %s: the inner shoulder fills foot to track (%d)" % [name, int(side * (near_edge - outer_mid))])
+		var far_edge: float = ChunkDefs.cutoff_x(def, mid_d) + side * (float(cf["width"]) * 0.5 + margin)
+		var trees: float = side * (float(cf["trees_x"]) - far_edge)
+		t.check(trees >= 0.0 and trees <= 60.0, "cutoff: %s: the treeline stands just past the outer shoulder (%d)" % [name, int(trees)])
 		t.check(is_equal_approx(ChunkDefs.cutoff_x(def, 0.0), float(pts[0][1])) and is_equal_approx(ChunkDefs.cutoff_x(def, 2000.0), float(pts[pts.size() - 1][1])),
 			"cutoff: %s: the trail holds its first and last station past the ends" % name)
 	for i in l["cutoff"]["trail"].size():
@@ -348,20 +358,38 @@ func test_cutoff_geometry() -> void:
 	for i in l["path"].size():
 		t.check(is_equal_approx(float(l["path"][i][1]), -float(r["path"][i][1])), "cutoff: the roads mirror (station %d)" % i)
 
+## The road's verge line (where the grass verge ends) at d, on a side.
+func _verge_x(entry: Dictionary, side: float, d: float) -> float:
+	return Builder._center_x(entry, d) + side * (Builder._half_w(entry, d) + Builder.SHOULDER_W)
+
+## Every corner of a zone's rect Cols, in chunk space.
+func _rect_corners(zone: Node) -> Array:
+	var out: Array = []
+	for sub in zone.get_children():
+		if sub is CollisionShape2D and sub.shape is RectangleShape2D:
+			var h: Vector2 = sub.shape.size * 0.5
+			for c in [Vector2(-h.x, -h.y), Vector2(h.x, -h.y), Vector2(h.x, h.y), Vector2(-h.x, h.y)]:
+				out.append(sub.position + c.rotated(sub.rotation))
+	return out
+
 ## The cutoff, built: the trail side's wall is three runs with the mouths
-## open, the far side stays one; a solid treeline fences the trail; the
-## trail is a dirt zone that outranks the shoulder; the ditch is mud.
+## open, the far side stays one; a solid treeline fences the corridor; the
+## track is a narrow dirt zone flanked by two wide shoulders that run MUD
+## under long-grass paint (the gamble) and outrank the clearing; nothing of
+## the corridor — zone or bed — lies inside the road's verge.
 func test_builder_cutoff() -> void:
 	for name in [&"cutoff_l", &"cutoff_r"]:
 		var def: Dictionary = ChunkDefs.DEFS[name]
 		var cf: Dictionary = def["cutoff"]
 		var side: float = cf["side"]
-		var chunk: Node2D = Builder.build(_entry_for(name))
+		var entry := _entry_for(name)
+		var chunk: Node2D = Builder.build(entry)
 		var walls := 0
 		var trail_walls := 0
 		var trees: Node = null
 		var trail: Node = null
-		var ditch: Node = null
+		var shoulders: Dictionary = {}
+		var clearing: Node = null
 		for child in chunk.get_children():
 			if child is StaticBody2D and child.collision_layer == 2:
 				if child.name == "Treeline":
@@ -378,8 +406,10 @@ func test_builder_cutoff() -> void:
 			elif child is Area2D and child.collision_layer == 128:
 				if child.name == "Trail":
 					trail = child
-				elif child.name == "Ditch":
-					ditch = child
+				elif child.name == "ShoulderIn" or child.name == "ShoulderOut":   # the corridor's, not the road's verge (ShoulderL/R)
+					shoulders[String(child.name)] = child
+				elif child.name == "Clearing":
+					clearing = child
 		t.check(walls == 4 and trail_walls == 3, "cutoff: %s: three wall runs on the trail side, one on the other (%d/%d)" % [name, walls, trail_walls])
 		t.check(trees != null, "cutoff: %s: a treeline stands beyond the trail" % name)
 		if trees != null:
@@ -391,19 +421,68 @@ func test_builder_cutoff() -> void:
 					if absf(sub.position.x - float(cf["trees_x"])) > 30.0:
 						off_line = true
 			t.check(circles >= 14 and not off_line, "cutoff: %s: %d solid pines on the line" % [name, circles])
-		t.check(trail != null and trail.terrain_type == &"dirt" and trail.terrain_priority == 1,
-			"cutoff: %s: the trail is dirt and outranks the shoulder at the mouths" % name)
-		t.check(ditch != null and ditch.terrain_type == &"mud", "cutoff: %s: the ditch is mud" % name)
+		# The track: dirt, narrow, and the top of the corridor's pecking order.
+		var straight_lo: float = float(cf["gaps"][0][1]) + 120.0
+		var straight_hi: float = float(cf["gaps"][1][0]) - 120.0
+		t.check(trail != null and trail.terrain_type == &"dirt", "cutoff: %s: the track is dirt" % name)
 		if trail != null:
-			var outside := true
+			var widest := 0.0
 			for sub in trail.get_children():
-				if sub is CollisionShape2D:
+				if sub is CollisionShape2D and sub.shape is RectangleShape2D:
+					widest = maxf(widest, sub.shape.size.y)
+			t.check(widest <= 80.0 and widest >= float(cf["width"]) - 1.0, "cutoff: %s: the track is %dpx wide — narrow" % [name, int(widest)])
+		# The shoulders: two mud zones under grass paint, each ≥ 140 wide along
+		# the straight, flanking the track; the treeline beyond the outer one.
+		t.check(shoulders.has("ShoulderIn") and shoulders.has("ShoulderOut"), "cutoff: %s: a shoulder each side of the track (%s)" % [name, str(shoulders.keys())])
+		var track_x: float = float(entry["entry_x"]) + ChunkDefs.cutoff_x(def, (straight_lo + straight_hi) * 0.5)
+		for sname in shoulders:
+			var sh: Node = shoulders[sname]
+			t.check(sh.terrain_type == &"mud", "cutoff: %s: %s runs mud underneath" % [name, sname])
+			t.check(clearing != null and sh.terrain_priority >= clearing.terrain_priority and sh.terrain_priority >= 1,
+				"cutoff: %s: %s outranks the clearing's grass" % [name, sname])
+			t.check(trail != null and trail.terrain_priority > sh.terrain_priority, "cutoff: %s: the track outranks %s where they touch" % [name, sname])
+			var vis := sh.get_node_or_null(^"Vis") as Polygon2D
+			t.check(vis != null and vis.material == Builder.SurfacePaint.terrain_material(&"grass"), "cutoff: %s: %s wears the arena grass" % [name, sname])
+			t.check(not sh.soften_visual, "cutoff: %s: %s keeps its edges crisp (nothing spills)" % [name, sname])
+			var narrowest := INF
+			var flank_ok := true
+			var past_trees := false
+			for sub in sh.get_children():
+				if sub is CollisionShape2D and sub.shape is RectangleShape2D:
 					var d: float = -sub.position.y
-					if d > float(cf["gaps"][0][1]) and d < float(cf["gaps"][1][0]):
-						var edge: float = Builder._center_x(_entry_for(name), d) + side * (float(def["half_w"]) + Builder.SHOULDER_W)
-						if side * (sub.position.x - edge) < 0.0:
-							outside = false
-			t.check(outside, "cutoff: %s: along the straight the trail lies outside the road" % name)
+					if d < straight_lo or d > straight_hi:
+						continue
+					narrowest = minf(narrowest, sub.shape.size.y)
+					var toward_trees: float = side * (sub.position.x - track_x)
+					if (sname == "ShoulderIn") != (toward_trees < 0.0):
+						flank_ok = false
+					if side * (sub.position.x + side * sub.shape.size.y * 0.5 - (float(entry["entry_x"]) + float(cf["trees_x"]))) > 0.0:
+						past_trees = true
+			t.check(narrowest >= 140.0, "cutoff: %s: %s is %dpx wide along the straight" % [name, sname, int(narrowest)])
+			t.check(flank_ok, "cutoff: %s: %s lies on its side of the track" % [name, sname])
+			t.check(not past_trees, "cutoff: %s: %s ends at the treeline" % [name, sname])
+		# The mouths: no corridor rect, and no point of the bed, inside the
+		# road's verge — the track starts at the shoulder of the road.
+		var zones: Array = [trail] + shoulders.values()
+		for zone in zones:
+			if zone == null:
+				continue
+			var spilled := 0
+			for c in _rect_corners(zone):
+				if side * (c.x - _verge_x(entry, side, -c.y)) < -6.0:
+					spilled += 1
+			t.check(spilled == 0, "cutoff: %s: %s never reaches inside the verge (%d corners did)" % [name, zone.name, spilled])
+		var bed := chunk.get_node_or_null(^"TrailBed") as Polygon2D
+		t.check(bed != null and bed.polygon.size() >= 6, "cutoff: %s: the track has a bed" % name)
+		if bed != null:
+			var inside := 0
+			for p in bed.polygon:
+				if side * (p.x - _verge_x(entry, side, -p.y)) < -1.0:
+					inside += 1
+			t.check(inside == 0, "cutoff: %s: the bed's paint stays outside the verge (%d points spilled)" % [name, inside])
+			var first_d: float = -bed.polygon[0].y
+			t.check(first_d > float(cf["gaps"][0][0]) and first_d < float(cf["gaps"][0][1]),
+				"cutoff: %s: the bed starts inside the entry mouth (d %d)" % [name, int(first_d)])
 		var flair_on_trail := false
 		for child in chunk.get_children():
 			if child is Polygon2D and child.z_index == 0 and child.position == Vector2.ZERO and child.polygon.size() > 0:
@@ -1085,16 +1164,22 @@ func test_builder_surfaces_match_the_arenas() -> void:
 		var zvis := wchunk.get_node_or_null(NodePath("Washout%s/Vis" % side)) as Polygon2D
 		t.check(zvis != null and zvis.material == null and zvis.color.a == 0.0, "surfaces: washout zone %s leaves the paint to its bed" % side)
 	wchunk.free()
-	# Cutoff: trail bed = dirt, ditch = mud, the clearing is real grass; the
-	# trail draws AFTER the shoulders so its bed paints over the verge.
+	# Cutoff: trail bed = dirt, the clearing is real grass; the shoulders are
+	# the one deliberate lie — arena GRASS to the eye over a MUD zone (grass
+	# here is faster than dirt, so a true grass shoulder would be the fast
+	# line; mud is what bogs); the trail draws AFTER the road's shoulders.
 	var cchunk: Node2D = Builder.build(_entry_for(&"cutoff_l"))
 	var trail_bed := cchunk.get_node_or_null(^"TrailBed") as Polygon2D
 	t.check(trail_bed != null and trail_bed.material == Loader._speckle_material("dirt"), "surfaces: the trail bed is the arena dirt")
-	var ditch_vis := cchunk.get_node_or_null(^"Ditch/Vis") as Polygon2D
-	t.check(ditch_vis != null and ditch_vis.material == Loader._speckle_material("mud") and ditch_vis.color == Catalog.TERRAIN_COLORS["mud"],
-		"surfaces: the ditch is the arena mud")
-	var ditch: Node = cchunk.get_node_or_null(^"Ditch")
-	t.check(ditch != null and ditch.terrain_priority == 1, "surfaces: the ditch outranks the clearing")
+	for sname in ["ShoulderIn", "ShoulderOut"]:
+		var sh: Node = cchunk.get_node_or_null(NodePath(sname))
+		var sh_vis := cchunk.get_node_or_null(NodePath("%s/Vis" % sname)) as Polygon2D
+		t.check(sh != null and sh.terrain_type == &"mud" and sh_vis != null and sh_vis.material == Loader._speckle_material("grass")
+			and sh_vis.color == Catalog.TERRAIN_COLORS["grass"], "surfaces: %s is arena grass over a mud zone" % sname)
+		t.check(sh != null and sh.terrain_priority == 1, "surfaces: %s outranks the clearing" % sname)
+		t.check(cchunk.get_node_or_null(NodePath("%sShade" % sname)) != null and cchunk.get_node_or_null(NodePath("%sTuftsDark" % sname)) != null,
+			"surfaces: %s reads as long grass — darkened, tufted" % sname)
+	t.check(cchunk.get_node_or_null(^"DitchRut") is Polygon2D, "surfaces: the ditch's rut stays as paint along the wall's foot")
 	var clearing: Node = cchunk.get_node_or_null(^"Clearing")
 	t.check(clearing != null and clearing is Area2D and clearing.collision_layer == 128 and clearing.terrain_type == &"grass",
 		"surfaces: the clearing is a grass zone, not grass-coloured paint")
