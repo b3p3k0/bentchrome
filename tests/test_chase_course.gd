@@ -689,6 +689,67 @@ func test_builder_spike_strip() -> void:
 	t.check(ChunkDefs.WEIGHTS.has(&"spike_strip") and &"spike_strip" in ChunkDefs.NO_REPEAT and not (&"spike_strip" in ChunkDefs.RARE),
 		"spikes: rolls like a chunk, never twice running, never a landmark")
 
+## The tanker: a burning trailer in the verge with its load spilled across
+## two lanes — at least four ice-under-oil slicks in a sheet from the rear,
+## and the far lane left dry. Both verges over a few seeds.
+func test_builder_tanker() -> void:
+	const Traps := preload("res://levels/chase/road_traps.gd")
+	var def: Dictionary = ChunkDefs.DEFS[&"tanker"]
+	var half: float = def["half_w"]
+	var sides_seen := {}
+	for start_d in [0.0, 1400.0, 3100.0, 7700.0]:
+		var entry := _entry_for(&"tanker")
+		entry["start_d"] = start_d
+		var chunk: Node2D = Builder.build(entry)
+		var rig: Node = null
+		var cab := false
+		var fire := false
+		var glow := false
+		var flock := false
+		var slicks: Array = []
+		for child in chunk.get_children():
+			var script = child.get_script()
+			var path: String = script.resource_path if script else ""
+			if path.ends_with("destructible_block.gd") and child.deco == &"trailer":
+				rig = child
+			elif path.ends_with("derelict_car.gd") and child.name == "TankerCab":
+				cab = true
+			elif path.ends_with("highway_deco.gd"):
+				if child.kind == &"wreck_fire" and child.name == "TankerFire":
+					fire = true
+				elif child.kind == &"vultures":
+					flock = true
+			elif child is PointLight2D and child.name == "TankerGlow":
+				glow = true
+			elif child is Area2D and child.collision_layer == 128 and child.terrain_type == &"ice":
+				for sub in child.get_children():   # the slicks are circles (shoulders are rect strips); siblings get auto-renamed
+					if sub is CollisionShape2D and sub.shape is CircleShape2D:
+						slicks.append(child.position)
+						break
+		t.check(rig != null and cab and fire and glow and flock, "tanker: the rig, its cab, the fire, the glow and the birds (seed %d)" % int(start_d))
+		t.check(slicks.size() >= 4, "tanker: the load spilled — %d slicks" % slicks.size())
+		if rig != null:
+			var side: float = signf(rig.position.x)
+			sides_seen[side] = true
+			t.check(rig.max_hp >= 80.0 and absf(rig.rotation) > 0.6 and absf(rig.position.x) >= half - 20.0,
+				"tanker: heavy, angled, in the verge")
+			var near_lane := 0
+			var dry := true
+			for p in slicks:
+				var px: float = float(p.x)
+				if side * px > 0.0:
+					near_lane += 1
+				if side * px < -(half / 3.0) - 60.0:   # a slick's reach past the far lane's line
+					dry = false
+				t.check(absf(px) < half - 30.0 and -p.y < Traps.TANKER_D and -p.y > Traps.TANKER_D - 300.0,
+					"tanker: the oil lies on the road, south of the rear hatch")
+			t.check(near_lane >= 3, "tanker: the sheet starts at the tanker's rear (%d near-side slicks)" % near_lane)
+			t.check(dry, "tanker: the far lane is dry — the line")
+		chunk.free()
+	t.check(sides_seen.size() == 2, "tanker: it goes into either verge by the seed")
+	t.check(ChunkDefs.WEIGHTS.has(&"tanker") and &"tanker" in ChunkDefs.NO_REPEAT and not (&"tanker" in ChunkDefs.RARE),
+		"tanker: rolls like a chunk, never twice running, never a landmark")
+
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch
 ## lip that launches the birds but never the player.

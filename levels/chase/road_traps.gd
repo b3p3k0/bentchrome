@@ -143,3 +143,92 @@ static func spike_strip(root: Node2D, c: float, half: float, rng: RandomNumberGe
 	scuff.color = Color(0.1, 0.09, 0.07, 0.35)
 	scuff.z_index = -1
 	root.add_child(scuff)
+
+# --- the tanker -------------------------------------------------------------
+static var TANKER_D := 700.0       # the rig's station into the chunk
+static var SPILL_SLICKS := 5       # oil slicks in the sheet (two lanes' worth)
+static var SPILL_PITCH := 95.0     # px between slick centres across the road
+static var TANKER_HP := 90.0       # the jackknife's trailer: heaviest thing short of a pillar
+
+## A tanker jackknifed into the verge and burning (the jackknife's `trailer`
+## block, 90 HP, with its cab nosed into the embankment), its load spilled
+## in a diagonal sheet across two lanes from the rear. The sheet itself is
+## paint; the SLICKS are the builder's (`_slick`: ice under oil) — this
+## returns where they go, in order from the tanker's rear, and the builder
+## lays them. Vultures overhead. The dry lane is the line.
+static func tanker(root: Node2D, c: float, half: float, rng: RandomNumberGenerator) -> Array[Vector2]:
+	var d := TANKER_D
+	rng.randf()   # warm-up: the first draws off a small seed lean under 0.5
+	rng.randf()
+	var side := 1.0 if rng.randi() % 2 == 0 else -1.0   # which verge it went into
+	var rig := BlockScene.instantiate()
+	rig.name = "Tanker"
+	rig.position = Vector2(c + side * (half + 6.0), -d)
+	rig.rotation = side * rng.randf_range(0.85, 1.1)   # nearly across the verge, the rear on the road
+	rig.size = Vector2(230, 72)
+	rig.max_hp = TANKER_HP
+	rig.deco = &"trailer"
+	root.add_child(rig)
+	var cab = DerelictScene.instantiate()
+	cab.name = "TankerCab"
+	cab.position = Vector2(c + side * (half + 96.0), -(d + 118.0))
+	cab.rotation = -PI / 2.0 + side * rng.randf_range(0.9, 1.3)
+	root.add_child(cab)
+	# The spill: a dark sheet from the rear hatch running diagonally across
+	# two lanes, the slicks laid over it by the builder. z -1 paint.
+	var rear := Vector2(c + side * (half - 40.0), -(d - 10.0))
+	var far_k := float(SPILL_SLICKS - 1)
+	var tip := Vector2(c + side * (half - 60.0 - far_k * SPILL_PITCH), -(d - 20.0 - far_k * 48.0))
+	var sheet := Polygon2D.new()
+	sheet.name = "OilSheet"
+	var across := (tip - rear).normalized().orthogonal() * 58.0
+	sheet.polygon = PackedVector2Array([
+		rear + across * 0.5 + Vector2(0.0, -30.0), rear - across * 0.6,
+		rear.lerp(tip, 0.4) - across * 1.1, tip - across * 0.7 + Vector2(0.0, 18.0),
+		tip + across * 0.6 + Vector2(0.0, 24.0), rear.lerp(tip, 0.55) + across * 1.0,
+	])
+	sheet.color = Color(0.03, 0.03, 0.035, 0.85)
+	sheet.z_index = -1
+	root.add_child(sheet)
+	var spots: Array[Vector2] = []
+	for k in SPILL_SLICKS:
+		spots.append(Vector2(c + side * (half - 60.0 - float(k) * SPILL_PITCH) + rng.randf_range(-8.0, 8.0),
+			-(d - 20.0 - float(k) * 48.0 + rng.randf_range(-10.0, 10.0))))
+	# The fire: on the tank, with a glow; and the birds that found it first.
+	var fire := Node2D.new()
+	fire.set_script(HighwayDecoScript)
+	fire.name = "TankerFire"
+	fire.kind = &"wreck_fire"
+	fire.position = rig.position + Vector2(-side * 20.0, -30.0)
+	fire.scale = Vector2(1.6, 1.6)   # paint only: a whole tank going up, not a wreck's engine bay
+	root.add_child(fire)
+	var hatch_fire := Node2D.new()   # and the rear hatch, where the load ran out
+	hatch_fire.set_script(HighwayDecoScript)
+	hatch_fire.name = "HatchFire"
+	hatch_fire.kind = &"wreck_fire"
+	hatch_fire.position = rear + Vector2(0.0, -6.0)
+	root.add_child(hatch_fire)
+	var glow := LightKit.make_light(170.0, 0.6, Color(1.0, 0.5, 0.18))
+	glow.name = "TankerGlow"
+	glow.position = rig.position
+	root.add_child(glow)
+	rig.flattened.connect(func() -> void:
+		for node in [fire, hatch_fire, glow]:
+			if is_instance_valid(node):
+				node.queue_free())
+	var flock := Node2D.new()
+	flock.set_script(HighwayDecoScript)
+	flock.name = "TankerVultures"
+	flock.kind = &"vultures"
+	flock.position = Vector2(c + side * 160.0, -(d + 40.0))
+	root.add_child(flock)
+	# Skids where the rig came round, and glass on the asphalt.
+	for lane in [-16.0, 16.0]:
+		var skid := Polygon2D.new()
+		var a := Vector2(c + side * 60.0 + lane, -(d - 300.0))
+		var b := Vector2(c + side * (half - 20.0) + lane, -(d - 30.0))
+		skid.polygon = PackedVector2Array([a + Vector2(-4, 0), a + Vector2(4, 0), b + Vector2(4, 0), b + Vector2(-4, 0)])
+		skid.color = Color(0.07, 0.07, 0.08, 0.7)
+		skid.z_index = -1
+		root.add_child(skid)
+	return spots

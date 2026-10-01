@@ -218,6 +218,19 @@ const DEFS := {
 			{"kind": &"junk", "at": [1080.0, -260.0]},
 		],
 	},
+	# Tanker: a rig jackknifed into the verge and burning, its load spilled in
+	# a sheet of oil across two lanes (slicks: ice — the car keeps going where
+	# it was going). The dry lane is the line. Vultures already overhead.
+	&"tanker": {
+		"len": 1400.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"tanker", "shoulder": &"dirt",
+		"set_piece": &"tanker",
+		"props": [
+			{"kind": &"cone", "at": [400.0, -330.0]},
+			{"kind": &"cone", "at": [400.0, 330.0]},
+			{"kind": &"barrel", "at": [1150.0, 320.0]},
+		],
+	},
 	# --- the back roads --------------------------------------------------
 	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
 	# straight along the inside — through a GAP in the shoulder and the
@@ -338,6 +351,7 @@ const WEIGHTS := {
 	&"jackknife": 0.7,
 	&"tire_wall": 0.6,
 	&"spike_strip": 0.6,
+	&"tanker": 0.6,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -347,7 +361,7 @@ const WEIGHTS := {
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
 	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r", &"tollbooth", &"jackknife",
-	&"tire_wall", &"spike_strip"]
+	&"tire_wall", &"spike_strip", &"tanker"]
 
 ## A cutoff's trail: its centre at chunk-local d as an offset from the chunk
 ## ENTRY x (the trail runs straight while the road bends away from it).

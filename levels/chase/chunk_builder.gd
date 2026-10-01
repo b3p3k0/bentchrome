@@ -90,6 +90,8 @@ static func build(entry: Dictionary) -> Node2D:
 			_tire_wall(root, entry)
 		&"spike_strip":
 			_spike_strip(root, entry)
+		&"tanker":
+			_tanker(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -1420,3 +1422,13 @@ static func _spike_strip(root: Node2D, entry: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(entry["start_d"]) + 667
 	RoadTraps.spike_strip(root, _center_x(entry, RoadTraps.SPIKE_D), float(entry["def"]["half_w"]), rng)
+
+## Tanker: a rig jackknifed into the verge and burning, its load spilled
+## across two lanes — road_traps places the wreck and says where the oil
+## went; the slicks themselves are the bad road's (`_slick`: ice under oil).
+static func _tanker(root: Node2D, entry: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 668
+	var spots: Array[Vector2] = RoadTraps.tanker(root, _center_x(entry, RoadTraps.TANKER_D), float(entry["def"]["half_w"]), rng)
+	for pos in spots:
+		_slick(root, pos, rng)
