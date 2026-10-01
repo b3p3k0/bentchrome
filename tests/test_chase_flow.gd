@@ -582,3 +582,124 @@ func test_off_the_tour_the_loss_panel_stands_in() -> void:
 		"chase: nothing is taken off the tour")
 	gs.owned_mods.clear()
 	_close(scene)
+
+## The oil slick is a SLIDE, not a death: the nose kicks 12-28° off the line
+## (and keeps coming — yaw_kick) while the velocity holds its course at the
+## moment of entry, the tires ride ice for OIL_SECONDS and then don't, black
+## tracks come off the tread, the car crabs a lane's worth, and a dead-centre
+## entry at speed is back on the road pointing north inside 1.5s.
+## A pothole is still a pothole (dirt zone, no kick, no tracks) and an
+## airborne car clears the oil. One boot for all of it — the suite's clock
+## is the budget, so the hazards sit a few frames up the road.
+func test_oil_slick_is_a_slide_not_a_death() -> void:
+	const OilSlick := preload("res://levels/chase/oil_slick.gd")
+	const Builder := preload("res://levels/chase/chunk_builder.gd")
+	const NORTH := -PI / 2.0
+	var scene = await _boot()
+	scene.catch_enabled = false
+	scene.get_node(^"ChaseDirector").frozen = true
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	var fx = player.get_node(^"DriveFX")
+	# The kick itself, by hand: a car running north at 500.
+	var bench: Area2D = OilSlick.make(Vector2(300.0, -9000.0), 44.0)
+	scene.add_child(bench)
+	player.velocity = Vector2(0.0, -500.0)
+	player.heading = NORTH
+	var hp_before: float = player.get_hp()
+	bench.slide(player)
+	var kick: float = absf(rad_to_deg(angle_difference(NORTH, player.heading)))
+	t.check(kick >= OilSlick.KICK_MIN_DEG - 0.01 and kick <= OilSlick.KICK_MAX_DEG + 0.01,
+		"slick: the nose kicks 12-28° off the line (%.1f°)" % kick)
+	t.check(player.velocity == Vector2(0.0, -500.0), "slick: the velocity is never touched — momentum carries straight")
+	t.check(player.terrain_forced() and player.yaw_kicking(), "slick: the tires are on the spell and the nose keeps coming")
+	t.check(fx._blood_tracks.size() == 2 and (fx._blood_tracks[0] as Line2D).default_color == OilSlick.TRACK_COLOR,
+		"slick: a car lays a BLACK rear pair (%d)" % fx._blood_tracks.size())
+	t.check(fx._blood_t >= OilSlick.TRACK_SECONDS - 0.01, "slick: tracks carry for TRACK_SECONDS")
+	t.check(fx._screech_t >= OilSlick.SCREECH_SECONDS - 0.01, "slick: the screech is held")
+	t.check(player.get_hp() == hp_before, "slick: never HP")
+	# The splat keeps its red: a stain over the oil swaps the pair, not the rule.
+	fx.carry_splat(0.5)
+	t.check(fx._blood_tracks.size() == 2 and (fx._blood_tracks[0] as Line2D).default_color == fx.BLOOD_COLOR,
+		"slick: a splat after the oil lays red again")
+	fx.clear_splat_tracks()
+	player.heading = NORTH
+	player._terrain_override_t = 0.0
+	player._yaw_t = 0.0
+	fx._screech_t = 0.0
+	# Airborne over the spill: nothing.
+	player.height = 12.0
+	bench._on_body_entered(player)
+	t.check(is_equal_approx(player.heading, NORTH) and not player.terrain_forced() and fx._blood_tracks.is_empty(),
+		"slick: an airborne car sails over the oil untouched")
+	player.height = 0.0
+	bench.free()
+	# Driven over, dead centre at speed, hands off the lane wheel.
+	for i in 3:
+		await t.physics_frame
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	Builder._slick(scene, Vector2(player.global_position.x, player.global_position.y - 120.0), rng)
+	var slick: Node = scene.get_node_or_null(^"Slick")
+	t.check(slick != null and slick.get_script().resource_path.ends_with("oil_slick.gd"),
+		"slick: the builder's slick is the oil_slick sensor")
+	var prev_heading: float = player.heading
+	var prev_vel: Vector2 = player.velocity
+	var kick_frame := -1
+	var vel_turn := 0.0
+	var ice_frames := 0
+	var worst_off := 0.0
+	var speed_in: float = player.velocity.length()
+	var x_in: float = player.global_position.x
+	for i in 120:  # 2s of road: a short approach, the slide, 1.5s of recovery
+		await t.physics_frame
+		if kick_frame < 0 and absf(rad_to_deg(angle_difference(prev_heading, player.heading))) >= OilSlick.KICK_MIN_DEG - 1.0:
+			kick_frame = i
+			vel_turn = absf(rad_to_deg(prev_vel.angle_to(player.velocity)))
+		if kick_frame >= 0:
+			if player.current_terrain == &"ice":
+				ice_frames += 1
+			worst_off = maxf(worst_off, absf(rad_to_deg(angle_difference(NORTH, player.heading))))
+			if i - kick_frame >= 90:  # 1.5s after the kick
+				break
+		prev_heading = player.heading
+		prev_vel = player.velocity
+	t.check(kick_frame >= 0, "slick: driving over it kicks the nose")
+	t.check(vel_turn < 2.0, "slick: the velocity holds its line through the kick (turned %.2f°)" % vel_turn)
+	t.check(ice_frames >= 50 and ice_frames <= 70,
+		"slick: the ice spell lasts ~OIL_SECONDS then lifts (%d frames)" % ice_frames)
+	t.check(not player.terrain_forced() and player.current_terrain != &"ice",
+		"slick: 1.5s on, the tires are back on the road")
+	# The lingering yaw carries the nose a few degrees past the kick before
+	# the lane wheel wins (measured ~31° off a 24° kick); a spin-out would
+	# be the nose crossing 45°.
+	t.check(worst_off > OilSlick.KICK_MIN_DEG and worst_off < 45.0,
+		"slick: the nose hangs off the line but never spins out (worst %.1f° off north)" % worst_off)
+	t.check(ice_frames > 0 and absf(player.global_position.x - x_in) > 20.0,
+		"slick: the car crabbed a lane's worth toward the nose (%d px)" % int(absf(player.global_position.x - x_in)))
+	var off_north: float = absf(rad_to_deg(angle_difference(NORTH, player.heading)))
+	t.check(off_north < 4.0, "slick: heading north again inside 1.5s (%.1f° off)" % off_north)
+	var s: Dictionary = scene.course.sample(-player.global_position.y)
+	t.check(absf(player.global_position.x - float(s["x"])) < float(s["half_w"]),
+		"slick: still on the asphalt (x %d vs centre %d ± %d)" % [int(player.global_position.x), int(s["x"]), int(s["half_w"])])
+	t.check(player.velocity.length() > speed_in * 0.7, "slick: the speed carried (%d of %d)" % [int(player.velocity.length()), int(speed_in)])
+	t.check(player.get_hp() == hp_before, "slick: the drive-over cost no HP")
+	# Driven through a pothole: dirt under the tires, the nose holds.
+	fx.clear_splat_tracks()
+	Builder._pothole(scene, Vector2(player.global_position.x, player.global_position.y - 120.0), rng)
+	var hole: Node = scene.get_node_or_null(^"Pothole")
+	t.check(hole != null and hole.collision_layer == 128 and hole.terrain_type == &"dirt",
+		"pothole: still a bare dirt TerrainZone")
+	var saw_dirt := false
+	var saw_ice := false
+	worst_off = 0.0
+	for i in 40:
+		await t.physics_frame
+		saw_dirt = saw_dirt or player.current_terrain == &"dirt"
+		saw_ice = saw_ice or player.current_terrain == &"ice" or player.terrain_forced()
+		worst_off = maxf(worst_off, absf(rad_to_deg(angle_difference(NORTH, player.heading))))
+	t.check(saw_dirt, "pothole: the car crossed it on dirt")
+	t.check(not saw_ice, "pothole: no ice spell")
+	t.check(worst_off < 3.0, "pothole: the nose never kicks (worst %.1f°)" % worst_off)
+	t.check(fx._blood_tracks.is_empty() and is_zero_approx(fx._blood_t), "pothole: no tracks")
+	_close(scene)

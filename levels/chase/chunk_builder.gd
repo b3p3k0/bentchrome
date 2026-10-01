@@ -1115,14 +1115,16 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 ## smooth, curvy spill edge and one bright light reflection (a sky glint —
 ## the wet read); a POTHOLE is JAGGED dark grey, a hair lighter than the
 ## oil, with a cracked pale rim and loose rubble (the broken read). Both are
-## pure paint over a small TerrainZone, never HP, and airtime clears both —
-## but they FEEL different: oil is ice (the car keeps going where it was
-## going), a pothole is dirt (a bump that bleeds speed). Each zone's Vis
-## wears the arena's surface under the paint: the pothole sits in a disc of
-## the arena's dirt (its rubble apron), and the slick keeps its black pool —
-## the arena's ice tint would grey it out — showing only as a thin icy RIM
-## around the spill (SLICK_RIM), where the sheen reads without the black
-## losing. The zones go down first so their dress paints under the hazard.
+## pure paint over a small sensor, never HP, and airtime clears both — but
+## they FEEL different: oil is an oil_slick.gd Area2D over an ice zone (the
+## nose kicks off the line and the tires ride ice for a second — the car
+## keeps going where it was going), a pothole is a dirt TerrainZone (a bump
+## that bleeds speed). Each zone's Vis wears the arena's surface under the
+## paint: the pothole sits in a disc of the arena's dirt (its rubble apron),
+## and the slick keeps its black pool — the arena's ice tint would grey it
+## out — showing only as a thin icy RIM around the spill (SLICK_RIM), where
+## the sheen reads without the black losing. The zones go down first so
+## their dress paints under the hazard.
 const OIL := Color(0.01, 0.01, 0.015)
 const POTHOLE := Color(0.095, 0.095, 0.1)
 const SLICK_RIM := 1.16   # the ice rim's outline, as a scale of the pool's
@@ -1176,6 +1178,10 @@ static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> vo
 	drip.color = OIL
 	drip.z_index = -1
 	root.add_child(drip)
+	# Not a bare ice zone: the sensor under the spill kicks the nose and puts
+	# the tires on ice for a second (oil_slick.gd owns the feel).
+	var OilSlick := preload("res://levels/chase/oil_slick.gd")
+	root.add_child(OilSlick.make(pos, r))
 
 static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
 	var r := 38.0

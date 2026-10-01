@@ -70,8 +70,13 @@ var _flame: Polygon2D
 var _burn_fx: CPUParticles2D
 var _peace: Node2D
 var _frost: Node2D
+# Carried tracks: a stain picked up on the tread, laid behind the rear tires
+# for a spell — the splat's red (carry_splat) or an oil slick's black
+# (carry_tracks). The _blood_ names date from the splat, which came first.
 var _blood_tracks: Array = []
 var _blood_t := 0.0
+var _track_color: Color = BLOOD_COLOR
+var _screech_t := 0.0  # screech(): holds the player's skid loop on, marks or not
 
 func _ready() -> void:
 	_vehicle = get_parent() as CharacterBody2D
@@ -270,11 +275,14 @@ func _physics_process(_delta: float) -> void:
 	elif not skidding and not _skids.is_empty():
 		_end_skid()
 	# Skid audio tracks the MARKS, not the input — if rubber is going down,
-	# sound comes out (player only). loop_set is idempotent per frame.
+	# sound comes out (player only). loop_set is idempotent per frame. A
+	# screech() hold keeps the squeal up without marks (the oil slick's cue).
+	if _screech_t > 0.0:
+		_screech_t = maxf(_screech_t - _delta, 0.0)
 	if _vehicle.is_in_group(&"player"):
 		var audio := get_node_or_null(^"/root/AudioDirector")
 		if audio:
-			audio.loop_set(&"skid", not _skids.is_empty())
+			audio.loop_set(&"skid", not _skids.is_empty() or _screech_t > 0.0)
 			# Service-brake crunch: ONE shot when hard braking starts (phases
 			# with the brake lights, not the handbrake) — not a loop.
 			var braking_hard: bool = grounded and ctrl.service_braking \
@@ -328,9 +336,25 @@ func _end_skid() -> void:
 ## Called by a live AmbientSplat. Pure presentation: it never reaches the
 ## controller or changes traction, and repeated stains only refresh the clock.
 func carry_splat(seconds := 1.25) -> void:
+	carry_tracks(seconds, BLOOD_COLOR)
+
+## The generic stain: `color` tracks off the rear tires (bike one line, cars
+## a pair) for `seconds`. A repeat of the same color refreshes the clock; a
+## different color (red splat, then black oil) lets the old pair fade and
+## starts fresh. Same cap and draw slot as the skids.
+func carry_tracks(seconds: float, color: Color) -> void:
+	if not _blood_tracks.is_empty() and color != _track_color:
+		_end_blood_tracks()
+	_track_color = color
 	_blood_t = maxf(_blood_t, seconds)
 	if _blood_tracks.is_empty():
 		_start_blood_tracks()
+
+## Hold the player's skid squeal on for `seconds` with no marks under it
+## (an oil slick's tires spinning on the spill). Cosmetic, player-audible
+## only; a second call extends, never stacks.
+func screech(seconds: float) -> void:
+	_screech_t = maxf(_screech_t, seconds)
 
 func _start_blood_tracks() -> void:
 	var host := get_tree().current_scene
@@ -340,7 +364,7 @@ func _start_blood_tracks() -> void:
 	for i in mini(_skid_offsets().size(), maxi(available, 0)):
 		var line := Line2D.new()
 		line.width = BLOOD_WIDTH
-		line.default_color = BLOOD_COLOR
+		line.default_color = _track_color
 		line.add_to_group(&"skidmarks")
 		host.add_child(line)
 		host.move_child(line, mini(2, host.get_child_count() - 1))

@@ -674,18 +674,31 @@ func test_builder_momentum_obstacles() -> void:
 	var pits := 0
 	var oil := 0
 	var holes := 0
+	var paint := 0
 	for child in pchunk.get_children():
-		if child is Area2D and child.collision_layer == 128:
-			for sub in child.get_children():
-				if sub is CollisionShape2D and sub.shape is CircleShape2D:
-					pits += 1  # shoulders are rect strips; only hazards are circles
-					if child.terrain_type == &"ice":
-						oil += 1
-					elif child.terrain_type == &"dirt":
-						holes += 1
-					break
+		if child is Polygon2D and child.color == Builder.OIL:
+			paint += 1  # the pool + its drip; the approved black stays as it was
+		if not (child is Area2D):
+			continue
+		var script = child.get_script()
+		var is_slick: bool = script != null and script.resource_path.ends_with("oil_slick.gd")
+		if not is_slick and child.collision_layer != 128:
+			continue
+		for sub in child.get_children():
+			if sub is CollisionShape2D and sub.shape is CircleShape2D:
+				pits += 1  # shoulders are rect strips; only hazards are circles
+				if is_slick:
+					# The slick is a sensor on the ground bit, not a terrain
+					# zone — the ice reaches the car through force_terrain.
+					oil += 1
+					t.check(child.collision_layer == 0 and child.collision_mask == 1,
+						"builder: the slick listens on the ground bit like a pad")
+				elif child.terrain_type == &"dirt":
+					holes += 1
+				break
 	t.check(pits == 5, "builder: the bad road spills five hazards (got %d)" % pits)
-	t.check(oil == 2 and holes == 3, "builder: oil is ice and potholes are dirt — two reads, two feels (%d/%d)" % [oil, holes])
+	t.check(oil == 2 and holes == 3, "builder: oil is a slide and potholes are dirt — two reads, two feels (%d/%d)" % [oil, holes])
+	t.check(paint == 4, "builder: every slick still paints its black pool and drip (%d)" % paint)
 	pchunk.free()
 	var lchunk: Node2D = Builder.build(_entry_for(&"log_run"))
 	var logs := 0

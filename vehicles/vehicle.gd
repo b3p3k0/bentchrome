@@ -115,6 +115,11 @@ const SMASH_MIN_SPEED := 40.0         # under this the nose is only resting on i
 var heading: float = 0.0  # radians; the direction the nose points
 var current_terrain: StringName = &"road"
 var _prev_terrain: StringName = &"road"  # splash edge-detect (water entry SFX)
+var _terrain_override: StringName = &""  # force_terrain(): the surface the tires
+var _terrain_override_t := 0.0           # ride for a spell, whatever is under them
+var _yaw_rate := 0.0   # yaw_kick(): a decaying spin of the nose (rad/s at full)
+var _yaw_t := 0.0      # ...with this long left of it
+var _yaw_total := 0.0
 var height: float = 0.0   # fake vertical offset (px); 0 = on the ground
 var vz: float = 0.0       # vertical velocity (px/s)
 var floor_index := -1     # terrace we drive on; -1 = legacy single-plane level
@@ -580,6 +585,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if _terrain_sensor:
 		current_terrain = _terrain_sensor.current_terrain
+	if _terrain_override_t > 0.0:
+		_terrain_override_t -= delta
+		current_terrain = _terrain_override  # the spell outranks the ground
 	if current_terrain != _prev_terrain:
 		if current_terrain == &"water" and get_speed() > SPLASH_MIN_SPEED:
 			var audio_w := get_node_or_null(^"/root/AudioDirector")
@@ -631,6 +639,11 @@ func _physics_process(delta: float) -> void:
 			_status.clear_kind(&"burn")  # nitro wind blows the fire out
 	elif _controller:
 		_controller.service_braking = false
+	if _yaw_t > 0.0:
+		# A yaw_kick spins the nose on top of whatever the wheel does, fading
+		# linearly to nothing — the driver has to steer against it.
+		heading += _yaw_rate * (_yaw_t / _yaw_total) * delta
+		_yaw_t -= delta
 	_sync_brake_lights()
 	# Side-slide credit window: handbrake now, or released within SLIDE_GRACE
 	# (the let-go-and-slam moment). AI never handbrakes, so slip alone — an
@@ -1246,6 +1259,34 @@ func _set_net_repairing(on: bool, at: Vector2) -> void:
 func terrain_factor(property: StringName, surface: StringName = current_terrain) -> float:
 	return stats.terrain_factor(surface, property) if stats else 1.0
 
+## Timed surface override: for `seconds` the car drives on `surface` whatever
+## the TerrainSensor reads (Route 666's oil slick puts the tires on ice). The
+## controller's effective_terrain seam is untouched — it composes
+## current_terrain exactly as before, this just decides what that is. A
+## repeat refreshes the clock, never stacks. Never called = no-op.
+func force_terrain(surface: StringName, seconds: float) -> void:
+	_terrain_override = surface
+	_terrain_override_t = maxf(_terrain_override_t, seconds)
+
+func terrain_forced() -> bool:
+	return _terrain_override_t > 0.0
+
+## A spin of the nose that OUTLIVES the frame: `rate` rad/s now, fading
+## linearly to zero over `seconds`, added to the heading on top of the
+## driver's steering (the velocity is never touched — the car keeps going
+## where it was going while the nose comes round). Route 666's oil slick:
+## the lane wheel steers against it and that fight is the slide. A fresh
+## kick replaces a running one. Never called = no-op.
+func yaw_kick(rate: float, seconds: float) -> void:
+	if seconds <= 0.0:
+		return
+	_yaw_rate = rate
+	_yaw_total = seconds
+	_yaw_t = seconds
+
+func yaw_kicking() -> bool:
+	return _yaw_t > 0.0
+
 func apply_effect(spec: StatusEffectSpec, source: Node = null,
 		hit_id: StringName = &"") -> void:
 	if _status:
@@ -1347,6 +1388,8 @@ func respawn(at: Vector2, new_heading: float, shield_seconds := DEFAULT_SHIELD_S
 	global_position = at
 	heading = new_heading
 	velocity = Vector2.ZERO
+	_terrain_override_t = 0.0  # a fresh car's tires are on whatever it spawns on
+	_yaw_t = 0.0
 	# Camera2D smoothing remembers its last world-space center. A pit fall moves
 	# that center far from spawn, so a bare vehicle teleport makes the view snap,
 	# chase the old pit position, then catch up again. Reset the authored local
