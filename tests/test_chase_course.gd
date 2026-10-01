@@ -787,3 +787,121 @@ func test_boost_pickup_refills_nitro() -> void:
 	t.check(pickup.is_queued_for_deletion(), "boost: one shot, gone")
 	t.root.remove_child(container)
 	container.free()
+
+## The surfaces wear the arenas' paint: every driveable zone's Vis carries the
+## catalog colour and the loader's speckle material for its surface, the
+## opaque beds (washout, trail) ARE the arena dirt, the river's shallows are
+## the arena's water, the asphalt mirrors the scenes' SM_asphalt numbers,
+## the hazards dress under their paint (pothole = dirt, slick = an ice RIM
+## around a black pool), and the pavements are road-handling concrete.
+func test_builder_surfaces_match_the_arenas() -> void:
+	const Catalog := preload("res://levels/entity_catalog.gd")
+	const Loader := preload("res://levels/level_loader.gd")
+	const SurfacePaint := preload("res://levels/chase/surface_paint.gd")
+	var c = _course()
+	var chunk: Node2D = Builder.build(c.plan[0])   # a straight: grass shoulders
+	for side in ["L", "R"]:
+		var vis := chunk.get_node_or_null(NodePath("Shoulder%s/Vis" % side)) as Polygon2D
+		t.check(vis != null and vis.color == Catalog.TERRAIN_COLORS["grass"],
+			"surfaces: shoulder %s wears the catalog grass" % side)
+		t.check(vis != null and vis.material == Loader._speckle_material("grass"),
+			"surfaces: shoulder %s carries the arena grass speckle" % side)
+	# The asphalt: the arenas' SM_asphalt, number for number (downtown is the reference).
+	var asphalt := chunk.get_node_or_null(^"Asphalt") as Polygon2D
+	var downtown: Node = load("res://levels/downtown/downtown.tscn").instantiate()
+	var ref := downtown.get_node_or_null(^"Asphalt") as Polygon2D
+	t.check(asphalt != null and asphalt.material is ShaderMaterial and ref != null and ref.material is ShaderMaterial,
+		"surfaces: the road and downtown's floor are both speckled asphalt")
+	if asphalt != null and ref != null and asphalt.material is ShaderMaterial and ref.material is ShaderMaterial:
+		t.check(asphalt.material.shader == ref.material.shader, "surfaces: the same speckle shader")
+		for param in ["base_color", "speckle_color", "density", "intensity", "scale", "shimmer"]:
+			t.check(asphalt.material.get_shader_parameter(param) == ref.material.get_shader_parameter(param),
+				"surfaces: asphalt %s matches downtown's" % param)
+	var grid: Node = chunk.get_node_or_null(^"RoadGrid")
+	t.check(grid != null and grid is Node2D and grid.z_index == -1, "surfaces: the arenas' survey grid rides the road")
+	downtown.free()
+	chunk.free()
+	# Washout: the beds carry the dirt material; the zones' own Vis stays bare.
+	var wchunk: Node2D = Builder.build(_entry_for(&"washout_l"))
+	for side in ["L", "R"]:
+		var bed := wchunk.get_node_or_null(NodePath("WashoutBed%s" % side)) as Polygon2D
+		t.check(bed != null and bed.material == Loader._speckle_material("dirt") and bed.color == Catalog.TERRAIN_COLORS["dirt"],
+			"surfaces: washout bed %s is the arena dirt" % side)
+		var zvis := wchunk.get_node_or_null(NodePath("Washout%s/Vis" % side)) as Polygon2D
+		t.check(zvis != null and zvis.material == null and zvis.color.a == 0.0, "surfaces: washout zone %s leaves the paint to its bed" % side)
+	wchunk.free()
+	# Cutoff: trail bed = dirt, ditch = mud, the clearing is real grass; the
+	# trail draws AFTER the shoulders so its bed paints over the verge.
+	var cchunk: Node2D = Builder.build(_entry_for(&"cutoff_l"))
+	var trail_bed := cchunk.get_node_or_null(^"TrailBed") as Polygon2D
+	t.check(trail_bed != null and trail_bed.material == Loader._speckle_material("dirt"), "surfaces: the trail bed is the arena dirt")
+	var ditch_vis := cchunk.get_node_or_null(^"Ditch/Vis") as Polygon2D
+	t.check(ditch_vis != null and ditch_vis.material == Loader._speckle_material("mud") and ditch_vis.color == Catalog.TERRAIN_COLORS["mud"],
+		"surfaces: the ditch is the arena mud")
+	var ditch: Node = cchunk.get_node_or_null(^"Ditch")
+	t.check(ditch != null and ditch.terrain_priority == 1, "surfaces: the ditch outranks the clearing")
+	var clearing: Node = cchunk.get_node_or_null(^"Clearing")
+	t.check(clearing != null and clearing is Area2D and clearing.collision_layer == 128 and clearing.terrain_type == &"grass",
+		"surfaces: the clearing is a grass zone, not grass-coloured paint")
+	var clearing_vis := cchunk.get_node_or_null(^"Clearing/Vis") as Polygon2D
+	t.check(clearing_vis != null and clearing_vis.material == Loader._speckle_material("grass"), "surfaces: and wears the arena grass")
+	var shoulder_i := cchunk.get_node(^"ShoulderL").get_index()
+	t.check(trail_bed != null and trail_bed.get_index() > shoulder_i and cchunk.get_node(^"Trail").get_index() > shoulder_i,
+		"surfaces: the trail bed draws over the shoulder at the mouths")
+	cchunk.free()
+	# The river: shallows and pools are the arena's water.
+	var bchunk: Node2D = Builder.build(_entry_for(&"bridge_out"))
+	for zname in ["ShallowsFar", "PoolL", "PoolR"]:
+		var wvis := bchunk.get_node_or_null(NodePath("%s/Vis" % zname)) as Polygon2D
+		t.check(wvis != null and wvis.material == Loader._speckle_material("water") and wvis.color == Catalog.TERRAIN_COLORS["water"],
+			"surfaces: %s is the arena water" % zname)
+	bchunk.free()
+	# Hazards: the pothole sits in arena dirt, the slick keeps its black pool
+	# and shows the arena ice only as a rim — both dress BEFORE their paint.
+	var hchunk: Node2D = Builder.build(_entry_for(&"bad_road"))
+	var slicks := 0
+	var holes := 0
+	for child in hchunk.get_children():
+		if not (child is Area2D and child.collision_layer == 128):
+			continue
+		var vis := child.get_node_or_null(^"Vis") as Polygon2D
+		if String(child.name).begins_with("Slick"):
+			slicks += 1
+			t.check(vis != null and vis.material == Loader._speckle_material("ice") and child.z_index == -1,
+				"surfaces: the slick's zone wears the arena ice under the pool")
+			var pool_i := -1   # the next OIL polygon after the zone is its pool
+			for i in range(child.get_index() + 1, hchunk.get_child_count()):
+				var sib = hchunk.get_child(i)
+				if sib is Polygon2D and sib.color == Builder.OIL:
+					pool_i = i
+					break
+			t.check(pool_i > child.get_index(), "surfaces: the black pool paints over the ice (the rim is what shows)")
+		elif String(child.name).begins_with("Pothole"):
+			holes += 1
+			t.check(vis != null and vis.material == Loader._speckle_material("dirt") and child.z_index == -1,
+				"surfaces: the pothole's zone wears the arena dirt")
+	t.check(slicks == 2 and holes == 3, "surfaces: every hazard dressed (%d/%d)" % [slicks, holes])
+	hchunk.free()
+	# Pavements: the toll plaza and the truckstop forecourt are road-handling
+	# concrete zones that outrank the dirt verge they cover.
+	var tchunk: Node2D = Builder.build(_entry_for(&"tollbooth"))
+	var plaza: Node = tchunk.get_node_or_null(^"Plaza")
+	t.check(plaza != null and plaza is Area2D and plaza.terrain_type == &"road" and plaza.terrain_priority == 1,
+		"surfaces: the toll plaza is pavement — road handling over the shoulder")
+	var pvis := tchunk.get_node_or_null(^"Plaza/Vis") as Polygon2D
+	t.check(pvis != null and pvis.material == SurfacePaint.concrete_material(), "surfaces: and reads as concrete")
+	tchunk.free()
+	var schunk: Node2D = Builder.build(_entry_for(&"truckstop"))
+	var apron: Node = schunk.get_node_or_null(^"Apron")
+	t.check(apron != null and apron is Area2D and apron.terrain_type == &"road" and apron.terrain_priority == 1,
+		"surfaces: the forecourt is pavement")
+	var avis := schunk.get_node_or_null(^"Apron/Vis") as Polygon2D
+	var def: Dictionary = ChunkDefs.DEFS[&"truckstop"]
+	var foot: float = float(def["half_w"]) + Builder.SHOULDER_W
+	var inside := avis != null
+	if avis != null:
+		for p in avis.polygon:
+			if p.x > Builder._center_x(_entry_for(&"truckstop"), -p.y) + foot + 0.5:
+				inside = false
+	t.check(inside and avis.material == SurfacePaint.concrete_material(), "surfaces: the forecourt stops at the embankment's foot")
+	schunk.free()

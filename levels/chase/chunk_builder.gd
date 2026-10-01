@@ -19,6 +19,7 @@ const StreetDecoScript := preload("res://environment/street_deco.gd")
 const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
 const LightKit := preload("res://environment/light_kit.gd")
 const HighwayDecoScript := preload("res://levels/chase/highway_deco.gd")
+const SurfacePaint := preload("res://levels/chase/surface_paint.gd")   # the arenas' surface dress
 const SIGN_EVERY := 1400.0        # course px between highway signs (sides alternate)
 const BILLBOARD_EVERY := 4300.0   # course px between billboards
 
@@ -30,13 +31,10 @@ const TAPER := 300.0       # must match chase_course.TAPER
 
 const ChunkDefs := preload("res://levels/chase/chunk_defs.gd")
 
-const ASPHALT := Color(0.17, 0.17, 0.19)
-const WASHOUT_DIRT := Color(0.36, 0.27, 0.17)
-const SHOULDER_VIS := {
-	&"grass": Color(0.25, 0.5, 0.22, 0.5),
-	&"dirt": Color(0.5, 0.36, 0.2, 0.5),
-	&"water": Color(0.2, 0.42, 0.58, 0.65),
-}
+# Driveable surfaces are painted by surface_paint.gd — the arenas' colours
+# and speckle — so the road, the verges and every bed read as the surfaces
+# the player already knows. Only structures and accents keep flat tones here.
+const ASPHALT := SurfacePaint.ASPHALT
 const DECK := Color(0.2, 0.2, 0.23)
 const DECK_RAIL := Color(0.3, 0.3, 0.34)
 const REBAR := Color(0.45, 0.28, 0.16)
@@ -69,6 +67,7 @@ static func build(entry: Dictionary) -> Node2D:
 	for side in [-1.0, 1.0]:
 		_build_shoulder(root, ds, cx, half, side, shoulder)
 		_build_embankment(root, entry, side, shoulder)
+	_build_cutoff_trail(root, entry)   # after the shoulders: the trail paints OVER the verge at the mouths
 	_build_medians(root, entry)
 	_build_washout(root, entry)
 	_place_props(root, entry)
@@ -126,9 +125,20 @@ static func _paint_road(root: Node2D, ds: Array, cx: Array, half: Array) -> void
 	var asphalt := Polygon2D.new()
 	asphalt.name = "Asphalt"
 	asphalt.color = ASPHALT
+	asphalt.material = SurfacePaint.asphalt_material()   # the arenas' worn-tarmac grain
 	asphalt.polygon = _strip(left, right)
 	asphalt.z_index = -1
 	root.add_child(asphalt)
+	# The arenas' survey grid, clipped to the road — the same faint 128px
+	# lines under every arena's asphalt, world-anchored so seams don't show.
+	var grid := SurfacePaint.RoadGrid.new()
+	grid.name = "RoadGrid"
+	grid.ds = ds
+	grid.cx = cx
+	grid.half = half
+	grid.start_d = -root.position.y
+	grid.z_index = -1
+	root.add_child(grid)
 	_add_marks(root, "CenterLine", center, &"dashed_yellow")
 	_add_marks(root, "EdgeL", edge_l, &"dashed_white")
 	_add_marks(root, "EdgeR", edge_r, &"dashed_white")
@@ -166,7 +176,7 @@ static func _road_wear(root: Node2D, entry: Dictionary, ds: Array, cx: Array, ha
 			2:   # a tar patch: a darker blob of fresher asphalt
 				var patch := Polygon2D.new()
 				patch.polygon = _chunk_of_road(Vector2(x, -d), rng.randf_range(30.0, 60.0), 0.6, 7, rng)
-				patch.color = ASPHALT.darkened(0.25)
+				patch.color = ASPHALT.darkened(0.4)   # fresh tar: flat and darker than the grain
 				patch.z_index = -1
 				root.add_child(patch)
 			3:   # cracks: a short jagged run
@@ -223,7 +233,8 @@ static func _build_shoulder(root: Node2D, ds: Array, cx: Array, half: Array, sid
 	root.add_child(_zone_strip("ShoulderL" if side < 0.0 else "ShoulderR", shoulder, inner, outer))
 
 ## A TerrainZone between two edge polylines: painted strip + one rotated
-## rect Col per segment. Shoulders and medians share it.
+## rect Col per segment. Shoulders and medians share it. The Vis wears the
+## arena's colour + speckle for the surface (surface_paint.dress).
 static func _zone_strip(zone_name: String, kind: StringName, edge_a: PackedVector2Array, edge_b: PackedVector2Array) -> Area2D:
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
@@ -234,7 +245,7 @@ static func _zone_strip(zone_name: String, kind: StringName, edge_a: PackedVecto
 	zone.z_index = -1
 	var vis := Polygon2D.new()
 	vis.name = "Vis"
-	vis.color = SHOULDER_VIS.get(kind, SHOULDER_VIS[&"grass"])
+	SurfacePaint.dress(vis, kind)
 	vis.polygon = _strip(edge_a, edge_b)
 	zone.add_child(vis)
 	for i in edge_a.size() - 1:
@@ -249,6 +260,14 @@ static func _zone_strip(zone_name: String, kind: StringName, edge_a: PackedVecto
 		col.rotation = seg.angle()
 		zone.add_child(col)
 	return zone
+
+## A zone whose paint is a torn-edged bed laid separately: strip the Vis of
+## its dress (the speckle material paints whatever the colour says, so both
+## have to go) and leave the Col alone.
+static func _bare(zone: Area2D) -> void:
+	var vis := zone.get_node(^"Vis") as Polygon2D
+	vis.color = Color(0, 0, 0, 0)
+	vis.material = null
 
 ## Median runs along the centerline: grass/dirt grip islands or crumple-rail
 ## guardrails (the Freeway Loop's) — the road diet that forces a line choice.
@@ -326,10 +345,11 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 		var bed := Polygon2D.new()
 		bed.name = "WashoutBedL" if side < 0.0 else "WashoutBedR"
 		bed.polygon = bed_pts
-		bed.color = WASHOUT_DIRT
+		SurfacePaint.dress(bed, &"dirt")   # the bed IS the arena's dirt, torn edge and all
 		bed.z_index = -1
 		root.add_child(bed)
 		# Texture: darker damp patches, pale wheel ruts, and slabs of the old road.
+		var dirt: Color = SurfacePaint.tone(&"dirt")
 		for i in n:
 			var a := outer[i].lerp(inner[i], rng.randf_range(0.15, 0.8))
 			var span := outer[i].distance_to(inner[i])
@@ -337,7 +357,8 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 				continue
 			var patch := Polygon2D.new()
 			patch.polygon = _chunk_of_road(a + Vector2(0.0, -rng.randf_range(10.0, 70.0)), rng.randf_range(26.0, 54.0), 0.55, 8, rng)
-			patch.color = WASHOUT_DIRT.darkened(rng.randf_range(0.1, 0.22))
+			patch.color = dirt.darkened(rng.randf_range(0.1, 0.22))
+			patch.color.a = 0.7
 			patch.z_index = -1
 			root.add_child(patch)
 			var rut := Polygon2D.new()
@@ -348,7 +369,8 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 				Vector2(rx - 2.5, ry), Vector2(rx + 2.5, ry),
 				Vector2(rx + 2.5 + rng.randf_range(-8.0, 8.0), ry - rl), Vector2(rx - 2.5 + rng.randf_range(-8.0, 8.0), ry - rl),
 			])
-			rut.color = WASHOUT_DIRT.lightened(0.14)
+			rut.color = dirt.lightened(0.14)
+			rut.color.a = 0.8
 			rut.z_index = -1
 			root.add_child(rut)
 			# Slabs: more of the old road survives near the ribbon than out by the verge.
@@ -358,11 +380,11 @@ static func _build_washout(root: Node2D, entry: Dictionary) -> void:
 				at.y -= rng.randf_range(0.0, 85.0)
 				var slab := Polygon2D.new()
 				slab.polygon = _chunk_of_road(at, rng.randf_range(9.0, 24.0) if near else rng.randf_range(6.0, 14.0), 0.5, 5, rng)
-				slab.color = ASPHALT.lightened(rng.randf_range(0.02, 0.1))
+				slab.color = ASPHALT.lightened(rng.randf_range(0.08, 0.22))   # paler than the grain: road that survived
 				slab.z_index = -1
 				root.add_child(slab)
 		var zone := _zone_strip("WashoutL" if side < 0.0 else "WashoutR", &"dirt", outer, inner)
-		(zone.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)   # the bed is the paint
+		_bare(zone)   # the bed is the paint
 		root.add_child(zone)
 
 ## Toll plaza: a painted apron, three booths spanning the road with a lane
@@ -372,15 +394,13 @@ static func _tollbooth(root: Node2D, entry: Dictionary) -> void:
 	var d := 640.0
 	var c := _center_x(entry, d)
 	var half: float = entry["def"]["half_w"]
-	var apron := Polygon2D.new()
-	apron.name = "Plaza"
-	apron.polygon = PackedVector2Array([
-		Vector2(c - half - 90, -(d - 160)), Vector2(c + half + 90, -(d - 160)),
-		Vector2(c + half + 90, -(d + 160)), Vector2(c - half - 90, -(d + 160)),
-	])
-	apron.color = Color(0.25, 0.25, 0.27)
-	apron.z_index = -1
-	root.add_child(apron)
+	# The plaza is poured concrete out to the embankment's foot — pavement
+	# (road handling) that outranks the dirt shoulder it covers, so the paint
+	# and the feel agree.
+	var plaza := _pavement("Plaza",
+		PackedVector2Array([Vector2(c - half - SHOULDER_W, -(d - 160)), Vector2(c - half - SHOULDER_W, -(d + 160))]),
+		PackedVector2Array([Vector2(c + half + SHOULDER_W, -(d - 160)), Vector2(c + half + SHOULDER_W, -(d + 160))]))
+	root.add_child(plaza)
 	# Four booths, three lanes: booths at the edges and at ±1/3.
 	var booth_x: Array = [c - half + 10.0, c - half / 3.0, c + half / 3.0, c + half - 10.0]
 	for i in booth_x.size():
@@ -411,6 +431,17 @@ static func _tollbooth(root: Node2D, entry: Dictionary) -> void:
 		pool.name = "PlazaLight"
 		pool.position = Vector2(lx, -d)
 		root.add_child(pool)
+
+## Poured pavement: a road-handling TerrainZone in Ground Floor Gore's
+## concrete, outranking whatever verge it lies over (paint = feel).
+static func _pavement(zone_name: String, edge_a: PackedVector2Array, edge_b: PackedVector2Array) -> Area2D:
+	var zone := _zone_strip(zone_name, &"road", edge_a, edge_b)
+	zone.terrain_priority = 1
+	zone.soften_visual = false   # poured slabs are formed straight
+	var vis := zone.get_node(^"Vis") as Polygon2D
+	vis.color = SurfacePaint.CONCRETE
+	vis.material = SurfacePaint.concrete_material()
+	return zone
 
 ## Jackknife: the trailer across two lanes, angled, with its tractor nosed
 ## into the verge — the open lane is the line.
@@ -517,25 +548,26 @@ static func _highway_dressing(root: Node2D, entry: Dictionary, ds: Array, cx: Ar
 ## fencing the far side — solid pines on a layer-2 body, so the trail is a
 ## corridor you stay in or scrape. The mouths are the embankment's gaps
 ## (_build_embankment); the trail's zone outranks the grass shoulder where
-## they meet.
+## they meet. Two phases: the ground (clearing, woods) goes down before the
+## walls so the slope paints over it; the trail (_build_cutoff_trail) goes
+## down after the shoulders so its bed paints over the verge at the mouths —
+## sibling order is draw order, and the paint has to agree with the zones.
 static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 	var def: Dictionary = entry["def"]
 	if not def.has("cutoff"):
 		return
 	var cf: Dictionary = def["cutoff"]
 	var side: float = cf["side"]
-	var width: float = cf["width"]
 	var entry_x: float = entry["entry_x"]
 	var pts: Array = cf["trail"]
 	var d_from: float = pts[0][0]
 	var d_to: float = pts[pts.size() - 1][0]
-	var gaps: Array = cf["gaps"]
 	var trees_x: float = entry_x + float(cf["trees_x"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(entry["start_d"]) + 1213
-	# The clearing: grass from the shoulder's edge out past the treeline,
-	# over the whole cutoff, so the gaps open onto ground and not the void.
-	var clear := PackedVector2Array()
+	# The clearing: real grass (a zone, the arena's dress) from the shoulder's
+	# edge out past the treeline, over the whole cutoff, so the gaps open onto
+	# ground that slows you like grass does everywhere else, not the void.
 	var n := maxi(int(ceilf((d_to - d_from + 200.0) / 90.0)), 2)
 	var near := PackedVector2Array()
 	for i in n + 1:
@@ -544,11 +576,8 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 	var far := PackedVector2Array()
 	for p in near:
 		far.append(Vector2(trees_x + side * 120.0, p.y))
-	var clearing := Polygon2D.new()
-	clearing.name = "Clearing"
-	clearing.polygon = _strip(near, far)
-	clearing.color = SLOPE_FILL[&"grass"].lightened(0.08)
-	clearing.z_index = -1
+	var clearing := _zone_strip("Clearing", &"grass", near, far)
+	clearing.soften_visual = false   # its near edge already follows the road's bend
 	root.add_child(clearing)
 	# Past the treeline the ground darkens into the woods instead of ending
 	# on a hard edge: two bands, each a little darker and a little ragged.
@@ -574,8 +603,26 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 		crown.color = Color(0.1, 0.2, 0.1).darkened(rng.randf_range(0.0, 0.3))
 		root.add_child(crown)
 		dd += rng.randf_range(90.0, 170.0)
-	# The ditch: a dark rut between the embankment's foot and the trail,
-	# along the straight where the two run side by side. Mud: stray and stick.
+
+## The cutoff's second phase — see _build_cutoff.
+static func _build_cutoff_trail(root: Node2D, entry: Dictionary) -> void:
+	var def: Dictionary = entry["def"]
+	if not def.has("cutoff"):
+		return
+	var cf: Dictionary = def["cutoff"]
+	var side: float = cf["side"]
+	var width: float = cf["width"]
+	var entry_x: float = entry["entry_x"]
+	var pts: Array = cf["trail"]
+	var d_from: float = pts[0][0]
+	var d_to: float = pts[pts.size() - 1][0]
+	var gaps: Array = cf["gaps"]
+	var trees_x: float = entry_x + float(cf["trees_x"])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 1214
+	# The ditch: a mud rut between the embankment's foot and the trail,
+	# along the straight where the two run side by side. Mud: stray and
+	# stick. It outranks the clearing's grass under it.
 	var ditch_a := PackedVector2Array()
 	var ditch_b := PackedVector2Array()
 	var d0: float = gaps[0][1]
@@ -588,7 +635,7 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 		ditch_a.append(Vector2(foot, -d))
 		ditch_b.append(Vector2(trail_edge - side * 10.0, -d))
 	var ditch := _zone_strip("Ditch", &"mud", ditch_a, ditch_b)
-	(ditch.get_node(^"Vis") as Polygon2D).color = Color(0.12, 0.11, 0.08, 0.85)
+	ditch.terrain_priority = 1
 	root.add_child(ditch)
 	# The trail: a torn-edged dirt bed and its zone, which outranks the
 	# grass shoulder at the mouths.
@@ -607,20 +654,22 @@ static func _build_cutoff(root: Node2D, entry: Dictionary) -> void:
 	var bed := Polygon2D.new()
 	bed.name = "TrailBed"
 	bed.polygon = _strip(torn_in, torn_out)
-	bed.color = WASHOUT_DIRT
+	SurfacePaint.dress(bed, &"dirt")   # the arena's dirt, torn edge and all
 	bed.z_index = -1
 	root.add_child(bed)
+	var dirt: Color = SurfacePaint.tone(&"dirt")
 	for i in range(0, k, 2):   # twin ruts the bikes wore in
 		for lane in [-0.28, 0.28]:
 			var rut := Polygon2D.new()
 			var a: Vector2 = inner[i].lerp(outer[i], 0.5 + lane)
 			var b: Vector2 = inner[i + 1].lerp(outer[i + 1], 0.5 + lane) if i + 1 <= k else a
 			rut.polygon = PackedVector2Array([a + Vector2(-3, 0), a + Vector2(3, 0), b + Vector2(3, 0), b + Vector2(-3, 0)])
-			rut.color = WASHOUT_DIRT.darkened(0.22)
+			rut.color = dirt.darkened(0.22)
+			rut.color.a = 0.8
 			rut.z_index = -1
 			root.add_child(rut)
 	var trail := _zone_strip("Trail", &"dirt", inner, outer)
-	(trail.get_node(^"Vis") as Polygon2D).color = Color(0, 0, 0, 0)
+	_bare(trail)   # the bed is the paint
 	trail.terrain_priority = 1
 	root.add_child(trail)
 	# The treeline: solid pines along the far side of the trail, close enough
@@ -962,14 +1011,13 @@ static func _overpass(root: Node2D, entry: Dictionary) -> void:
 ## pools off the shoulder (street_deco — non-colliding by design).
 static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 	var c := _center_x(entry, 620.0)
-	var apron := Polygon2D.new()
-	apron.name = "Apron"
-	apron.polygon = PackedVector2Array([
-		Vector2(c + 250, -380), Vector2(c + 470, -380),
-		Vector2(c + 470, -880), Vector2(c + 250, -880),
-	])
-	apron.color = Color(0.36, 0.3, 0.22)
-	apron.z_index = -1
+	# The forecourt: poured concrete from the road's edge lane to the
+	# embankment's foot (it used to paint past the foot, over the slope), a
+	# road-handling zone over the dirt shoulder it covers.
+	var half: float = entry["def"]["half_w"]
+	var apron := _pavement("Apron",
+		PackedVector2Array([Vector2(c + 250, -380), Vector2(c + 250, -880)]),
+		PackedVector2Array([Vector2(c + half + SHOULDER_W, -380), Vector2(c + half + SHOULDER_W, -880)]))
 	root.add_child(apron)
 	var neon := Node2D.new()
 	neon.set_script(StreetDecoScript)
@@ -1022,9 +1070,15 @@ static func _truckstop(root: Node2D, entry: Dictionary) -> void:
 ## oil, with a cracked pale rim and loose rubble (the broken read). Both are
 ## pure paint over a small TerrainZone, never HP, and airtime clears both —
 ## but they FEEL different: oil is ice (the car keeps going where it was
-## going), a pothole is dirt (a bump that bleeds speed).
+## going), a pothole is dirt (a bump that bleeds speed). Each zone's Vis
+## wears the arena's surface under the paint: the pothole sits in a disc of
+## the arena's dirt (its rubble apron), and the slick keeps its black pool —
+## the arena's ice tint would grey it out — showing only as a thin icy RIM
+## around the spill (SLICK_RIM), where the sheen reads without the black
+## losing. The zones go down first so their dress paints under the hazard.
 const OIL := Color(0.01, 0.01, 0.015)
 const POTHOLE := Color(0.095, 0.095, 0.1)
+const SLICK_RIM := 1.16   # the ice rim's outline, as a scale of the pool's
 
 static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
 	var r := 44.0
@@ -1040,6 +1094,10 @@ static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> vo
 		var a := TAU * float(i) / float(n)
 		var rad := r * (1.0 + w1 * sin(2.0 * a + ph1) + w2 * sin(3.0 * a + ph2))
 		pool.append(pos + Vector2(cos(a) * 1.3, sin(a) * 0.8) * rad)
+	var rim := PackedVector2Array()
+	for p in pool:
+		rim.append(pos + (p - pos) * SLICK_RIM)
+	_hazard_zone(root, "Slick", pos, r, &"ice", rim)
 	var pool_poly := Polygon2D.new()
 	pool_poly.polygon = pool
 	pool_poly.color = OIL
@@ -1071,7 +1129,6 @@ static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> vo
 	drip.color = OIL
 	drip.z_index = -1
 	root.add_child(drip)
-	_hazard_zone(root, "Slick", pos, r, &"ice")
 
 static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> void:
 	var r := 38.0
@@ -1087,6 +1144,7 @@ static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> 
 	var lip := PackedVector2Array()
 	for p in hole:
 		lip.append(pos + (p - pos) * 1.16)
+	_hazard_zone(root, "Pothole", pos, r, &"dirt", _chunk_of_road(pos, r * 1.5, 0.8, 10, rng))
 	var lip_poly := Polygon2D.new()
 	lip_poly.polygon = lip
 	lip_poly.color = Color(0.36, 0.35, 0.33)
@@ -1128,7 +1186,6 @@ static func _pothole(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> 
 		crack.color = Color(0.11, 0.11, 0.12)
 		crack.z_index = -1
 		root.add_child(crack)
-	_hazard_zone(root, "Pothole", pos, r, &"dirt")
 
 static func _ellipse(center: Vector2, rx: float, ry: float, n: int) -> PackedVector2Array:
 	var out := PackedVector2Array()
@@ -1137,14 +1194,26 @@ static func _ellipse(center: Vector2, rx: float, ry: float, n: int) -> PackedVec
 		out.append(center + Vector2(cos(a) * rx, sin(a) * ry))
 	return out
 
-static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, terrain: StringName) -> void:
+## A hazard's circle zone with a Vis in the arena's dress for its surface
+## (`vis_poly` in chunk space; the zone sits at pos, so it is re-based).
+static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, terrain: StringName, vis_poly: PackedVector2Array) -> void:
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
-	zone.name = label
+	zone.name = "%s%d" % [label, root.get_child_count()]   # unique per chunk (a bare duplicate is renamed @Area2D@N)
 	zone.collision_layer = 128
 	zone.collision_mask = 0
 	zone.terrain_type = terrain
 	zone.position = pos
+	zone.z_index = -1
+	zone.soften_visual = false   # the hazard's own outline is the shape
+	var vis := Polygon2D.new()
+	vis.name = "Vis"
+	var local := PackedVector2Array()
+	for p in vis_poly:
+		local.append(p - pos)
+	vis.polygon = local
+	SurfacePaint.dress(vis, terrain)
+	zone.add_child(vis)
 	var col := CollisionShape2D.new()
 	var shape := CircleShape2D.new()
 	shape.radius = r
