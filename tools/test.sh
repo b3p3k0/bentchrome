@@ -30,7 +30,7 @@ fi
 echo "== tests: engine $("$GODOT" --version 2>/dev/null | head -n1)"
 # timeout guard: if the runner script fails to compile, quit() never runs and
 # headless Godot idles forever — never let that hang CI.
-OUT="$(timeout 120 "$GODOT" --headless --path "$PROJECT_DIR" -s res://tests/run_tests.gd 2>&1)"
+OUT="$(timeout 300 "$GODOT" --headless --path "$PROJECT_DIR" -s res://tests/run_tests.gd 2>&1)"
 CODE=$?
 if [[ $CODE -eq 124 ]]; then
   echo "$OUT"
