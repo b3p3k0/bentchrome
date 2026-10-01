@@ -3,6 +3,8 @@ extends Node2D
 ## Paint-only words for roadside boards, pylon heads, and storefront bands.
 ## Level placement owns depth: overhead signs belong at z 1, bands at z 0.
 
+const UnderFade := preload("res://environment/under_fade.gd")
+
 const GRIME := Color(0.06, 0.055, 0.065, 0.42)
 const PEEL := Color(0.68, 0.65, 0.61, 0.72)
 const DEAD_LETTER := Color(0.22, 0.20, 0.16, 0.78)
@@ -26,7 +28,13 @@ const MIN_SUB_FONT_SIZE := 14
 @export var dead_letters := 0
 @export var paint_seed := 0
 
+var _under_area: Area2D = null
+
 func _ready() -> void:
+	if kind == &"billboard" or kind == &"pylon":
+		_under_area = UnderFade.build_area(size)
+		add_child(_under_area)
+	set_process(_under_area != null)
 	var holder := get_parent()
 	if holder == null:
 		return
@@ -38,6 +46,10 @@ func _ready() -> void:
 	var health := holder.get_node_or_null(^"Health")
 	if health != null and health.has_signal(&"died"):
 		health.connect(&"died", hide)
+
+func _process(delta: float) -> void:
+	modulate.a = move_toward(modulate.a,
+		UnderFade.target_alpha(_under_area, z_index), UnderFade.SPEED * delta)
 
 func text_font_size() -> int:
 	var largest := maxi(MIN_FONT_SIZE, int(floor(size.y - PADDING * 2.0)))

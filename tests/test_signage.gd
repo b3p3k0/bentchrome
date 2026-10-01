@@ -3,12 +3,17 @@ extends RefCounted
 ## and the destructible-parent lifecycle. Driven by tests/run_tests.gd.
 
 const SignageScript := preload("res://environment/signage.gd")
+const UnderFade := preload("res://environment/under_fade.gd")
 const BlockScene := preload("res://environment/destructible_block.tscn")
 
 var t
 
 func _init(runner) -> void:
 	t = runner
+
+func _settle(frames: int) -> void:
+	for i in frames:
+		await t.physics_frame
 
 func test_each_kind_fits_long_and_short_text() -> void:
 	for kind in [&"billboard", &"pylon", &"band"]:
@@ -68,12 +73,77 @@ func test_destructible_parent_hides_and_restores_sign() -> void:
 	t.root.remove_child(block)
 	block.free()
 
-func test_node_tree_is_paint_only() -> void:
+func test_only_overhead_kinds_build_panel_fade_geometry() -> void:
+	for kind in [&"billboard", &"pylon", &"band"]:
+		var sign = SignageScript.new()
+		sign.kind = kind
+		sign.size = Vector2(300, 110)
+		t.root.add_child(sign)
+		var overhead: bool = kind == &"billboard" or kind == &"pylon"
+		var area := sign.get_node_or_null(^"Underpass") as Area2D
+		t.check((area != null) == overhead,
+			"signage: %s owns only its expected fade area" % kind)
+		t.check(sign.is_processing() == overhead,
+			"signage: %s processes only when it can fade" % kind)
+		if area != null:
+			var collision := area.get_child(0) as CollisionShape2D
+			var shape := collision.shape as RectangleShape2D
+			t.check(area.collision_layer == 0 and area.collision_mask == 1,
+				"signage: %s fade area is query-only on the vehicle bit" % kind)
+			t.check(shape != null and shape.size == sign.size
+					and collision.position == Vector2.ZERO,
+				"signage: %s fade rect covers the panel, not its supports" % kind)
+		t.root.remove_child(sign)
+		sign.free()
+
+func test_overhead_signs_fade_for_a_lower_body_and_recover() -> void:
+	for kind in [&"billboard", &"pylon"]:
+		var container := Node2D.new()
+		t.root.add_child(container)
+		var sign = SignageScript.new()
+		sign.kind = kind
+		sign.size = Vector2(300, 110)
+		sign.z_index = 1
+		container.add_child(sign)
+		var body := StaticBody2D.new()
+		body.collision_layer = 1
+		body.z_index = 0
+		var collision := CollisionShape2D.new()
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(20, 20)
+		collision.shape = shape
+		body.add_child(collision)
+		container.add_child(body)
+		await _settle(20)
+		t.check_approx(sign.modulate.a, UnderFade.ALPHA,
+			"signage: %s fades over a lower body" % kind)
+		body.global_position = Vector2(1000, 0)
+		await _settle(20)
+		t.check_approx(sign.modulate.a, 1.0,
+			"signage: %s returns opaque once clear" % kind)
+		t.root.remove_child(container)
+		container.free()
+
+func test_ground_level_overhead_sign_stays_opaque() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
 	var sign = SignageScript.new()
-	t.check(not sign is CollisionObject2D
-		and sign.find_children("*", "CollisionObject2D", true, false).is_empty(),
-		"signage: node and descendants contain no collision objects")
-	sign.free()
+	sign.z_index = 0
+	container.add_child(sign)
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	body.z_index = 0
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(20, 20)
+	collision.shape = shape
+	body.add_child(collision)
+	container.add_child(body)
+	await _settle(20)
+	t.check_approx(sign.modulate.a, 1.0,
+		"signage: a z 0 sign finds nothing rendered beneath it")
+	t.root.remove_child(container)
+	container.free()
 
 func test_all_kinds_draw_for_a_frame() -> void:
 	var holder := Node2D.new()

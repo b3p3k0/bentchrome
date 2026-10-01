@@ -17,6 +17,7 @@ const SUITES := [
 	preload("res://tests/test_sticker_book.gd"),
 	preload("res://tests/test_sticker_art.gd"),
 	preload("res://tests/test_impact_fx.gd"),
+	preload("res://tests/test_drive_fx.gd"),
 	preload("res://tests/test_mg_heat.gd"),
 	preload("res://tests/test_specials_data.gd"),
 	preload("res://tests/test_tracking_scale.gd"),

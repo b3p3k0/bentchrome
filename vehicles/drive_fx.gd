@@ -25,6 +25,8 @@ var _was_boosting := false      # edge detector: the boost roar fires at ignitio
 const SKID_SLIP_MIN := 120.0  # sideways px/s that marks an off-road surface
 const SKID_FADE := 2.0
 const MAX_SKID_NODES := 24  # global cap (12 pairs), via the "skidmarks" group
+const SKID_OWNER_META := &"drive_fx_owner"
+const SKID_ORDER_META := &"drive_fx_order"
 const BLOOD_COLOR := Color(0.38, 0.015, 0.02, 0.82)
 const BLOOD_WIDTH := 4.5
 const BLOOD_FADE := 3.0
@@ -48,6 +50,8 @@ const FLING_SCALE_HARD := 6.0
 
 const PeaceMarkerScript := preload("res://vehicles/peace_marker.gd")
 const FrostMarkerScript := preload("res://vehicles/frost_marker.gd")
+
+static var _next_skid_order := 0
 
 # --- progressive wear: visual damage tier + trailing smoke ------------------
 # HP thirds per spec: FRESH strictly above 2/3, exact thirds land BANGED.
@@ -311,7 +315,7 @@ func _start_skid() -> void:
 	var host := get_tree().current_scene
 	if host == null:
 		return
-	var available := MAX_SKID_NODES - get_tree().get_nodes_in_group(&"skidmarks").size()
+	var available := _reserve_skid_nodes(_skid_offsets().size())
 	# One color for the whole mark, picked from the surface it started on.
 	var terrain: StringName = _vehicle.current_terrain
 	var color: Color = SKID_COLORS.get(terrain, SKID_COLOR)
@@ -319,7 +323,7 @@ func _start_skid() -> void:
 		var line := Line2D.new()
 		line.width = SKID_WIDTH
 		line.default_color = color
-		line.add_to_group(&"skidmarks")
+		_tag_skid(line)
 		host.add_child(line)
 		# Early in the draw order: under buildings and cars, over the floor.
 		host.move_child(line, mini(2, host.get_child_count() - 1))
@@ -328,10 +332,66 @@ func _start_skid() -> void:
 func _end_skid() -> void:
 	for line in _skids:
 		if is_instance_valid(line):
-			var tween: Tween = line.create_tween()
-			tween.tween_property(line, "modulate:a", 0.0, SKID_FADE)
-			tween.tween_callback(line.queue_free)
+			_fade_skid(line)
 	_skids.clear()
+
+func _reserve_skid_nodes(wanted: int) -> int:
+	var marks := get_tree().get_nodes_in_group(&"skidmarks")
+	var available := MAX_SKID_NODES - marks.size()
+	if available >= wanted or not _is_local_vehicle():
+		return mini(wanted, maxi(available, 0))
+	var rivals: Array[Node] = []
+	for mark in marks:
+		if mark is Line2D and not _mark_belongs_to_local(mark):
+			rivals.append(mark)
+	rivals.sort_custom(func(a: Node, b: Node) -> bool:
+		var a_order := int(a.get_meta(SKID_ORDER_META, -1))
+		var b_order := int(b.get_meta(SKID_ORDER_META, -1))
+		return a_order < b_order if a_order != b_order \
+			else a.get_instance_id() < b.get_instance_id())
+	for line in rivals:
+		_retire_skid(line as Line2D)
+		available += 1
+		if available >= wanted:
+			break
+	return mini(wanted, maxi(available, 0))
+
+func _is_local_vehicle() -> bool:
+	if get_tree().get_first_node_in_group(Vehicles.GROUP_LOCAL) != null:
+		return _vehicle.is_in_group(Vehicles.GROUP_LOCAL)
+	return _vehicle.is_in_group(&"player")
+
+func _mark_belongs_to_local(line: Line2D) -> bool:
+	var owner: Variant = line.get_meta(SKID_OWNER_META, null)
+	if not owner is Node or not is_instance_valid(owner):
+		return false
+	if get_tree().get_first_node_in_group(Vehicles.GROUP_LOCAL) != null:
+		return (owner as Node).is_in_group(Vehicles.GROUP_LOCAL)
+	return (owner as Node).is_in_group(&"player")
+
+func _tag_skid(line: Line2D) -> void:
+	line.set_meta(SKID_OWNER_META, _vehicle)
+	line.set_meta(SKID_ORDER_META, _next_skid_order)
+	_next_skid_order += 1
+	line.add_to_group(&"skidmarks")
+
+func _retire_skid(line: Line2D) -> void:
+	line.remove_from_group(&"skidmarks")
+	var owner: Variant = line.get_meta(SKID_OWNER_META, null)
+	if owner is Node and is_instance_valid(owner):
+		var owner_fx := (owner as Node).get_node_or_null(^"DriveFX")
+		if owner_fx != null and owner_fx.has_method(&"_forget_skid"):
+			owner_fx._forget_skid(line)
+	_fade_skid(line)
+
+func _forget_skid(line: Line2D) -> void:
+	_skids.erase(line)
+	_blood_tracks.erase(line)
+
+func _fade_skid(line: Line2D) -> void:
+	var tween: Tween = line.create_tween()
+	tween.tween_property(line, "modulate:a", 0.0, SKID_FADE)
+	tween.tween_callback(line.queue_free)
 
 ## Called by a live AmbientSplat. Pure presentation: it never reaches the
 ## controller or changes traction, and repeated stains only refresh the clock.
@@ -360,12 +420,12 @@ func _start_blood_tracks() -> void:
 	var host := get_tree().current_scene
 	if host == null:
 		return
-	var available := MAX_SKID_NODES - get_tree().get_nodes_in_group(&"skidmarks").size()
+	var available := _reserve_skid_nodes(_skid_offsets().size())
 	for i in mini(_skid_offsets().size(), maxi(available, 0)):
 		var line := Line2D.new()
 		line.width = BLOOD_WIDTH
 		line.default_color = _track_color
-		line.add_to_group(&"skidmarks")
+		_tag_skid(line)
 		host.add_child(line)
 		host.move_child(line, mini(2, host.get_child_count() - 1))
 		_blood_tracks.append(line)
