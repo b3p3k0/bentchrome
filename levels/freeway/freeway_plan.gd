@@ -36,11 +36,26 @@ const RAMPS := {
 	},
 }
 
+const BANKS := {
+	&"BankNE": {
+		"low": 1, "high": 2, "rect": Rect2(1088, -2688, 256, 360),
+		"toward": &"west",
+	},
+	&"BankN": {
+		"low": 1, "high": 2, "rect": Rect2(1088, -1280, 256, 328),
+		"toward": &"west",
+	},
+	&"BankMid": {
+		"low": 1, "high": 2, "rect": Rect2(1088, -584, 256, 328),
+		"toward": &"west",
+	},
+	&"BankS": {
+		"low": 1, "high": 2, "rect": Rect2(1088, 792, 256, 1896),
+		"toward": &"west",
+	},
+}
+
 const WALLS := {
-	&"RetainE_1": {"layer": 12, "rect": Rect2(1088, -2688, 24, 384)},
-	&"RetainE_2": {"layer": 12, "rect": Rect2(1088, -1792, 24, 864)},
-	&"RetainE_3": {"layer": 12, "rect": Rect2(1088, -608, 24, 864)},
-	&"RetainE_4": {"layer": 12, "rect": Rect2(1088, 768, 24, 1920)},
 	&"ShelfN_E": {"layer": 12, "rect": Rect2(1344, -2304, 24, 512)},
 	&"ShelfN_N": {"layer": 12, "rect": Rect2(1088, -2328, 280, 24)},
 	&"ShelfS_E": {"layer": 12, "rect": Rect2(1344, 256, 24, 512)},
@@ -54,16 +69,10 @@ const WALLS := {
 	&"DeckEastStop": {"layer": 20, "rect": Rect2(1064, -928, 24, 320)},
 }
 
-const CHAMFERS := {
-	&"ChamferNE": {"corner": Vector2(1112, -2688), "legs": Vector2(128, 128)},
-	&"ChamferAN": {"corner": Vector2(1112, -952), "legs": Vector2(128, -128)},
-	&"ChamferAS": {"corner": Vector2(1112, -584), "legs": Vector2(128, 128)},
-	&"ChamferSE": {"corner": Vector2(1112, 2688), "legs": Vector2(128, -128)},
-}
-
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
 const PASTURE := Rect2(1400, -2688, 1608, 1688)
 const FARM_FIELD := Rect2(2176, -1920, 768, 640)
+const JUMP_LOWLAND := Vector2(1536, 2400)
 
 const TRUCK_STOP := {
 	&"TruckStopLot": Rect2(1664, 320, 1344, 1856),
@@ -109,21 +118,14 @@ static func floor_at(point: Vector2) -> int:
 			best = maxi(best, int(zone["floor"]))
 	return best
 
-static func chamfer_points(name: StringName) -> PackedVector2Array:
-	var chamfer: Dictionary = CHAMFERS[name]
-	var corner: Vector2 = chamfer["corner"]
-	var legs: Vector2 = chamfer["legs"]
-	return PackedVector2Array([
-		corner,
-		corner + Vector2(legs.x, 0.0),
-		corner + Vector2(0.0, legs.y),
-	])
-
 static func plate_east_edge_covered(y: float) -> bool:
 	var plate := rect_of(FLOOR_ZONES, &"FZPlate")
 	var point := Vector2(plate.end.x, y)
 	for wall: Dictionary in WALLS.values():
 		if _has_point_inclusive(wall["rect"], point):
+			return true
+	for bank: Dictionary in BANKS.values():
+		if _has_point_inclusive(bank["rect"], point):
 			return true
 	for ramp: Dictionary in RAMPS.values():
 		if _has_point_inclusive(ramp["rect"], point):

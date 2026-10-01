@@ -523,34 +523,6 @@ rails = true
 terrain_type = "road"
 downhill_pull = 120.0
 
-[node name="RetainE_1Shadow" type="Node2D" parent="."]
-position = Vector2(1112, -2496)
-rotation = -1.5707963267949
-script = ExtResource("28_ddeco")
-kind = &"ledge_shadow"
-size = Vector2(384, 90)
-
-[node name="RetainE_2Shadow" type="Node2D" parent="."]
-position = Vector2(1112, -1360)
-rotation = -1.5707963267949
-script = ExtResource("28_ddeco")
-kind = &"ledge_shadow"
-size = Vector2(864, 90)
-
-[node name="RetainE_3Shadow" type="Node2D" parent="."]
-position = Vector2(1112, -176)
-rotation = -1.5707963267949
-script = ExtResource("28_ddeco")
-kind = &"ledge_shadow"
-size = Vector2(864, 90)
-
-[node name="RetainE_4Shadow" type="Node2D" parent="."]
-position = Vector2(1112, 1728)
-rotation = -1.5707963267949
-script = ExtResource("28_ddeco")
-kind = &"ledge_shadow"
-size = Vector2(1920, 90)
-
 [node name="LandingNShadow" type="Node2D" parent="."]
 position = Vector2(1600, -952)
 rotation = 3.14159265358979
@@ -644,6 +616,102 @@ to_floor = 2
 approach_dir = Vector2(0, 1)
 kind = &"grade"
 
+[node name="ConBankNEUp" type="Node2D" parent="."]
+position = Vector2(1216, -2508)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankNEDown" type="Node2D" parent="."]
+position = Vector2(1216, -2508)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConBankNUp" type="Node2D" parent="."]
+position = Vector2(1216, -1116)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankNDown" type="Node2D" parent="."]
+position = Vector2(1216, -1116)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConBankMidUp" type="Node2D" parent="."]
+position = Vector2(1216, -420)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankMidDown" type="Node2D" parent="."]
+position = Vector2(1216, -420)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConBankS1Up" type="Node2D" parent="."]
+position = Vector2(1216, 1024)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankS1Down" type="Node2D" parent="."]
+position = Vector2(1216, 1024)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConBankS2Up" type="Node2D" parent="."]
+position = Vector2(1216, 1740)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankS2Down" type="Node2D" parent="."]
+position = Vector2(1216, 1740)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
+[node name="ConBankS3Up" type="Node2D" parent="."]
+position = Vector2(1216, 2432)
+script = ExtResource("27_conn")
+from_floor = 1
+to_floor = 2
+approach_dir = Vector2(-1, 0)
+kind = &"grade"
+
+[node name="ConBankS3Down" type="Node2D" parent="."]
+position = Vector2(1216, 2432)
+script = ExtResource("27_conn")
+from_floor = 2
+to_floor = 1
+approach_dir = Vector2(1, 0)
+kind = &"grade"
+
 [node name="ConDeckDownN" type="Node2D" parent="."]
 position = Vector2(0, -968)
 script = ExtResource("27_conn")
@@ -677,7 +745,7 @@ approach_dir = Vector2(0, -1)
 kind = &"jump"
 
 [node name="ConLowlandJump" type="Node2D" parent="."]
-position = Vector2(1280, 1536)
+position = Vector2(1536, 2400)
 script = ExtResource("27_conn")
 from_floor = 1
 to_floor = 2
@@ -686,14 +754,6 @@ kind = &"jump"
 
 [node name="ConPlateDownN" type="Node2D" parent="."]
 position = Vector2(1048, -2000)
-script = ExtResource("27_conn")
-from_floor = 2
-to_floor = 1
-approach_dir = Vector2(1, 0)
-kind = &"edge"
-
-[node name="ConPlateDownS" type="Node2D" parent="."]
-position = Vector2(1048, 1600)
 script = ExtResource("27_conn")
 from_floor = 2
 to_floor = 1
@@ -729,7 +789,7 @@ polygon = PackedVector2Array(-112, -112, 112, -112, 112, 112, -112, 112)
 shape = SubResource("RectangleShape2D_ramp")
 
 [node name="JumpLowland" type="Area2D" parent="."]
-position = Vector2(1280, 1536)
+position = Vector2(1536, 2400)
 collision_layer = 0
 collision_mask = 1
 script = ExtResource("4_ramp")
@@ -927,53 +987,81 @@ polygon = PackedVector2Array(-20, -2728, 20, -2728, 20, 2728, -20, 2728)
 position = Vector2(3028, 0)
 shape = SubResource("RectangleShape2D_wall_v")
 
-[node name="RetainE_1" type="StaticBody2D" parent="."]
-position = Vector2(1100, -2496)
-collision_layer = 12
-collision_mask = 0
+[node name="BankNE" type="Node2D" parent="."]
+position = Vector2(1216, -2508)
+rotation = -1.5707963267949
+script = ExtResource("25_grade")
+low_floor = 1
+high_floor = 2
+size = Vector2(360, 256)
+surface_paint = false
+rails = false
+terrain_type = "grass"
+downhill_pull = 120.0
 
-[node name="Vis" type="Polygon2D" parent="RetainE_1"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(-12, -192, 12, -192, 12, 192, -12, 192)
+[node name="BankNEEmbankment" type="Node2D" parent="."]
+position = Vector2(1216, -2508)
+rotation = -1.5707963267949
+script = ExtResource("29_fdeco")
+kind = &"embankment"
+size = Vector2(360, 256)
 
-[node name="Col" type="CollisionShape2D" parent="RetainE_1"]
-shape = SubResource("RectangleShape2D_retain_short")
+[node name="BankN" type="Node2D" parent="."]
+position = Vector2(1216, -1116)
+rotation = -1.5707963267949
+script = ExtResource("25_grade")
+low_floor = 1
+high_floor = 2
+size = Vector2(328, 256)
+surface_paint = false
+rails = false
+terrain_type = "grass"
+downhill_pull = 120.0
 
-[node name="RetainE_2" type="StaticBody2D" parent="."]
-position = Vector2(1100, -1360)
-collision_layer = 12
-collision_mask = 0
+[node name="BankNEmbankment" type="Node2D" parent="."]
+position = Vector2(1216, -1116)
+rotation = -1.5707963267949
+script = ExtResource("29_fdeco")
+kind = &"embankment"
+size = Vector2(328, 256)
 
-[node name="Vis" type="Polygon2D" parent="RetainE_2"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(-12, -432, 12, -432, 12, 432, -12, 432)
+[node name="BankMid" type="Node2D" parent="."]
+position = Vector2(1216, -420)
+rotation = -1.5707963267949
+script = ExtResource("25_grade")
+low_floor = 1
+high_floor = 2
+size = Vector2(328, 256)
+surface_paint = false
+rails = false
+terrain_type = "grass"
+downhill_pull = 120.0
 
-[node name="Col" type="CollisionShape2D" parent="RetainE_2"]
-shape = SubResource("RectangleShape2D_retain_mid")
+[node name="BankMidEmbankment" type="Node2D" parent="."]
+position = Vector2(1216, -420)
+rotation = -1.5707963267949
+script = ExtResource("29_fdeco")
+kind = &"embankment"
+size = Vector2(328, 256)
 
-[node name="RetainE_3" type="StaticBody2D" parent="."]
-position = Vector2(1100, -176)
-collision_layer = 12
-collision_mask = 0
+[node name="BankS" type="Node2D" parent="."]
+position = Vector2(1216, 1740)
+rotation = -1.5707963267949
+script = ExtResource("25_grade")
+low_floor = 1
+high_floor = 2
+size = Vector2(1896, 256)
+surface_paint = false
+rails = false
+terrain_type = "grass"
+downhill_pull = 120.0
 
-[node name="Vis" type="Polygon2D" parent="RetainE_3"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(-12, -432, 12, -432, 12, 432, -12, 432)
-
-[node name="Col" type="CollisionShape2D" parent="RetainE_3"]
-shape = SubResource("RectangleShape2D_retain_mid")
-
-[node name="RetainE_4" type="StaticBody2D" parent="."]
-position = Vector2(1100, 1728)
-collision_layer = 12
-collision_mask = 0
-
-[node name="Vis" type="Polygon2D" parent="RetainE_4"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(-12, -960, 12, -960, 12, 960, -12, 960)
-
-[node name="Col" type="CollisionShape2D" parent="RetainE_4"]
-shape = SubResource("RectangleShape2D_retain_long")
+[node name="BankSEmbankment" type="Node2D" parent="."]
+position = Vector2(1216, 1740)
+rotation = -1.5707963267949
+script = ExtResource("29_fdeco")
+kind = &"embankment"
+size = Vector2(1896, 256)
 
 [node name="ShelfN_E" type="StaticBody2D" parent="."]
 position = Vector2(1356, -2048)
@@ -1094,54 +1182,6 @@ polygon = PackedVector2Array(-192, -12, 192, -12, 192, 12, -192, 12)
 
 [node name="Col" type="CollisionShape2D" parent="RampAS"]
 shape = SubResource("RectangleShape2D_ramp_b_wall")
-
-[node name="ChamferNE" type="StaticBody2D" parent="."]
-position = Vector2(1112, -2688)
-collision_layer = 12
-collision_mask = 0
-
-[node name="Vis" type="Polygon2D" parent="ChamferNE"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
-
-[node name="Col" type="CollisionPolygon2D" parent="ChamferNE"]
-polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
-
-[node name="ChamferAN" type="StaticBody2D" parent="."]
-position = Vector2(1112, -952)
-collision_layer = 12
-collision_mask = 0
-
-[node name="Vis" type="Polygon2D" parent="ChamferAN"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
-
-[node name="Col" type="CollisionPolygon2D" parent="ChamferAN"]
-polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
-
-[node name="ChamferAS" type="StaticBody2D" parent="."]
-position = Vector2(1112, -584)
-collision_layer = 12
-collision_mask = 0
-
-[node name="Vis" type="Polygon2D" parent="ChamferAS"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
-
-[node name="Col" type="CollisionPolygon2D" parent="ChamferAS"]
-polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
-
-[node name="ChamferSE" type="StaticBody2D" parent="."]
-position = Vector2(1112, 2688)
-collision_layer = 12
-collision_mask = 0
-
-[node name="Vis" type="Polygon2D" parent="ChamferSE"]
-color = Color(0.42, 0.42, 0.5, 1)
-polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
-
-[node name="Col" type="CollisionPolygon2D" parent="ChamferSE"]
-polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
 
 [node name="DeckEastStop" type="StaticBody2D" parent="."]
 position = Vector2(1076, -768)
