@@ -1245,3 +1245,85 @@ func test_builder_surfaces_match_the_arenas() -> void:
 				inside = false
 	t.check(inside and avis.material == SurfacePaint.concrete_material(), "surfaces: the forecourt stops at the embankment's foot")
 	schunk.free()
+
+## The illustrated billboards: every copy line has a stable, unique slug and
+## an art path under ART_DIR; a board whose copy has art draws the painting
+## (and no text) while one without draws the text board; and every PNG in the
+## folder is named for a line in the table — no orphans. Art is a drop-in:
+## the folder may be empty, so a temp file exercises the illustrated path.
+func test_billboard_art() -> void:
+	const Deco := preload("res://levels/chase/highway_deco.gd")
+	var slugs: Array = []
+	var pattern := RegEx.new()
+	pattern.compile("^[a-z0-9]+(_[a-z0-9]+)*$")
+	for line in Deco.BILLBOARD_COPY:
+		var slug: String = Deco.slug_for(line)
+		t.check(pattern.search(slug) != null, "billboard art: slug %s is a-z0-9 joined by single underscores" % slug)
+		t.check(not slug in slugs, "billboard art: slug %s is unique" % slug)
+		t.check(Deco.art_path(line) == "%s/%s.png" % [Deco.ART_DIR, slug], "billboard art: art_path is ART_DIR/<slug>.png")
+		slugs.append(slug)
+	t.check(Deco.slug_for(["SLO MO'S", "PARTS"]) == "slo_mo_s", "billboard art: SLO MO'S → slo_mo_s (stable)")
+	t.check(Deco.slug_for(["LAWYER?", ""]) == "lawyer", "billboard art: LAWYER? → lawyer (no trailing underscore)")
+	t.check(Deco.slug_for(["  Visit   MERCY!  "]) == "visit_mercy", "billboard art: runs of junk fold to one underscore")
+	t.check(Deco.slug_for([]) == "" and Deco.art_for([]) == null, "billboard art: empty copy has no slug and no art")
+	var allowed: Array = slugs.duplicate()
+	allowed.append(Deco.slug_for(Deco.DINER_COPY))   # the truckstop's own board may be painted too
+	# No orphans in the drop-in folder.
+	var dir := DirAccess.open(Deco.ART_DIR)
+	var shipped: Array = []
+	if dir != null:
+		for file in dir.get_files():
+			if file.ends_with(".png"):
+				t.check(file.get_basename() in allowed, "billboard art: %s is named for a copy line" % file)
+				shipped.append(file.get_basename())
+	# One board with art, one without. A temp PNG stands in when nothing ships.
+	var with_index := -1
+	var without_index := -1
+	for i in Deco.BILLBOARD_COPY.size():
+		if slugs[i] in shipped and with_index < 0:
+			with_index = i
+		elif not slugs[i] in shipped and without_index < 0:
+			without_index = i
+	var temp_path := ""
+	if with_index < 0 and without_index >= 0:
+		with_index = without_index
+		without_index = -1
+		for i in Deco.BILLBOARD_COPY.size():
+			if i != with_index and not slugs[i] in shipped:
+				without_index = i
+				break
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(Deco.ART_DIR))
+		temp_path = Deco.art_path(Deco.BILLBOARD_COPY[with_index])
+		var image := Image.create(8, 4, false, Image.FORMAT_RGB8)
+		image.fill(Color(0.8, 0.2, 0.5))
+		image.save_png(temp_path)
+	var stage := Node2D.new()
+	t.root.add_child(stage)
+	var painted := Node2D.new()
+	painted.set_script(Deco)
+	painted.kind = &"billboard"
+	painted.copy_index = with_index
+	painted.position = Vector2(200, -300)
+	stage.add_child(painted)
+	var plain: Node = null
+	if without_index >= 0:
+		plain = Node2D.new()
+		plain.set_script(Deco)
+		plain.kind = &"billboard"
+		plain.copy_index = without_index
+		plain.position = Vector2(-200, -300)
+		stage.add_child(plain)
+	await t.process_frame
+	await t.process_frame
+	if temp_path != "":
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+	t.check(painted._copy == Deco.BILLBOARD_COPY[with_index], "billboard art: copy_index pins the line")
+	t.check(painted.has_art(), "billboard art: a board whose copy has art draws the painting (%s)" % slugs[with_index])
+	t.check(painted.is_inside_tree() and painted.is_visible_in_tree(), "billboard art: the illustrated board stands and draws")
+	if plain != null:
+		t.check(not plain.has_art(), "billboard art: a board without art is still the text board (%s)" % slugs[without_index])
+		t.check(plain.is_visible_in_tree(), "billboard art: the text board still draws")
+	painted.shadow_strength = 1.0
+	await t.process_frame
+	t.root.remove_child(stage)
+	stage.free()

@@ -20,6 +20,13 @@ extends Node2D
 ## Every sign is in group `highway_deco` and casts a LONG SHADOW when the host
 ## asks (`shadow_strength` 0..1 — buzzard_run's sunset act): a dark translucent
 ## sweep of the board toward the north-east, the sun low in the west.
+##
+## A billboard can be ILLUSTRATED: a drop-in `ART_DIR/<slug>.png` (the slug is
+## the copy's first line, lowercased, anything but a-z0-9 folded to `_`) is
+## drawn as the board face and the art carries the copy — no text is drawn
+## over it. The backing, the frame line, the bulbs, the posts and the long
+## shadow stay the game's. Absent art = today's text board. Brief and recipe:
+## docs/art_briefs/billboards.md; drop-in contract: assets/img/billboards/README.md.
 
 ## Directional / informational only. Town names and distances carry the humour.
 const HIGHWAY_COPY := [
@@ -67,6 +74,8 @@ const BILLBOARD_COPY := [
 	["LAWYER?", "CALL SLO MO", "he knows a guy"],
 	["GET RIGHT", "WITH GOD", "or at least with your mechanic"],
 ]
+## Where an illustrated board's face lives (see slug_for / art_path).
+const ART_DIR := "res://assets/img/billboards"
 ## Plausible limits, dealt by seed. Not jokes — the joke is that nobody obeys them.
 const SPEED_LIMITS := [55, 65, 45, 35, 80, 15]
 const BOARD_TINTS := [Color(0.82, 0.74, 0.5), Color(0.6, 0.72, 0.8), Color(0.85, 0.62, 0.5), Color(0.72, 0.8, 0.62)]
@@ -96,6 +105,7 @@ static var MILE_PX := 1600.0
 @export var kind: StringName = &"highway_sign"
 @export var side := 1.0            # which verge: the post faces the road
 @export var copy_seed := 0         # picks the copy; 0 = from position
+@export var copy_index := -1       # billboard: pin a BILLBOARD_COPY row; -1 = dealt by seed
 @export var mile_number := MILE_START   # mile_marker: the number on the post
 ## 0 = no shadow, 1 = the full sunset sweep. The host drives it by act.
 var shadow_strength := 0.0:
@@ -110,6 +120,7 @@ var _rng := RandomNumberGenerator.new()
 var _copy: Array = []
 var _tint := Color.WHITE
 var _limit := 55
+var _art: Texture2D = null         # billboard: the illustrated face, when the drop-in exists
 var _birds: Array = []             # vultures: {r, speed, phase, wing}
 var _weed_x := 0.0                 # tumbleweed: offset along its crossing
 var _weed_dir := 1.0
@@ -122,6 +133,50 @@ static func mile_at(d: float) -> float:
 static func d_of_mile(mile: float) -> float:
 	return (mile - float(MILE_START)) * MILE_PX
 
+## The art's name for a copy line: the first line lowercased, every run of
+## anything but a-z0-9 folded to one `_`, none leading or trailing — stable
+## across edits to the smaller lines, unique across BILLBOARD_COPY
+## (test-locked). "SLO MO'S" → slo_mo_s, "LAWYER?" → lawyer.
+static func slug_for(copy: Array) -> String:
+	if copy.is_empty():
+		return ""
+	var head := String(copy[0]).to_lower()
+	var out := ""
+	var gap := false
+	for i in head.length():
+		var code: int = head.unicode_at(i)
+		var alnum: bool = (code >= 97 and code <= 122) or (code >= 48 and code <= 57)
+		if alnum:
+			if gap and out != "":
+				out += "_"
+			out += head[i]
+			gap = false
+		else:
+			gap = true
+	return out
+
+## Where that copy's illustration would live, exist or not.
+static func art_path(copy: Array) -> String:
+	return "%s/%s.png" % [ART_DIR, slug_for(copy)]
+
+## The illustration for a copy, or null: imported resources and raw drop-ins
+## both count, and a file that won't load is the same as none (text board).
+static func art_for(copy: Array) -> Texture2D:
+	if copy.is_empty():
+		return null
+	var path := art_path(copy)
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	if FileAccess.file_exists(path):
+		var image := Image.load_from_file(path)
+		if image != null and not image.is_empty():
+			return ImageTexture.create_from_image(image)
+	return null
+
+## True while this billboard draws its illustrated face.
+func has_art() -> bool:
+	return _art != null
+
 func _ready() -> void:
 	add_to_group(&"highway_deco")
 	if kind == &"sign":
@@ -133,8 +188,14 @@ func _ready() -> void:
 		&"speed_sign":
 			_limit = SPEED_LIMITS[_rng.randi() % SPEED_LIMITS.size()]
 		&"billboard":
-			_copy = DINER_COPY if copy_seed == DINER_SEED else BILLBOARD_COPY[_rng.randi() % BILLBOARD_COPY.size()]
+			if copy_seed == DINER_SEED:
+				_copy = DINER_COPY
+			elif copy_index >= 0 and copy_index < BILLBOARD_COPY.size():
+				_copy = BILLBOARD_COPY[copy_index]
+			else:
+				_copy = BILLBOARD_COPY[_rng.randi() % BILLBOARD_COPY.size()]
 			_tint = BOARD_TINTS[_rng.randi() % BOARD_TINTS.size()]
+			_art = art_for(_copy)
 		&"vultures":
 			z_index = 3
 			for i in _rng.randi_range(2, 4):
@@ -267,6 +328,8 @@ func _draw_mile_marker() -> void:
 		HORIZONTAL_ALIGNMENT_CENTER, w, 30, SIGN_TEXT)
 
 ## Two posts and a big board — the copy is the joke, the board is the read.
+## An illustrated board (`_art`) is the painted face: the art carries the
+## copy, so no text goes over it; everything around it is drawn the same.
 func _draw_billboard() -> void:
 	var font := ThemeDB.fallback_font
 	var w := 340.0
@@ -277,18 +340,22 @@ func _draw_billboard() -> void:
 		draw_rect(Rect2(px - 4.0, -12, 8, 24), POST)
 		draw_circle(Vector2(px, 12), 7.0, Color(0.12, 0.1, 0.08, 0.5))
 	draw_rect(board.grow(4.0), Color(0.05, 0.05, 0.06, 0.65))
-	draw_rect(board, _tint)
+	if _art != null:
+		draw_texture_rect(_art, board, false)
+	else:
+		draw_rect(board, _tint)
 	draw_rect(board.grow(-8.0), _tint.darkened(0.55), false, 3.0)
-	var ink := _tint.darkened(0.7)
-	if _copy.size() >= 1:
-		draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 46.0), String(_copy[0]),
-			HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 34, ink)
-	if _copy.size() >= 2 and String(_copy[1]) != "":
-		draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 82.0), String(_copy[1]),
-			HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 28, ink)
-	if _copy.size() >= 3:
-		draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 112.0), String(_copy[2]),
-			HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 15, ink.lightened(0.2))
+	if _art == null:   # the painting IS the copy; a text board spells it out
+		var ink := _tint.darkened(0.7)
+		if _copy.size() >= 1:
+			draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 46.0), String(_copy[0]),
+				HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 34, ink)
+		if _copy.size() >= 2 and String(_copy[1]) != "":
+			draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 82.0), String(_copy[1]),
+				HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 28, ink)
+		if _copy.size() >= 3:
+			draw_string(font, Vector2(board.position.x + 20.0, board.position.y + 112.0), String(_copy[2]),
+				HORIZONTAL_ALIGNMENT_LEFT, w - 40.0, 15, ink.lightened(0.2))
 	# The mounting: a strip of bulbs along the top that some vandal has mostly finished off.
 	for i in 11:
 		var on: bool = (i * 7 + int(absf(position.x))) % 3 != 0
