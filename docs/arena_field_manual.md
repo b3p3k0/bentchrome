@@ -236,18 +236,21 @@ that crosses a grade seam.
   `_ready`. They may smooth a concave block corner, but they never replace the
   authored blocks that static lints inspect as the mountain topology.
 
-### Retaining walls and shelves
+### Embankments, shelves and barricades
 
-- **MUST:** separate a lower floor from an upper plate with layer-12 statics
-  (obstacle + floor-1 bit) along the seam. Floor-1 traffic stops at the face;
-  floor-2 traffic ignores it and may drive off for the one-floor ledge hop.
-- **MUST:** grades and elevated shelves make explicit breaks in that wall. A
-  signed layout plan must prove the complete seam is covered by a retaining
-  wall, grade, or shelf at every point; a missing interval is not an entrance.
-- **MUST:** every concave corner formed by the retaining wall and another wall
-  or the arena boundary gets a 45-degree chamfer with legs of at least 128px.
-- **DEFAULT:** a shelf has its own outer/cap walls and a readable ledge shadow;
-  keep its road skin higher-priority than the lower-floor substrate.
+- **DEFAULT:** a lower floor meets a raised plate on a driveable embankment
+  grade. The grade adopts both floors at ground level, so either direction is
+  a climb or descent rather than a hop.
+- **MUST:** use layer-12 statics (obstacle + floor-1 bit) only where a ramp,
+  shelf, or approach needs a barricade. Floor-1 traffic stops at the face;
+  floor-2 traffic ignores it.
+- **MUST:** a signed layout plan proves the complete seam is covered by a bank,
+  road grade, shelf, or wall at every point. A missing interval is not an
+  entrance.
+- **DEFAULT:** any concave corner that a kept wall still forms with another wall
+  or the arena boundary gets a 45-degree chamfer or becomes a driveable grade.
+- **DEFAULT:** a shelf has its own outer/cap barricades and a readable ledge
+  shadow; keep its road skin higher-priority than the lower-floor substrate.
 - **MUST:** a deck above a driveable floor uses breakaway rails and NEVER AI
   curbs. Curbs are floor-blind and would become invisible walls across the
   traffic running underneath.
@@ -349,6 +352,10 @@ that crosses a grade seam.
 - Road marks, lights, weather, signs, overhead paint, and living streets are
   cosmetic unless their scene explicitly says otherwise.
 
+- **MUST:** a highway reaches the arena boundary at smashable barriers, never a
+  turnaround.
+- **MUST:** a ramp joins a carriageway with a diagonal in the direction of
+  travel.
 - **MUST:** solid cover does not overlap other solid cover accidentally.
 - **MUST:** cover never overlaps jump pads or connector approach lanes.
 - **DEFAULT:** cover clusters interrupt sightlines without fully enclosing a
@@ -487,7 +494,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 |---|---:|---|---|---|
 | Arena Assault | Small / 2 (duel, mp_avail false) | derby pit: dirt infield ring in an asphalt lane | 1v1 duel AI, center station, wall-lane pickups, chainable barrels | a duel arena buys tightness by resigning its LAN seats; terrain contrast reads at a glance |
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
-| Freeway Firefight | Large / 8 | floor-2 raised highway plate + floor-1 farm/truck-stop lowland + floor-3 country-road overpass | five grades, three cross-floor pads, retaining ledge hops, breakaway deck rails, fuel-chain blasts | a retaining seam can admit grades and shelves without leaking; an overhead deck stays driveable above and below only when its rails remain floor-correct and curb-free |
+| Freeway Firefight | Large / 8 | floor-2 raised highway with full-length carriageways, grass banks, shelves, and merge lanes + floor-1 farm/truck-stop lowland + floor-3 country-road overpass | five road grades, four embankment grades, three cross-floor pads, smashable lane-end barriers, breakaway deck rails, fuel-chain blasts | make a driveable embankment the default plate seam, reserve barricades for ramps and shelves, join directional traffic with merge diagonals, and keep an overhead deck floor-correct and curb-free |
 | Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
 | Mountainside Mayhem | Medium / 5 | generated southwest-to-northeast mountain pass + bridge/jump chasm + floor-3 knoll and runaway ledge | ice bends, lethal drop, 12-HP breakaway rails, one-exit high rewards | one grid can own collision, hazards, rails, and furniture while union skins turn authored rectangles into a coherent mountain |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |

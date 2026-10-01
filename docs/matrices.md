@@ -252,6 +252,7 @@ Source: `vehicles/paint/wear.gd` (marks) + `vehicles/drive_fx.gd` (tier poll + s
 | Marks | scratches+dents (BANGED) / +soot+chips+nose crumple (BUSTED) | deterministic per style+palette seed; BUSTED extends BANGED's RNG stream (damage accumulates) |
 | Count scale | `4·l·w / REF_AREA 1144`, clamped 0.4–1.6 | bikes 1-2 marks, APC/trailer cap; `tail_len` keeps Coldfront's plow clean |
 | Smoke | amounts [0, 6, 12] · lifetime [—, 1.1, 1.8] · gray wisps / dark trail | one lazy world-space CPUParticles2D at the rear midpoint; death cuts it, the wreck keeps its dents |
+| `MAX_SKID_NODES` | 24 active skid/stain lines | Every line carries `drive_fx_owner` and `drive_fx_order`. At the cap, a local request retires the oldest rival lines until its requested lines fit; rivals receive no lines at the cap and never retire a live local-player line. Retired lines leave the active group before their 2s fade. |
 | Exceptions | Goliath phase 2 resets wear with the pool (fresh bobtail) · trailer plates stay FRESH · derelicts keep their WRECK_TINT instead | |
 
 ---
@@ -373,7 +374,7 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 1 | Arena Assault | SMALL 2560×2560 | 2 (duel; mp_avail false) | 1 | 1 | derby pit: dirt infield in an asphalt lane, jersey ring, center station, wall-lane M/M/H/P/X crates, barrel chains, wreck cover; `optional: true` while in test |
 | 2 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
 | 3 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
-| 4 | Freeway Firefight | LARGE 4096×5376, 3 floors | 8 | 7 | 3 | floor-2 raised highway plate + floor-1 farm/truck-stop lowland + floor-3 country-road overpass; 5 grades, 3 jump pads, 16 synced 12-HP deck rails, retaining seam with 4 chamfers, fuel-chain blasts; MP ready |
+| 4 | Freeway Firefight | LARGE 4096×5376, 3 floors | 8 | 7 | 3 | floor-2 raised highway plate + floor-1 farm/truck-stop lowland + floor-3 country-road overpass; 5 road grades, 4 grass embankment grades, 2 merge lanes, 3 jump pads, 8 smashable 80-HP lane-end barriers, 16 synced 12-HP deck rails, fuel-chain blasts; MP ready |
 | 5 | Lackey's Arena | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
 | 6 | Suburban Savagery | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
 | 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
@@ -391,8 +392,9 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 Sources: `levels/freeway/freeway_plan.gd` is the dependency-free signed layout;
 `levels/freeway/freeway.tscn` mirrors it. `tests/test_freeway_level.gd` compares
 the scene against the plan and live-simulates the cross-floor jumps, grades,
-retaining stops, garage drive-through, and fuel chain. Change the plan first,
-then update its scene mirror; the tests prove the relationship.
+banks, merge lanes, barricade stops, garage drive-through, and fuel chain.
+Change the plan first, then update its scene mirror; the tests prove the
+relationship.
 
 ### Plan constants
 
@@ -401,15 +403,18 @@ then update its scene mirror; the tests prove the relationship.
 | `ARENA_RECT` | `Rect2(-1088,-2688,4096,5376)` | Complete playfield; floor-2 plate is `x=-1088…1088`, floor-1 lowland is `x=1088…3008` |
 | `FLOOR_ZONES` | `FZPlate`: floor 2, `Rect2(-1088,-2688,2176,5376)`<br>`FZLowland`: floor 1, `Rect2(1088,-2688,1920,5376)`<br>`FZDeck`: floor 3, `Rect2(-1088,-928,2176,320)`<br>`FZLanding`: floor 2, `Rect2(1472,-928,256,320)`<br>`FZShelfN`: floor 2, `Rect2(1088,-2304,256,512)`<br>`FZShelfS`: floor 2, `Rect2(1088,256,256,512)` | Winning floor at every driveable XY point |
 | `RAMPS` | `RampW`: 2→3, `Rect2(-1088,-608,256,384)`, high north<br>`RampA`: 2→3, `Rect2(1088,-928,384,320)`, high west<br>`RampB`: 1→2, `Rect2(1728,-928,384,320)`, high west<br>`RampN`: 1→2, `Rect2(1088,-1792,256,512)`, high north<br>`RampS`: 1→2, `Rect2(1088,-256,256,512)`, high south | Five road grades and their floor/direction contract |
-| `WALLS` | Layer 12: `RetainE_1 Rect2(1088,-2688,24,384)`; `RetainE_2 Rect2(1088,-1792,24,864)`; `RetainE_3 Rect2(1088,-608,24,864)`; `RetainE_4 Rect2(1088,768,24,1920)`; `ShelfN_E Rect2(1344,-2304,24,512)`; `ShelfN_N Rect2(1088,-2328,280,24)`; `ShelfS_E Rect2(1344,256,24,512)`; `ShelfS_S Rect2(1088,768,280,24)`; `LandingN Rect2(1472,-952,256,24)`; `LandingS Rect2(1472,-608,256,24)`; `RampAN Rect2(1088,-952,384,24)`; `RampAS Rect2(1088,-608,384,24)`; `RampBN Rect2(1728,-952,384,24)`; `RampBS Rect2(1728,-608,384,24)`.<br>Layer 20: `DeckEastStop Rect2(1064,-928,24,320)` | Layer 12 is obstacle + floor-1, so lowland traffic stops and floor-2 traffic may hop down. Layer 20 is obstacle + floor-2 and stops plate traffic from driving under the deck's east end into `RampA`. |
-| `CHAMFERS` | `ChamferNE`: corner `(1112,-2688)`, legs `(128,128)`<br>`ChamferAN`: corner `(1112,-952)`, legs `(128,-128)`<br>`ChamferAS`: corner `(1112,-584)`, legs `(128,128)`<br>`ChamferSE`: corner `(1112,2688)`, legs `(128,-128)` | Four 45° retaining-corner triangles; `chamfer_points()` derives their three vertices |
-| `COUNTRY_ROAD` | `Rect2(2112,-896,896,256)` | Floor-1 country road east of `RampB` |
+| `BANKS` | `BankNE`: 1→2, `Rect2(1088,-2688,256,360)`, high west<br>`BankN`: 1→2, `Rect2(1088,-1280,256,328)`, high west<br>`BankMid`: 1→2, `Rect2(1088,-584,256,328)`, high west<br>`BankS`: 1→2, `Rect2(1088,792,256,1896)`, high west | Four paintless, unrailed grass `Ramp`s with `120 px/s²` pull; each is followed immediately by a matching `freeway_deco` embankment skin |
+| `MERGES` | `MergeN`: `[(1088,-2304),(1088,-1942),(768,-2262),(768,-2624)]`<br>`MergeS`: `[(768,726),(768,1088),(1088,768),(1088,406)]` | Priority-10 road polygons with matching collision. `MergeN` leaves the north `362px` of `FZShelfN` north-west into the northbound east carriageway; `MergeS` carries that carriageway north-east into the south `362px` of `FZShelfS`. |
+| `LANE_END_BARRIERS` | North: `BarrierNW1 (-704,-2672)`, `BarrierNW2 (-576,-2672)`, `BarrierNE1 (576,-2672)`, `BarrierNE2 (704,-2672)`<br>South: `BarrierSW1 (-704,2672)`, `BarrierSW2 (-576,2672)`, `BarrierSE1 (576,2672)`, `BarrierSE2 (704,2672)` | Eight floor-2 `128×32`, 80-HP `barrier` blocks, two at each carriageway end and flush with the boundary |
+| `WALLS` | Layer 12: `ShelfN_E Rect2(1344,-2304,24,512)`; `ShelfN_N Rect2(1088,-2328,280,24)`; `ShelfS_E Rect2(1344,256,24,512)`; `ShelfS_S Rect2(1088,768,280,24)`; `LandingN Rect2(1472,-952,256,24)`; `LandingS Rect2(1472,-608,256,24)`; `RampAN Rect2(1088,-952,384,24)`; `RampAS Rect2(1088,-608,384,24)`; `RampBN Rect2(1728,-952,384,24)`; `RampBS Rect2(1728,-608,384,24)`.<br>Layer 20: `DeckEastStop Rect2(1064,-928,24,320)` | Layer 12 is the floor-1 barricade recipe for shelf caps/east edges and ramp/landing sides. Layer 20 stops floor-2 plate traffic from entering `RampA` beneath the deck. |
+| `JUMP_LOWLAND` | `Vector2(1536,2400)` | Floor-1 pad and `ConLowlandJump` position at `BankS`'s foot; the authored clear run-up is `x=1648…2098` |
+| `COUNTRY_ROAD` | `Rect2(2112,-928,896,320)` | Floor-1 country road east of `RampB`, matching the ramp and landing's `320px` north-south span |
 | `PASTURE` | `Rect2(1400,-2688,1608,1688)` | Priority-5 grass under the farm |
 | `FARM_FIELD` | `Rect2(2176,-1920,768,640)` | Crop-row paint and farm-hand wander footprint |
-| `TRUCK_STOP` | `TruckStopLot Rect2(1664,320,1344,1856)`; `FrontageRoad Rect2(2560,-640,256,960)` | Priority-10 floor-1 road zones |
+| `TRUCK_STOP` | `TruckStopLot Rect2(1664,320,1344,1856)`; `FrontageRoad Rect2(2560,-608,256,928)` | Priority-10 floor-1 road zones |
 | `TRUCK_STOP_IDS` | `Tanker 200`; `DieselPump1/2 201/202`; `Barrel1/2/3 203/204/205`; `Pump1/2/3/4 206/207/208/209`; `Store 210`; `GarageW/E 211/212`; `Semi1/2 213/214` | Stable LAN ledger for the truck stop |
 | `RAILS` | computed by `_build_rails(FZDeck, RampW, RampA)` | Deck-edge rectangles; see below |
-| Helpers | `rect_of`, `floor_at`, `plate_east_edge_covered`, `chamfer_points` | Test-facing lookup, floor precedence, complete seam proof, and chamfer geometry |
+| Helpers | `rect_of`, `floor_at`, `plate_east_edge_covered` | Test-facing lookup, floor precedence, and proof that a bank, road grade, shelf, or barricade covers every point of the plate's east seam |
 
 ### Deck rail constants
 
@@ -424,6 +429,13 @@ then update its scene mirror; the tests prove the relationship.
 | Durability / floor / draw | 12 HP / floor 3 / `z_index = 2` | Breakaway deck guards on the floor-3 draw plane |
 | `arena_net_id` | `100–115` | Contiguous ID in computed rail order |
 | AI curb rule | none | A floor-blind curb on the deck would wall off floor-2 highway traffic underneath |
+
+### `Ramp` rail ends and outline
+
+| Export / paint | Default | Rule |
+|---|---|---|
+| `rail_caps` | `false` | When built-in rails are enabled, adds a 24px pointed cap to the high and low end of both rails. `RampN`, `RampS`, and `RampW` enable it. |
+| Surface outline | long sides only | The painted grade outlines its two long sides and never draws a line across either grade end. |
 
 ### `Signage`
 
@@ -441,6 +453,7 @@ then update its scene mirror; the tests prove the relationship.
 | `weathering` | `0.5`, range `0…1` | Deterministic grime, peel, or band chips |
 | `dead_letters` | `0` | Number of alphabetic characters darkened across both copy lines |
 | `paint_seed` | `0` | Nonzero fixes weather/dead-letter selection; zero derives it from global position |
+| Under-fade | billboard and pylon only | Builds the shared `UnderFade` area and eases to `UnderFade.ALPHA` while a body renders beneath it; bands remain fully opaque |
 | `text_fits()` | computed | Returns whether the selected font sizes fit the authored panel; use it in level tests for final copy |
 | Parent lifetime | signal-driven | Hide on a parent's `flattened` or `Health.died`; show again on `restored` when that signal exists |
 
@@ -474,6 +487,8 @@ collision separately.
 | `size` | `768×160` | Exact paint footprint; long-run details follow the longer local axis |
 | `paint_seed` | `0` | Nonzero fixes scattered wear/detail; zero derives it from position |
 | `accent` | `Color(0.72,0.16,0.14)` | Canopy outline/logo and lot-mark entrance stripe |
+| `south_gaps` / `north_gaps` | empty arrays | Local x start/end ranges omitted from an `overpass_deck` kerb and edge line; Freeway authors `south_gaps = [(-1088,-832)]` over `RampW` and leaves `north_gaps` empty |
+| `embankment_band_color()` | computed | Four grass bands run lightest at local `-y` (crest) to darkest at local `+y` (foot) |
 | Under-fade | `overpass_deck`, `canopy` only | Builds the shared `UnderFade` area and eases alpha while lower-floor traffic is beneath |
 
 ---
