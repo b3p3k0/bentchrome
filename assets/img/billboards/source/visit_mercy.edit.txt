@@ -1,0 +1,5 @@
+Task: EDIT the attached billboard image (the second attachment, ./visit_mercy.prev.png) with the built-in image_gen tool and copy the result to ./visit_mercy.png in the current working directory. Do not create or modify any other file. Finish by reporting the saved path.
+
+Make exactly this ONE change: Shift the red script lettering 'and falling' to the LEFT so its last letter ends at least 100 pixels clear of the right edge of the board (it currently touches the edge). Keep its size, colour and spelling exactly: and falling
+
+Everything else must stay as it is: same composition, same picture, same lettering layout, same colours, same 16-bit pixel-art style (the first attachment is the style reference). Keep every piece of lettering spelled EXACTLY as it is except where the change says otherwise.
