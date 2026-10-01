@@ -136,6 +136,7 @@ const REMAINS := {
 	&"pillar": [&"debris", Color(0.42, 0.42, 0.45), Color(0.2, 0.2, 0.22)],
 	&"trailer": [&"crumple", Color(0.72, 0.7, 0.66), Color(0.3, 0.3, 0.32)],
 	&"booth": [&"crumple", Color(0.62, 0.6, 0.55), Color(0.24, 0.22, 0.2)],
+	&"tires": [&"scorch", TIRE_BLACK, Color(0.05, 0.05, 0.06)],
 }
 
 @export var size := Vector2(96, 96)
@@ -148,6 +149,13 @@ const REMAINS := {
 @export var livery := -1            # style palette index; -1 = position-seeded
 @export_enum("south", "north", "west", "east") var front := "south"
 @export_range(0, 65535, 1) var arena_net_id := 0 # 0 = legacy/local destruction
+## A status the prop passes to the car that smashes through it (Route 666's
+## burning tire stacks hand out `&"burn"`): a StatusEffectSpec kind, or ""
+## for none. Applied from the vehicle's smash seam (`on_smashed`) — the prop
+## never knows who touched it otherwise.
+@export var touch_effect: StringName = &""
+@export var touch_magnitude := 3.0   # burn: damage per second; slow: speed factor
+@export var touch_duration := 3.0
 
 var _wreck := 0.0  # 0..1 battle damage, darkens the paint
 var _dead := false
@@ -213,6 +221,19 @@ func _present_remains() -> void:
 		remove_from_group(&"tutorial_smash")  # the smash lesson counts live members
 	queue_redraw()
 	flattened.emit()
+
+## The car that just smashed through this prop (Vehicle._smash_through calls
+## it after the kill): hand it the authored touch effect, if any. Duck-typed
+## on apply_effect; mild by authoring — a few seconds of light DoT, never a
+## stop. The spec's `refresh` default means a second stack extends, not stacks.
+func on_smashed(car: Node) -> void:
+	if touch_effect == &"" or car == null or not car.has_method(&"apply_effect"):
+		return
+	var spec := StatusEffectSpec.new()
+	spec.kind = touch_effect
+	spec.magnitude = touch_magnitude
+	spec.duration = touch_duration
+	car.call(&"apply_effect", spec)
 
 func _spawn_death_visual() -> void:
 	var scene := get_tree().current_scene
@@ -369,6 +390,8 @@ func _draw() -> void:
 			_draw_trailer()
 		&"booth":
 			_draw_booth()
+		&"tires":
+			_draw_tires()
 		&"rail":
 			_draw_rail()
 		&"fan_rail":
@@ -639,6 +662,35 @@ func _draw_booth() -> void:
 	draw_rect(Rect2(Vector2(-half.x * 0.5, -half.y * 0.2), Vector2(size.x * 0.5, half.y * 0.55)), _shade(Color(0.32, 0.4, 0.48)))
 	draw_rect(Rect2(Vector2(-half.x * 0.5, -half.y * 0.2), Vector2(size.x * 0.5, half.y * 0.55)), _shade(Color(0.2, 0.2, 0.22)), false, 2.0)
 	draw_rect(Rect2(Vector2(-half.x * 0.35, half.y * 0.5), Vector2(size.x * 0.35, 6)), _shade(Color(0.3, 0.28, 0.26)))
+
+## Tire stack (deco = &"tires"): a pile of old tires from above — a fat black
+## ring with a tread band and a dark hub hole, a second ring slumped off-axis
+## on top, a stray tire leaning against the pile. Route 666's burning tire
+## wall: 22 HP each, so a smash costs a nick and keeps most of the momentum.
+func _draw_tires() -> void:
+	var rng := _seed_rng()
+	var r := minf(size.x, size.y) * 0.5
+	draw_circle(Vector2(5, 7), r, Color(0, 0, 0, 0.3))
+	var rubber := _shade(TIRE_BLACK)
+	var tread := _shade(Color(0.18, 0.18, 0.2))
+	var hole := _shade(Color(0.04, 0.04, 0.05))
+	# The stray at the foot of the pile, seen edge-on: a dark lozenge.
+	var lean := Vector2(r * 0.55, r * 0.55).rotated(rng.randf_range(-0.6, 0.6))
+	draw_colored_polygon(PackedVector2Array([
+		lean + Vector2(-r * 0.5, -r * 0.18), lean + Vector2(r * 0.5, -r * 0.18),
+		lean + Vector2(r * 0.5, r * 0.18), lean + Vector2(-r * 0.5, r * 0.18),
+	]), rubber)
+	# The stack: bottom ring, then one slumped off-axis on top.
+	draw_circle(Vector2.ZERO, r, rubber)
+	draw_arc(Vector2.ZERO, r * 0.82, 0.0, TAU, 28, tread, 3.0)
+	for i in 10:
+		var a := TAU * float(i) / 10.0
+		draw_line(Vector2.RIGHT.rotated(a) * r * 0.7, Vector2.RIGHT.rotated(a) * r * 0.96, tread, 2.0)
+	var top := Vector2(rng.randf_range(-r * 0.2, r * 0.2), rng.randf_range(-r * 0.25, 0.0))
+	draw_circle(top, r * 0.88, rubber)
+	draw_arc(top, r * 0.72, 0.0, TAU, 28, tread, 2.5)
+	draw_circle(top, r * 0.42, hole)
+	draw_arc(top, r * 0.46, 0.0, TAU, 20, _shade(Color(0.26, 0.26, 0.28)), 1.5)
 
 ## Gas pump: red body, pale face with a dark meter, hose to a nozzle.
 func _draw_pump() -> void:

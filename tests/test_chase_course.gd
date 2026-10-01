@@ -492,6 +492,8 @@ func test_builder_highway_dressing() -> void:
 			if script and script.resource_path.ends_with("highway_deco.gd"):
 				match child.kind:
 					&"highway_sign":
+						if child.copy_seed == Deco.TOLL_SEED:
+							continue   # the plaza's own TOLL AHEAD board, not the cadence
 						signs += 1
 						if last_side != 0.0 and is_equal_approx(child.side, last_side) and not entry["def"].has("cutoff"):
 							alternates = false
@@ -562,6 +564,78 @@ func test_builder_tollbooth_and_jackknife() -> void:
 	wreck.free()
 	for name in [&"tollbooth", &"jackknife"]:
 		t.check(ChunkDefs.WEIGHTS.has(name) and name in ChunkDefs.NO_REPEAT, "flavors: %s rolls, never twice running" % name)
+
+## The tire wall: a row of burning 22-HP `tires` stacks across the asphalt
+## with EXACTLY one gap a car fits through (the seed deals it left, centre or
+## right), every stack carrying a fire and a glow that die with it, and the
+## burn handed out on contact. Three seeds: the gap moves, the rule holds.
+func test_builder_tire_wall() -> void:
+	const Traps := preload("res://levels/chase/road_traps.gd")
+	var def: Dictionary = ChunkDefs.DEFS[&"tire_wall"]
+	var gaps_seen := {}
+	for start_d in [0.0, 1200.0, 2600.0, 5000.0, 9800.0]:
+		var entry := _entry_for(&"tire_wall")
+		entry["start_d"] = start_d
+		var chunk: Node2D = Builder.build(entry)
+		t.root.add_child(chunk)   # in the tree: the stacks' Health has to be live for the kill below
+		var stacks: Array = []
+		var fires: Array = []
+		var glows := 0
+		for child in chunk.get_children():
+			var script = child.get_script()
+			if script and script.resource_path.ends_with("destructible_block.gd") and child.deco == &"tires":
+				stacks.append(child)
+			elif script and script.resource_path.ends_with("highway_deco.gd") and child.kind == &"wreck_fire":
+				fires.append(child)
+			elif child is PointLight2D and String(child.name).begins_with("TireGlow"):
+				glows += 1
+		t.check(stacks.size() >= 5, "tires: a wall of stacks across the road (%d)" % stacks.size())
+		var xs: Array = []
+		var all_burn := true
+		var all_lit := true
+		for s in stacks:
+			xs.append(float(s.position.x))
+			if s.touch_effect != &"burn" or s.max_hp > 30.0:
+				all_burn = false
+			var lit := false
+			for f in fires:
+				if f.position.distance_to(s.position) < 20.0:
+					lit = true
+			if not lit:
+				all_lit = false
+			t.check(absf(s.position.x) < float(def["half_w"]) - 20.0 and absf(-s.position.y - Traps.TIRE_WALL_D) < 12.0,
+				"tires: every stack stands on the asphalt at the row")
+		t.check(all_burn, "tires: every stack is light (22 HP) and hands out a burn on contact")
+		t.check(all_lit and fires.size() == stacks.size() and glows == stacks.size(),
+			"tires: every stack burns — a fire and a glow each (%d/%d/%d)" % [stacks.size(), fires.size(), glows])
+		xs.sort()
+		var gaps: Array = []
+		for i in xs.size() - 1:
+			var clear: float = float(xs[i + 1]) - float(xs[i]) - Traps.TIRE_SIZE
+			if clear > 120.0:   # wider than any car
+				gaps.append((float(xs[i + 1]) + float(xs[i])) * 0.5)
+		t.check(gaps.size() == 1, "tires: exactly one gap a car fits through (seed %d: %d)" % [int(start_d), gaps.size()])
+		if gaps.size() == 1:
+			var clear_w: float = 0.0
+			for i in xs.size() - 1:
+				clear_w = maxf(clear_w, float(xs[i + 1]) - float(xs[i]) - Traps.TIRE_SIZE)
+			t.check(clear_w >= 170.0 and clear_w <= 300.0, "tires: the gap is a lane, not a boulevard (%d)" % int(clear_w))
+			gaps_seen[roundi(float(gaps[0]) / 100.0)] = true
+		# A smashed stack takes its fire with it.
+		if not stacks.is_empty():
+			var first = stacks[0]
+			var fire_before := fires.size()
+			first.get_node(^"Health").kill()
+			var live := 0
+			for f in fires:
+				if is_instance_valid(f) and not f.is_queued_for_deletion():
+					live += 1
+			t.check(live == fire_before - 1, "tires: a smashed stack's fire goes out (%d -> %d)" % [fire_before, live])
+		t.root.remove_child(chunk)
+		chunk.free()
+	t.check(gaps_seen.size() >= 2, "tires: the gap moves with the seed (%d positions over five seeds)" % gaps_seen.size())
+	t.check(ChunkDefs.WEIGHTS.has(&"tire_wall") and &"tire_wall" in ChunkDefs.NO_REPEAT and not (&"tire_wall" in ChunkDefs.RARE),
+		"tires: rolls like a chunk, never twice running, never a landmark")
 
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch

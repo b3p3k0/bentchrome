@@ -189,6 +189,21 @@ const DEFS := {
 			{"kind": &"boost", "at": [1100.0, 200.0]},
 		],
 	},
+	# --- traps (the Buzzardz got here first) ----------------------------
+	# Tire wall: stacked tires across the road, every stack burning, one
+	# lane-wide gap that moves with the chunk seed. A stack is 22 HP (a nick,
+	# most of the momentum kept) — but touching one sets the car on fire
+	# (a few seconds of light DoT; nitro blows it out). Cones well ahead.
+	&"tire_wall": {
+		"len": 1200.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"tire_wall", "shoulder": &"dirt",
+		"set_piece": &"tire_wall",
+		"props": [
+			{"kind": &"cone", "at": [380.0, -240.0]},
+			{"kind": &"cone", "at": [380.0, 240.0]},
+			{"kind": &"cone", "at": [450.0, 0.0]},
+		],
+	},
 	# --- the back roads --------------------------------------------------
 	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
 	# straight along the inside — through a GAP in the shoulder and the
@@ -307,6 +322,7 @@ const WEIGHTS := {
 	&"cutoff_r": 0.6,
 	&"tollbooth": 0.7,
 	&"jackknife": 0.7,
+	&"tire_wall": 0.6,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -315,7 +331,8 @@ const WEIGHTS := {
 
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
-	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r", &"tollbooth", &"jackknife"]
+	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r", &"tollbooth", &"jackknife",
+	&"tire_wall"]
 
 ## A cutoff's trail: its centre at chunk-local d as an offset from the chunk
 ## ENTRY x (the trail runs straight while the road bends away from it).

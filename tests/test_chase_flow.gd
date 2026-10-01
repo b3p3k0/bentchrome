@@ -128,6 +128,61 @@ func test_smash_and_pass() -> void:
 	t.check(Economy.funds > funds_before, "smash: the salvage still pays")
 	_close(scene)
 
+## The tire wall's touch: a burning stack dies under the nose like any other
+## prop (a nick, the momentum kept) — and hands the car its fire: a few
+## seconds of light DoT, which the nitro blows out.
+func test_burning_tires_set_the_car_on_fire() -> void:
+	const Traps := preload("res://levels/chase/road_traps.gd")
+	var scene = await _boot()
+	scene.catch_enabled = false
+	scene.get_node(^"ChaseDirector").frozen = true
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	for i in 135:  # the level-start blink shield has to lapse: the bite and the burn must land
+		await t.physics_frame
+	var stack = load("res://environment/destructible_block.tscn").instantiate()
+	stack.size = Vector2(Traps.TIRE_SIZE, Traps.TIRE_SIZE)
+	stack.max_hp = Traps.TIRE_HP
+	stack.deco = &"tires"
+	stack.touch_effect = &"burn"
+	stack.touch_magnitude = Traps.TIRE_BURN_DPS
+	stack.touch_duration = Traps.TIRE_BURN_T
+	stack.position = player.global_position + Vector2(0.0, -220.0)
+	scene.add_child(stack)
+	var hp_before: float = player.get_hp()
+	var slowest := INF
+	var passed := false
+	var lit := false
+	for i in 90:
+		await t.physics_frame
+		slowest = minf(slowest, -player.velocity.y)
+		if player.is_burning():
+			lit = true
+		if player.global_position.y < stack.position.y - 60.0:
+			passed = true
+			break
+	t.check(passed and stack.get_node(^"Health").hp <= 0.0, "tires: the car is through and the stack is scorch")
+	t.check(lit and player.is_burning(), "tires: the car came through on fire")
+	var floor_speed: float = player.get_controller().max_speed * SpeedBand.FLOOR_FRAC
+	t.check(slowest > floor_speed * 0.8, "tires: the car never stopped (slowest %d)" % int(slowest))
+	var bite: float = hp_before - player.get_hp()
+	t.check(bite > 0.0 and bite <= Traps.TIRE_HP * player.smash_bite + Traps.TIRE_BURN_DPS * 0.5 + 0.01,
+		"tires: the hull took the nick plus a lick of fire so far (%.1f)" % bite)
+	for i in 30:   # half a second of DoT
+		await t.physics_frame
+	var burned: float = hp_before - player.get_hp()
+	t.check(burned > bite and burned < Traps.TIRE_HP * player.smash_bite + Traps.TIRE_BURN_DPS * Traps.TIRE_BURN_T + 1.0,
+		"tires: the burn ticks, mild (%.1f so far)" % burned)
+	# Nitro blows the fire out — the play mechanic (held through the real pedal).
+	const IR := preload("res://game/input_router.gd")
+	player.get_controller().boost_fuel = 100.0
+	Input.action_press(IR.ACTION_BOOST)
+	for i in 6:
+		await t.physics_frame
+	Input.action_release(IR.ACTION_BOOST)
+	t.check(not player.is_burning(), "tires: a squirt of nitro blows the fire out")
+	_close(scene)
+
 ## The bumper is a weapon out here: the chase car rams at twice the arena
 ## rate from a far lower speed floor, the birds are glass, and a ram that
 ## wrecks one punches through the wreck — a bird that boxes you in can be

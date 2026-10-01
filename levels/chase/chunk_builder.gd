@@ -20,6 +20,7 @@ const DeepWaterScene := preload("res://environment/deep_water_zone.tscn")
 const LightKit := preload("res://environment/light_kit.gd")
 const HighwayDecoScript := preload("res://levels/chase/highway_deco.gd")
 const SurfacePaint := preload("res://levels/chase/surface_paint.gd")   # the arenas' surface dress
+const RoadTraps := preload("res://levels/chase/road_traps.gd")
 const SIGN_EVERY := 1400.0        # course px between highway signs (sides alternate)
 const BILLBOARD_EVERY := 4300.0   # course px between billboards
 
@@ -85,6 +86,8 @@ static func build(entry: Dictionary) -> Node2D:
 			_tollbooth(root, entry)
 		&"jackknife":
 			_jackknife(root, entry)
+		&"tire_wall":
+			_tire_wall(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -1399,3 +1402,12 @@ static func _strip(forward: PackedVector2Array, back: PackedVector2Array) -> Pac
 	for i in range(back.size() - 1, -1, -1):
 		out.append(back[i])
 	return out
+
+# --- traps (road_traps.gd owns the geometry; these hand it the station) ------
+
+## Tire wall: burning stacks across the road, one lane-wide gap dealt by the
+## seed; every stack hands the car a burn on contact.
+static func _tire_wall(root: Node2D, entry: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 666
+	RoadTraps.tire_wall(root, _center_x(entry, RoadTraps.TIRE_WALL_D), float(entry["def"]["half_w"]), rng)

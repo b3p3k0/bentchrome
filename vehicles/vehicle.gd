@@ -1533,6 +1533,11 @@ func _smash_through(health: Health, impact_speed: float, pre_slide_vel: Vector2)
 	if _health and smash_bite > 0.0:
 		set_meta(&"bc_hit_kind", &"ram")
 		_health.take_damage(heft * smash_bite)
+	# A prop with something to hand out on contact (a burning tire stack's
+	# fire): the prop never knows who touched it, so the smash seam tells it.
+	var prop: Node = health.get_parent()
+	if prop and prop.has_method(&"on_smashed"):
+		prop.call(&"on_smashed", self)
 
 ## Deflection: reflect the pre-slide velocity component that went INTO the
 ## surface, scaled by bounce_factor — angled hits carom, dead-on stays a thud.
