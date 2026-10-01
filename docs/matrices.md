@@ -706,13 +706,15 @@ Pack speed = `road_top × (pace + SURGE_PER_PX × max(gap − LEASH_GAP, 0))`. F
 
 ### Dusk to night, and the roadside
 
-Source: `buzzard_run.gd` (`SKY_KEYS`, `sky_at`, `_light_the_cars`), `horde_deco.gd` (`RIDER_BEAM_*`), `chunk_builder.gd` (`_road_wear`, `_highway_dressing`, `_tollbooth`, `_jackknife`), `levels/chase/highway_deco.gd`.
+Source: `buzzard_run.gd` (`ACTS`, `act_at`, `sky_at`, `shadows_at`, `headlights_at`, `_light_the_cars`, `_shade_the_roadside`), `horde_deco.gd` (`RIDER_BEAM_*`, `headlights`), `chunk_builder.gd` (`_road_wear`, `_highway_dressing`, `_tollbooth`, `_jackknife`), `levels/chase/highway_deco.gd`. Picture probe: `tools/probes/chase_shot.gd` (`--clock=10,50,100` one frame per act; `--signs` every sign kind by day / sunset / night).
 
 | Knob | Value | Where | Detail |
 |---|---|---|---|
-| The sky | golden (1.0, 0.93, 0.82) → sunset @0.35 (0.92, 0.72, 0.6) → dusk @0.65 (0.66, 0.58, 0.72) → night @0.85 (0.48, 0.52, 0.74) | `SKY_KEYS` | a CanvasModulate in `night_arena` driven from the clock; night is the Coliseum's brightness so obstacles still read; the finale is dark |
-| Headlights | length 460 · spread 56° · energy 0.7 · viewer (0.85, 0.9, 1.0) · others (1.0, 0.9, 0.7) | `BEAM_*` | GFG's lazy group-scan attach on every `vehicles` node (meta `chase_beam`) |
-| Rider beams | length 260 · energy 0.45 | horde_deco `RIDER_BEAM_*` | every painted rider in the dust burns one; reads once the sky goes |
+| The three acts | ACT 1 (0-⅓) daylight (1.0, 0.97, 0.92) · ACT 2 (⅓-⅔) sunset (0.9, 0.55, 0.32) · ACT 3 (⅔-end) night (0.4, 0.45, 0.78) | `ACTS`, `act_at(frac)` | a CanvasModulate in `night_arena` driven from the clock's fraction; night is near the Coliseum's brightness so obstacles still read; past the line (the finale) holds act 3 |
+| The crossfade | `ACT_FADE` 3s | `act_blend`, `sky_at` | an act's tint crosses from the one before over three seconds past its edge — a change you notice, never a drift |
+| Long shadows | act 1 → 0 · act 2 → 1 (fading in with the crossfade) · act 3 → `NIGHT_SHADOW` 0.3 | `shadows_at`, highway_deco `shadow_strength` / `SHADOW_DIR` (0.9, −0.44) / `SHADOW_REACH` 1.5 / `SHADOW_ALPHA` 0.42 | every `highway_deco` node (signs, limits, markers, billboards) throws a dark sweep north-east of 1.5 × its height — the sun low in the west |
+| Headlights | length 460 · spread 56° · energy 0.7 × level · viewer (0.85, 0.9, 1.0) · others (1.0, 0.9, 0.7) | `BEAM_*`, `headlights_at` | GFG's lazy group-scan attach on every `vehicles` node (meta `chase_beam`); energy 0 through acts 1-2, the POP at the act-3 edge (`POP_FLICKER` 0.7 / 0 / 0.9 / 0.1 over 0.32s), then full |
+| Rider beams | length 260 · energy 0.45 × level | horde_deco `RIDER_BEAM_*`, `headlights` | every painted rider in the dust carries one; the host sets the level each frame so they pop with the cars' |
 | Lit landmarks | truckstop neon + 2 lamp pools · toll plaza 2 pools · burning wrecks glow 110px | chunk_builder | `LightKit.make_light` |
 | Highway signs | one per `SIGN_EVERY` 1400px, sides alternate, nudged ≥120px off seams · board 210×70, type 24/19 · green/white | `_highway_dressing`, `HIGHWAY_COPY` (kind `highway_sign`; `sign` still accepted) | DIRECTIONAL/INFORMATIONAL copy only — town names and distances carry the humour (MERCY 40, HOPE 3 (CLOSED), GRIEF NEXT EXIT); never on a cutoff's trail side or a river; the toll plaza's is always `TOLL_COPY` |
 | Speed signs | one per `SPEED_SIGN_EVERY` 2500px, sides alternate (even → left), same skips · board 90×110, number 44 over MPH 20 · white/black | highway_deco `SPEED_LIMITS` (kind `speed_sign`) | plausible limits 55/65/45/35/80/15 — never jokes |

@@ -43,17 +43,26 @@ static var DAREDEVIL_CAP := 2000
 ## when the crest rolls over it.
 static var FLINCH_INSET := 40.0
 static var MISSILE_CUT := 0.18       # a missile's flinch is lighter than a mine's
-## Dusk to night: the sky over the run, keyed on the clock's fraction — golden
-## hour at the green flag, sunset, dusk, and full dark from NIGHT_FULL on,
-## so the last stretch and the finale play under headlights. A CanvasModulate
-## in group night_arena (the Ground Floor Gore idiom: explosions bloom, the
-## beams READ), driven from _process.
-static var SKY_KEYS: Array = [
-	[0.0, Color(1.0, 0.93, 0.82)],    # golden hour
-	[0.35, Color(0.92, 0.72, 0.6)],   # sunset
-	[0.65, Color(0.66, 0.58, 0.72)],  # dusk
-	[0.85, Color(0.48, 0.52, 0.74)],  # night (the Coliseum's night is 0.5/0.56/0.82 — obstacles must still read)
+## TWILIGHT IN THREE ACTS, keyed on the clock's fraction of the run: ACT 1
+## (the first third) is daylight — the arenas' light; ACT 2 a dark orange
+## sunset cast, and the roadside's boards throw LONG SHADOWS (highway_deco
+## shadow_strength → 1) to sell the low sun; ACT 3 a deep blue night and the
+## HEADLIGHTS POP ON — every car beam and every rider beam sits at energy 0
+## through acts 1-2 and snaps to full at the act-3 edge with a two-flicker
+## pop (POP_FLICKER), the shadows easing back to NIGHT_SHADOW. Acts cross in
+## ACT_FADE seconds — a change you notice, not a drift you don't. The sky is
+## a CanvasModulate in group night_arena (the Ground Floor Gore idiom:
+## explosions bloom, the beams READ), driven from _process; the finale past
+## the line plays in act 3.
+static var ACTS: Array = [
+	Color(1.0, 0.97, 0.92),   # ACT 1 daylight: as the arenas, a hair warm
+	Color(0.9, 0.55, 0.32),   # ACT 2 sunset: a dark orange cast — obstacles must still read
+	Color(0.4, 0.45, 0.78),   # ACT 3 night: deep blue (the Coliseum's night is 0.5/0.56/0.82)
 ]
+static var ACT_FADE := 3.0          # seconds an act takes to cross into the next
+static var NIGHT_SHADOW := 0.3      # what's left of the long shadows under the night overlay
+## The pop: [until seconds past the night edge, beam level] steps, then full.
+static var POP_FLICKER: Array = [[0.08, 0.7], [0.16, 0.0], [0.26, 0.9], [0.32, 0.1]]
 ## Headlights on every car (the GFG lazy attach): the viewer's cool-white,
 ## everyone else's warm. Beams ride the car's Visual — the node that carries
 ## the 16-step heading.
@@ -93,6 +102,8 @@ var _end_screen = null
 var _robbery = null
 var _finale = null
 var _sky: CanvasModulate = null
+var _headlights := 0.0   # 0..1: the beams' level this frame (headlights_at)
+var _shadows := 0.0      # 0..1: the roadside's long-shadow strength this frame (shadows_at)
 var _won := false
 var _jacked := false
 
@@ -153,9 +164,13 @@ func _ready() -> void:
 ## The host is the sole arbiter of how a run ends. A catch or a wreck beats
 ## the clock on a same-frame tie — the wasteland is unfair.
 func _process(delta: float) -> void:
+	var frac := clock / RUN_SECONDS
 	if _sky != null:
-		_sky.color = sky_at(clock / RUN_SECONDS)
+		_sky.color = sky_at(frac)
+	_headlights = headlights_at(frac)
+	_shadows = shadows_at(frac)
 	_light_the_cars()
+	_shade_the_roadside()
 	if _won or _jacked or _player == null or not is_instance_valid(_player):
 		return
 	clock += delta
@@ -209,21 +224,54 @@ func _finish_run() -> void:
 func finale_running() -> bool:
 	return _finale != null and _finale.running
 
-## The sky's tint at a fraction of the run, pure: piecewise-linear through
-## SKY_KEYS, holding the last key past the line (the finale is night).
+## Which act a fraction of the run is in (0, 1, 2); past the line it stays 2.
+static func act_at(frac: float) -> int:
+	return clampi(int(floorf(frac * 3.0)), 0, 2)
+
+## How far into its crossfade the current act is: 0 at the edge, 1 once
+## settled (ACT_FADE seconds in). Act 1 has no edge to cross.
+static func act_blend(frac: float) -> float:
+	var act := act_at(frac)
+	if act == 0:
+		return 1.0
+	var since := (frac - float(act) / 3.0) * RUN_SECONDS
+	return clampf(since / ACT_FADE, 0.0, 1.0)
+
+## The sky's tint at a fraction of the run, pure: the act's colour, crossing
+## from the act before over ACT_FADE; past the line it holds act 3 (the
+## finale is night).
 static func sky_at(frac: float) -> Color:
-	var keys: Array = SKY_KEYS
-	if frac <= float(keys[0][0]):
-		return keys[0][1]
-	for i in keys.size() - 1:
-		var a: Array = keys[i]
-		var b: Array = keys[i + 1]
-		if frac <= float(b[0]):
-			return (a[1] as Color).lerp(b[1], (frac - float(a[0])) / (float(b[0]) - float(a[0])))
-	return keys[keys.size() - 1][1]
+	var act := act_at(frac)
+	var tint: Color = ACTS[act]
+	if act == 0:
+		return tint
+	return (ACTS[act - 1] as Color).lerp(tint, act_blend(frac))
+
+## The roadside's long-shadow strength: none by day, full through the sunset
+## act (fading in with it), easing back to NIGHT_SHADOW under the night.
+static func shadows_at(frac: float) -> float:
+	var act := act_at(frac)
+	if act == 0:
+		return 0.0
+	if act == 1:
+		return act_blend(frac)
+	return lerpf(1.0, NIGHT_SHADOW, act_blend(frac))
+
+## The beams' level: dark through acts 1-2, then the POP at the night edge —
+## two flickers over ~0.3s — and full from there. Pure, so the riders' beams
+## and the cars' agree to the frame.
+static func headlights_at(frac: float) -> float:
+	if act_at(frac) < 2:
+		return 0.0
+	var since := (frac - 2.0 / 3.0) * RUN_SECONDS
+	for step in POP_FLICKER:
+		if since < float(step[0]):
+			return float(step[1])
+	return 1.0
 
 ## Every car on the road drives with headlights (GFG's group-scan attach:
-## covers the boot, every spawned bird, and the finale's swaps in one seam).
+## covers the boot, every spawned bird, and the finale's swaps in one seam);
+## their energy rides the act (0 until the night pops them on).
 func _light_the_cars() -> void:
 	for node in get_tree().get_nodes_in_group(&"vehicles"):
 		if not (node is Node2D):
@@ -242,6 +290,17 @@ func _light_the_cars() -> void:
 				car.add_child(beam)
 			car.set_meta(&"chase_beam", beam)
 		beam.color = BEAM_VIEWER if car.is_in_group(&"player") else BEAM_OTHERS
+		beam.energy = BEAM_ENERGY * _headlights
+	if _wall != null:
+		var deco: Node = _wall.get_node_or_null(^"Deco")
+		if deco != null:
+			deco.set(&"headlights", _headlights)   # the painted riders' beams pop with everyone's
+
+## The static roadside casts its long shadows by act: every highway_deco
+## node (signs, limits, markers, billboards) takes the frame's strength.
+func _shade_the_roadside() -> void:
+	for node in get_tree().get_nodes_in_group(&"highway_deco"):
+		node.set(&"shadow_strength", _shadows)
 
 ## Off the road on a cutoff's trail: the chunk under the car has one, the
 ## car is inside the trail's reach along the road and out past the shoulder

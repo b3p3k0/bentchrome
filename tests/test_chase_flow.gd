@@ -270,42 +270,87 @@ func test_the_trail_loses_the_pack() -> void:
 	t.check(clamp_x >= float(s["x"]) - float(s["half_w"]), "trail: the birds' road clamp keeps them on the asphalt (%d)" % int(clamp_x))
 	_close(scene)
 
-## Dusk to night: the sky is golden at the green flag, dark from NIGHT_FULL
-## on, and every car on the road drives with a headlight that reads once it
-## is; the sky rides the clock.
+## Twilight in three acts: daylight, a dark orange sunset with long shadows
+## on the roadside, a deep blue night with the headlights POPPING on; the
+## acts cross in seconds, the sky rides the clock, and the finale is night.
 func test_dusk_to_night() -> void:
-	var golden: Color = RunScript.sky_at(0.0)
-	var night: Color = RunScript.sky_at(1.0)
-	t.check(golden.get_luminance() > 0.85, "sky: golden hour at the flag")
+	const Deco := preload("res://levels/chase/highway_deco.gd")
+	var fade: float = RunScript.ACT_FADE / RunScript.RUN_SECONDS
+	t.check(RunScript.act_at(0.0) == 0 and RunScript.act_at(0.3) == 0, "acts: the first third is act 1")
+	t.check(RunScript.act_at(0.4) == 1 and RunScript.act_at(0.6) == 1, "acts: the second third is act 2")
+	t.check(RunScript.act_at(0.7) == 2 and RunScript.act_at(1.0) == 2 and RunScript.act_at(1.3) == 2, "acts: the last third and the finale past the line are act 3")
+	var day: Color = RunScript.sky_at(0.2)
+	var sunset: Color = RunScript.sky_at(0.5)
+	var night: Color = RunScript.sky_at(0.9)
+	t.check(day.get_luminance() > 0.9, "sky: act 1 is daylight — the arenas' light")
+	t.check(sunset.r > sunset.g * 1.4 and sunset.g > sunset.b, "sky: act 2 is an orange cast")
+	t.check(night.b > night.r and night.b > night.g, "sky: act 3 is a blue overlay")
+	t.check(day.get_luminance() > sunset.get_luminance() and sunset.get_luminance() > night.get_luminance(),
+		"sky: each act is darker than the one before")
 	t.check(night.get_luminance() < 0.6 and night.get_luminance() > 0.35, "sky: dark by the end — but obstacles still have to read")
-	var last := 2.0
-	var monotone := true
-	for i in 21:
-		var lum: float = RunScript.sky_at(float(i) / 20.0).get_luminance()
-		if lum > last + 0.001:
-			monotone = false
-		last = lum
-	t.check(monotone, "sky: it only ever gets darker")
-	t.check(RunScript.sky_at(0.85).is_equal_approx(night), "sky: night arrives at 85% of the run — the last stretch and the finale are dark")
+	t.check(RunScript.sky_at(1.0).is_equal_approx(night) and RunScript.sky_at(1.2).is_equal_approx(night), "sky: the finale holds the night")
+	# The crossfade: a change, not a drift — settled ACT_FADE seconds past the edge, midway halfway in.
+	var mid: Color = RunScript.sky_at(1.0 / 3.0 + fade * 0.5)
+	t.check(mid.get_luminance() < day.get_luminance() - 0.02 and mid.get_luminance() > sunset.get_luminance() + 0.02,
+		"sky: halfway through the act-2 crossfade the tint is between day and sunset")
+	t.check(RunScript.sky_at(1.0 / 3.0 + fade * 1.5).is_equal_approx(sunset), "sky: the crossfade is over ACT_FADE seconds past the edge")
+	t.check(RunScript.sky_at(1.0 / 3.0 - 0.001).is_equal_approx(day), "sky: nothing drifts before the edge")
+	# Shadows: none by day, full through the sunset, NIGHT_SHADOW under the night.
+	t.check(is_zero_approx(RunScript.shadows_at(0.2)), "shadows: none in act 1")
+	t.check(is_equal_approx(RunScript.shadows_at(0.5), 1.0), "shadows: full length through act 2")
+	t.check(is_equal_approx(RunScript.shadows_at(0.9), RunScript.NIGHT_SHADOW), "shadows: eased to NIGHT_SHADOW in act 3")
+	# Headlights: dark through acts 1-2, the pop at the edge, full after.
+	t.check(is_zero_approx(RunScript.headlights_at(0.2)) and is_zero_approx(RunScript.headlights_at(0.5)) and is_zero_approx(RunScript.headlights_at(2.0 / 3.0 - 0.001)),
+		"lights: every beam is dark until the night edge")
+	t.check(RunScript.headlights_at(2.0 / 3.0 + 0.01 / RunScript.RUN_SECONDS) > 0.5, "lights: they POP on at the edge")
+	var flickered := false
+	for step in RunScript.POP_FLICKER:
+		if float(step[1]) < 0.2:
+			flickered = true
+	t.check(flickered, "lights: the pop flickers")
+	t.check(is_equal_approx(RunScript.headlights_at(0.7), 1.0) and is_equal_approx(RunScript.headlights_at(1.2), 1.0), "lights: full through act 3 and the finale")
+	# The booted scene: the tint, the beams' energy and the roadside's shadows all ride the clock.
 	var scene = await _boot()
 	scene.catch_enabled = false
 	var sky := scene.get_node_or_null(^"SkyTint") as CanvasModulate
 	t.check(sky != null and sky.is_in_group(&"night_arena"), "sky: a CanvasModulate in night_arena (explosions bloom, beams read)")
+	var board := Node2D.new()
+	board.set_script(Deco)
+	board.kind = &"billboard"
+	scene.add_child(board)
+	var player = scene.get_node(^"Vehicle")
+	var bird = scene.get_node(^"ChaseDirector").spawn(&"bike")
+	var deco = scene.get_node(^"HordeWall").get_node(^"Deco")
 	scene.clock = scene.RUN_SECONDS * 0.5
 	scene._process(0.016)
 	t.check(sky != null and sky.color.is_equal_approx(RunScript.sky_at(0.5)), "sky: the tint rides the clock")
-	var player = scene.get_node(^"Vehicle")
-	var bird = scene.get_node(^"ChaseDirector").spawn(&"bike")
-	scene._process(0.016)
 	var pbeam = player.get_meta(&"chase_beam") if player.has_meta(&"chase_beam") else null
 	var bbeam = bird.get_meta(&"chase_beam") if bird.has_meta(&"chase_beam") else null
 	t.check(pbeam is PointLight2D and pbeam.get_parent() == player.get_node(^"Visual"), "lights: the car drives with a headlight on its Visual")
 	t.check(bbeam is PointLight2D and bbeam.color != pbeam.color, "lights: a spawned bird gets its own, in the warm colour")
+	t.check(pbeam is PointLight2D and is_zero_approx(pbeam.energy) and is_zero_approx(bbeam.energy), "lights: car beams sit at energy 0 in act 2")
 	var riders_lit := 0
-	for r in scene.get_node(^"HordeWall").get_node(^"Deco")._riders:
-		if r["node"].get_node_or_null(^"Beam") is PointLight2D:
+	var riders_dark := 0
+	for r in deco._riders:
+		var rb = r["node"].get_node_or_null(^"Beam")
+		if rb is PointLight2D:
 			riders_lit += 1
-	t.check(riders_lit == scene.get_node(^"HordeWall").get_node(^"Deco").RIDERS, "lights: every painted rider in the dust burns a headlight (%d)" % riders_lit)
+			if is_zero_approx(rb.energy):
+				riders_dark += 1
+	t.check(riders_lit == deco.RIDERS, "lights: every painted rider in the dust carries a headlight (%d)" % riders_lit)
+	t.check(riders_dark == deco.RIDERS, "lights: the riders' beams are dark in act 2 too (%d/%d)" % [riders_dark, riders_lit])
+	t.check(is_equal_approx(board.shadow_strength, 1.0), "shadows: the roadside's boards cast full shadows in act 2 (%.2f)" % board.shadow_strength)
+	scene.clock = scene.RUN_SECONDS * 0.9
+	scene._process(0.016)
+	t.check(sky != null and sky.color.is_equal_approx(night), "sky: act 3 on the tint")
+	t.check(pbeam.energy > 0.5 and bbeam.energy > 0.5, "lights: car beams burn in act 3 (%.2f / %.2f)" % [pbeam.energy, bbeam.energy])
+	var riders_on := 0
+	for r in deco._riders:
+		var rb = r["node"].get_node_or_null(^"Beam")
+		if rb is PointLight2D and rb.energy > 0.2:
+			riders_on += 1
+	t.check(riders_on == deco.RIDERS, "lights: every rider's beam burns in act 3 (%d)" % riders_on)
+	t.check(is_equal_approx(board.shadow_strength, RunScript.NIGHT_SHADOW), "shadows: eased back under the night (%.2f)" % board.shadow_strength)
 	_close(scene)
 
 ## The windshield streaks read "flat out" the same for every ride.

@@ -16,7 +16,7 @@ extends Node2D
 const CarPaintScript := preload("res://vehicles/car_paint.gd")
 const LightKit := preload("res://environment/light_kit.gd")
 const RIDER_BEAM_LENGTH := 260.0   # every rider drives with a real headlight once the sky goes
-const RIDER_BEAM_ENERGY := 0.45    # dimmer than a live car's: they burn through dust
+const RIDER_BEAM_ENERGY := 0.45    # dimmer than a live car's: they burn through dust (× `headlights`)
 
 const RIDERS := 11
 const BAND_DEPTH := 520.0
@@ -39,6 +39,16 @@ var half := 640.0      # road half-width + margin at the crest (the wall pushes 
 var pressure := 0.0    # 0 far .. 1 contact: fire and fury scale with it
 var halted := false    # stopped at the brink: the riders lock up, the dust settles
 var lost_sight := false   # the car is off the road: the headlights sweep, looking for it
+## 0..1: the riders' beams' level — the host sets it by act (buzzard_run
+## headlights_at: dark through the day and the sunset, popping on with every
+## car's at the night edge). Nothing here decides when; it only agrees.
+var headlights := 0.0:
+	set(value):
+		headlights = value
+		for r in _riders:
+			var beam := (r["node"] as Node2D).get_node_or_null(^"Beam") as PointLight2D
+			if beam != null:
+				beam.energy = RIDER_BEAM_ENERGY * headlights
 var _flinch_t := 0.0   # a bang in the dust: the riders recoil south for a beat
 var skid_marks: Array = []   # [from, to] world-local streaks laid on the halt
 var _halt_t := 0.0
@@ -92,7 +102,7 @@ func _build_riders() -> void:
 		# A real beam off the nose (reads only once the sky's CanvasModulate
 		# darkens; by day it's just the painted lamps). Along +x, the body's own
 		# axis — the body is rotated to face north.
-		var beam := LightKit.make_beam(RIDER_BEAM_LENGTH, 50.0, RIDER_BEAM_ENERGY, LAMP)
+		var beam := LightKit.make_beam(RIDER_BEAM_LENGTH, 50.0, RIDER_BEAM_ENERGY * headlights, LAMP)
 		beam.name = "Beam"
 		beam.position = Vector2(float(style.get("half_len", 20.0)) * CarPaintScript.FLEET_SCALE * 0.8 + float(beam.get_meta(&"center_ahead")), 0.0)
 		body.add_child(beam)
