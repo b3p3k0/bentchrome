@@ -363,11 +363,23 @@ polygon = PackedVector2Array(-128, -480, 128, -480, 128, 480, -128, 480)
 [node name="Col" type="CollisionShape2D" parent="FrontageRoad"]
 shape = SubResource("RectangleShape2D_frontage_road")
 
+[node name="Field" type="Node2D" parent="."]
+position = Vector2(2560, -1600)
+script = ExtResource("29_fdeco")
+kind = &"crop_rows"
+size = Vector2(768, 640)
+
 [node name="LotMarks" type="Node2D" parent="."]
 position = Vector2(1832, 1950)
 script = ExtResource("29_fdeco")
 kind = &"lot_marks"
 size = Vector2(336, 200)
+
+[node name="CanopyShadow" type="Node2D" parent="."]
+position = Vector2(2400, 864)
+script = ExtResource("29_fdeco")
+kind = &"overpass_shadow"
+size = Vector2(512, 288)
 
 [node name="LandingRoad" type="Area2D" parent="."]
 position = Vector2(1600, -768)
@@ -1121,6 +1133,12 @@ position = Vector2(2912, 2040)
 kind = "mine"
 amount = 2
 
+[node name="AmmoPower3" parent="." instance=ExtResource("8_ammo")]
+position = Vector2(2560, -2560)
+kind = "power"
+amount = 1
+floor_index = 1
+
 [node name="Brush1" parent="." instance=ExtResource("20_clutter")]
 position = Vector2(-256, -1856)
 kind = &"brush"
@@ -1355,6 +1373,125 @@ max_hp = 50.0
 deco = &"crate"
 floor_index = 1
 
+[node name="Barn" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2560, -2300)
+size = Vector2(320, 256)
+max_hp = 220.0
+deco = &"house"
+floor_index = 1
+
+[node name="Hay1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2300, -1540)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2460, -1540)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2620, -1540)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay4" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2780, -1540)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay5" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2380, -1380)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay6" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2540, -1380)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Hay7" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2700, -1380)
+size = Vector2(64, 64)
+max_hp = 20.0
+deco = &"hay"
+floor_index = 1
+
+[node name="Fence1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2240, -1232)
+size = Vector2(160, 16)
+max_hp = 15.0
+deco = &"fence"
+floor_index = 1
+
+[node name="Fence2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2496, -1232)
+size = Vector2(160, 16)
+max_hp = 15.0
+deco = &"fence"
+floor_index = 1
+
+[node name="Fence3" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2752, -1232)
+size = Vector2(160, 16)
+max_hp = 15.0
+deco = &"fence"
+floor_index = 1
+
+[node name="FarmJunk" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(2864, -2340)
+size = Vector2(96, 96)
+max_hp = 60.0
+deco = &"junk"
+floor_index = 1
+
+[node name="LotCone1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(2800, 1080)
+kind = &"cone"
+floor_index = 1
+
+[node name="LotCone2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(2820, 1330)
+kind = &"cone"
+floor_index = 1
+
+[node name="LotCone3" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(2760, 1460)
+kind = &"cone"
+floor_index = 1
+
+[node name="Trash1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1900, 800)
+kind = &"trash"
+floor_index = 1
+
+[node name="Trash2" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(2700, 1870)
+kind = &"trash"
+floor_index = 1
+
+[node name="Hydrant1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(2180, 600)
+kind = &"hydrant"
+floor_index = 1
+
+[node name="LotSign1" parent="." instance=ExtResource("20_clutter")]
+position = Vector2(1700, 720)
+kind = &"sign"
+floor_index = 1
+
 [node name="OverpassPillar1" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-832, -768)
 size = Vector2(64, 96)
@@ -1555,6 +1692,17 @@ kind = &"pylon"
 size = Vector2(256, 200)
 text = "HATE'S"
 sub_text = "DIESEL 4.99"
+
+[node name="Billboard" type="Node2D" parent="."]
+position = Vector2(1650, -1700)
+z_index = 1
+script = ExtResource("30_sign")
+kind = &"billboard"
+size = Vector2(448, 160)
+text = "HATE'S TRAVEL STOP"
+sub_text = "NEXT EXIT"
+weathering = 0.6
+dead_letters = 1
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 2304)

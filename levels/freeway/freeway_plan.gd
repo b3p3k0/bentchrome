@@ -55,6 +55,7 @@ const WALLS := {
 }
 
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
+const FARM_FIELD := Rect2(2176, -1920, 768, 640)
 
 const TRUCK_STOP := {
 	&"TruckStopLot": Rect2(1664, 320, 1344, 1856),

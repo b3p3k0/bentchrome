@@ -101,6 +101,27 @@ func _draw_overpass_shadow() -> void:
 func _draw_canopy() -> void:
 	var half := size * 0.5
 	draw_rect(Rect2(-half, size), CANOPY_ROOF)
+	var seam := -maxf(size.x, size.y) * 0.5 + 128.0
+	while seam < maxf(size.x, size.y) * 0.5:
+		var from := _axis_point(seam, -minf(size.x, size.y) * 0.5)
+		var to := _axis_point(seam, minf(size.x, size.y) * 0.5)
+		draw_line(from, to, CONCRETE_DARK, 2.0)
+		seam += 128.0
+	var unit_size := Vector2.ONE * 40.0
+	var unit_corner := half - Vector2.ONE * 18.0 - unit_size
+	draw_rect(Rect2(unit_corner, unit_size), CONCRETE_DARK)
+	draw_rect(Rect2(unit_corner + Vector2.ONE * 6.0,
+		unit_size - Vector2.ONE * 12.0), CONCRETE)
+	var rng := _rng(91)
+	for i in rng.randi_range(3, 5):
+		var along := rng.randf_range(-maxf(size.x, size.y) * 0.42,
+			maxf(size.x, size.y) * 0.42)
+		var cross := rng.randf_range(-minf(size.x, size.y) * 0.38,
+			minf(size.x, size.y) * 0.38)
+		var streak := rng.randf_range(18.0, 52.0)
+		draw_line(_axis_point(along - streak * 0.5, cross),
+			_axis_point(along + streak * 0.5, cross + rng.randf_range(-4.0, 4.0)),
+			SCUFF, rng.randf_range(2.0, 5.0))
 	draw_rect(Rect2(-half, size), accent, false, 12.0)
 	var logo_size := minf(size.x, size.y) * 0.22
 	draw_rect(Rect2(-half + Vector2(18.0, 18.0), Vector2.ONE * logo_size),

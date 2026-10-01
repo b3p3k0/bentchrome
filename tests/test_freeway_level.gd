@@ -101,6 +101,65 @@ const TRUCK_STOP_BLOCKS := {
 		"deco": &"crate", "hp": 50.0,
 	},
 }
+const FARM_BLOCKS := {
+	&"Barn": {
+		"position": Vector2(2560, -2300), "size": Vector2(320, 256),
+		"deco": &"house", "hp": 220.0,
+	},
+	&"Hay1": {
+		"position": Vector2(2300, -1540), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay2": {
+		"position": Vector2(2460, -1540), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay3": {
+		"position": Vector2(2620, -1540), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay4": {
+		"position": Vector2(2780, -1540), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay5": {
+		"position": Vector2(2380, -1380), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay6": {
+		"position": Vector2(2540, -1380), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Hay7": {
+		"position": Vector2(2700, -1380), "size": Vector2(64, 64),
+		"deco": &"hay", "hp": 20.0,
+	},
+	&"Fence1": {
+		"position": Vector2(2240, -1232), "size": Vector2(160, 16),
+		"deco": &"fence", "hp": 15.0,
+	},
+	&"Fence2": {
+		"position": Vector2(2496, -1232), "size": Vector2(160, 16),
+		"deco": &"fence", "hp": 15.0,
+	},
+	&"Fence3": {
+		"position": Vector2(2752, -1232), "size": Vector2(160, 16),
+		"deco": &"fence", "hp": 15.0,
+	},
+	&"FarmJunk": {
+		"position": Vector2(2864, -2340), "size": Vector2(96, 96),
+		"deco": &"junk", "hp": 60.0,
+	},
+}
+const LOT_CLUTTER := {
+	&"LotCone1": {"position": Vector2(2800, 1080), "kind": &"cone"},
+	&"LotCone2": {"position": Vector2(2820, 1330), "kind": &"cone"},
+	&"LotCone3": {"position": Vector2(2760, 1460), "kind": &"cone"},
+	&"Trash1": {"position": Vector2(1900, 800), "kind": &"trash"},
+	&"Trash2": {"position": Vector2(2700, 1870), "kind": &"trash"},
+	&"Hydrant1": {"position": Vector2(2180, 600), "kind": &"hydrant"},
+	&"LotSign1": {"position": Vector2(1700, 720), "kind": &"sign"},
+}
 
 var t
 var _shared_freeway: Node
@@ -221,6 +280,24 @@ func _point_rect_distance(point: Vector2, rect: Rect2) -> float:
 func _block_rect(block: Node2D) -> Rect2:
 	var block_size: Vector2 = block.get("size")
 	return Rect2(block.position - block_size * 0.5, block_size)
+
+func _rect_distance(a: Rect2, b: Rect2) -> float:
+	var dx := maxf(maxf(a.position.x - b.end.x, b.position.x - a.end.x), 0.0)
+	var dy := maxf(maxf(a.position.y - b.end.y, b.position.y - a.end.y), 0.0)
+	return Vector2(dx, dy).length()
+
+func _rotated_rect(center: Vector2, rect_size: Vector2, rotation: float) -> Rect2:
+	var half := rect_size * 0.5
+	var corners := [
+		Vector2(-half.x, -half.y),
+		Vector2(half.x, -half.y),
+		Vector2(half.x, half.y),
+		Vector2(-half.x, half.y),
+	]
+	var result := Rect2(center + corners[0].rotated(rotation), Vector2.ZERO)
+	for corner in corners.slice(1):
+		result = result.expand(center + corner.rotated(rotation))
+	return result
 
 func _truck_stop_solids(freeway: Node) -> Array[Node2D]:
 	var solids: Array[Node2D] = []
@@ -440,7 +517,8 @@ func test_freeway_floor_stamps_and_counts() -> void:
 					"freeway: %s station stays ground-bit ungated like Dock" % node.name)
 			"ammo_pickup.tscn":
 				counts.pickups += 1
-				var expected_floor := 3 if node.name == &"AmmoHoming1" else -1
+				var expected_floor := 3 if node.name == &"AmmoHoming1" \
+					else (1 if node.name == &"AmmoPower3" else -1)
 				t.check(node.floor_index == expected_floor,
 					"freeway: %s pickup uses its signed-off floor" % node.name)
 
@@ -450,10 +528,10 @@ func test_freeway_floor_stamps_and_counts() -> void:
 		"freeway: 12 original highway rails (got %d)" % counts.highway_rails)
 	t.check(counts.debris == 4, "freeway: 4 debris blocks (got %d)" % counts.debris)
 	t.check(counts.pillars == 4, "freeway: 4 overpass pillars (got %d)" % counts.pillars)
-	t.check(counts.clutter == 15, "freeway: 15 clutter props (got %d)" % counts.clutter)
+	t.check(counts.clutter == 22, "freeway: 22 clutter props (got %d)" % counts.clutter)
 	t.check(counts.wrecks == 2, "freeway: 2 wrecks (got %d)" % counts.wrecks)
 	t.check(counts.stations == 3, "freeway: 3 stations (got %d)" % counts.stations)
-	t.check(counts.pickups == 10, "freeway: 10 ammo pickups (got %d)" % counts.pickups)
+	t.check(counts.pickups == 11, "freeway: 11 ammo pickups (got %d)" % counts.pickups)
 	t.check(counts.pads == 3, "freeway: 3 jump pads (got %d)" % counts.pads)
 	t.check(counts.cars == 8, "freeway: 8 cars (got %d)" % counts.cars)
 	t.check(counts.rivals == 7, "freeway: 7 rivals (got %d)" % counts.rivals)
@@ -607,17 +685,115 @@ func test_freeway_truck_stop_surfaces_match_plan() -> void:
 	var dirt := freeway.get_node(^"LowlandDirt")
 	var lot := freeway.get_node(^"TruckStopLot")
 	var frontage := freeway.get_node(^"FrontageRoad")
+	var field := freeway.get_node(^"Field")
 	var marks := freeway.get_node_or_null(^"LotMarks") as Node2D
 	t.check(lot.get_index() == dirt.get_index() + 1
 			and frontage.get_index() == lot.get_index() + 1,
 		"freeway truck stop: lot and frontage follow LowlandDirt")
-	t.check(marks != null and marks.get_index() == frontage.get_index() + 1,
-		"freeway truck stop: LotMarks follows both road zones")
+	t.check(marks != null and field.get_index() == frontage.get_index() + 1
+			and marks.get_index() == field.get_index() + 1,
+		"freeway truck stop: Field and LotMarks follow both road zones")
 	if marks:
 		t.check(marks.position == Vector2(1832, 1950)
 				and marks.get("kind") == &"lot_marks"
 				and marks.get("size") == Vector2(336, 200),
 			"freeway truck stop: parking marks match the signed-off rectangle")
+
+func test_freeway_f9_farm_matches_layout() -> void:
+	var freeway := _freeway_structure()
+	var frontage := freeway.get_node(^"FrontageRoad")
+	var field := freeway.get_node_or_null(^"Field") as Node2D
+	var marks := freeway.get_node(^"LotMarks")
+	t.check(field != null, "freeway farm: Field exists")
+	if field:
+		var field_rect := Rect2(field.position - (field.get("size") as Vector2) * 0.5,
+			field.get("size"))
+		t.check(field_rect == Plan.FARM_FIELD and field.get("kind") == &"crop_rows"
+				and field.z_index == 0,
+			"freeway farm: Field matches the planned crop-row paint")
+		t.check(field.get_index() == frontage.get_index() + 1
+				and marks.get_index() == field.get_index() + 1,
+			"freeway farm: Field follows the lot roads and precedes LotMarks")
+
+	for node_name: StringName in FARM_BLOCKS:
+		var cfg: Dictionary = FARM_BLOCKS[node_name]
+		var block := freeway.get_node_or_null(NodePath(node_name)) as Node2D
+		t.check(block != null, "freeway farm: %s exists" % node_name)
+		if block == null:
+			continue
+		t.check(String(block.scene_file_path).ends_with("destructible_block.tscn"),
+			"freeway farm: %s uses DestructibleBlock" % node_name)
+		t.check(block.position == cfg["position"] and block.get("size") == cfg["size"],
+			"freeway farm: %s position and size match" % node_name)
+		t.check(block.get("deco") == cfg["deco"] and block.get("floor_index") == 1
+				and is_equal_approx(float(block.get("max_hp")), float(cfg["hp"])),
+			"freeway farm: %s style, floor, and HP match" % node_name)
+		t.check(int(block.get("arena_net_id")) == 0,
+			"freeway farm: %s stays local destruction" % node_name)
+		if String(node_name).begins_with("Hay"):
+			t.check(Plan.FARM_FIELD.encloses(_block_rect(block)),
+				"freeway farm: %s sits inside FARM_FIELD" % node_name)
+		elif String(node_name).begins_with("Fence"):
+			t.check(not Plan.FARM_FIELD.intersects(_block_rect(block)),
+				"freeway farm: %s runs outside the field's south edge" % node_name)
+
+	var power := freeway.get_node_or_null(^"AmmoPower3") as Area2D
+	t.check(power != null and power.position == Vector2(2560, -2560)
+			and power.get("kind") == "power" and power.get("floor_index") == 1,
+		"freeway farm: AmmoPower3 is the floor-1 power pickup behind the barn")
+
+func test_freeway_f9_farm_clearances() -> void:
+	var freeway := _freeway_structure()
+	var farm_solids: Array[Node2D] = []
+	for node_name: StringName in FARM_BLOCKS:
+		var solid := freeway.get_node_or_null(NodePath(node_name)) as Node2D
+		if solid:
+			farm_solids.append(solid)
+	for solid in farm_solids:
+		var solid_rect := _block_rect(solid)
+		for child in freeway.get_children():
+			if child is Vehicle:
+				var clearance := _point_rect_distance(child.position, solid_rect)
+				t.check(clearance >= 256.0,
+					"freeway farm: %s is %.0fpx clear of spawn %s" %
+						[solid.name, clearance, child.name])
+			if String(child.scene_file_path).get_file() == "ammo_pickup.tscn":
+				var clearance := _point_rect_distance(child.position, solid_rect)
+				t.check(clearance >= 96.0,
+					"freeway farm: %s is %.0fpx clear of pickup %s" %
+						[solid.name, clearance, child.name])
+		for child in freeway.get_children():
+			if child is Ramp:
+				var grade_rect := _rotated_rect(child.position, child.size, child.rotation)
+				var clearance := _rect_distance(solid_rect, grade_rect)
+				t.check(clearance >= 64.0,
+					"freeway farm: %s is %.0fpx clear of grade %s" %
+						[solid.name, clearance, child.name])
+
+		var shelf := freeway.get_node(^"FZShelfN") as FloorZone
+		var shelf_rect := Rect2(shelf.position - shelf.size * 0.5, shelf.size)
+		var road := freeway.get_node(^"CountryRoad") as Area2D
+		var road_rect := _collision_rect(road, road.get_node(^"Col"))
+		t.check(_rect_distance(solid_rect, shelf_rect) >= 64.0,
+			"freeway farm: %s stays 64px clear of the north shelf" % solid.name)
+		t.check(_rect_distance(solid_rect, road_rect) >= 64.0,
+			"freeway farm: %s stays 64px clear of the country road" % solid.name)
+
+	for i in farm_solids.size():
+		for j in range(i + 1, farm_solids.size()):
+			var gap := _rect_distance(_block_rect(farm_solids[i]), _block_rect(farm_solids[j]))
+			t.check(gap <= 24.0 or gap >= 96.0,
+				"freeway farm: %s and %s leave a safe %.0fpx gap" %
+					[farm_solids[i].name, farm_solids[j].name, gap])
+	# The arena boundary is a solid too: a prop parked 60px off the east wall
+	# is a wedge pocket like any other.
+	for solid in farm_solids:
+		var r := _block_rect(solid)
+		var to_wall := minf(minf(r.position.x - Plan.ARENA_RECT.position.x,
+			Plan.ARENA_RECT.end.x - r.end.x), minf(r.position.y - Plan.ARENA_RECT.position.y,
+			Plan.ARENA_RECT.end.y - r.end.y))
+		t.check(to_wall <= 24.0 or to_wall >= 96.0,
+			"freeway farm: %s leaves a safe %.0fpx gap to the arena wall" % [solid.name, to_wall])
 
 func test_freeway_truck_stop_props_match_layout() -> void:
 	var freeway := _freeway_structure()
@@ -697,6 +873,68 @@ func test_freeway_truck_stop_signage_canopy_and_draw_order() -> void:
 			t.check(child.get_index() > canopy.get_index()
 					and child.get_index() > pylon.get_index(),
 				"freeway truck stop: %s renders above overhead paint" % child.name)
+
+func test_freeway_f9_billboard_shadow_clutter_and_draw_order() -> void:
+	var freeway := _freeway_structure()
+	var billboard := freeway.get_node_or_null(^"Billboard") as Signage
+	t.check(billboard != null, "freeway farm: Billboard exists as Signage")
+	if billboard:
+		t.check(billboard.position == Vector2(1650, -1700) and billboard.z_index == 1
+				and billboard.kind == &"billboard" and billboard.size == Vector2(448, 160),
+			"freeway farm: Billboard placement, size, kind, and depth match")
+		t.check(billboard.text == "HATE'S TRAVEL STOP" and billboard.sub_text == "NEXT EXIT"
+				and billboard.dead_letters == 1
+				and is_equal_approx(billboard.weathering, 0.6) and billboard.text_fits(),
+			"freeway farm: Billboard copy and weathering fit the panel")
+		for child in freeway.get_children():
+			if child == billboard:
+				continue
+			var floor_value: Variant = child.get("floor_index")
+			if floor_value is int and int(floor_value) == 1:
+				t.check(child.get_index() < billboard.get_index(),
+					"freeway farm: floor-1 prop %s renders before Billboard" % child.name)
+			if child is Vehicle:
+				t.check(child.get_index() > billboard.get_index(),
+					"freeway farm: car %s renders after Billboard" % child.name)
+
+	var marks := freeway.get_node(^"LotMarks")
+	var shadow := freeway.get_node_or_null(^"CanopyShadow") as Node2D
+	t.check(shadow != null, "freeway truck stop: CanopyShadow exists")
+	if shadow:
+		t.check(shadow.position == Vector2(2400, 864) and shadow.z_index == 0
+				and shadow.get("kind") == &"overpass_shadow"
+				and shadow.get("size") == Vector2(512, 288),
+			"freeway truck stop: CanopyShadow matches the canopy footprint at z 0")
+		t.check(shadow.get_index() == marks.get_index() + 1,
+			"freeway truck stop: CanopyShadow draws immediately after LotMarks")
+
+	var solids: Array[Node2D] = []
+	for child in freeway.get_children():
+		if String(child.scene_file_path).get_file() == "destructible_block.tscn":
+			solids.append(child)
+	var lot: Rect2 = Plan.TRUCK_STOP[&"TruckStopLot"]
+	var pad := freeway.get_node(^"JumpLowland") as JumpPad
+	var runup := Rect2(Vector2(pad.position.x, pad.position.y - 192.0),
+		Vector2(450, 384))
+	for node_name: StringName in LOT_CLUTTER:
+		var cfg: Dictionary = LOT_CLUTTER[node_name]
+		var clutter := freeway.get_node_or_null(NodePath(node_name)) as Node2D
+		t.check(clutter != null, "freeway truck stop: %s exists" % node_name)
+		if clutter == null:
+			continue
+		var footprint := Vector2.ONE * float(clutter.get("footprint"))
+		var clutter_rect := Rect2(clutter.position - footprint * 0.5, footprint)
+		t.check(String(clutter.scene_file_path).ends_with("clutter.tscn")
+				and clutter.position == cfg["position"] and clutter.get("kind") == cfg["kind"]
+				and clutter.get("floor_index") == 1,
+			"freeway truck stop: %s kind, position, and floor match" % node_name)
+		t.check(lot.encloses(clutter_rect),
+			"freeway truck stop: %s sits inside TruckStopLot" % node_name)
+		t.check(not clutter_rect.intersects(runup),
+			"freeway truck stop: %s stays outside the lowland-pad run-up" % node_name)
+		for solid in solids:
+			t.check(not clutter_rect.intersects(_block_rect(solid)),
+				"freeway truck stop: %s stays outside solid %s" % [node_name, solid.name])
 
 func test_freeway_truck_stop_network_id_ledger() -> void:
 	var freeway := _freeway_structure()
