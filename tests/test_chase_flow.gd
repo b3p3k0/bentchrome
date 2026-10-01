@@ -687,7 +687,10 @@ func test_oil_slick_is_a_slide_not_a_death() -> void:
 	# Driven through a pothole: dirt under the tires, the nose holds.
 	fx.clear_splat_tracks()
 	Builder._pothole(scene, Vector2(player.global_position.x, player.global_position.y - 120.0), rng)
-	var hole: Node = scene.get_node_or_null(^"Pothole")
+	var hole: Node = null
+	for child in scene.get_children():
+		if String(child.name).begins_with("Pothole"):
+			hole = child
 	t.check(hole != null and hole.collision_layer == 128 and hole.terrain_type == &"dirt",
 		"pothole: still a bare dirt TerrainZone")
 	var saw_dirt := false

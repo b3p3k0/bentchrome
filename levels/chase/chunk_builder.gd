@@ -1146,7 +1146,7 @@ static func _slick(root: Node2D, pos: Vector2, rng: RandomNumberGenerator) -> vo
 	var rim := PackedVector2Array()
 	for p in pool:
 		rim.append(pos + (p - pos) * SLICK_RIM)
-	_hazard_zone(root, "Slick", pos, r, &"ice", rim)
+	_hazard_zone(root, "SlickRim", pos, r, &"ice", rim, true)
 	var pool_poly := Polygon2D.new()
 	pool_poly.polygon = pool
 	pool_poly.color = OIL
@@ -1249,11 +1249,14 @@ static func _ellipse(center: Vector2, rx: float, ry: float, n: int) -> PackedVec
 
 ## A hazard's circle zone with a Vis in the arena's dress for its surface
 ## (`vis_poly` in chunk space; the zone sits at pos, so it is re-based).
-static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, terrain: StringName, vis_poly: PackedVector2Array) -> void:
+## `dress_only` lays the arena surface paint without a live terrain zone —
+## the slick's feel comes from its own sensor (oil_slick.gd), the icy rim is
+## just how it looks.
+static func _hazard_zone(root: Node2D, label: String, pos: Vector2, r: float, terrain: StringName, vis_poly: PackedVector2Array, dress_only := false) -> void:
 	var zone := Area2D.new()
 	zone.set_script(TerrainZoneScript)
 	zone.name = "%s%d" % [label, root.get_child_count()]   # unique per chunk (a bare duplicate is renamed @Area2D@N)
-	zone.collision_layer = 128
+	zone.collision_layer = 0 if dress_only else 128
 	zone.collision_mask = 0
 	zone.terrain_type = terrain
 	zone.position = pos

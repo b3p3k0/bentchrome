@@ -933,10 +933,10 @@ func test_builder_surfaces_match_the_arenas() -> void:
 	var slicks := 0
 	var holes := 0
 	for child in hchunk.get_children():
-		if not (child is Area2D and child.collision_layer == 128):
-			continue
+		if not (child is Area2D and (child.collision_layer == 128 or String(child.name).begins_with("SlickRim"))):
+			continue   # (the slick's rim is paint-only dress on layer 0 — the oil_slick sensor owns the feel)
 		var vis := child.get_node_or_null(^"Vis") as Polygon2D
-		if String(child.name).begins_with("Slick"):
+		if String(child.name).begins_with("SlickRim"):
 			slicks += 1
 			t.check(vis != null and vis.material == Loader._speckle_material("ice") and child.z_index == -1,
 				"surfaces: the slick's zone wears the arena ice under the pool")
