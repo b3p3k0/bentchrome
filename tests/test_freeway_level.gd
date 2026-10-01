@@ -936,6 +936,104 @@ func test_freeway_f9_billboard_shadow_clutter_and_draw_order() -> void:
 			t.check(not clutter_rect.intersects(_block_rect(solid)),
 				"freeway truck stop: %s stays outside solid %s" % [node_name, solid.name])
 
+func test_freeway_retaining_chamfers_match_plan() -> void:
+	var freeway := _freeway_structure()
+	var retaining_vis := freeway.get_node(^"RetainE_2/Vis") as Polygon2D
+	for chamfer_name: StringName in Plan.CHAMFERS:
+		var chamfer := freeway.get_node_or_null(NodePath(chamfer_name)) as StaticBody2D
+		t.check(chamfer != null, "freeway: %s exists" % chamfer_name)
+		if chamfer == null:
+			continue
+		var collision := chamfer.get_node_or_null(^"Col") as CollisionPolygon2D
+		var vis := chamfer.get_node_or_null(^"Vis") as Polygon2D
+		t.check(chamfer.position == Plan.CHAMFERS[chamfer_name]["corner"],
+			"freeway: %s is anchored at its planned corner" % chamfer_name)
+		t.check(chamfer.collision_layer == 12 and chamfer.collision_mask == 0,
+			"freeway: %s uses retaining-wall collision bits" % chamfer_name)
+		t.check(collision != null, "freeway: %s has polygon collision" % chamfer_name)
+		t.check(vis != null, "freeway: %s has visible fill" % chamfer_name)
+		if collision == null or vis == null:
+			continue
+		var world_points := PackedVector2Array()
+		for point in collision.polygon:
+			world_points.append(collision.to_global(point))
+		t.check(world_points == Plan.chamfer_points(chamfer_name),
+			"freeway: %s collision polygon matches the plan in world space" % chamfer_name)
+		t.check(vis.polygon == collision.polygon,
+			"freeway: %s visible fill matches its collision polygon" % chamfer_name)
+		t.check(vis.color == retaining_vis.color,
+			"freeway: %s uses RetainE_2's colour" % chamfer_name)
+
+func test_freeway_retaining_chamfer_legs_meet_walls() -> void:
+	for chamfer_name: StringName in Plan.CHAMFERS:
+		var points := Plan.chamfer_points(chamfer_name)
+		var corner := points[0]
+		var horizontal_end := points[1]
+		var vertical_end := points[2]
+		var vertical_wall := false
+		var horizontal_wall := false
+		for wall: Dictionary in Plan.WALLS.values():
+			var rect: Rect2 = wall["rect"]
+			var on_vertical_edge := is_equal_approx(corner.x, rect.position.x) \
+					or is_equal_approx(corner.x, rect.end.x)
+			vertical_wall = vertical_wall or (on_vertical_edge
+				and _has_point_inclusive(rect, corner)
+				and _has_point_inclusive(rect, vertical_end))
+			var on_horizontal_edge := is_equal_approx(corner.y, rect.position.y) \
+					or is_equal_approx(corner.y, rect.end.y)
+			horizontal_wall = horizontal_wall or (on_horizontal_edge
+				and _has_point_inclusive(rect, corner)
+				and _has_point_inclusive(rect, horizontal_end))
+		var arena_horizontal_edge := is_equal_approx(corner.y, Plan.ARENA_RECT.position.y) \
+			or is_equal_approx(corner.y, Plan.ARENA_RECT.end.y)
+		horizontal_wall = horizontal_wall or (arena_horizontal_edge
+			and corner.x >= Plan.ARENA_RECT.position.x
+			and horizontal_end.x <= Plan.ARENA_RECT.end.x)
+		t.check(vertical_wall,
+			"freeway: %s vertical leg lies on the retaining wall" % chamfer_name)
+		t.check(horizontal_wall,
+			"freeway: %s horizontal leg lies on its cross wall" % chamfer_name)
+
+	for y in range(int(Plan.ARENA_RECT.position.y), int(Plan.ARENA_RECT.end.y) + 1,
+			SAMPLE_STEP):
+		t.check(Plan.plate_east_edge_covered(y),
+			"freeway chamfers: plate east edge stays covered at y=%d" % y)
+
+func test_freeway_retaining_chamfer_footprints_are_clear() -> void:
+	var freeway := _freeway_structure()
+	var blockers: Array[Node] = []
+	for child in freeway.get_children():
+		var source := String(child.scene_file_path).get_file()
+		var is_interactable := child is JumpPad \
+			or source in ["health_station.tscn", "ammo_pickup.tscn"]
+		var is_solid_prop := child is StaticBody2D \
+			and child.name not in Plan.WALLS \
+			and child.name not in Plan.CHAMFERS \
+			and child.name != &"Boundary"
+		if is_interactable or is_solid_prop:
+			blockers.append(child)
+
+	for chamfer_name: StringName in Plan.CHAMFERS:
+		var points := Plan.chamfer_points(chamfer_name)
+		var bounds := Rect2(points[0], Vector2.ZERO)
+		for point in points.slice(1):
+			bounds = bounds.expand(point)
+		for ramp_name: StringName in Plan.RAMPS:
+			t.check(not bounds.intersects(Plan.rect_of(Plan.RAMPS, ramp_name)),
+				"freeway: %s stays outside ramp %s" % [chamfer_name, ramp_name])
+		for zone_name: StringName in Plan.FLOOR_ZONES:
+			var zone: Dictionary = Plan.FLOOR_ZONES[zone_name]
+			if int(zone["floor"]) not in [2, 3]:
+				continue
+			t.check(not bounds.intersects(zone["rect"]),
+				"freeway: %s stays outside floor zone %s" % [chamfer_name, zone_name])
+		for blocker in blockers:
+			var blocker_rects: Array[Rect2] = []
+			_collect_shape_rects(blocker, blocker_rects)
+			for blocker_rect in blocker_rects:
+				t.check(not bounds.intersects(blocker_rect),
+					"freeway: %s stays outside %s" % [chamfer_name, blocker.name])
+
 func test_freeway_truck_stop_network_id_ledger() -> void:
 	var freeway := _freeway_structure()
 	var truck_stop_ids := {}

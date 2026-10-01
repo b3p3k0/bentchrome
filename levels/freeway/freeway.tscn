@@ -1075,6 +1075,54 @@ polygon = PackedVector2Array(-192, -12, 192, -12, 192, 12, -192, 12)
 [node name="Col" type="CollisionShape2D" parent="RampAS"]
 shape = SubResource("RectangleShape2D_ramp_b_wall")
 
+[node name="ChamferNE" type="StaticBody2D" parent="."]
+position = Vector2(1112, -2688)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="ChamferNE"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
+
+[node name="Col" type="CollisionPolygon2D" parent="ChamferNE"]
+polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
+
+[node name="ChamferAN" type="StaticBody2D" parent="."]
+position = Vector2(1112, -952)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="ChamferAN"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
+
+[node name="Col" type="CollisionPolygon2D" parent="ChamferAN"]
+polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
+
+[node name="ChamferAS" type="StaticBody2D" parent="."]
+position = Vector2(1112, -584)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="ChamferAS"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
+
+[node name="Col" type="CollisionPolygon2D" parent="ChamferAS"]
+polygon = PackedVector2Array(0, 0, 128, 0, 0, 128)
+
+[node name="ChamferSE" type="StaticBody2D" parent="."]
+position = Vector2(1112, 2688)
+collision_layer = 12
+collision_mask = 0
+
+[node name="Vis" type="Polygon2D" parent="ChamferSE"]
+color = Color(0.42, 0.42, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
+
+[node name="Col" type="CollisionPolygon2D" parent="ChamferSE"]
+polygon = PackedVector2Array(0, 0, 128, 0, 0, -128)
+
 [node name="DeckEastStop" type="StaticBody2D" parent="."]
 position = Vector2(1076, -768)
 collision_layer = 20

@@ -54,6 +54,13 @@ const WALLS := {
 	&"DeckEastStop": {"layer": 20, "rect": Rect2(1064, -928, 24, 320)},
 }
 
+const CHAMFERS := {
+	&"ChamferNE": {"corner": Vector2(1112, -2688), "legs": Vector2(128, 128)},
+	&"ChamferAN": {"corner": Vector2(1112, -952), "legs": Vector2(128, -128)},
+	&"ChamferAS": {"corner": Vector2(1112, -584), "legs": Vector2(128, 128)},
+	&"ChamferSE": {"corner": Vector2(1112, 2688), "legs": Vector2(128, -128)},
+}
+
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
 const FARM_FIELD := Rect2(2176, -1920, 768, 640)
 
@@ -100,6 +107,16 @@ static func floor_at(point: Vector2) -> int:
 		if (zone["rect"] as Rect2).has_point(point):
 			best = maxi(best, int(zone["floor"]))
 	return best
+
+static func chamfer_points(name: StringName) -> PackedVector2Array:
+	var chamfer: Dictionary = CHAMFERS[name]
+	var corner: Vector2 = chamfer["corner"]
+	var legs: Vector2 = chamfer["legs"]
+	return PackedVector2Array([
+		corner,
+		corner + Vector2(legs.x, 0.0),
+		corner + Vector2(0.0, legs.y),
+	])
 
 static func plate_east_edge_covered(y: float) -> bool:
 	var plate := rect_of(FLOOR_ZONES, &"FZPlate")
