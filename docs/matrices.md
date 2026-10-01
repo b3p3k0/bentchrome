@@ -192,6 +192,7 @@ Sources: `environment/ambient_actor.gd`, `ambient_population.gd`, and the four a
 |---|---:|---|
 | Downtown Derby | 18 + 2 carts | 12 business people, 2 vagrants, 2 police, 2 vendors; carts are separate debris props |
 | Suburban Savagery | 18 | 5 joggers, 4 cyclists, 2 dogs, 2 skateboarders, 3 route-locked mowers, 2 police |
+| Freeway Firefight | 11 | 5 truckers, 2 clerks, 1 dog, 1 hitchhiker, 2 farm hands; all on floor 1 |
 | Capital City Carnage | 21 | 6 stationary food-truck vendors, 8 mall/museum business figures, 2 police on the monument loop, 2 K St vagrants, 2 joggers, 1 Ellipse dog |
 | Mountainside Mayhem | 7 | 2 floor-2 skiers on the trailhead route, 5 floor-3 knoll deer |
 | Piers of Pain | 18 | 15 workers across floors 1/2/3, 3 floor-2 police |
@@ -372,7 +373,7 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 1 | Arena Assault | SMALL 2560×2560 | 2 (duel; mp_avail false) | 1 | 1 | derby pit: dirt infield in an asphalt lane, jersey ring, center station, wall-lane M/M/H/P/X crates, barrel chains, wreck cover; `optional: true` while in test |
 | 2 | Piers of Pain | LARGE 5120×3584 | 8 | 7 | 2 | 3 floors: lowland / quay / roofs + 1704px ship deck; deep water + piers; 2 sky bridges + crane underpasses; chain-link quay fence (12 HP); 8 jump pads; roof crates |
 | 3 | Downtown Derby | MED 3712×3584 | 5 | 4 | 1 | park pond, secret courtyard, smashables; NW+N rooftops + bridge, garage ramp, 1 jump pad |
-| 4 | Freeway Firefight | LARGE 2176×5376 | 7 | 6 | 3 | ring + crossover, guardrails (20 HP), 2 jump pads |
+| 4 | Freeway Firefight | LARGE 4096×5376, 3 floors | 8 | 7 | 3 | floor-2 raised highway plate + floor-1 farm/truck-stop lowland + floor-3 country-road overpass; 5 grades, 3 jump pads, 16 synced 12-HP deck rails, retaining seam with 4 chamfers, fuel-chain blasts; MP ready |
 | 5 | Lackey's Arena | MED 3072×3072 | 4 planned MP | 1 (Lackey) | 1 | live turret; destructible container cover (140 HP), chain-link runs, barrel clusters, containment square, one jump pad; named MP exception |
 | 6 | Suburban Savagery | MED 3584×3456 | 7 | 6 | 2 | 20 houses (120 HP), east lake, school/gas anchors |
 | 7 | Terminal Terror | PLACEHOLDER (unbuilt) | — | — | — | sawhorse card; chains into slot 8 |
@@ -382,6 +383,98 @@ Source: `game/scene_flow.gd` CAMPAIGN profiles + `levels/arena_contract.gd`; ful
 | 11 | Ground Floor Gore | LARGE 4608×3840, 3 floors | 8 | 7 | 2 | dirt/mud/water; RAINY DUSK (night_arena, 5 shootable 8-HP worklights, headlight beams on EVERY car); foundation + scaffold ring over a courtyard pit; ALL 16 ring rails breakaway 12-HP; east-strip 2↔3 ramp (courtyard pinch gone); fl-2 rim fully open (floor-1-only walls); 4 slab columns; spoil heap (848 fl-2 apron + 448 fl-3 cap, mine crate on top) + SW twin heaps (320 fl-2); NW parking lot (7 synced derelicts); 220-HP generator (arm 55) w/ 90%/75% distress sparks at (-1420,-60); junk 15 HP; ids 1,10-17,20-74; MP ready |
 | 12 | Capital City Carnage | LARGE 6144×3840 (biggest interior; FLAT — knoll only) | 8 | 7 | 3 | THUNDERSTORM (night_arena StormTint, flash/dip cycle, slashing rain, headlight beams); Potomac shallow banks + lethal deep channel, 2 straight bridges w/ destructible rails + VISIBLE 20-HP rim guardrails (ids 60-65); Lincoln/Capitol flat painted plazas, Monument `DriveableHill` knoll w/ summit crates; Penn Ave K-to-Capitol diagonal + traffic circle + Maryland diagonal + 5 side streets + 3 pocket parks + tan sidewalk trails on road ribbons; 1024px Reflecting Pool w/ coping + algae (`pool_surround`); WH iron-fence ring (8×30 HP, ids 10-17) around **Marine One** (id 1: breach→POTUS+3-guard sprint→spool 6s→2-stage floor-bit climb→sky; air kill = spiral crash + Ellipse cache; any kill = 2500 mini_boss); 6 food trucks (128×60) + vendors on Constitution; net ids 1,10-17,20-23,30-35,40-65 sparse (43 total); `optional: true` while in test |
 | 13 | Goliath's Arena | LARGE 4608×3584, 2 floors | 4 planned MP | 1 (Goliath) | 1 | grandstand ramps pull 170 + stair bumps; continuous crown; 4 solid chamfers; boss overlay; named MP exception |
+
+---
+
+## Freeway Firefight (raised highway knobs)
+
+Sources: `levels/freeway/freeway_plan.gd` is the dependency-free signed layout;
+`levels/freeway/freeway.tscn` mirrors it. `tests/test_freeway_level.gd` compares
+the scene against the plan and live-simulates the cross-floor jumps, grades,
+retaining stops, garage drive-through, and fuel chain. Change the plan first,
+then update its scene mirror; the tests prove the relationship.
+
+### Plan constants
+
+| Plan constant | Signed value | What it owns |
+|---|---|---|
+| `ARENA_RECT` | `Rect2(-1088,-2688,4096,5376)` | Complete playfield; floor-2 plate is `x=-1088…1088`, floor-1 lowland is `x=1088…3008` |
+| `FLOOR_ZONES` | `FZPlate`: floor 2, `Rect2(-1088,-2688,2176,5376)`<br>`FZLowland`: floor 1, `Rect2(1088,-2688,1920,5376)`<br>`FZDeck`: floor 3, `Rect2(-1088,-928,2176,320)`<br>`FZLanding`: floor 2, `Rect2(1472,-928,256,320)`<br>`FZShelfN`: floor 2, `Rect2(1088,-2304,256,512)`<br>`FZShelfS`: floor 2, `Rect2(1088,256,256,512)` | Winning floor at every driveable XY point |
+| `RAMPS` | `RampW`: 2→3, `Rect2(-1088,-608,256,384)`, high north<br>`RampA`: 2→3, `Rect2(1088,-928,384,320)`, high west<br>`RampB`: 1→2, `Rect2(1728,-928,384,320)`, high west<br>`RampN`: 1→2, `Rect2(1088,-1792,256,512)`, high north<br>`RampS`: 1→2, `Rect2(1088,-256,256,512)`, high south | Five road grades and their floor/direction contract |
+| `WALLS` | Layer 12: `RetainE_1 Rect2(1088,-2688,24,384)`; `RetainE_2 Rect2(1088,-1792,24,864)`; `RetainE_3 Rect2(1088,-608,24,864)`; `RetainE_4 Rect2(1088,768,24,1920)`; `ShelfN_E Rect2(1344,-2304,24,512)`; `ShelfN_N Rect2(1088,-2328,280,24)`; `ShelfS_E Rect2(1344,256,24,512)`; `ShelfS_S Rect2(1088,768,280,24)`; `LandingN Rect2(1472,-952,256,24)`; `LandingS Rect2(1472,-608,256,24)`; `RampAN Rect2(1088,-952,384,24)`; `RampAS Rect2(1088,-608,384,24)`; `RampBN Rect2(1728,-952,384,24)`; `RampBS Rect2(1728,-608,384,24)`.<br>Layer 20: `DeckEastStop Rect2(1064,-928,24,320)` | Layer 12 is obstacle + floor-1, so lowland traffic stops and floor-2 traffic may hop down. Layer 20 is obstacle + floor-2 and stops plate traffic from driving under the deck's east end into `RampA`. |
+| `CHAMFERS` | `ChamferNE`: corner `(1112,-2688)`, legs `(128,128)`<br>`ChamferAN`: corner `(1112,-952)`, legs `(128,-128)`<br>`ChamferAS`: corner `(1112,-584)`, legs `(128,128)`<br>`ChamferSE`: corner `(1112,2688)`, legs `(128,-128)` | Four 45° retaining-corner triangles; `chamfer_points()` derives their three vertices |
+| `COUNTRY_ROAD` | `Rect2(2112,-896,896,256)` | Floor-1 country road east of `RampB` |
+| `PASTURE` | `Rect2(1400,-2688,1608,1688)` | Priority-5 grass under the farm |
+| `FARM_FIELD` | `Rect2(2176,-1920,768,640)` | Crop-row paint and farm-hand wander footprint |
+| `TRUCK_STOP` | `TruckStopLot Rect2(1664,320,1344,1856)`; `FrontageRoad Rect2(2560,-640,256,960)` | Priority-10 floor-1 road zones |
+| `TRUCK_STOP_IDS` | `Tanker 200`; `DieselPump1/2 201/202`; `Barrel1/2/3 203/204/205`; `Pump1/2/3/4 206/207/208/209`; `Store 210`; `GarageW/E 211/212`; `Semi1/2 213/214` | Stable LAN ledger for the truck stop |
+| `RAILS` | computed by `_build_rails(FZDeck, RampW, RampA)` | Deck-edge rectangles; see below |
+| Helpers | `rect_of`, `floor_at`, `plate_east_edge_covered`, `chamfer_points` | Test-facing lookup, floor precedence, complete seam proof, and chamfer geometry |
+
+### Deck rail constants
+
+| Constant / scene value | Value | Effect |
+|---|---:|---|
+| `RAIL_THICKNESS` | 12px | Short axis of every deck rail |
+| `RAIL_INSET` | 8px | Rail centerline inset from the deck edge |
+| `RAIL_MAX_LENGTH` | 256px | Maximum generated segment length |
+| `RAIL_BREAK_CLEARANCE` | 16px | Gap between segments and clearance before the deck's east end |
+| North run | 8 × `256×12`, `x=-1088…1072`, center `y=-920` | Full north edge from the west corner to the east clearance |
+| South run | 8 × `224×12`, `x=-832…1072`, center `y=-616` | Begins after `RampW`'s 256px mouth and ends at the east clearance |
+| Durability / floor / draw | 12 HP / floor 3 / `z_index = 2` | Breakaway deck guards on the floor-3 draw plane |
+| `arena_net_id` | `100–115` | Contiguous ID in computed rail order |
+| AI curb rule | none | A floor-blind curb on the deck would wall off floor-2 highway traffic underneath |
+
+### `Signage`
+
+`environment/signage.gd` paints words only. Place billboards and pylons at
+`z_index = 1` when they are overhead; a storefront band remains at z 0.
+
+| Export / helper | Default | Rule |
+|---|---|---|
+| `kind` | `billboard` | `billboard`, `pylon`, or `band`; an unknown kind falls back to billboard paint |
+| `size` | `384×160` | Panel footprint and the text-fitting box |
+| `text` / `sub_text` | `BENT CHROME` / empty | Main and optional secondary copy |
+| `face_color` | `Color(0.16,0.15,0.17)` | Panel face |
+| `text_color` | `Color(0.92,0.85,0.55)` | Live-letter ink |
+| `frame_color` | `Color(0.30,0.30,0.34)` | Frame, pylon trim, or band edge |
+| `weathering` | `0.5`, range `0…1` | Deterministic grime, peel, or band chips |
+| `dead_letters` | `0` | Number of alphabetic characters darkened across both copy lines |
+| `paint_seed` | `0` | Nonzero fixes weather/dead-letter selection; zero derives it from global position |
+| `text_fits()` | computed | Returns whether the selected font sizes fit the authored panel; use it in level tests for final copy |
+| Parent lifetime | signal-driven | Hide on a parent's `flattened` or `Health.died`; show again on `restored` when that signal exists |
+
+### `DestructibleBlock` road-site styles and blasts
+
+| `deco` | Purpose / knobs |
+|---|---|
+| `semi` | Parked box trailer and fleet cab; long axis follows `size`, `livery` chooses the work-truck palette |
+| `tanker` | Rounded fuel cylinder and fleet cab; same size/livery rules, plus the explosive row below |
+| `hay` | Round bale with straw coils, twine, and seeded whiskers |
+| `storefront` | Flat gravel roof and explicit shop face; `front` is `south` by default and accepts `north`, `west`, or `east`. HVAC count is 0 when the short side is below 192px, otherwise 2 when the long side is at least 320px, otherwise 1. Signage remains a level-owned child. |
+
+| `BLASTS` key | Radius | Flat damage | Query shape |
+|---|---:|---:|---|
+| `barrel` | 130px | 25 | Circle from the fixture center |
+| `tanker` | 200px | 40 | Capsule following a nonsquare hull's spine; a square fixture keeps the circle |
+
+Blasts affect same-floor Health-bearing cars, obstacles, and soft targets and
+may chain other explosives. They deliberately carry environment hit identity,
+not a shooter credit. Blocks emit `flattened` when they become collisionless
+remains and `restored` when applied network state brings them back.
+
+### `freeway_deco.gd`
+
+This script is paint-only. Author terrain, floors, columns, walls, and other
+collision separately.
+
+| Export | Default | What it changes |
+|---|---|---|
+| `kind` | `overpass_deck` | Selects `overpass_deck`, `overpass_shadow`, `canopy`, `embankment`, `lot_marks`, or `crop_rows` |
+| `size` | `768×160` | Exact paint footprint; long-run details follow the longer local axis |
+| `paint_seed` | `0` | Nonzero fixes scattered wear/detail; zero derives it from position |
+| `accent` | `Color(0.72,0.16,0.14)` | Canopy outline/logo and lot-mark entrance stripe |
+| Under-fade | `overpass_deck`, `canopy` only | Builds the shared `UnderFade` area and eases alpha while lower-floor traffic is beneath |
 
 ---
 

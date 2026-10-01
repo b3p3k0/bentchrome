@@ -236,6 +236,25 @@ that crosses a grade seam.
   `_ready`. They may smooth a concave block corner, but they never replace the
   authored blocks that static lints inspect as the mountain topology.
 
+### Retaining walls and shelves
+
+- **MUST:** separate a lower floor from an upper plate with layer-12 statics
+  (obstacle + floor-1 bit) along the seam. Floor-1 traffic stops at the face;
+  floor-2 traffic ignores it and may drive off for the one-floor ledge hop.
+- **MUST:** grades and elevated shelves make explicit breaks in that wall. A
+  signed layout plan must prove the complete seam is covered by a retaining
+  wall, grade, or shelf at every point; a missing interval is not an entrance.
+- **MUST:** every concave corner formed by the retaining wall and another wall
+  or the arena boundary gets a 45-degree chamfer with legs of at least 128px.
+- **DEFAULT:** a shelf has its own outer/cap walls and a readable ledge shadow;
+  keep its road skin higher-priority than the lower-floor substrate.
+- **MUST:** a deck above a driveable floor uses breakaway rails and NEVER AI
+  curbs. Curbs are floor-blind and would become invisible walls across the
+  traffic running underneath.
+- **MUST:** any jump pad whose landing crosses onto another floor is proven by
+  a live simulation that checks launch, landing position, landing floor, and
+  wall clearance.
+
 ### Generated geometry
 
 - **MUST:** when a level is generated from data, never hand-edit its generated
@@ -339,11 +358,19 @@ that crosses a grade seam.
   clears the painted pad itself.
 - **DEFAULT:** no solid piece belongs in a concave wall corner or in a strip
   narrower than about 200px between a wall and a road or lethal rim.
+- **DEFAULT:** two solid footprints either join intentionally at no more than
+  24px or leave at least 96px of safe gap. The arena boundary counts as a solid
+  in this audit; a prop cannot create a 24–96px wedge pocket against the wall.
 - **DEFAULT:** measure rival stalls after furnishing. A legal placement can
   still combine with steering radius, nearby cover, and a hazard guard to make
   a repeatable pin.
+- `DestructibleBlock` site styles include `storefront` (flat roof plus authored
+  `front`), `semi`, explosive `tanker`, and `hay`; use them as readable local
+  landmarks, not as collisionless paint standing in for cover.
 - Fuel barrels and other explosive scenery need readable spacing and must not
-  produce unavoidable spawn-chain damage.
+  produce unavoidable spawn-chain damage. Explosion reach is measured from
+  the explosive's hull: a long tanker queries a capsule along its spine, while
+  a square fixture retains a circular blast.
 
 ### Signature destructibles
 
@@ -460,7 +487,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 |---|---:|---|---|---|
 | Arena Assault | Small / 2 (duel, mp_avail false) | derby pit: dirt infield ring in an asphalt lane | 1v1 duel AI, center station, wall-lane pickups, chainable barrels | a duel arena buys tightness by resigning its LAN seats; terrain contrast reads at a glance |
 | Downtown Derby | Medium / 5 | city grid + park + roof pair | corners, crosswalks, rooftop rewards | districts and landmarks turn a grid into a readable place |
-| Freeway Firefight | Large / 7 | long ring + infield crossover | speed, guardrails, long sightlines | a narrow dimension can work when circulation never dead-ends |
+| Freeway Firefight | Large / 8 | floor-2 raised highway plate + floor-1 farm/truck-stop lowland + floor-3 country-road overpass | five grades, three cross-floor pads, retaining ledge hops, breakaway deck rails, fuel-chain blasts | a retaining seam can admit grades and shelves without leaking; an overhead deck stays driveable above and below only when its rails remain floor-correct and curb-free |
 | Suburban Savagery | Medium / 7 | neighborhood blocks + yards | houses progressively open routes | destructibility can change topology without losing orientation |
 | Mountainside Mayhem | Medium / 5 | generated southwest-to-northeast mountain pass + bridge/jump chasm + floor-3 knoll and runaway ledge | ice bends, lethal drop, 12-HP breakaway rails, one-exit high rewards | one grid can own collision, hazards, rails, and furniture while union skins turn authored rectangles into a coherent mountain |
 | Lackey's Arena | Medium / planned 4 MP | containment yard | Lackey, turret, container erosion | boss logic is an overlay; destructible cover creates phases naturally |
@@ -556,3 +583,8 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 9. Run `tools/stalls.sh <scene.tscn>` at its standard seed set, then inspect the
    longest episode, fall lead-ins, and worst 128px cells before accepting
    furniture or route changes.
+10. Prove every cross-floor pad landing and every authored explosive chain
+    reaction by live simulation in the level's test suite.
+11. Keep the full `tools/test.sh` runner inside its 120s ceiling. Freeway's
+    structural checks share instantiated levels and its live simulations exit
+    as soon as the tested landing, stop, grade, or chain result is established.
