@@ -26,6 +26,8 @@ const SHADOW := Color(0.0, 0.0, 0.0)
 @export var size := Vector2(768, 160)
 @export var paint_seed: int = 0
 @export var accent := Color(0.72, 0.16, 0.14)
+@export var south_gaps: Array[Vector2] = []
+@export var north_gaps: Array[Vector2] = []
 
 var _under_area: Area2D = null
 
@@ -75,6 +77,12 @@ func _draw_overpass_deck() -> void:
 	draw_rect(Rect2(-half, size), CONCRETE)
 	draw_rect(Rect2(Vector2(-half.x, -half.y + 16.0),
 		Vector2(size.x, size.y - 32.0)), ASPHALT)
+	for gap in north_gaps:
+		draw_rect(Rect2(Vector2(gap.x, -half.y),
+			Vector2(gap.y - gap.x, 16.0)), ASPHALT)
+	for gap in south_gaps:
+		draw_rect(Rect2(Vector2(gap.x, half.y - 16.0),
+			Vector2(gap.y - gap.x, 16.0)), ASPHALT)
 	var joint_x := -half.x + 256.0
 	while joint_x < half.x:
 		draw_line(Vector2(joint_x, -half.y), Vector2(joint_x, half.y),
@@ -86,9 +94,21 @@ func _draw_overpass_deck() -> void:
 		draw_line(Vector2(dash_x, 0.0), Vector2(dash_end, 0.0),
 			RoadMarks.YELLOW, RoadMarks.LINE_W)
 		dash_x += RoadMarks.DASH_LEN + RoadMarks.DASH_GAP
-	for side: float in [-1.0, 1.0]:
-		var y := side * (half.y - 3.0)
-		draw_line(Vector2(-half.x, y), Vector2(half.x, y), CONCRETE_DARK, 3.0)
+	_draw_deck_edge(-half.y + 3.0, north_gaps, half.x)
+	_draw_deck_edge(half.y - 3.0, south_gaps, half.x)
+
+func _draw_deck_edge(y: float, gaps: Array[Vector2], half_width: float) -> void:
+	var cursor := -half_width
+	var ordered := gaps.duplicate()
+	ordered.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+	for gap in ordered:
+		var gap_start := clampf(gap.x, -half_width, half_width)
+		var gap_end := clampf(gap.y, -half_width, half_width)
+		if gap_start > cursor:
+			draw_line(Vector2(cursor, y), Vector2(gap_start, y), CONCRETE_DARK, 3.0)
+		cursor = maxf(cursor, gap_end)
+	if cursor < half_width:
+		draw_line(Vector2(cursor, y), Vector2(half_width, y), CONCRETE_DARK, 3.0)
 
 func _draw_overpass_shadow() -> void:
 	var center := Vector2(14.0, 18.0)
@@ -135,7 +155,7 @@ func _draw_embankment() -> void:
 	var half := size * 0.5
 	var band_depth := size.y * 0.25
 	for i in 4:
-		var color := GRASS_WALL.lerp(GRASS_FOOT, (float(i) + 0.5) / 4.0)
+		var color := embankment_band_color(i)
 		draw_rect(Rect2(Vector2(-half.x, -half.y + band_depth * i),
 			Vector2(size.x, band_depth + 1.0)), color)
 	for point in detail_points():
@@ -150,6 +170,9 @@ func _draw_embankment() -> void:
 			points.append(Vector2(x + rng.randf_range(-10.0, 10.0),
 				-half.y + size.y * float(step) / 4.0))
 		draw_polyline(points, EROSION, 3.0, true)
+
+static func embankment_band_color(index: int) -> Color:
+	return GRASS_FOOT.lerp(GRASS_WALL, clampf(float(index) / 3.0, 0.0, 1.0))
 
 func _embankment_tufts() -> PackedVector2Array:
 	var half := size * 0.5

@@ -75,7 +75,7 @@ size = Vector2(256, 5376)
 size = Vector2(2176, 256)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_infield"]
-size = Vector2(896, 1920)
+size = Vector2(896, 2560)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_sq384"]
 size = Vector2(384, 384)
@@ -96,13 +96,13 @@ size = Vector2(256, 512)
 size = Vector2(256, 320)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_country_road"]
-size = Vector2(896, 256)
+size = Vector2(896, 320)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_truck_stop_lot"]
 size = Vector2(1344, 1856)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_frontage_road"]
-size = Vector2(256, 960)
+size = Vector2(256, 928)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pasture"]
 size = Vector2(1608, 1688)
@@ -147,12 +147,12 @@ extent = Vector2(2048, 2688)
 
 [node name="LaneW" type="Node2D" parent="RoadMarks"]
 script = ExtResource("21_marks")
-points = PackedVector2Array(-640, -2400, -640, 2400)
+points = PackedVector2Array(-640, -2688, -640, 2688)
 style = &"dashed_white"
 
 [node name="LaneE" type="Node2D" parent="RoadMarks"]
 script = ExtResource("21_marks")
-points = PackedVector2Array(640, -2400, 640, 2400)
+points = PackedVector2Array(640, -2688, 640, 2688)
 style = &"dashed_white"
 
 [node name="ShoulderW" type="Area2D" parent="."]
@@ -185,38 +185,38 @@ polygon = PackedVector2Array(-128, -2688, 128, -2688, 128, 2688, -128, 2688)
 [node name="Col" type="CollisionShape2D" parent="ShoulderE"]
 shape = SubResource("RectangleShape2D_sh_side")
 
-[node name="ShoulderN" type="Area2D" parent="."]
-position = Vector2(0, -2560)
+[node name="MergeN" type="Area2D" parent="."]
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
-terrain_type = &"dirt"
+terrain_type = &"road"
+terrain_priority = 10
+soften_visual = false
 
-[node name="Vis" type="Polygon2D" parent="ShoulderN"]
-material = SubResource("SM_dirt")
-color = Color(0.5, 0.36, 0.2, 0.5)
-polygon = PackedVector2Array(-1088, -128, 1088, -128, 1088, 128, -1088, 128)
+[node name="Vis" type="Polygon2D" parent="MergeN"]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(1088, -2304, 1088, -1942, 768, -2262, 768, -2624)
 
-[node name="Col" type="CollisionShape2D" parent="ShoulderN"]
-shape = SubResource("RectangleShape2D_sh_cap")
+[node name="Col" type="CollisionPolygon2D" parent="MergeN"]
+polygon = PackedVector2Array(1088, -2304, 1088, -1942, 768, -2262, 768, -2624)
 
-[node name="ShoulderS" type="Area2D" parent="."]
-position = Vector2(0, 2560)
+[node name="MergeS" type="Area2D" parent="."]
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
-terrain_type = &"dirt"
+terrain_type = &"road"
+terrain_priority = 10
+soften_visual = false
 
-[node name="Vis" type="Polygon2D" parent="ShoulderS"]
-material = SubResource("SM_dirt")
-color = Color(0.5, 0.36, 0.2, 0.5)
-polygon = PackedVector2Array(-1088, -128, 1088, -128, 1088, 128, -1088, 128)
+[node name="Vis" type="Polygon2D" parent="MergeS"]
+material = SubResource("SM_asphalt")
+polygon = PackedVector2Array(768, 726, 768, 1088, 1088, 768, 1088, 406)
 
-[node name="Col" type="CollisionShape2D" parent="ShoulderS"]
-shape = SubResource("RectangleShape2D_sh_cap")
+[node name="Col" type="CollisionPolygon2D" parent="MergeS"]
+polygon = PackedVector2Array(768, 726, 768, 1088, 1088, 768, 1088, 406)
 
 [node name="InfieldN" type="Area2D" parent="."]
-position = Vector2(0, -1088)
+position = Vector2(0, -1408)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -225,13 +225,13 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="InfieldN"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-448, -960, 448, -960, 448, 960, -448, 960)
+polygon = PackedVector2Array(-448, -1280, 448, -1280, 448, 1280, -448, 1280)
 
 [node name="Col" type="CollisionShape2D" parent="InfieldN"]
 shape = SubResource("RectangleShape2D_infield")
 
 [node name="InfieldS" type="Area2D" parent="."]
-position = Vector2(0, 1088)
+position = Vector2(0, 1408)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -240,7 +240,7 @@ terrain_type = &"grass"
 [node name="Vis" type="Polygon2D" parent="InfieldS"]
 material = SubResource("SM_grass")
 color = Color(0.25, 0.5, 0.22, 0.5)
-polygon = PackedVector2Array(-448, -960, 448, -960, 448, 960, -448, 960)
+polygon = PackedVector2Array(-448, -1280, 448, -1280, 448, 1280, -448, 1280)
 
 [node name="Col" type="CollisionShape2D" parent="InfieldS"]
 shape = SubResource("RectangleShape2D_infield")
@@ -352,7 +352,7 @@ polygon = PackedVector2Array(-672, -928, 672, -928, 672, 928, -672, 928)
 shape = SubResource("RectangleShape2D_truck_stop_lot")
 
 [node name="FrontageRoad" type="Area2D" parent="."]
-position = Vector2(2688, -160)
+position = Vector2(2688, -144)
 collision_layer = 128
 collision_mask = 0
 script = ExtResource("3_zone")
@@ -362,7 +362,7 @@ soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="FrontageRoad"]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-128, -480, 128, -480, 128, 480, -128, 480)
+polygon = PackedVector2Array(-128, -464, 128, -464, 128, 464, -128, 464)
 
 [node name="Col" type="CollisionShape2D" parent="FrontageRoad"]
 shape = SubResource("RectangleShape2D_frontage_road")
@@ -428,7 +428,7 @@ soften_visual = false
 
 [node name="Vis" type="Polygon2D" parent="CountryRoad"]
 material = SubResource("SM_asphalt")
-polygon = PackedVector2Array(-448, -128, 448, -128, 448, 128, -448, 128)
+polygon = PackedVector2Array(-448, -160, 448, -160, 448, 160, -448, 160)
 
 [node name="Col" type="CollisionShape2D" parent="CountryRoad"]
 shape = SubResource("RectangleShape2D_country_road")
@@ -477,6 +477,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(256, 512)
 rails = true
+rail_caps = true
 terrain_type = "road"
 downhill_pull = 120.0
 
@@ -488,6 +489,7 @@ low_floor = 1
 high_floor = 2
 size = Vector2(256, 512)
 rails = true
+rail_caps = true
 terrain_type = "road"
 downhill_pull = 120.0
 
@@ -520,6 +522,7 @@ low_floor = 2
 high_floor = 3
 size = Vector2(256, 384)
 rails = true
+rail_caps = true
 terrain_type = "road"
 downhill_pull = 120.0
 
@@ -908,6 +911,62 @@ position = Vector2(464, -1728)
 size = Vector2(32, 128)
 max_hp = 20.0
 deco = &"rail"
+floor_index = 2
+
+[node name="BarrierNW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-704, -2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierNW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-576, -2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierNE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(576, -2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierNE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(704, -2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierSW1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-704, 2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierSW2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(-576, 2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierSE1" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(576, 2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
+floor_index = 2
+
+[node name="BarrierSE2" parent="." instance=ExtResource("9_dblock")]
+position = Vector2(704, 2672)
+size = Vector2(128, 32)
+max_hp = 80.0
+deco = &"barrier"
 floor_index = 2
 
 [node name="Debris1" parent="." instance=ExtResource("9_dblock")]
@@ -1640,6 +1699,7 @@ z_index = 1
 script = ExtResource("29_fdeco")
 kind = &"overpass_deck"
 size = Vector2(2176, 320)
+south_gaps = Array[Vector2]([Vector2(-1088, -832)])
 
 [node name="RailDeckN01" parent="." instance=ExtResource("9_dblock")]
 position = Vector2(-960, -920)
@@ -1802,7 +1862,7 @@ text = "HATE'S"
 sub_text = "DIESEL 4.99"
 
 [node name="Billboard" type="Node2D" parent="."]
-position = Vector2(1650, -1700)
+position = Vector2(1600, 1900)
 z_index = 1
 script = ExtResource("30_sign")
 kind = &"billboard"

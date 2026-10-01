@@ -55,6 +55,28 @@ const BANKS := {
 	},
 }
 
+static var MERGES := {
+	&"MergeN": PackedVector2Array([
+		Vector2(1088, -2304), Vector2(1088, -1942),
+		Vector2(768, -2262), Vector2(768, -2624),
+	]),
+	&"MergeS": PackedVector2Array([
+		Vector2(768, 726), Vector2(768, 1088),
+		Vector2(1088, 768), Vector2(1088, 406),
+	]),
+}
+
+const LANE_END_BARRIERS := {
+	&"BarrierNW1": Vector2(-704, -2672),
+	&"BarrierNW2": Vector2(-576, -2672),
+	&"BarrierNE1": Vector2(576, -2672),
+	&"BarrierNE2": Vector2(704, -2672),
+	&"BarrierSW1": Vector2(-704, 2672),
+	&"BarrierSW2": Vector2(-576, 2672),
+	&"BarrierSE1": Vector2(576, 2672),
+	&"BarrierSE2": Vector2(704, 2672),
+}
+
 const WALLS := {
 	&"ShelfN_E": {"layer": 12, "rect": Rect2(1344, -2304, 24, 512)},
 	&"ShelfN_N": {"layer": 12, "rect": Rect2(1088, -2328, 280, 24)},
@@ -69,14 +91,14 @@ const WALLS := {
 	&"DeckEastStop": {"layer": 20, "rect": Rect2(1064, -928, 24, 320)},
 }
 
-const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
+const COUNTRY_ROAD := Rect2(2112, -928, 896, 320)
 const PASTURE := Rect2(1400, -2688, 1608, 1688)
 const FARM_FIELD := Rect2(2176, -1920, 768, 640)
 const JUMP_LOWLAND := Vector2(1536, 2400)
 
 const TRUCK_STOP := {
 	&"TruckStopLot": Rect2(1664, 320, 1344, 1856),
-	&"FrontageRoad": Rect2(2560, -640, 256, 960),
+	&"FrontageRoad": Rect2(2560, -608, 256, 928),
 }
 
 const TRUCK_STOP_IDS := {
@@ -114,7 +136,7 @@ static func rect_of(table: Dictionary, name: StringName) -> Rect2:
 static func floor_at(point: Vector2) -> int:
 	var best := -1
 	for zone: Dictionary in FLOOR_ZONES.values():
-		if (zone["rect"] as Rect2).has_point(point):
+		if _has_point_inclusive(zone["rect"] as Rect2, point):
 			best = maxi(best, int(zone["floor"]))
 	return best
 

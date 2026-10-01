@@ -4,13 +4,16 @@ extends RefCounted
 ## driveable embankment, and live floor-masked traffic agree.
 
 const FreewayScene := preload("res://levels/freeway/freeway.tscn")
+const VehicleScene := preload("res://vehicles/vehicle.tscn")
 const Plan := preload("res://levels/freeway/freeway_plan.gd")
+const FreewayDeco := preload("res://levels/freeway/freeway_deco.gd")
 const Floors := preload("res://game/floors.gd")
 const FLOOR_BITS := 8 | 16 | 32
 const SAMPLE_STEP := 8
 const CONNECTOR_RUNUP := 220.0
 const LIVE_ENTRY_SPEED := 600.0
 const LIVE_SIM_FRAMES := 90
+const MERGE_SIM_FRAMES := 150
 const JUMP_RUNUP := 150.0
 const JUMP_ENTRY_SPEED := 450.0
 const JUMP_SIM_FRAMES := 120
@@ -174,6 +177,25 @@ class FullThrottleDriver:
 			"handbrake": false,
 		}
 
+class WaypointDriver:
+	extends Driver
+	var target: Vector2
+
+	func _init(p_target: Vector2) -> void:
+		target = p_target
+
+	func get_intent(vehicle, _delta: float) -> Dictionary:
+		var want: float = (target - vehicle.global_position).angle()
+		return {
+			"throttle": 1.0,
+			"steer": clampf(angle_difference(vehicle.heading, want) * 2.0, -1.0, 1.0),
+			"fire_mg": false,
+			"fire_selected": false,
+			"weapon_prev": false,
+			"weapon_next": false,
+			"handbrake": false,
+		}
+
 class BlastProbe:
 	extends StaticBody2D
 	var floor_index := 1
@@ -267,6 +289,15 @@ func _point_rect_distance(point: Vector2, rect: Rect2) -> float:
 func _block_rect(block: Node2D) -> Rect2:
 	var block_size: Vector2 = block.get("size")
 	return Rect2(block.position - block_size * 0.5, block_size)
+
+func _polygon_overlaps_rect(polygon: PackedVector2Array, rect: Rect2) -> bool:
+	var rect_polygon := PackedVector2Array([
+		rect.position,
+		Vector2(rect.end.x, rect.position.y),
+		rect.end,
+		Vector2(rect.position.x, rect.end.y),
+	])
+	return not Geometry2D.intersect_polygons(polygon, rect_polygon).is_empty()
 
 func _rect_distance(a: Rect2, b: Rect2) -> float:
 	var dx := maxf(maxf(a.position.x - b.end.x, b.position.x - a.end.x), 0.0)
@@ -504,6 +535,118 @@ func test_freeway_plan_plate_east_edge_is_closed() -> void:
 		t.check(Plan.plate_east_edge_covered(y),
 			"freeway plan: plate east edge is covered at y=%d" % y)
 
+func test_freeway_f12_highway_runs_to_both_walls() -> void:
+	var freeway := _freeway_structure()
+	t.check(freeway.get_node_or_null(^"ShoulderN") == null
+			and freeway.get_node_or_null(^"ShoulderS") == null,
+		"freeway F12: the north and south dirt caps are gone")
+	var expected_infields := {
+		&"InfieldN": Rect2(-448, -2688, 896, 2560),
+		&"InfieldS": Rect2(-448, 128, 896, 2560),
+	}
+	for infield_name: StringName in expected_infields:
+		var infield := freeway.get_node_or_null(NodePath(infield_name)) as Area2D
+		var collision := infield.get_node_or_null(^"Col") as CollisionShape2D \
+			if infield else null
+		t.check(infield != null and collision != null
+				and _collision_rect(infield, collision) == expected_infields[infield_name],
+			"freeway F12: %s carries the median grass to the wall" % infield_name)
+	for lane_name: StringName in [&"LaneW", &"LaneE"]:
+		var lane := freeway.get_node(NodePath("RoadMarks/%s" % lane_name))
+		var points: PackedVector2Array = lane.get("points")
+		t.check(points.size() == 2 and points[0].y == -2688.0
+				and points[1].y == 2688.0,
+			"freeway F12: %s markings reach both boundary faces" % lane_name)
+
+func test_freeway_f12_lane_end_barriers_match_plan() -> void:
+	var freeway := _freeway_structure()
+	var barrier_count := 0
+	for child in freeway.get_children():
+		if child.get("deco") == &"barrier":
+			barrier_count += 1
+	t.check(barrier_count == Plan.LANE_END_BARRIERS.size(),
+		"freeway F12: exactly eight lane-end barriers exist")
+	for barrier_name: StringName in Plan.LANE_END_BARRIERS:
+		var barrier := freeway.get_node_or_null(NodePath(barrier_name)) as StaticBody2D
+		var expected: Vector2 = Plan.LANE_END_BARRIERS[barrier_name]
+		t.check(barrier != null, "freeway F12: %s exists" % barrier_name)
+		if barrier == null:
+			continue
+		var rect := _block_rect(barrier)
+		var lane := Rect2(-768, -2688, 256, 5376) if expected.x < 0.0 \
+			else Rect2(512, -2688, 256, 5376)
+		var boundary_distance := absf(rect.position.y - Plan.ARENA_RECT.position.y) \
+			if expected.y < 0.0 else absf(Plan.ARENA_RECT.end.y - rect.end.y)
+		t.check(barrier.position == expected and barrier.get("size") == Vector2(128, 32)
+				and is_equal_approx(float(barrier.get("max_hp")), 80.0)
+				and barrier.get("deco") == &"barrier"
+				and int(barrier.get("floor_index")) == 2,
+			"freeway F12: %s has the signed-off barrier recipe" % barrier_name)
+		t.check(lane.encloses(rect) and boundary_distance <= 32.0,
+			"freeway F12: %s stays in its carriageway and flush to the wall" % barrier_name)
+
+func test_freeway_f12_merge_zones_match_plan_and_are_clear() -> void:
+	var freeway := _freeway_structure()
+	var asphalt := freeway.get_node(^"Asphalt") as Polygon2D
+	var shelf_names := {&"MergeN": &"FZShelfN", &"MergeS": &"FZShelfS"}
+	var blockers := _solid_prop_rects(freeway)
+	for merge_name: StringName in Plan.MERGES:
+		var merge := freeway.get_node_or_null(NodePath(merge_name)) as Area2D
+		var expected: PackedVector2Array = Plan.MERGES[merge_name]
+		t.check(merge != null, "freeway F12: %s exists" % merge_name)
+		if merge == null:
+			continue
+		var collision := merge.get_node_or_null(^"Col") as CollisionPolygon2D
+		var vis := merge.get_node_or_null(^"Vis") as Polygon2D
+		t.check(merge.get("terrain_type") == &"road"
+				and int(merge.get("terrain_priority")) == 10
+				and not bool(merge.get("soften_visual")),
+			"freeway F12: %s is crisp priority-10 road terrain" % merge_name)
+		t.check(collision != null and collision.polygon == expected,
+			"freeway F12: %s collision polygon matches the plan" % merge_name)
+		t.check(vis != null and vis.polygon == expected and vis.material == asphalt.material,
+			"freeway F12: %s paints the same polygon with SM_asphalt" % merge_name)
+		var shelf := Plan.rect_of(Plan.FLOOR_ZONES, shelf_names[merge_name])
+		var shelf_vertices := 0
+		var lane_vertices := 0
+		for vertex in expected:
+			t.check(Plan.floor_at(vertex) == 2,
+				"freeway F12: %s vertex %s lies on floor 2" % [merge_name, vertex])
+			if vertex.x == shelf.position.x and _has_point_inclusive(shelf, vertex):
+				shelf_vertices += 1
+			if vertex.x == 768.0:
+				lane_vertices += 1
+		t.check(shelf_vertices == 2 and lane_vertices == 2,
+			"freeway F12: %s joins the shelf west edge to x=768" % merge_name)
+		for blocker: Dictionary in blockers:
+			t.check(not _polygon_overlaps_rect(expected, blocker["rect"]),
+				"freeway F12: %s contains no solid prop %s" %
+					[merge_name, blocker["name"]])
+		for child in freeway.get_children():
+			var source := String(child.scene_file_path).get_file()
+			if source in ["health_station.tscn", "ammo_pickup.tscn"]:
+				t.check(not Geometry2D.is_point_in_polygon(child.position, expected),
+					"freeway F12: %s contains no station or pickup %s" %
+						[merge_name, child.name])
+
+func test_freeway_f12_embankment_and_deck_opening_match_height_cues() -> void:
+	var crest := FreewayDeco.embankment_band_color(0)
+	var foot := FreewayDeco.embankment_band_color(3)
+	var crest_brightness := crest.r + crest.g + crest.b
+	var foot_brightness := foot.r + foot.g + foot.b
+	t.check(crest_brightness > foot_brightness,
+		"freeway F12: the embankment crest band is lighter than its foot")
+	var freeway := _freeway_structure()
+	var deck := freeway.get_node_or_null(^"OverpassDeck") as Node2D
+	var deck_rect := Plan.rect_of(Plan.FLOOR_ZONES, &"FZDeck")
+	var west_opening := Plan.rect_of(Plan.RAMPS, &"RampW")
+	var expected_gap := Vector2(west_opening.position.x - deck_rect.get_center().x,
+		west_opening.end.x - deck_rect.get_center().x)
+	var south_gaps: Array[Vector2] = deck.get("south_gaps") if deck else []
+	var north_gaps: Array[Vector2] = deck.get("north_gaps") if deck else []
+	t.check(deck != null and south_gaps == [expected_gap] and north_gaps.is_empty(),
+		"freeway F12: deck kerb gap is derived from RampW's planned opening")
+
 func test_freeway_f11_banks_match_plan_and_skin_order() -> void:
 	var freeway := _freeway_structure()
 	for bank_name: StringName in Plan.BANKS:
@@ -626,7 +769,7 @@ func test_freeway_floor_stamps_and_counts() -> void:
 	var pad_floors := {&"JumpW": 2, &"JumpE": 2, &"JumpLowland": 1}
 	var counts := {
 		"deck_rails": 0, "highway_rails": 0, "debris": 0, "clutter": 0, "wrecks": 0,
-		"pillars": 0, "stations": 0, "pickups": 0, "pads": 0,
+		"pillars": 0, "barriers": 0, "stations": 0, "pickups": 0, "pads": 0,
 		"cars": 0, "rivals": 0,
 	}
 	var floor_zones := 0
@@ -670,6 +813,8 @@ func test_freeway_floor_stamps_and_counts() -> void:
 					counts.debris += 1
 				elif node.get("deco") == &"pillar":
 					counts.pillars += 1
+				elif node.get("deco") == &"barrier":
+					counts.barriers += 1
 			"clutter.tscn":
 				counts.clutter += 1
 			"derelict_car.tscn":
@@ -691,6 +836,7 @@ func test_freeway_floor_stamps_and_counts() -> void:
 		"freeway: 12 original highway rails (got %d)" % counts.highway_rails)
 	t.check(counts.debris == 4, "freeway: 4 debris blocks (got %d)" % counts.debris)
 	t.check(counts.pillars == 4, "freeway: 4 overpass pillars (got %d)" % counts.pillars)
+	t.check(counts.barriers == 8, "freeway: 8 lane-end barriers (got %d)" % counts.barriers)
 	t.check(counts.clutter == 22, "freeway: 22 clutter props (got %d)" % counts.clutter)
 	t.check(counts.wrecks == 2, "freeway: 2 wrecks (got %d)" % counts.wrecks)
 	t.check(counts.stations == 3, "freeway: 3 stations (got %d)" % counts.stations)
@@ -822,8 +968,8 @@ func test_freeway_lowland_matches_plan() -> void:
 				"freeway: LowlandDirt collision covers the lowland")
 		t.check(vis != null, "freeway: LowlandDirt has visible paint")
 		if vis:
-			var shoulder_vis := freeway.get_node(^"ShoulderN/Vis") as Polygon2D
-			t.check(vis.material == shoulder_vis.material,
+			var dirt_vis := freeway.get_node(^"DirtN/Vis") as Polygon2D
+			t.check(vis.material == dirt_vis.material,
 				"freeway: LowlandDirt uses the shared dirt paint")
 
 func test_freeway_truck_stop_surfaces_match_plan() -> void:
@@ -1229,7 +1375,7 @@ func test_freeway_f9_billboard_shadow_clutter_and_draw_order() -> void:
 	var billboard := freeway.get_node_or_null(^"Billboard") as Signage
 	t.check(billboard != null, "freeway farm: Billboard exists as Signage")
 	if billboard:
-		t.check(billboard.position == Vector2(1650, -1700) and billboard.z_index == 1
+		t.check(billboard.position == Vector2(1600, 1900) and billboard.z_index == 1
 				and billboard.kind == &"billboard" and billboard.size == Vector2(448, 160),
 			"freeway farm: Billboard placement, size, kind, and depth match")
 		t.check(billboard.text == "HATE'S TRAVEL STOP" and billboard.sub_text == "NEXT EXIT"
@@ -1422,8 +1568,8 @@ func test_freeway_f4_floor_zones_and_ramps_match_plan() -> void:
 				and ramp.high_floor == int(expected["high"]),
 			"freeway: %s floors match the plan" % ramp_name)
 		t.check(ramp.terrain_type == "road" and is_equal_approx(ramp.downhill_pull, 120.0)
-				and ramp.rails,
-			"freeway: %s is a railed road grade with the standard pull" % ramp_name)
+				and ramp.rails and ramp.rail_caps,
+			"freeway: %s is a capped, railed road grade with the standard pull" % ramp_name)
 		var toward := _toward_vector(expected["toward"])
 		var expected_rotation := toward.angle() + PI * 0.5
 		t.check(absf(angle_difference(ramp.rotation, expected_rotation)) < 0.001,
@@ -1584,6 +1730,11 @@ func test_freeway_f5_ramp_retrofit_structure() -> void:
 			"freeway retrofit: RampB high end reaches floor 2")
 		t.check(_floor_at_structure(freeway, low_end) == ramp.low_floor,
 			"freeway retrofit: RampB low end rests on floor 1")
+		var ramp_rect := Plan.rect_of(Plan.RAMPS, &"RampB")
+		t.check(Plan.COUNTRY_ROAD.position.x == ramp_rect.end.x
+				and Plan.COUNTRY_ROAD.position.y == ramp_rect.position.y
+				and Plan.COUNTRY_ROAD.size.y == ramp_rect.size.y,
+			"freeway retrofit: RampB and CountryRoad share the same 320px span")
 
 	var connectors := {
 		&"ConRampBUp": {"from": 1, "to": 2, "approach": Vector2.LEFT},
@@ -1699,8 +1850,9 @@ func test_freeway_f6_deck_grades_and_walls_match_plan() -> void:
 		t.check(ramp.terrain_type == "road"
 				and is_equal_approx(ramp.downhill_pull, 120.0),
 			"freeway: %s is a road grade with the standard pull" % ramp_name)
-		t.check(ramp.rails == (ramp_name == &"RampW"),
-			"freeway: only shoulder chokepoint RampW builds rails")
+		t.check(ramp.rails == (ramp_name == &"RampW")
+				and ramp.rail_caps == (ramp_name == &"RampW"),
+			"freeway: only shoulder chokepoint RampW builds capped rails")
 		var expected_rotation := toward.angle() + PI * 0.5
 		t.check(absf(angle_difference(ramp.rotation, expected_rotation)) < 0.001,
 			"freeway: %s high end faces %s" % [ramp_name, cfg["toward"]])
@@ -1928,6 +2080,82 @@ func test_freeway_f6_pillars_paint_reward_and_draw_order() -> void:
 			and jump.floor_index == 2,
 		"freeway: JumpW launches south from its floor-2 run-up")
 
+func test_freeway_f12_ramp_rail_caps_are_opt_in_and_pointed() -> void:
+	for enabled in [false, true]:
+		var ramp := Ramp.new()
+		ramp.size = Vector2(256, 512)
+		ramp.low_floor = 2
+		ramp.high_floor = 2
+		ramp.surface_paint = false
+		ramp.downhill_pull = 0.0
+		ramp.rail_caps = enabled
+		t.root.add_child(ramp)
+		await t.process_frame
+		var rails: Array[StaticBody2D] = []
+		for child in ramp.get_children():
+			if child is StaticBody2D:
+				rails.append(child)
+		t.check(rails.size() == 2, "ramp rail caps: both side rails are built")
+		for rail in rails:
+			var caps: Array[CollisionPolygon2D] = []
+			for child in rail.get_children():
+				if child is CollisionPolygon2D:
+					caps.append(child)
+			t.check(caps.size() == (2 if enabled else 0),
+				"ramp rail caps: %s has %s pointed ends" %
+					[rail.name, "two" if enabled else "no"])
+			if enabled:
+				var apex_ys: Array[float] = []
+				for cap in caps:
+					var apex := cap.polygon[0]
+					for point in cap.polygon:
+						if absf(point.y) > absf(apex.y):
+							apex = point
+					apex_ys.append(apex.y)
+				apex_ys.sort()
+				t.check(apex_ys == [-ramp.size.y * 0.5 - 24.0,
+						ramp.size.y * 0.5 + 24.0],
+					"ramp rail caps: each rail apex extends 24px beyond both ends")
+		t.root.remove_child(ramp)
+		ramp.free()
+
+func test_freeway_f12_live_car_slides_past_a_capped_rail_end() -> void:
+	var container := Node2D.new()
+	var ramp := Ramp.new()
+	ramp.size = Vector2(256, 512)
+	ramp.low_floor = 2
+	ramp.high_floor = 2
+	ramp.surface_paint = false
+	ramp.downhill_pull = 0.0
+	ramp.rail_caps = true
+	container.add_child(ramp)
+	var player := VehicleScene.instantiate() as Vehicle
+	var direction := Vector2(1, -1).normalized()
+	player.position = Vector2(-230, -198)
+	player.start_floor = 2
+	container.add_child(player)
+	t.root.add_child(container)
+	t.current_scene = container
+	player.heading = direction.angle()
+	player.velocity = direction * 420.0
+	player.set_driver(FullThrottleDriver.new())
+	var entry_speed := player.velocity.length()
+	var exit_speed := 0.0
+	var crossed_end := false
+	for i in 75:
+		await t.physics_frame
+		if not crossed_end and player.position.y < -300.0:
+			crossed_end = true
+			exit_speed = player.velocity.length()
+		if crossed_end:
+			break
+	t.check(crossed_end and exit_speed >= entry_speed * 0.6,
+		"ramp rail caps: a 45-degree live hit slides through above 60%% speed "
+			+ "(entry %.1f, exit %.1f at %s)" % [entry_speed, exit_speed, player.position])
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func test_freeway_campaign_size_matches_plan() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var found := false
@@ -1948,6 +2176,60 @@ func test_freeway_campaign_size_matches_plan() -> void:
 		mp_found = true
 		t.check(profile.cars == 8, "freeway: multiplayer harvests all 8 cars")
 	t.check(mp_found, "freeway: multiplayer profile exists")
+
+func test_freeway_f12_live_cars_drive_both_merges_on_floor_two() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	var shelf_s := Plan.rect_of(Plan.FLOOR_ZONES, &"FZShelfS")
+	player.position = Vector2(640, 1250)
+	player.start_floor = 2
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	player.heading = Vector2.UP.angle()
+	player.velocity = Vector2.UP * 420.0
+	player.set_driver(WaypointDriver.new(Vector2(1216, 600)))
+	var stayed_floor_two := true
+	for i in MERGE_SIM_FRAMES:
+		await t.physics_frame
+		var floor := Floors.floor_of(player)
+		stayed_floor_two = stayed_floor_two and (floor < 1 or floor == 2)
+		if _has_point_inclusive(shelf_s, player.position):
+			break
+	t.check(stayed_floor_two and _has_point_inclusive(shelf_s, player.position),
+		"freeway F12: northbound car steers through MergeS onto FZShelfS "
+			+ "on floor 2 (floor %d at %s)" % [Floors.floor_of(player), player.position])
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
+
+	freeway = FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	player = freeway.get_node(^"Vehicle") as Vehicle
+	player.position = Vector2(1216, -2100)
+	player.start_floor = 2
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	var target := Vector2(640, -2500)
+	player.heading = player.position.direction_to(target).angle()
+	player.velocity = Vector2.RIGHT.rotated(player.heading) * 420.0
+	player.set_driver(WaypointDriver.new(target))
+	var minimum_speed := player.velocity.length()
+	var stayed_on_plate := true
+	for i in MERGE_SIM_FRAMES:
+		await t.physics_frame
+		minimum_speed = minf(minimum_speed, player.velocity.length())
+		var floor := Floors.floor_of(player)
+		stayed_on_plate = stayed_on_plate and (floor < 1 or floor == 2)
+		if player.position.x < 768.0:
+			break
+	t.check(stayed_on_plate and player.position.x < 768.0 and minimum_speed >= 200.0,
+		"freeway F12: ShelfN car reaches the northbound lane without wall contact "
+			+ "(minimum %.1f, floor %d at %s)" %
+				[minimum_speed, Floors.floor_of(player), player.position])
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
 
 func test_freeway_frontage_road_reaches_the_lot_live() -> void:
 	var freeway := FreewayScene.instantiate()

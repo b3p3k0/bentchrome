@@ -44,6 +44,7 @@ static var STAIR_SPEED_NICK := 0.9  # climbing: each tier eats a bite of speed;
 @export var rails := true  # false = no built side rails; the level authors its
 	# own guards (stadium slope ends wear light DESTRUCTIBLE guardrails so a
 	# beached rig can smash out instead of pinning on indestructible geometry)
+@export var rail_caps := false  # pointed ends turn a diagonal hit into a slide
 @export_enum("road", "grass", "snow", "dirt", "mud", "ice", "water") \
 	var terrain_type := "road"
 @export_range(1.0, 600.0, 1.0) var downhill_pull := DEFAULT_DOWNHILL_PULL
@@ -70,6 +71,7 @@ func _ready() -> void:
 		var rail_bits: int = 4 | Floors.floor_bit(low_floor) | Floors.floor_bit(high_floor)
 		for s in [-1.0, 1.0]:
 			var rail := StaticBody2D.new()
+			rail.name = "RailLeft" if s < 0.0 else "RailRight"
 			rail.collision_layer = rail_bits
 			rail.collision_mask = 0
 			rail.position = Vector2(s * (size.x * 0.5 + RAIL_W * 0.5 + 2.0), 0.0)
@@ -78,6 +80,9 @@ func _ready() -> void:
 			shape.size = Vector2(RAIL_W, size.y)
 			col.shape = shape
 			rail.add_child(col)
+			if rail_caps:
+				_add_rail_cap(rail, -size.y * 0.5)
+				_add_rail_cap(rail, size.y * 0.5)
 			add_child(rail)
 	if downhill_pull > 0.0 or stairs:
 		var mechanics := Node2D.new()
@@ -96,6 +101,17 @@ func _ready() -> void:
 		_grade_area.body_exited.connect(_on_grade_exit)
 	set_physics_process(_grade_area != null)
 	queue_redraw()
+
+func _add_rail_cap(rail: StaticBody2D, end_y: float) -> void:
+	var outward := signf(end_y)
+	var cap := CollisionPolygon2D.new()
+	cap.name = "CapHigh" if outward < 0.0 else "CapLow"
+	cap.polygon = PackedVector2Array([
+		Vector2(-RAIL_W * 0.5, end_y),
+		Vector2(RAIL_W * 0.5, end_y),
+		Vector2(0.0, end_y + outward * 24.0),
+	])
+	rail.add_child(cap)
 
 func _physics_process(delta: float) -> void:
 	if _grade_area == null:
@@ -174,6 +190,18 @@ func _draw() -> void:
 		var rail_x := half.x + 2.0
 		draw_rect(Rect2(Vector2(-rail_x - RAIL_W, -half.y), Vector2(RAIL_W, size.y)), EDGE)
 		draw_rect(Rect2(Vector2(rail_x, -half.y), Vector2(RAIL_W, size.y)), EDGE)
+		if rail_caps:
+			for rail_center_x in [-rail_x - RAIL_W * 0.5, rail_x + RAIL_W * 0.5]:
+				draw_colored_polygon(PackedVector2Array([
+					Vector2(rail_center_x - RAIL_W * 0.5, -half.y),
+					Vector2(rail_center_x + RAIL_W * 0.5, -half.y),
+					Vector2(rail_center_x, -half.y - 24.0),
+				]), EDGE)
+				draw_colored_polygon(PackedVector2Array([
+					Vector2(rail_center_x - RAIL_W * 0.5, half.y),
+					Vector2(rail_center_x + RAIL_W * 0.5, half.y),
+					Vector2(rail_center_x, half.y + 24.0),
+				]), EDGE)
 	if not surface_paint:
 		return
 	# The slope is a built structure — fully opaque, never tinted street.
@@ -184,7 +212,8 @@ func _draw() -> void:
 		var band := Rect2(Vector2(-half.x, -half.y + i * step_h), Vector2(size.x, step_h + 1.0))
 		draw_rect(band, Color(1.0, 1.0, 1.0, HILITE_A * (1.0 - t)))
 		draw_rect(band, Color(0.0, 0.0, 0.0, SHADOW_A * t))
-	draw_rect(Rect2(-half, size), EDGE, false, 2.0)
+	draw_line(Vector2(-half.x, -half.y), Vector2(-half.x, half.y), EDGE, 2.0)
+	draw_line(Vector2(half.x, -half.y), Vector2(half.x, half.y), EDGE, 2.0)
 	# Up-slope chevrons along the centerline.
 	var chevrons := maxi(int(size.y / 112.0), 2)
 	for i in chevrons:
