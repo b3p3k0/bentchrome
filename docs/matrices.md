@@ -726,6 +726,16 @@ Source: `buzzard_run.gd` (`ACTS`, `act_at`, `sky_at`, `shadows_at`, `headlights_
 | Toll plaza | 4 `booth` blocks 44×90 / 60 HP · 3 `barrier` arms / 25 HP · weight 0.7 · `NO_REPEAT` | `tollbooth` def, `_tollbooth` | pick a gate |
 | Jackknife | `trailer` block 230×72 / 90 HP angled 0.5-0.75 rad across two lanes · cab derelict · weight 0.7 · `NO_REPEAT` | `jackknife` def, `_jackknife` | the open lane is the line; a nitro bottle past it |
 
+### The traps (what the Buzzardz left on the road)
+
+Source: `levels/chase/road_traps.gd` (the set pieces; `chunk_builder._tire_wall` / `_spike_strip` / `_tanker` are thin arms), `spike_strip.gd` + `spike_thrower.gd`, `destructible_block.touch_effect` → `Vehicle._smash_through` → `on_smashed` (a prop's touch applies a status as it dies). Rule: nothing stops the car, and every trap has one clean line through for a driver who reads the tell. All three defs weight 0.6, `NO_REPEAT`.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| Tire wall | row at `TIRE_WALL_D` 760 · `tires` stacks 56px / 22 HP every `TIRE_PITCH` 60 · `GAP_STACKS` 4 (~244px, a lane) · touch = burn `TIRE_BURN_DPS` 3 × `TIRE_BURN_T` 3s | `tire_wall` def (1200 long, dirt verge), road_traps | a burning stacked-tire wall edge to edge with ONE gap, seeded lane, a stack always left on each flank; skids lead through the gap (somebody found the line); smashing a stack costs ~2.6 hull + a mild burn nitro blows out; three cones telegraph it |
+| Spike strip | rider at `SPIKE_D` 820 on the right verge (`SPIKE_SIDE`), bike 20 HP · throw trips at `REACH` 700 south, `SWING_T` 0.45 / release `RELEASE_T` 0.14, flat in `THROW_T` 0.5 · strip `LENGTH` 200 across the near lane (`SPIKE_LANE_IN` 130) · crossing grounded = `SLOW` 0.55 × `SLOW_T` 1.8s + `WOBBLE` 0.22 rad kick + sparks | `spike_strip` def (1300, grass verge), spike_strip / spike_thrower | the tell is the parked Buzzard and the arm swing; the other lanes are open; airborne clears it; the pack's birds pay the same; no HP |
+| Tanker | rig at `TANKER_D` 700 (`trailer` deco, 90 HP, burning, vultures) · `SPILL_SLICKS` 5 oil slicks at `SPILL_PITCH` 95 across two lanes | `tanker` def (1400, dirt verge), road_traps | the dry lane is the line; each slick is a real `oil_slick.gd` (the nose kick + ice second); a barrel on the verge past it |
+
 ### They flinch (ordnance in the dust)
 
 Source: `horde_wall.flinch` / `pace_mult`, `horde_deco.flinch`, `buzzard_run._physics_process` (the fuse), `mine.blow()`.
