@@ -88,6 +88,8 @@ static func build(entry: Dictionary) -> Node2D:
 			_jackknife(root, entry)
 		&"tire_wall":
 			_tire_wall(root, entry)
+		&"spike_strip":
+			_spike_strip(root, entry)
 	return root
 
 ## Centerline x at d — same stations math as chase_course.sample().
@@ -1411,3 +1413,10 @@ static func _tire_wall(root: Node2D, entry: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(entry["start_d"]) + 666
 	RoadTraps.tire_wall(root, _center_x(entry, RoadTraps.TIRE_WALL_D), float(entry["def"]["half_w"]), rng)
+
+## Spike strip: a Buzzard parked on the verge whose rider tosses the strip
+## across the near lane when a human car comes within reach.
+static func _spike_strip(root: Node2D, entry: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(entry["start_d"]) + 667
+	RoadTraps.spike_strip(root, _center_x(entry, RoadTraps.SPIKE_D), float(entry["def"]["half_w"]), rng)

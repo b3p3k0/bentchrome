@@ -183,6 +183,74 @@ func test_burning_tires_set_the_car_on_fire() -> void:
 	t.check(not player.is_burning(), "tires: a squirt of nitro blows the fire out")
 	_close(scene)
 
+## The spike strip's flat tire: a rider's throw lands the strip across the
+## car's lane, and crossing it grounded is a beat on the `slow` status and a
+## wobble — never HP, never a stop.
+func test_spike_strip_flat_tire() -> void:
+	const Thrower := preload("res://levels/chase/spike_thrower.gd")
+	const Strip := preload("res://levels/chase/spike_strip.gd")
+	var scene = await _boot()
+	scene.catch_enabled = false
+	scene.get_node(^"ChaseDirector").frozen = true
+	scene.get_node(^"HordeWall").set_physics_process(false)
+	var player = scene.get_node(^"Vehicle")
+	var status = player.get_node(^"Status")
+	var rider := Node2D.new()
+	rider.set_script(Thrower)
+	rider.side = 1.0
+	rider.road_x = player.global_position.x
+	rider.road_half = 360.0
+	rider.lane_x = player.global_position.x        # right into the car's own lane
+	rider.position = player.global_position + Vector2(404.0, -900.0)
+	scene.add_child(rider)
+	var strip = rider.get_node(^"Strip")
+	t.check(not strip.armed, "spikes: the coil waits at his feet")
+	# The car drives into his reach: the trigger throws (no hand-pulled throw).
+	var thrown_at := -1
+	for i in 120:
+		await t.physics_frame
+		if rider.thrown and thrown_at < 0:
+			thrown_at = i
+		if strip.armed:
+			break
+	t.check(thrown_at >= 0, "spikes: the car inside his reach got the throw")
+	t.check(strip.armed and absf(strip.global_position.x - rider.lane_x) < 2.0,
+		"spikes: the strip lies across the car's lane (x %d vs %d)" % [int(strip.global_position.x), int(rider.lane_x)])
+	var hp_before: float = player.get_hp()
+	var heading_before: float = player.heading
+	var slowed := false
+	var wobbled := false
+	for i in 120:
+		await t.physics_frame
+		if status.has_effect(&"slow"):
+			slowed = true
+		if absf(angle_difference(player.heading, heading_before)) > Strip.WOBBLE * 0.5:
+			wobbled = true
+		if player.global_position.y < strip.global_position.y - 200.0:
+			break
+	t.check(slowed, "spikes: crossing it grounded is a flat tire — the slow status")
+	t.check(wobbled, "spikes: ... and a wobble the lane wheel has to catch")
+	t.check(is_equal_approx(player.get_hp(), hp_before), "spikes: it never costs HP")
+	t.check(-player.velocity.y > 0.0, "spikes: and never stops the car")
+	# Airborne clears it: a popped car crossing a second strip takes nothing.
+	var second := Area2D.new()
+	second.set_script(Strip)
+	second.position = player.global_position + Vector2(0.0, -300.0)
+	scene.add_child(second)
+	second.deploy(second.position)
+	for i in 40:
+		await t.physics_frame
+		if second.armed:
+			break
+	status.clear_kind(&"slow")
+	player.pop_airborne(600.0)
+	for i in 60:
+		await t.physics_frame
+		if player.global_position.y < second.position.y - 120.0:
+			break
+	t.check(not status.has_effect(&"slow"), "spikes: airborne, the spikes never touch the tires")
+	_close(scene)
+
 ## The bumper is a weapon out here: the chase car rams at twice the arena
 ## rate from a far lower speed floor, the birds are glass, and a ram that
 ## wrecks one punches through the wreck — a bird that boxes you in can be

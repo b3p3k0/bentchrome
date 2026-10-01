@@ -94,3 +94,52 @@ static func tire_wall(root: Node2D, c: float, half: float, rng: RandomNumberGene
 		skid.color = Color(0.07, 0.07, 0.08, 0.6)
 		skid.z_index = -1
 		root.add_child(skid)
+
+# --- the spike strip --------------------------------------------------------
+const DerelictScene := preload("res://environment/derelict_car.tscn")
+const SpikeThrowerScript := preload("res://levels/chase/spike_thrower.gd")
+static var SPIKE_D := 820.0        # the rider's station into the chunk
+static var SPIKE_SIDE := 1.0       # the verge he stands on (right)
+static var SPIKE_LANE_IN := 130.0  # the strip's centre, in from the road edge: the near lane
+static var BIKE_HP := 20.0         # his parked bike: glass, like him
+
+## A Buzzard parked on the verge, rider standing by with a coil of spikes
+## (spike_thrower.gd + its spike_strip.gd child): a human car inside his
+## REACH gets the throw across the near lane. The bike is a derelict in the
+## bird's own silhouette — smashable, never an enemy, never a shooter.
+static func spike_strip(root: Node2D, c: float, half: float, rng: RandomNumberGenerator) -> void:
+	var d := SPIKE_D
+	var side := SPIKE_SIDE
+	var verge_x := c + side * (half + 44.0)
+	var bike = DerelictScene.instantiate()
+	bike.name = "ParkedBike"
+	bike.position = Vector2(verge_x + side * 26.0, -(d + 34.0))
+	bike.rotation = -PI / 2.0 + side * rng.randf_range(0.15, 0.4)   # nosed in off the road
+	bike.max_hp = BIKE_HP
+	var pool: Array[StringName] = [&"buzz_bike"]
+	bike.pool_override = pool
+	root.add_child(bike)
+	# He left the headlight on: a warm pool on the verge that marks the
+	# ambush once the sky goes (by day the figure and the bike are the tell).
+	var lamp := LightKit.make_light(120.0, 0.5, Color(1.0, 0.85, 0.6))
+	lamp.name = "BikeLamp"
+	lamp.position = bike.position + Vector2(-side * 10.0, -40.0)
+	root.add_child(lamp)
+	var rider := Node2D.new()
+	rider.set_script(SpikeThrowerScript)
+	rider.name = "SpikeThrower"
+	rider.side = side
+	rider.road_x = c
+	rider.road_half = half
+	rider.lane_x = c + side * (half - SPIKE_LANE_IN)
+	rider.position = Vector2(verge_x, -d)
+	root.add_child(rider)
+	# Where the bike pulled off: a scuff in the verge.
+	var scuff := Polygon2D.new()
+	scuff.polygon = PackedVector2Array([
+		Vector2(c + side * (half - 30.0), -(d - 120.0)), Vector2(c + side * (half + 10.0), -(d - 120.0)),
+		Vector2(c + side * (half + 70.0), -(d + 30.0)), Vector2(c + side * (half + 40.0), -(d + 40.0)),
+	])
+	scuff.color = Color(0.1, 0.09, 0.07, 0.35)
+	scuff.z_index = -1
+	root.add_child(scuff)

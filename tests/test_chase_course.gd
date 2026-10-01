@@ -637,6 +637,58 @@ func test_builder_tire_wall() -> void:
 	t.check(ChunkDefs.WEIGHTS.has(&"tire_wall") and &"tire_wall" in ChunkDefs.NO_REPEAT and not (&"tire_wall" in ChunkDefs.RARE),
 		"tires: rolls like a chunk, never twice running, never a landmark")
 
+## The spike strip: a parked Buzzard (a derelict, never an enemy) and a rider
+## on the verge whose coil starts OFF the road; the throw carries it across
+## the near lane in half a second and it lies there armed; the trigger
+## reaches REACH px of road south of him.
+func test_builder_spike_strip() -> void:
+	const Traps := preload("res://levels/chase/road_traps.gd")
+	const Thrower := preload("res://levels/chase/spike_thrower.gd")
+	const Strip := preload("res://levels/chase/spike_strip.gd")
+	var def: Dictionary = ChunkDefs.DEFS[&"spike_strip"]
+	var half: float = def["half_w"]
+	var chunk: Node2D = Builder.build(_entry_for(&"spike_strip"))
+	t.root.add_child(chunk)
+	var rider: Node = null
+	var bike: Node = null
+	for child in chunk.get_children():
+		var script = child.get_script()
+		if script and script.resource_path.ends_with("spike_thrower.gd"):
+			rider = child
+		elif script and script.resource_path.ends_with("derelict_car.gd") and child.name == "ParkedBike":
+			bike = child
+	t.check(rider != null and bike != null, "spikes: a rider and his parked bike on the verge")
+	if rider != null and bike != null:
+		t.check(not rider.is_in_group(&"enemies") and not bike.is_in_group(&"enemies") and not (rider is CollisionObject2D),
+			"spikes: neither the rider nor the bike is an enemy, and the rider is paint")
+		t.check(absf(bike.position.x) > half and absf(rider.position.x) > half, "spikes: both stand off the asphalt")
+		var strip: Area2D = rider.get_node_or_null(^"Strip")
+		var trigger: Area2D = rider.get_node_or_null(^"Trigger")
+		t.check(strip != null and strip.get_script() == Strip and strip.collision_layer == 0 and strip.collision_mask == 1,
+			"spikes: the strip is a layer-0 / mask-1 sensor")
+		t.check(trigger != null and trigger.collision_layer == 0 and trigger.collision_mask == 1, "spikes: the trigger is a sensor too")
+		if trigger != null:
+			var col := trigger.get_child(0) as CollisionShape2D
+			var rect := col.shape as RectangleShape2D
+			t.check(is_equal_approx(rect.size.y, Thrower.REACH) and col.position.y > 0.0 and rect.size.x >= half * 2.0,
+				"spikes: the trigger spans the road for REACH px south of the rider")
+		if strip != null:
+			var start_x: float = rider.position.x + strip.position.x
+			t.check(absf(start_x) > half and not strip.armed, "spikes: the coil starts off the road, not armed (%d)" % int(start_x))
+			rider.throw()
+			for i in int((Thrower.RELEASE_T + Strip.THROW_T) * 60.0) + 8:
+				await t.physics_frame
+			var end_x: float = rider.position.x + strip.position.x
+			t.check(strip.armed, "spikes: half a second later it lies flat and live")
+			t.check(absf(end_x) < half - 20.0 and absf(end_x - rider.lane_x) < 2.0 and is_zero_approx(strip.rotation),
+				"spikes: ... square across the near lane (%d)" % int(end_x))
+			t.check(absf(end_x) > half * 0.3, "spikes: the far lanes are open")
+			t.check(rider.thrown, "spikes: one throw per rider")
+	t.root.remove_child(chunk)
+	chunk.free()
+	t.check(ChunkDefs.WEIGHTS.has(&"spike_strip") and &"spike_strip" in ChunkDefs.NO_REPEAT and not (&"spike_strip" in ChunkDefs.RARE),
+		"spikes: rolls like a chunk, never twice running, never a landmark")
+
 ## The bridge is out: a real deep channel the finale's numbers are measured
 ## against, shallows either side, the deck drawn OVER the water, and a launch
 ## lip that launches the birds but never the player.

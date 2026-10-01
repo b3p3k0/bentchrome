@@ -204,6 +204,20 @@ const DEFS := {
 			{"kind": &"cone", "at": [450.0, 0.0]},
 		],
 	},
+	# Spike strip: a Buzzard parked on the right verge, its rider standing by
+	# with a coil of spikes — come within reach and it goes skidding across
+	# the near lane. Cross it grounded and you're on a flat tire for a beat
+	# (a slow, a wobble, sparks); the other lanes are open, the tell is the
+	# bike and the throw. Airborne clears it. The pack's birds pay the same.
+	&"spike_strip": {
+		"len": 1300.0, "exit_dx": 0.0, "half_w": 360.0,
+		"kind": &"spike_strip", "shoulder": &"grass",
+		"set_piece": &"spike_strip",
+		"props": [
+			{"kind": &"cone", "at": [300.0, 300.0]},
+			{"kind": &"junk", "at": [1080.0, -260.0]},
+		],
+	},
 	# --- the back roads --------------------------------------------------
 	# Cutoff: the highway swings wide in an S while a dirt-bike trail runs
 	# straight along the inside — through a GAP in the shoulder and the
@@ -323,6 +337,7 @@ const WEIGHTS := {
 	&"tollbooth": 0.7,
 	&"jackknife": 0.7,
 	&"tire_wall": 0.6,
+	&"spike_strip": 0.6,
 	&"launch": 1.0,
 	&"overpass": 0.8,
 	&"truckstop": 0.6,
@@ -332,7 +347,7 @@ const WEIGHTS := {
 ## No two of these back to back — breathers between technical sections.
 const NO_REPEAT := [&"narrow", &"chicane", &"slalom", &"bad_road", &"log_run", &"launch",
 	&"washout_l", &"washout_r", &"cutoff_l", &"cutoff_r", &"tollbooth", &"jackknife",
-	&"tire_wall"]
+	&"tire_wall", &"spike_strip"]
 
 ## A cutoff's trail: its centre at chunk-local d as an offset from the chunk
 ## ENTRY x (the trail runs straight while the road bends away from it).
