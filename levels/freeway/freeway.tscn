@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=51 format=3]
 
 [ext_resource type="Script" path="res://levels/combat_level.gd" id="1_lvl"]
 [ext_resource type="Script" path="res://levels/grid_floor.gd" id="1_grid"]
@@ -21,6 +21,7 @@
 [ext_resource type="Script" path="res://levels/dock_deco.gd" id="28_ddeco"]
 [ext_resource type="Script" path="res://levels/freeway/freeway_deco.gd" id="29_fdeco"]
 [ext_resource type="Script" path="res://environment/signage.gd" id="30_sign"]
+[ext_resource type="Script" path="res://environment/ambient_population.gd" id="31_ambient"]
 
 [sub_resource type="ShaderMaterial" id="SM_asphalt"]
 shader = ExtResource("11_speck")
@@ -102,6 +103,9 @@ size = Vector2(1344, 1856)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_frontage_road"]
 size = Vector2(256, 960)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pasture"]
+size = Vector2(1608, 1688)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_retain_short"]
 size = Vector2(24, 384)
@@ -362,6 +366,22 @@ polygon = PackedVector2Array(-128, -480, 128, -480, 128, 480, -128, 480)
 
 [node name="Col" type="CollisionShape2D" parent="FrontageRoad"]
 shape = SubResource("RectangleShape2D_frontage_road")
+
+[node name="Pasture" type="Area2D" parent="."]
+position = Vector2(2204, -1844)
+collision_layer = 128
+collision_mask = 0
+script = ExtResource("3_zone")
+terrain_type = &"grass"
+terrain_priority = 5
+
+[node name="Vis" type="Polygon2D" parent="Pasture"]
+material = SubResource("SM_grass")
+color = Color(0.25, 0.5, 0.22, 0.5)
+polygon = PackedVector2Array(-804, -844, 804, -844, 804, 844, -804, 844)
+
+[node name="Col" type="CollisionShape2D" parent="Pasture"]
+shape = SubResource("RectangleShape2D_pasture")
 
 [node name="Field" type="Node2D" parent="."]
 position = Vector2(2560, -1600)
@@ -1751,6 +1771,59 @@ text = "HATE'S TRAVEL STOP"
 sub_text = "NEXT EXIT"
 weathering = 0.6
 dead_letters = 1
+
+[node name="AmbientLife" type="Node2D" parent="."]
+
+[node name="Truckers" type="Node2D" parent="AmbientLife"]
+position = Vector2(2375, 1325)
+script = ExtResource("31_ambient")
+kinds = Array[StringName]([&"dock_worker"])
+count = 5
+movement = 0
+bounds = Vector2(1050, 550)
+floor_index = 1
+seed_offset = 71
+
+[node name="Clerks" type="Node2D" parent="AmbientLife"]
+position = Vector2(2400, 630)
+script = ExtResource("31_ambient")
+kinds = Array[StringName]([&"vendor"])
+count = 2
+movement = 2
+bounds = Vector2(200, 0)
+floor_index = 1
+seed_offset = 72
+
+[node name="LotDog" type="Node2D" parent="AmbientLife"]
+position = Vector2(2400, 1250)
+script = ExtResource("31_ambient")
+kinds = Array[StringName]([&"dog"])
+count = 1
+movement = 0
+bounds = Vector2(1100, 1700)
+floor_index = 1
+seed_offset = 73
+
+[node name="Hitchhiker" type="Node2D" parent="AmbientLife"]
+position = Vector2(1400, -1470)
+rotation = 3.14159265358979
+script = ExtResource("31_ambient")
+kinds = Array[StringName]([&"vagrant"])
+count = 1
+movement = 2
+bounds = Vector2(0, 0)
+floor_index = 1
+seed_offset = 74
+
+[node name="FarmHands" type="Node2D" parent="AmbientLife"]
+position = Vector2(2560, -1600)
+script = ExtResource("31_ambient")
+kinds = Array[StringName]([&"construction_worker"])
+count = 2
+movement = 0
+bounds = Vector2(768, 640)
+floor_index = 1
+seed_offset = 75
 
 [node name="Vehicle" parent="." instance=ExtResource("2_veh")]
 position = Vector2(0, 2304)

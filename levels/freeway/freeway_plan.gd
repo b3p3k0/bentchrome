@@ -62,6 +62,7 @@ const CHAMFERS := {
 }
 
 const COUNTRY_ROAD := Rect2(2112, -896, 896, 256)
+const PASTURE := Rect2(1400, -2688, 1608, 1688)
 const FARM_FIELD := Rect2(2176, -1920, 768, 640)
 
 const TRUCK_STOP := {

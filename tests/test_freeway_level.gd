@@ -25,6 +25,7 @@ const F4_WALLS := [
 const F5_WALLS := [&"LandingN", &"LandingS", &"RampBN", &"RampBS"]
 const F6_RAMPS := [&"RampA", &"RampW"]
 const F6_WALLS := [&"RampAN", &"RampAS", &"DeckEastStop"]
+const LOWLAND_PAD_RUNUP := Rect2(1280, 1344, 450, 384)
 const TRUCK_STOP_SOLIDS := [
 	&"Store", &"Pump1", &"Pump2", &"Pump3", &"Pump4",
 	&"DieselPump1", &"DieselPump2", &"Tanker",
@@ -306,6 +307,20 @@ func _truck_stop_solids(freeway: Node) -> Array[Node2D]:
 		if solid:
 			solids.append(solid)
 	return solids
+
+func _solid_prop_rects(freeway: Node) -> Array[Dictionary]:
+	var props: Array[Dictionary] = []
+	for child in freeway.get_children():
+		if not child is StaticBody2D:
+			continue
+		var source := String(child.scene_file_path).get_file()
+		if source not in ["destructible_block.tscn", "clutter.tscn", "derelict_car.tscn"]:
+			continue
+		var rects: Array[Rect2] = []
+		_collect_shape_rects(child, rects)
+		for rect in rects:
+			props.append({"name": child.name, "rect": rect})
+	return props
 
 func _floor_at_structure(freeway: Node, point: Vector2) -> int:
 	var best := -1
@@ -685,14 +700,16 @@ func test_freeway_truck_stop_surfaces_match_plan() -> void:
 	var dirt := freeway.get_node(^"LowlandDirt")
 	var lot := freeway.get_node(^"TruckStopLot")
 	var frontage := freeway.get_node(^"FrontageRoad")
+	var pasture := freeway.get_node(^"Pasture")
 	var field := freeway.get_node(^"Field")
 	var marks := freeway.get_node_or_null(^"LotMarks") as Node2D
 	t.check(lot.get_index() == dirt.get_index() + 1
 			and frontage.get_index() == lot.get_index() + 1,
 		"freeway truck stop: lot and frontage follow LowlandDirt")
-	t.check(marks != null and field.get_index() == frontage.get_index() + 1
+	t.check(marks != null and pasture.get_index() == frontage.get_index() + 1
+			and field.get_index() == pasture.get_index() + 1
 			and marks.get_index() == field.get_index() + 1,
-		"freeway truck stop: Field and LotMarks follow both road zones")
+		"freeway truck stop: Pasture, Field, and LotMarks follow both road zones")
 	if marks:
 		t.check(marks.position == Vector2(1832, 1950)
 				and marks.get("kind") == &"lot_marks"
@@ -702,6 +719,7 @@ func test_freeway_truck_stop_surfaces_match_plan() -> void:
 func test_freeway_f9_farm_matches_layout() -> void:
 	var freeway := _freeway_structure()
 	var frontage := freeway.get_node(^"FrontageRoad")
+	var pasture := freeway.get_node(^"Pasture")
 	var field := freeway.get_node_or_null(^"Field") as Node2D
 	var marks := freeway.get_node(^"LotMarks")
 	t.check(field != null, "freeway farm: Field exists")
@@ -711,9 +729,10 @@ func test_freeway_f9_farm_matches_layout() -> void:
 		t.check(field_rect == Plan.FARM_FIELD and field.get("kind") == &"crop_rows"
 				and field.z_index == 0,
 			"freeway farm: Field matches the planned crop-row paint")
-		t.check(field.get_index() == frontage.get_index() + 1
+		t.check(pasture.get_index() == frontage.get_index() + 1
+				and field.get_index() == pasture.get_index() + 1
 				and marks.get_index() == field.get_index() + 1,
-			"freeway farm: Field follows the lot roads and precedes LotMarks")
+			"freeway farm: Pasture and Field follow the lot roads before LotMarks")
 
 	for node_name: StringName in FARM_BLOCKS:
 		var cfg: Dictionary = FARM_BLOCKS[node_name]
@@ -741,6 +760,189 @@ func test_freeway_f9_farm_matches_layout() -> void:
 	t.check(power != null and power.position == Vector2(2560, -2560)
 			and power.get("kind") == "power" and power.get("floor_index") == 1,
 		"freeway farm: AmmoPower3 is the floor-1 power pickup behind the barn")
+
+func test_freeway_f10_pasture_matches_plan_and_draw_order() -> void:
+	var freeway := _freeway_structure()
+	var pasture := freeway.get_node_or_null(^"Pasture") as Area2D
+	var infield := freeway.get_node(^"InfieldN") as Area2D
+	var frontage := freeway.get_node(^"FrontageRoad")
+	var field := freeway.get_node(^"Field")
+	var marks := freeway.get_node(^"LotMarks")
+	t.check(pasture != null, "freeway pasture: Pasture exists")
+	if pasture == null:
+		return
+	var collision := pasture.get_node_or_null(^"Col") as CollisionShape2D
+	var vis := pasture.get_node_or_null(^"Vis") as Polygon2D
+	var infield_vis := infield.get_node(^"Vis") as Polygon2D
+	var shoulder_vis := freeway.get_node(^"ShoulderW/Vis") as Polygon2D
+	t.check(pasture.get_script() == infield.get_script()
+			and pasture.get("terrain_type") == &"grass"
+			and int(pasture.get("terrain_priority")) == 5
+			and bool(pasture.get("soften_visual")),
+		"freeway pasture: grass terrain matches InfieldN at priority 5")
+	t.check(collision != null and _collision_rect(pasture, collision) == Plan.PASTURE,
+		"freeway pasture: collision rectangle matches PASTURE")
+	t.check(vis != null and vis.material == infield_vis.material
+			and vis.material == shoulder_vis.material
+			and vis.color == infield_vis.color,
+		"freeway pasture: visual shares the shoulder and infield grass treatment")
+	t.check(frontage.get_index() + 1 == pasture.get_index()
+			and pasture.get_index() + 1 == field.get_index()
+			and field.get_index() + 1 == marks.get_index(),
+		"freeway pasture: draw order is FrontageRoad -> Pasture -> Field -> LotMarks")
+	t.check(not Plan.PASTURE.intersects(Plan.COUNTRY_ROAD),
+		"freeway pasture: grass does not overlap the country road")
+	for ramp_name: StringName in Plan.RAMPS:
+		t.check(not Plan.PASTURE.intersects(Plan.rect_of(Plan.RAMPS, ramp_name)),
+			"freeway pasture: grass does not overlap grade %s" % ramp_name)
+	var north_shelf := Plan.rect_of(Plan.FLOOR_ZONES, &"FZShelfN")
+	t.check(not Plan.PASTURE.intersects(north_shelf),
+		"freeway pasture: grass does not overlap the north shelf")
+
+func test_freeway_f10_population_authorship() -> void:
+	var freeway := _freeway_structure()
+	var life := freeway.get_node_or_null(^"AmbientLife")
+	t.check(life != null, "freeway ambient: AmbientLife exists")
+	if life == null:
+		return
+	var expected := {
+		&"Truckers": {
+			"position": Vector2(2375, 1325), "kind": &"dock_worker", "count": 5,
+			"movement": AmbientActor.Movement.WANDER, "bounds": Vector2(1050, 550),
+		},
+		&"Clerks": {
+			"position": Vector2(2400, 630), "kind": &"vendor", "count": 2,
+			"movement": AmbientActor.Movement.STATIONARY, "bounds": Vector2(200, 0),
+		},
+		&"LotDog": {
+			"position": Vector2(2400, 1250), "kind": &"dog", "count": 1,
+			"movement": AmbientActor.Movement.WANDER, "bounds": Vector2(1100, 1700),
+		},
+		&"Hitchhiker": {
+			"position": Vector2(1400, -1470), "kind": &"vagrant", "count": 1,
+			"movement": AmbientActor.Movement.STATIONARY, "bounds": Vector2.ZERO,
+		},
+		&"FarmHands": {
+			"position": Plan.FARM_FIELD.get_center(), "kind": &"construction_worker",
+			"count": 2, "movement": AmbientActor.Movement.WANDER,
+			"bounds": Plan.FARM_FIELD.size,
+		},
+	}
+	var total := 0
+	var seeds := {}
+	t.check(life.get_child_count() == expected.size(),
+		"freeway ambient: exactly five populations are authored")
+	for population_name: StringName in expected:
+		var cfg: Dictionary = expected[population_name]
+		var population := life.get_node_or_null(NodePath(population_name)) as AmbientPopulation
+		t.check(population != null, "freeway ambient: %s exists" % population_name)
+		if population == null:
+			continue
+		total += population.count
+		seeds[population.seed_offset] = true
+		t.check(population.position == cfg["position"] and population.bounds == cfg["bounds"],
+			"freeway ambient: %s position and bounds match" % population_name)
+		t.check(population.kinds.size() == 1 and population.kinds[0] == cfg["kind"]
+				and population.count == int(cfg["count"]),
+			"freeway ambient: %s kind and count match" % population_name)
+		t.check(population.movement == int(cfg["movement"])
+				and population.floor_index == 1,
+			"freeway ambient: %s movement and floor match" % population_name)
+	t.check(total == 11, "freeway ambient: five populations total 11 actors")
+	t.check(seeds.size() == expected.size() and not seeds.has(0),
+		"freeway ambient: every population has a distinct seed offset")
+	var clerks := life.get_node(^"Clerks") as AmbientPopulation
+	var clerk_points := [
+		clerks.position - Vector2(clerks.bounds.x * 0.5, 0),
+		clerks.position + Vector2(clerks.bounds.x * 0.5, 0),
+	]
+	t.check(clerk_points == [Vector2(2300, 630), Vector2(2500, 630)],
+		"freeway ambient: clerk station line has the two signed-off endpoints")
+	var hitchhiker := life.get_node(^"Hitchhiker") as AmbientPopulation
+	var ramp_center := Plan.rect_of(Plan.RAMPS, &"RampN").get_center()
+	var facing := Vector2.RIGHT.rotated(hitchhiker.rotation)
+	t.check(facing.dot(hitchhiker.position.direction_to(ramp_center)) > 0.9,
+		"freeway ambient: Hitchhiker faces RampN")
+
+func test_freeway_f10_ambient_zones_and_stationary_clearances() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	t.root.add_child(freeway)
+	var life := freeway.get_node(^"AmbientLife")
+	var lowland := Plan.rect_of(Plan.FLOOR_ZONES, &"FZLowland")
+	for population_name: StringName in [&"Truckers", &"LotDog", &"FarmHands"]:
+		var population := life.get_node(NodePath(population_name)) as AmbientPopulation
+		var zone := Rect2(population.position - population.bounds * 0.5, population.bounds)
+		t.check(lowland.encloses(zone),
+			"freeway ambient: %s wander zone stays inside FZLowland" % population_name)
+		t.check(not zone.intersects(LOWLAND_PAD_RUNUP),
+			"freeway ambient: %s wander zone avoids the lowland-pad run-up" %
+				population_name)
+		for ramp_name: StringName in Plan.RAMPS:
+			t.check(not zone.intersects(Plan.rect_of(Plan.RAMPS, ramp_name)),
+				"freeway ambient: %s wander zone avoids grade %s" %
+					[population_name, ramp_name])
+
+	var stationary := {
+		&"ClerkW": Vector2(2300, 630),
+		&"ClerkE": Vector2(2500, 630),
+		&"Hitchhiker": Vector2(1400, -1470),
+	}
+	var solid_props := _solid_prop_rects(freeway)
+	for figure_name: StringName in stationary:
+		var point: Vector2 = stationary[figure_name]
+		t.check(lowland.has_point(point),
+			"freeway ambient: %s station lies inside FZLowland" % figure_name)
+		t.check(_point_rect_distance(point, LOWLAND_PAD_RUNUP) >= 48.0,
+			"freeway ambient: %s is 48px clear of the lowland-pad run-up" % figure_name)
+		for ramp_name: StringName in Plan.RAMPS:
+			var grade := Plan.rect_of(Plan.RAMPS, ramp_name)
+			t.check(_point_rect_distance(point, grade) >= 48.0,
+				"freeway ambient: %s is 48px clear of grade %s" %
+					[figure_name, ramp_name])
+		for prop: Dictionary in solid_props:
+			t.check(_point_rect_distance(point, prop["rect"]) >= 48.0,
+				"freeway ambient: %s is 48px clear of solid %s" %
+					[figure_name, prop["name"]])
+	t.root.remove_child(freeway)
+	freeway.free()
+
+func test_freeway_f10_live_ambient_actors_are_safe_noncombatants() -> void:
+	var freeway := FreewayScene.instantiate()
+	_remove_other_cars(freeway)
+	t.root.add_child(freeway)
+	t.current_scene = freeway
+	for i in 4:
+		await t.physics_frame
+	var lowland := Plan.rect_of(Plan.FLOOR_ZONES, &"FZLowland")
+	var solid_props := _solid_prop_rects(freeway)
+	var player := freeway.get_node(^"Vehicle") as Vehicle
+	var actors: Array[AmbientActor] = []
+	for population in freeway.get_node(^"AmbientLife").get_children():
+		for child in population.get_children():
+			if child is AmbientActor:
+				actors.append(child)
+	t.check(actors.size() == 11,
+		"freeway ambient: all 11 actors enter the live scene tree")
+	for actor in actors:
+		t.check(actor.is_inside_tree() and lowland.has_point(actor.global_position),
+			"freeway ambient: %s is live inside FZLowland" % actor.kind)
+		for prop: Dictionary in solid_props:
+			t.check(not _has_point_inclusive(prop["rect"], actor.global_position),
+				"freeway ambient: %s spawned outside solid %s" %
+					[actor.kind, prop["name"]])
+		var combat_group := actor.is_in_group(&"vehicles") or actor.is_in_group(&"enemies") \
+			or actor.is_in_group(&"player") or actor.is_in_group(&"local_player") \
+			or actor.is_in_group(&"dummies") or actor.is_in_group(&"targets")
+		t.check(not combat_group, "freeway ambient: %s joins no combat group" % actor.kind)
+		t.check(actor.collision_layer == AmbientActor.SOFT_TARGET_LAYER
+				and actor.collision_mask == 1
+				and (actor.collision_layer & (1 | 2 | 4 | FLOOR_BITS)) == 0
+				and (player.collision_mask & actor.collision_layer) == 0,
+			"freeway ambient: %s uses only the nonblocking soft-target layer" % actor.kind)
+	t.current_scene = null
+	t.root.remove_child(freeway)
+	freeway.free()
 
 func test_freeway_f9_farm_clearances() -> void:
 	var freeway := _freeway_structure()
