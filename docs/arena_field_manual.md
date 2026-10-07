@@ -455,7 +455,7 @@ resolves by scene path, so a reorder is a small, safe edit. The recipe:
 1. **Order + name:** edit the `CAMPAIGN` array in `game/scene_flow.gd` — the
    single source of truth for both. Move or insert the level dict; set its
    `name`. The full slot order is deliberately pinned in
-   `tests/test_ground_floor.gd` (`test_campaign_order_thirteen_slots`) —
+   `tests/test_ground_floor.gd` (`test_campaign_order_eleven_stops`) —
    update the expected list in the same change; that test failing on an
    unedited list is the point.
 2. **Invariants to preserve:** Goliath's Arena stays last (finale), exactly

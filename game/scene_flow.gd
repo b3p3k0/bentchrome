@@ -31,13 +31,11 @@ const MP_MAPS := [
 	{"scene": "res://levels/capital/capital_city_carnage.tscn", "name": "Capital City Carnage", "cars": 8},
 ]
 
-## The campaign, in order — thirteen pinned slots. Four are `placeholder`
-## mode: unbuilt levels with no scene, held in place by an under-construction
-## interstitial card that rolls the player past them. When one enters
-## development it swaps to a real entry with `"optional": true` (Route 666's
-## STAY/DETOUR chooser) so testers can try it while the tour stays stable.
-## Optional/placeholder slots must never be last — their advance is a
-## relative +1. Everything downstream is size()-driven.
+## The campaign, in order — eleven pinned stops. A level still in active
+## playtesting can use `"optional": true` (Route 666's STAY/DETOUR chooser)
+## until it is ready to become mandatory. Optional/placeholder slots must
+## never be last — their advance is a relative +1. Everything downstream is
+## size()-driven.
 const CAMPAIGN := [
 	{"scene": "res://levels/arena_assault/arena_assault.tscn", "name": "Arena Assault",
 		"mode": &"arena", "size_class": &"small", "encounter": &"duel",
@@ -59,13 +57,6 @@ const CAMPAIGN := [
 	{"scene": "res://levels/suburbs/suburbs.tscn", "name": "Suburban Savagery",
 		"mode": &"arena", "size_class": &"medium", "encounter": &"melee",
 		"arena_size": Vector2(3584, 3456), "target_cars": 7, "stations": 2, "mp_ready": true},
-	{"scene": "", "name": "Terminal Terror",
-		"mode": &"placeholder", "size_class": &"", "encounter": &"",
-		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false,
-		"card": "level_terminal.png"},
-	{"scene": "", "name": "Slaughter on the Strip",
-		"mode": &"placeholder", "size_class": &"", "encounter": &"",
-		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false},
 	{"scene": "res://levels/chase/buzzard_run.tscn", "name": "Route 666 Roulette",
 		"mode": &"specialty", "size_class": &"", "encounter": &"chase",
 		"arena_size": Vector2.ZERO, "target_cars": 0, "stations": 0, "mp_ready": false,

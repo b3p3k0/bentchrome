@@ -1,13 +1,13 @@
 extends RefCounted
-## The fight card (SINGLE BATTLE's level picker): the filter lists melee
-## arenas and the chase selectable and placeholder slots greyed while boss
-## slots stay off the card entirely; the screen boots its cursor onto a live row
-## and hops greyed ones; a pick stamps GameState.battle_level_index; and the
-## battle slot is run state that survives reset_campaign (car select resets
-## the run BEFORE launching into the slot). The scene is load()ed at test
-## time, NOT const-preloaded: level_select.gd names autoloads, which only
-## compile once autoloads are registered. Routing confirms (scene swaps)
-## stay untested here — _commit_pick is isolated for exactly that.
+## The fight card (SINGLE BATTLE's level picker): the player filter lists melee
+## arenas and the chase while Developer Mode also exposes miniboss/boss fights;
+## omitted slots are hidden, not disabled. A pick stamps
+## GameState.battle_level_index; and the battle slot is run state that survives
+## reset_campaign (car select resets the run BEFORE launching into the slot).
+## The scene is load()ed at test time, NOT const-preloaded: level_select.gd
+## names autoloads, which only compile once autoloads are registered. Routing
+## confirms (scene swaps) stay untested here — _commit_pick is isolated for
+## exactly that.
 
 var t
 
@@ -22,46 +22,67 @@ func _fresh() -> Control:
 func test_fight_card_filter() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var script: Script = load("res://ui/level_select.gd")
-	var rows: Array = script.listed_slots(flow.CAMPAIGN)
-	var enabled_tails: Array[String] = []
-	var locked_names: Array[String] = []
-	for row_v in rows:
+	var player_rows: Array = script.listed_slots(flow.CAMPAIGN, false)
+	var player_tails: Array[String] = []
+	for row_v in player_rows:
 		var row: Dictionary = row_v
-		if bool(row.enabled):
-			var profile: Dictionary = flow.CAMPAIGN[int(row.campaign_index)]
-			enabled_tails.append(String(profile.scene).get_file())
-		else:
-			locked_names.append(String(row.name))
-	t.check(enabled_tails == ["arena_assault.tscn", "dock.tscn", "downtown.tscn",
+		var profile: Dictionary = flow.CAMPAIGN[int(row.campaign_index)]
+		player_tails.append(String(profile.scene).get_file())
+	t.check(player_tails == ["arena_assault.tscn", "dock.tscn", "downtown.tscn",
 			"freeway.tscn", "suburbs.tscn", "buzzard_run.tscn", "snowy.tscn", "ground_floor_gore.tscn",
 			"capital_city_carnage.tscn"],
 		"fight card: every melee/duel arena and the chase are selectable, in tour order")
-	t.check(locked_names == ["Terminal Terror", "Slaughter on the Strip"],
-		"fight card: unbuilt slots hang greyed as coming attractions")
-	for row_v in rows:
+	for row_v in player_rows:
 		var row: Dictionary = row_v
 		var profile: Dictionary = flow.CAMPAIGN[int(row.campaign_index)]
 		t.check(StringName(profile.encounter) != &"miniboss"
 			and StringName(profile.encounter) != &"boss",
-			"fight card: %s is not a boss slot" % row.name)
+			"fight card: %s stays player-visible without Developer Mode" % row.name)
+	var dev_rows: Array = script.listed_slots(flow.CAMPAIGN, true)
+	var boss_names: Array[String] = []
+	for row_v in dev_rows:
+		var row: Dictionary = row_v
+		var profile: Dictionary = flow.CAMPAIGN[int(row.campaign_index)]
+		if StringName(profile.encounter) in [&"miniboss", &"boss"]:
+			boss_names.append(String(row.name))
+	t.check(boss_names == ["Lackey's Arena", "Goliath's Arena"],
+		"fight card: Developer Mode adds miniboss and boss fights in tour order")
+	t.check(dev_rows.size() == player_rows.size() + 2,
+		"fight card: Developer Mode adds only the two boss encounters")
 
 func test_screen_boots_onto_a_live_row() -> void:
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var before: bool = gs.dev_mode
+	gs.dev_mode = false
 	var screen := _fresh()
 	t.check(screen._entries.size() == screen._rows.size()
-		and screen._rows.size() == 12,
-		"fight card: eleven tour rows plus BACK")
-	t.check(bool(screen._rows[screen._index].enabled),
-		"fight card: cursor never boots onto a greyed slot")
+		and screen._rows.size() == 10,
+		"fight card: nine player fights plus BACK")
 	t.check(String(screen._rows[screen._index].name) == "Arena Assault",
 		"fight card: first live slot is Arena Assault")
-	var first: int = screen._index
 	screen._step(-1)
-	t.check(bool(screen._rows[screen._index].enabled) and screen._index != first,
-		"fight card: cursor hop lands live going up too")
-	t.check(screen._entries[5].modulate == screen.DISABLED_TEXT,
-		"fight card: greyed slot wears the disabled grey")
+	t.check(String(screen._rows[screen._index].name) == "BACK",
+		"fight card: moving up from the first fight wraps to BACK")
 	t.root.remove_child(screen)
 	screen.free()
+	gs.dev_mode = before
+
+func test_dev_mode_builds_boss_rows() -> void:
+	var gs: Node = t.root.get_node(^"/root/GameState")
+	var before: bool = gs.dev_mode
+	gs.dev_mode = true
+	var screen := _fresh()
+	var names: Array[String] = []
+	for row_v in screen._rows:
+		var row: Dictionary = row_v
+		names.append(String(row.name))
+	t.check("Lackey's Arena" in names and "Goliath's Arena" in names,
+		"fight card: Developer Mode exposes both boss shortcuts")
+	t.check(screen._rows.size() == 12,
+		"fight card: eleven campaign fights plus BACK in Developer Mode")
+	t.root.remove_child(screen)
+	screen.free()
+	gs.dev_mode = before
 
 func test_pick_stamps_battle_slot() -> void:
 	var gs: Node = t.root.get_node(^"/root/GameState")
@@ -70,7 +91,7 @@ func test_pick_stamps_battle_slot() -> void:
 	var screen := _fresh()
 	for row_v in screen._rows:
 		var row: Dictionary = row_v
-		if bool(row.enabled) and int(row.campaign_index) >= 0 \
+		if int(row.campaign_index) >= 0 \
 				and String(flow.CAMPAIGN[int(row.campaign_index)].scene).ends_with("snowy.tscn"):
 			screen._commit_pick(row)
 	t.check(String(flow.CAMPAIGN[gs.battle_level_index].scene).ends_with("snowy.tscn"),

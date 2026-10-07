@@ -157,15 +157,13 @@ func _scene_index(flow: Node, tail: String) -> int:
 			return i
 	return -1
 
-## The authored tour, pinned slot by slot: real levels by scene tail,
-## unbuilt slots by placeholder name. Reordering the campaign means editing
-## this list on purpose.
-func test_campaign_order_thirteen_slots() -> void:
+## The authored tour, pinned slot by slot by scene tail. Reordering the campaign
+## means editing this list on purpose.
+func test_campaign_order_eleven_stops() -> void:
 	var flow: Node = t.root.get_node(^"/root/SceneFlow")
 	var expected := [
 		"arena_assault.tscn", "dock.tscn", "downtown.tscn", "freeway.tscn",
-		"depot.tscn", "suburbs.tscn", "Terminal Terror",
-		"Slaughter on the Strip", "buzzard_run.tscn", "snowy.tscn",
+		"depot.tscn", "suburbs.tscn", "buzzard_run.tscn", "snowy.tscn",
 		"ground_floor_gore.tscn", "capital_city_carnage.tscn", "stadium.tscn",
 	]
 	t.check(flow.CAMPAIGN.size() == expected.size(),
@@ -173,13 +171,8 @@ func test_campaign_order_thirteen_slots() -> void:
 	for i in mini(expected.size(), flow.CAMPAIGN.size()):
 		var profile: Dictionary = flow.CAMPAIGN[i]
 		var want: String = expected[i]
-		var hit: bool
-		if want.ends_with(".tscn"):
-			hit = String(profile.scene).ends_with(want)
-		else:
-			hit = String(profile.name) == want \
-				and StringName(profile.mode) == &"placeholder"
-		t.check(hit, "campaign order: slot %d is %s" % [i + 1, want])
+		t.check(String(profile.scene).ends_with(want),
+			"campaign order: slot %d is %s" % [i + 1, want])
 	var ground := _scene_index(flow, "ground_floor_gore.tscn")
 	var profile: Dictionary = flow.CAMPAIGN[ground]
 	t.check(profile.size_class == &"large" and profile.target_cars == 8

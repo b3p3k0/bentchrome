@@ -1,21 +1,18 @@
 extends Control
 ## The fight card: SINGLE BATTLE's battleground picker, between difficulty
 ## select and car select. Lists the campaign tour in slot order, filtered to
-## the fights — melee arenas AND the Route 666 chase are selectable, unbuilt
-## placeholder slots hang greyed as coming attractions (they join the card
-## automatically the day their CAMPAIGN entry becomes a real melee arena),
-## and boss slots stay campaign-exclusive. A chase run off the tour has no
-## purse and nothing to rob: caught or wrecked, it skips the wheel and ends
-## on the classic panel (buzzard_run.gd). Confirm stamps GameState.battle_level_index and
-## rolls to car select; BACK and ESC return to difficulty select.
+## the fights — melee/duel arenas and the Route 666 chase are always available;
+## miniboss and boss fights join only while Developer Mode is enabled. A chase
+## run off the tour has no purse and nothing to rob: caught or wrecked, it
+## skips the wheel and ends on the classic panel (buzzard_run.gd). Confirm
+## stamps GameState.battle_level_index and rolls to car select; BACK and ESC
+## return to difficulty select.
 ## Manual-highlight menu idiom cloned from title.gd — no focus system.
 
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
-const DISABLED_TEXT := Color(0.3, 0.32, 0.35)
 
 const BACK_BLURB := "back to the license window"
-const LOCKED_BLURB := "under construction — check back soon"
 
 var _done := false
 var _index := 0
@@ -29,26 +26,27 @@ func _ready() -> void:
 	_build_rows()
 	_highlight()
 
-## Campaign slots that belong on the fight card, in tour order. Selectable =
-## a real melee or duel arena, or the chase; placeholders list greyed; boss
-## slots don't list. Static + campaign-injected so tests can probe the
-## filter without a tree.
-static func listed_slots(campaign: Array) -> Array[Dictionary]:
+## Campaign slots that belong on the fight card, in tour order. Developer Mode
+## adds boss encounters for playtesting; every omitted slot stays fully hidden.
+## Static + campaign-injected so tests can probe the filter without a tree.
+static func listed_slots(campaign: Array, include_bosses: bool = false) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for i in campaign.size():
 		var profile: Dictionary = campaign[i]
 		var mode := StringName(profile.mode)
 		var encounter := StringName(profile.encounter)
-		var enabled: bool = (mode == &"arena" and encounter in [&"melee", &"duel"]) \
+		var listed: bool = (mode == &"arena" and encounter in [&"melee", &"duel"]) \
 			or (mode == &"specialty" and encounter == &"chase")
-		if enabled or mode == &"placeholder":
+		listed = listed or (include_bosses and mode == &"arena" \
+			and encounter in [&"miniboss", &"boss"])
+		if listed:
 			out.append({"campaign_index": i, "name": String(profile.name),
-				"enabled": enabled, "profile": profile})
+				"profile": profile})
 	return out
 
 func _build_rows() -> void:
-	_rows = listed_slots(SceneFlow.CAMPAIGN)
-	_rows.append({"campaign_index": -1, "name": "BACK", "enabled": true})
+	_rows = listed_slots(SceneFlow.CAMPAIGN, GameState.dev_mode)
+	_rows.append({"campaign_index": -1, "name": "BACK"})
 	for row in _rows:
 		var lbl := Label.new()
 		lbl.add_theme_font_size_override("font_size", 24)
@@ -56,8 +54,6 @@ func _build_rows() -> void:
 		_menu.add_child(lbl)
 		_entries.append(lbl)
 	_index = 0
-	if not bool(_rows[0].enabled):  # never boot the cursor onto a greyed slot
-		_step(1)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:
@@ -83,17 +79,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif confirm:
 		_activate()
 
-## Cursor motion that hops greyed-out rows (locked slots can never land).
 func _step(dir: int) -> void:
 	_index = wrapi(_index + dir, 0, _rows.size())
-	while not bool(_rows[_index].enabled):
-		_index = wrapi(_index + dir, 0, _rows.size())
 	_highlight()
 
 func _activate() -> void:
 	var row: Dictionary = _rows[_index]
-	if not bool(row.enabled):
-		return  # unreachable via nav; forced cursors stay inert
 	if int(row.campaign_index) < 0:  # BACK
 		UiSfx.back(self)
 		_done = true
@@ -111,12 +102,8 @@ func _commit_pick(row: Dictionary) -> void:
 func _highlight() -> void:
 	for i in _rows.size():
 		var title := String(_rows[i].name).to_upper()
-		if not bool(_rows[i].enabled):
-			_entries[i].modulate = DISABLED_TEXT
-			_entries[i].text = title
-		else:
-			_entries[i].modulate = AMBER if i == _index else DIM_TEXT
-			_entries[i].text = ("[ %s ]" if i == _index else "%s") % title
+		_entries[i].modulate = AMBER if i == _index else DIM_TEXT
+		_entries[i].text = ("[ %s ]" if i == _index else "%s") % title
 	if _blurb:
 		_blurb.text = _blurb_for(_rows[_index])
 
@@ -124,12 +111,14 @@ func _highlight() -> void:
 func _blurb_for(row: Dictionary) -> String:
 	if int(row.campaign_index) < 0:
 		return BACK_BLURB
-	if not bool(row.enabled):
-		return LOCKED_BLURB
 	var profile: Dictionary = row.profile
 	if StringName(profile.encounter) == &"chase":
 		return "forced-scroll chase — outrun the horde for two minutes"
 	if StringName(profile.encounter) == &"duel":
 		return "%s arena — 1v1 duel" % String(profile.size_class)
+	if StringName(profile.encounter) == &"miniboss":
+		return "%s arena — miniboss fight" % String(profile.size_class)
+	if StringName(profile.encounter) == &"boss":
+		return "%s arena — boss fight" % String(profile.size_class)
 	return "%s arena — %d rivals" % [String(profile.size_class),
 		int(profile.target_cars) - 1]
