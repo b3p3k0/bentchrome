@@ -32,7 +32,7 @@ git diff --check
 
 ## Card TD-2 — Weapon cutover
 
-Status: pending.
+Status: accepted by RA on 2026-10-07 after one Required source-comment correction.
 
 Goal: make every existing nearest-lock weapon consume the shared designation.
 

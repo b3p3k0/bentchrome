@@ -8,15 +8,20 @@ const MountScript := preload("res://weapons/weapon_mount.gd")
 const ControllerScript := preload("res://vehicles/special_controller.gd")
 const ProjectileScene := preload("res://weapons/projectile.tscn")
 const ProjectileScript := preload("res://weapons/projectile.gd")
+const DesignatorScript := preload("res://game/target_designator.gd")
+const EnemyDriverScript := preload("res://vehicles/drivers/enemy_driver.gd")
+const Floors := preload("res://game/floors.gd")
 
 var t
 
 class TrackShooter extends CharacterBody2D:
 	var stats = null  # optionally a VehicleStats carrying tracking_scale
 	var heading := 0.0
+	var floor_index := -1
 
 class PreyCar extends CharacterBody2D:  # CollisionObject2D — _los_clear demands it
 	var hp := 100.0
+	var floor_index := -1
 	func get_hp() -> float:
 		return hp
 
@@ -33,6 +38,15 @@ func _prey(pos: Vector2) -> PreyCar:
 	prey.position = pos
 	prey.add_to_group(&"vehicles")
 	return prey
+
+func _designate(shooter: Node, target: Node2D) -> void:
+	var driver = EnemyDriverScript.new()
+	driver.name = "Driver"
+	shooter.add_child(driver)
+	var designator = DesignatorScript.new()
+	designator.name = "TargetDesignator"
+	shooter.add_child(designator)
+	driver._adopt_target(target)
 
 ## Mount wave: acq 400 / turn 100 vs a target at 600 — stock whiffs the lock
 ## and keeps the authored turn; a 2.0x shooter latches and steers twice as hard.
@@ -115,6 +129,56 @@ func test_mount_forward_lock_cone() -> void:
 	t.check(is_zero_approx(arena_car.get_node(^"SecondaryMount").lock_cone_deg), "lock: arena cars keep the classic lock")
 	arena_car.free()
 
+func test_mount_uses_designation_without_range_or_cone_redirect() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var mount = MountScript.new()
+	mount.projectile_scene = ProjectileScene
+	mount.turn_rate_deg = 100.0
+	mount.acquisition_radius = 700.0
+	mount.fire_rate = 100.0
+	container.add_child(mount)
+	var shooter := TrackShooter.new()
+	shooter.floor_index = 1
+	container.add_child(shooter)
+	var near := _prey(Vector2(100, 0))
+	near.floor_index = 1
+	container.add_child(near)
+	var marked := _prey(Vector2(500, 0))
+	marked.floor_index = 3
+	container.add_child(marked)
+	_designate(shooter, marked)
+	t.check(mount.try_fire(Vector2.ZERO, Vector2.RIGHT, shooter),
+		"designation mount: tracking shot fires")
+	var designated := _last_projectile(container)
+	t.check(designated != null and designated.target == marked,
+		"designation mount: farther designated opponent beats nearer rival")
+	t.check(designated != null and designated.collision_mask
+		== (Floors.projectile_mask(1, true, 3) | ProjectileScript.SOFT_TARGET_LAYER),
+		"designation mount: target-floor collision mask follows the designated car")
+	marked.position = Vector2(900, 0)
+	mount.tick(0.02)
+	mount.try_fire(Vector2.ZERO, Vector2.RIGHT, shooter)
+	var out_of_range := _last_projectile(container)
+	t.check(out_of_range != null and out_of_range != designated and out_of_range.target == null,
+		"designation mount: out-of-range designation never redirects to nearer rival")
+	marked.position = Vector2(-500, 0)
+	mount.lock_cone_deg = 60.0
+	mount.tick(0.02)
+	mount.try_fire(Vector2.ZERO, Vector2.RIGHT, shooter)
+	var outside_cone := _last_projectile(container)
+	t.check(outside_cone != null and outside_cone.target == null,
+		"designation mount: outside-cone designation never redirects ahead")
+	mount.tick(0.02)
+	mount.try_fire(Vector2.ZERO, Vector2.LEFT, shooter)
+	var rear := _last_projectile(container)
+	t.check(rear != null and rear.target == marked,
+		"designation mount: rear launch locks the rearward designation")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
 func _last_projectile(container: Node) -> Node:
 	var found: Node = null
 	for child in container.get_children():
@@ -151,6 +215,41 @@ func test_taser_latch_and_hold_scale() -> void:
 	prey.position = Vector2(base_radius * 4.5, 0)
 	ctrl._beam_tick(0.016)
 	t.check(ctrl._beam_t <= 0.0, "taser: hold breaks past the scaled distance")
+	t.current_scene = null
+	t.root.remove_child(container)
+	container.free()
+
+func test_twin_and_beam_do_not_redirect_around_designated_los() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	t.current_scene = container
+	var shooter := TrackShooter.new()
+	container.add_child(shooter)
+	var ctrl = ControllerScript.new()
+	shooter.add_child(ctrl)
+	var clear_near := _prey(Vector2(100, 180))
+	container.add_child(clear_near)
+	var blocked_mark := _prey(Vector2(300, 0))
+	container.add_child(blocked_mark)
+	_designate(shooter, blocked_mark)
+	var wall := StaticBody2D.new()
+	wall.collision_layer = 2
+	wall.position = Vector2(150, 0)
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(30, 140)
+	shape.shape = rect
+	wall.add_child(shape)
+	container.add_child(wall)
+	await t.physics_frame
+	var taser: WeaponDef = load("res://data/weapons/taser.tres")
+	var blaze: WeaponDef = load("res://data/weapons/blunt_blaze.tres")
+	ctrl._def = taser
+	ctrl._twin = blaze
+	t.check(ctrl._active_def(shooter.global_position, shooter) == blaze,
+		"designation twin: blocked designation selects partner despite clear nearer rival")
+	t.check(not ctrl._beam(true, shooter.global_position, Vector2.RIGHT, shooter, taser),
+		"designation beam: blocked designation never redirects through clear rival")
 	t.current_scene = null
 	t.root.remove_child(container)
 	container.free()
@@ -227,3 +326,37 @@ func test_dash_forward_cone() -> void:
 	var arena_car = load("res://vehicles/vehicle.tscn").instantiate()
 	t.check(is_zero_approx(arena_car.get_node(^"SpecialController").dash_cone_deg), "cone: everywhere else the Leap is untouched")
 	arena_car.free()
+
+func test_dash_uses_designation_without_floor_or_cone_redirect() -> void:
+	var container := Node2D.new()
+	t.root.add_child(container)
+	var shooter := TrackShooter.new()
+	shooter.floor_index = 2
+	container.add_child(shooter)
+	var ctrl = ControllerScript.new()
+	shooter.add_child(ctrl)
+	var near := _prey(Vector2(100, 0))
+	near.floor_index = 2
+	container.add_child(near)
+	var marked := _prey(Vector2(600, 0))
+	marked.floor_index = 2
+	container.add_child(marked)
+	_designate(shooter, marked)
+	ctrl._dash(true, shooter.global_position, Vector2.RIGHT, shooter)
+	t.check(ctrl._dash_target == marked,
+		"designation dash: farther designated opponent beats nearer rival")
+	ctrl.cancel_dash()
+	marked.floor_index = 3
+	ctrl._dash(true, shooter.global_position, Vector2.RIGHT, shooter)
+	t.check(ctrl._dash_target == null,
+		"designation dash: cross-floor designation never redirects same-floor")
+	ctrl.cancel_dash()
+	marked.floor_index = 2
+	marked.position = Vector2(-500, 0)
+	ctrl.dash_cone_deg = 45.0
+	ctrl._dash(true, shooter.global_position, Vector2.RIGHT, shooter)
+	t.check(ctrl._dash_target == null,
+		"designation dash: outside-cone designation never redirects ahead")
+	ctrl.cancel_dash()
+	t.root.remove_child(container)
+	container.free()

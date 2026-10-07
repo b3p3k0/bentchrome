@@ -29,17 +29,49 @@ static func is_eligible_other(from: Vector2, exclude: Node, candidate: Variant,
 		return false
 	return from.distance_to(candidate.global_position) < max_dist
 
-## Reads the component-owned designation without inventing a fallback. Callers
-## that support non-vehicle fixtures can distinguish a missing component and
-## retain their existing nearest query.
+## Reads the component-owned designation without inventing a fallback. Weapon
+## callers use lock_target(), which owns the missing-component distinction.
 static func designated_target(vehicle: Node) -> Node2D:
-	if vehicle == null or not is_instance_valid(vehicle):
-		return null
-	var designator := vehicle.get_node_or_null(^"TargetDesignator")
+	var designator := _designator(vehicle)
 	if designator == null or not designator.has_method(&"get_target"):
 		return null
 	var target: Variant = designator.get_target()
 	return target as Node2D if is_live_other(vehicle, target) else null
+
+## Weapon acquisition seam. A real vehicle with a designator gets only its
+## designation when eligible; an ineligible designation never redirects to a
+## different opponent. Lightweight fixtures without the component retain the
+## historical nearest query byte-for-byte.
+static func lock_target(from: Vector2, exclude: Node, max_dist: float,
+		same_floor_as: Node = null) -> Node2D:
+	var designator := _designator(exclude)
+	if designator == null:
+		return nearest_other(from, exclude, max_dist, same_floor_as)
+	var target: Variant = designator.get_target()
+	return target as Node2D \
+		if is_eligible_other(from, exclude, target, max_dist, same_floor_as) else null
+
+## Forward-cone form of lock_target. Range/floor eligibility is checked before
+## the cone, and a zero-length bearing cannot earn a directional lock.
+static func lock_target_in_cone(from: Vector2, facing: Vector2, half_angle: float,
+		exclude: Node, max_dist: float, same_floor_as: Node = null) -> Node2D:
+	var designator := _designator(exclude)
+	if designator == null:
+		return nearest_in_cone(from, facing, half_angle, exclude, max_dist, same_floor_as)
+	var target: Variant = designator.get_target()
+	if not is_eligible_other(from, exclude, target, max_dist, same_floor_as):
+		return null
+	var to: Vector2 = target.global_position - from
+	var distance := to.length()
+	if distance < 0.001 or facing.normalized().dot(to / distance) < cos(half_angle):
+		return null
+	return target as Node2D
+
+static func _designator(vehicle: Node) -> Node:
+	if vehicle == null or not is_instance_valid(vehicle):
+		return null
+	var designator := vehicle.get_node_or_null(^"TargetDesignator")
+	return designator if designator != null and designator.has_method(&"get_target") else null
 
 static func nearest_other(from: Vector2, exclude: Node, max_dist: float,
 		same_floor_as: Node = null) -> Node2D:

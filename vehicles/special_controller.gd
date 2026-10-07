@@ -29,7 +29,7 @@ const BEAM_HOLD_FACTOR := 2.0     # latch breaks beyond acquisition * this
 
 const DASH_SPEED := 1400.0        # body-check velocity (well past any top speed)
 const DASH_DURATION := 0.4        # ~560px of travel
-const DASH_LOCK_RANGE := 700.0    # lock the nearest vehicle inside this
+const DASH_LOCK_RANGE := 700.0    # designation must sit inside this to lock
 const DASH_INVULN_T := 2.0        # invulnerability after connecting
 const DASH_SLOW := 0.5            # victim speed drain
 const DASH_SLOW_T := 2.0
@@ -59,10 +59,11 @@ static var PULSE_HOP_VZ := 200.0       # the caster's little launch kick
 const TRIGGER_WINDOW := 5.0       # armed Toe Jam expires unspent after this
 
 ## Forward-only Leap (Route 666 authors this on the chase car): > 0 locks
-## only a target inside this half-angle of the nose — never an about-face
-## into whatever is nearest — and an empty cone is a straight surge up the
+## the shared designation only inside this half-angle of the nose — never an
+## about-face — and an out-of-cone designation is a straight surge up the
 ## road. A target that slips past the nose mid-leap is dropped, not chased.
-## 0 = the arena Leap: nearest car in range, any bearing.
+## 0 allows an in-range, same-floor designation at any bearing. Fixtures
+## without a designator retain the legacy nearest-car fallback.
 @export var dash_cone_deg := 0.0
 
 var _def: WeaponDef = null
@@ -183,7 +184,7 @@ func _active_def(origin: Vector2, shooter: Node) -> WeaponDef:
 	if beam_def == null:
 		return _def
 	var other: WeaponDef = _def if beam_def == _twin else _twin
-	var tgt := Targeting.nearest_other(origin, shooter,
+	var tgt := Targeting.lock_target(origin, shooter,
 		beam_def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt and _los_clear(origin, tgt, shooter):
 		return beam_def
@@ -272,14 +273,15 @@ func _drop(pressed: bool, shooter: Node, def: WeaponDef) -> bool:
 			mine.global_position, int(mine.get("floor_index")), bool(mine.get("jump")))
 	return true
 
-## Taser: burst zap — latch the nearest vehicle in close range and shock it for
-## BEAM_DURATION (light dps + slow), holding through turns. The latch breaks
-## only when line of sight is blocked (wall/block/another car), the target
-## strays far beyond range, or the target dies.
+## Taser: burst zap — latch the shared designation when it is in close range,
+## on the same floor, and visible; a failed constraint yields no latch rather
+## than another opponent. No-designator fixtures retain nearest fallback. A
+## successful latch holds through turns until LoS breaks, the target strays
+## far beyond range, changes floor, or dies.
 func _beam(pressed: bool, origin: Vector2, _direction: Vector2, shooter: Node, def: WeaponDef) -> bool:
 	if not pressed or _beam_t > 0.0 or def == null:
 		return false
-	var tgt := Targeting.nearest_other(origin, shooter,
+	var tgt := Targeting.lock_target(origin, shooter,
 		def.acquisition_radius * VehiclesHelper.stat_scale(shooter, &"tracking_scale"), shooter)
 	if tgt == null or not _los_clear(origin, tgt, shooter):
 		return false
@@ -401,11 +403,12 @@ func _exit_tree() -> void:
 	_dash_def = null
 	_dash_damage_mult = 1.0
 
-## Leap: lock the nearest vehicle in range and full-throttle body-check it
-## (straight ahead when nothing is in range). The dash overrides normal driving,
-## sails over obstacles, and on connecting drains the victim's speed and grants
-## the caster brief invulnerability. Ram damage itself comes from the existing
-## ram loop — at dash speed that's already a massive hit.
+## Leap: full-throttle body-check the shared designation when it satisfies the
+## range, floor, and optional cone constraints; otherwise surge straight rather
+## than redirecting. No-designator fixtures retain nearest fallback. The dash
+## overrides normal driving, sails over obstacles, and on connecting drains the
+## victim's speed and grants the caster brief invulnerability. Ram damage itself
+## comes from the existing ram loop — at dash speed that's already a massive hit.
 func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node,
 		def: WeaponDef = null) -> bool:
 	if not pressed or _dash_t > 0.0:
@@ -413,10 +416,10 @@ func _dash(pressed: bool, _origin: Vector2, direction: Vector2, shooter: Node,
 	var from := (shooter as Node2D).global_position
 	var reach: float = DASH_LOCK_RANGE * VehiclesHelper.stat_scale(shooter, &"tracking_scale")
 	if dash_cone_deg > 0.0:
-		_dash_target = Targeting.nearest_in_cone(from, direction, deg_to_rad(dash_cone_deg),
+		_dash_target = Targeting.lock_target_in_cone(from, direction, deg_to_rad(dash_cone_deg),
 			shooter, reach, shooter)
 	else:
-		_dash_target = Targeting.nearest_other(from, shooter, reach, shooter)
+		_dash_target = Targeting.lock_target(from, shooter, reach, shooter)
 	_dash_dir = direction
 	_dash_forward = direction
 	_dash_t = DASH_DURATION
