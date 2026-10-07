@@ -39,6 +39,7 @@ const TRACKS := {
 	"res://ui/mp_lobby.tscn": &"bgm_menu",
 	"res://ui/mp_scoreboard.tscn": &"bgm_menu",
 	"res://levels/tutorial/drivers_ed.tscn": &"bgm_menu",
+	"res://levels/gallery/shooting_gallery.tscn": &"bgm_menu",
 	"res://ui/interstitial.tscn": UPCOMING,
 	"res://levels/arena_assault/arena_assault.tscn": &"bgm_arena",
 	"res://levels/downtown/downtown.tscn": &"bgm_arena",

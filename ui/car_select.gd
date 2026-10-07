@@ -114,6 +114,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			# end screen off the campaign fork.
 			SceneFlow.to_level(GameState.battle_level_index)
 			return
+		if GameState.game_mode == &"gallery":
+			# Shooting Gallery — the weapon range, one-off outside CAMPAIGN.
+			SceneFlow.to_gallery()
+			return
 		if GameState.game_mode != &"campaign":
 			# Driver's Ed (lessons or test drive) — one-off yard, no campaign.
 			SceneFlow.to_tutorial()

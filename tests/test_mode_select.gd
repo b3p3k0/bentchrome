@@ -150,14 +150,27 @@ func test_sub_choice_stamps_game_mode() -> void:
 	if gs == null:
 		return
 	var before: StringName = gs.game_mode
+	var before_tier: int = Difficulty.tier
 	var menu := _fresh()
+	# The two Driver's Ed lanes never touch the tier: park it off HARD first.
+	Difficulty.tier = Difficulty.Tier.EASY
 	menu._sub_index = 0
 	menu._commit_sub_choice()
 	t.check(gs.game_mode == &"tutorial", "mode: FIRST TIME DRIVER stamps tutorial")
+	t.check(Difficulty.tier == Difficulty.Tier.EASY,
+		"mode: FIRST TIME DRIVER leaves the tier alone")
 	menu._sub_index = 1
 	menu._commit_sub_choice()
 	t.check(gs.game_mode == &"test_drive", "mode: TEST DRIVE stamps test_drive")
+	t.check(Difficulty.tier == Difficulty.Tier.EASY,
+		"mode: TEST DRIVE leaves the tier alone")
+	menu._sub_index = 2
+	menu._commit_sub_choice()
+	t.check(gs.game_mode == &"gallery", "mode: SHOOTING GALLERY stamps gallery")
+	t.check(Difficulty.tier == Difficulty.Tier.HARD,
+		"mode: SHOOTING GALLERY pins REVOKED LICENSE (every knob x1.0)")
 	gs.game_mode = before  # restore the live autoload — later suites read it
+	Difficulty.tier = before_tier  # ...and the static tier, same reason
 	t.root.remove_child(menu)
 	menu.free()
 

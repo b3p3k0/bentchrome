@@ -321,10 +321,11 @@ func test_earning_gate() -> void:
 	store.record_kill(null, &"mg")
 	t.check(store.counters.is_empty(), "stickers gate: active Net blocks kills")
 	net.mode = 0
-	for mode in [&"tutorial", &"test_drive"]:
+	for mode in [&"tutorial", &"test_drive", &"gallery"]:
 		gs.game_mode = mode
 		store.record_kill(null, &"mg")
-	t.check(store.counters.is_empty(), "stickers gate: tutorial lanes do not count kills")
+	t.check(store.counters.is_empty(),
+		"stickers gate: tutorial lanes and the gallery do not count kills")
 	gs.game_mode = &"campaign"
 	gs.pending_level_path = "user://custom.json"
 	store.record_kill(null, &"mg")

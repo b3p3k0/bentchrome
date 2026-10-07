@@ -2,7 +2,8 @@ extends Control
 ## The garage door: what kind of driving today? Sits between title SINGLE
 ## PLAYER and the rest of the SP chain. DRIVER'S ED opens the sign-up
 ## sub-dialog (full lesson plan vs free-roam test drive — both route through
-## car select into the practice yard); ROAD TRIP is the campaign (difficulty
+## car select into the practice yard — plus the SHOOTING GALLERY, the
+## no-enemy weapon range); ROAD TRIP is the campaign (difficulty
 ## select -> car select); SINGLE BATTLE is one arena off the fight card
 ## (difficulty select -> level select -> car select). Manual-highlight menu
 ## idiom cloned from title.gd — no focus system. BACK and ESC return to
@@ -26,9 +27,9 @@ const BLURBS := [
 ]
 
 const SUB_PROMPT := "WELCOME TO DRIVER'S ED"
-const SUB_OPTIONS := ["FIRST TIME DRIVER", "JUST HERE FOR A TEST DRIVE", "BACK"]
-const SUB_MODES: Array[StringName] = [&"tutorial", &"test_drive"]
-const SUB_BACK_INDEX := 2
+const SUB_OPTIONS := ["FIRST TIME DRIVER", "JUST HERE FOR A TEST DRIVE", "SHOOTING GALLERY", "BACK"]
+const SUB_MODES: Array[StringName] = [&"tutorial", &"test_drive", &"gallery"]
+const SUB_BACK_INDEX := 3
 
 var _done := false
 var _index := 1  # ROAD TRIP — get players into the campaign by default
@@ -122,7 +123,7 @@ func _commit_single_battle() -> void:
 	GameState.game_mode = &"single_battle"
 	Difficulty.tier = Difficulty.Tier.MEDIUM
 
-## The Driver's Ed sign-up window: lessons or just the yard?
+## The Driver's Ed sign-up window: lessons, just the yard, or the range?
 func _sub_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
@@ -151,9 +152,13 @@ func _sub_input(event: InputEvent) -> void:
 			SceneFlow.to_select()
 
 ## Split from the confirm so tests can assert the mode stamp without
-## triggering a live scene change.
+## triggering a live scene change. The gallery pins HARD — every damage knob
+## ×1.0, so the numbers on the range are the tuning truth; the two Driver's
+## Ed lanes leave the tier alone.
 func _commit_sub_choice() -> void:
 	GameState.game_mode = SUB_MODES[_sub_index]
+	if GameState.game_mode == &"gallery":
+		Difficulty.tier = Difficulty.Tier.HARD
 
 func _open_sub() -> void:
 	_sub = Control.new()

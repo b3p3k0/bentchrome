@@ -11,6 +11,7 @@ const LEVEL_SELECT := "res://ui/level_select.tscn"
 const SELECT := "res://ui/car_select.tscn"
 const CUSTOM := "res://levels/custom_level.tscn"
 const TUTORIAL := "res://levels/tutorial/drivers_ed.tscn"
+const GALLERY := "res://levels/gallery/shooting_gallery.tscn"
 const INTERSTITIAL := "res://ui/interstitial.tscn"
 const SETTINGS := "res://ui/settings.tscn"
 const MP_MENU := "res://ui/mp_menu.tscn"
@@ -110,6 +111,11 @@ func to_level(index: int) -> void:
 ## never auto-advances and the arena contract never applies.
 func to_tutorial() -> void:
 	goto_scene(TUTORIAL)
+
+## Shooting Gallery — the weapon range, the same one-off standing as Driver's
+## Ed: outside CAMPAIGN, so no auto-advance and no arena contract.
+func to_gallery() -> void:
+	goto_scene(GALLERY)
 
 func to_interstitial() -> void:
 	goto_scene(INTERSTITIAL)

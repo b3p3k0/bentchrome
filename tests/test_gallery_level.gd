@@ -584,3 +584,34 @@ func test_scene_reset_group_and_decos() -> void:
 	t.check(barrels >= 3, "gallery: %d barrels in gallery_reset (>=3)" % barrels)
 	t.check(wrecks >= 3, "gallery: %d derelicts in gallery_reset (>=3)" % wrecks)
 	scene.free()
+
+# ---------------------------------------------------------------- card G-4
+
+## Flow plumbing, read off the scripts' constant maps so the live autoloads
+## are never touched: SceneFlow routes to the yard and keeps it out of both
+## CAMPAIGN and the versus pool; the sign-up dialog grew its third lane.
+func test_scene_flow_destination() -> void:
+	var flow_script: Script = load("res://game/scene_flow.gd")
+	var consts: Dictionary = flow_script.get_script_constant_map()
+	t.check(String(consts.get("GALLERY", "")) == SCENE, "gallery: SceneFlow.GALLERY points at the yard")
+	var in_campaign := false
+	for entry in consts.get("CAMPAIGN", []):
+		if String(entry.get("scene", "")) == SCENE:
+			in_campaign = true
+	t.check(not in_campaign, "gallery: stays out of CAMPAIGN (no contract, no auto-advance)")
+	var in_mp := false
+	for entry in consts.get("MP_MAPS", []):
+		if String(entry.get("scene", "")) == SCENE:
+			in_mp = true
+	t.check(not in_mp, "gallery: stays out of MP_MAPS (not a versus map)")
+
+func test_sign_up_dialog_has_the_gallery_row() -> void:
+	var menu_script: Script = load("res://ui/mode_select.gd")
+	var consts: Dictionary = menu_script.get_script_constant_map()
+	var options: Array = consts.get("SUB_OPTIONS", [])
+	var modes: Array = consts.get("SUB_MODES", [])
+	t.check(options.size() == 4, "gallery: sign-up dialog has 4 rows (%d)" % options.size())
+	t.check(options.size() > 2 and String(options[2]) == "SHOOTING GALLERY",
+		"gallery: row 2 reads SHOOTING GALLERY")
+	t.check(modes.size() > 2 and modes[2] == &"gallery", "gallery: SUB_MODES[2] is gallery")
+	t.check(int(consts.get("SUB_BACK_INDEX", -1)) == 3, "gallery: BACK moved to index 3")

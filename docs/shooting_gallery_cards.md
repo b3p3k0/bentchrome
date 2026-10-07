@@ -114,7 +114,7 @@ tools/shot.sh levels/gallery/shooting_gallery.tscn /tmp/gallery.png
 
 ## Card G-4 — Flow plumbing
 
-Status: pending.
+Status: accepted (RA full pass; smoke PASS, tests PASS 17176 checks; a headless flow probe drove mode_select → car_select confirm → the yard with the player godded).
 
 Goal: the mode, the route, the music row, and the dialog option.
 
