@@ -1,8 +1,11 @@
 extends RefCounted
-## Shooting gallery, card G-1 — the shared target pieces: the dummy's opt-in
+## Shooting gallery. Card G-1 — the shared target pieces: the dummy's opt-in
 ## respawn (default still frees), the one HP label, the lap driver's
-## per-instance throttle, and the reusable exit prompt. Tree-entered fixtures
-## live under t.root, release the tree unpaused, and free every node.
+## per-instance throttle, and the reusable exit prompt. Card G-2 — the gallery
+## nodes: the target car scene, the lane spawner/respawner, the prop reset
+## helper, and the range-tick paint. Tree-entered fixtures live under t.root,
+## release the tree unpaused, and free every node. Target cars are faction
+## `targets`, so no fixture ever shadows a player-group lookup.
 
 const DummyScene := preload("res://environment/target_dummy.tscn")
 const HpLabel := preload("res://environment/hp_label.gd")
@@ -10,11 +13,34 @@ const LapDriver := preload("res://vehicles/goliath/victory_lap_driver.gd")
 const ConfirmScript := preload("res://levels/tutorial/exit_confirm.gd")
 const HealthScript := preload("res://vehicles/health.gd")
 const VehicleScene := preload("res://vehicles/vehicle.tscn")
+const VehicleScript := preload("res://vehicles/vehicle.gd")
+const TargetScene := preload("res://vehicles/target_vehicle.tscn")
+const LaneScript := preload("res://levels/gallery/target_lane.gd")
+const ResetScript := preload("res://levels/gallery/target_reset.gd")
+const DecoScript := preload("res://levels/gallery/gallery_deco.gd")
+const BlockScene := preload("res://environment/destructible_block.tscn")
+const DerelictScene := preload("res://environment/derelict_car.tscn")
 
 var t
 
 func _init(runner) -> void:
 	t = runner
+
+## Live Vehicle children of a lane (the inherited target scene's root script
+## IS vehicle.gd); a car mid-queue_free is not counted.
+func _cars(lane: Node) -> Array:
+	var out := []
+	for child in lane.get_children():
+		if child.get_script() == VehicleScript and not child.is_queued_for_deletion():
+			out.append(child)
+	return out
+
+func _labels(node: Node) -> Array:
+	var out := []
+	for child in node.get_children():
+		if child is Label:
+			out.append(child)
+	return out
 
 ## First Label in document order: _build_ui adds the caption before the
 ## option row, so a depth-first walk lands on it.
@@ -161,3 +187,230 @@ func test_exit_confirm_prompt() -> void:
 	t.paused = false
 	_drop(custom)
 	t.check(not t.paused, "confirm: tree released unpaused")
+
+# ---------------------------------------------------------------- card G-2
+
+## target_vehicle.tscn: the enemy-scene shape with the targets faction, the
+## lap driver seated, the camera dark, and no stats baked (the lane's job).
+func test_target_vehicle_scene_shape() -> void:
+	var car: Node = TargetScene.instantiate()
+	t.check(car.faction == &"targets", "target scene: faction is targets")
+	var drv: Script = car.get_node(^"Driver").get_script()
+	t.check(drv != null and drv.resource_path.ends_with("victory_lap_driver.gd"),
+		"target scene: Driver runs victory_lap_driver.gd")
+	t.check(not (car.get_node(^"Camera2D") as Camera2D).enabled, "target scene: Camera2D disabled")
+	t.check(car.stats == null, "target scene: no stats authored — the lane supplies them")
+	t.check(car.get_script() == VehicleScript, "target scene: root script is vehicle.gd")
+	car.free()
+
+## A parked lane (no markers): one car on the lane's own transform, the
+## lane's child, in targets + vehicles and nowhere hostile, labelled, idle;
+## death frees it and the lane hands over a NEW instance after the delay.
+func test_parked_lane_spawns_and_respawns() -> void:
+	var lane: Node2D = LaneScript.new()
+	lane.car_id = &"ghost"
+	lane.respawn_seconds = 0.05
+	lane.position = Vector2(-560, 760)
+	t.root.add_child(lane)
+	var cars := _cars(lane)
+	t.check(cars.size() == 1, "parked lane: exactly one Vehicle child on boot")
+	if cars.is_empty():
+		_drop(lane)
+		return
+	var car: Node2D = cars[0]
+	t.check(car.get_parent() == lane, "parked lane: the car is the LANE's child")
+	t.check(lane.target() == car, "parked lane: target() is the live car")
+	t.check(car.is_in_group(&"targets"), "parked lane: car in targets")
+	t.check(car.is_in_group(&"vehicles"), "parked lane: car in vehicles")
+	t.check(not car.is_in_group(&"enemies"), "parked lane: car NOT in enemies")
+	t.check(not car.is_in_group(&"player"), "parked lane: car NOT in player")
+	t.check(car.stats != null and car.stats.id == &"ghost", "parked lane: stats.id == ghost")
+	t.check(car.global_position.is_equal_approx(lane.global_position),
+		"parked lane: car sits on the lane's transform")
+	t.check(is_zero_approx(car.rotation), "parked lane: root rotation stays 0 (heading is separate)")
+	var health: Node = car.get_node(^"Health")
+	var labels := _labels(car)
+	t.check(labels.size() == 1, "parked lane: exactly one Label child")
+	t.check(not labels.is_empty() and (labels[0] as Label).text == "%d" % roundi(health.max_hp),
+		"parked lane: label reads the car's max hp")
+	t.check(not labels.is_empty() and is_equal_approx((labels[0] as Label).offset_top, -70.0),
+		"parked lane: label at the default label_y")
+	var driver: Node = car.get_driver()
+	t.check(driver.get_script() == LapDriver, "parked lane: the seated driver is the lap driver")
+	t.check(is_equal_approx(driver.throttle, 0.6), "parked lane: driver.throttle = lane default 0.6")
+	var intent: Dictionary = driver.get_intent(car, 1.0 / 60.0)
+	t.check(is_zero_approx(float(intent.get("throttle", -9.0))),
+		"parked lane: no loop → get_intent throttle 0 (parked)")
+	await t.process_frame
+	t.check(_cars(lane).size() == 1, "parked lane: still one car after a frame")
+	var first_id := car.get_instance_id()
+	health.kill()
+	await t.process_frame
+	await t.process_frame
+	t.check(not is_instance_valid(car), "parked lane: the dead car frees itself")
+	t.check(_cars(lane).is_empty(), "parked lane: no live car during the delay")
+	t.check(lane.target() == null, "parked lane: target() is null during the delay")
+	await t.create_timer(0.1).timeout
+	await t.process_frame
+	cars = _cars(lane)
+	t.check(cars.size() == 1, "parked lane: exactly one Vehicle child after the respawn")
+	if not cars.is_empty():
+		var fresh: Node2D = cars[0]
+		t.check(fresh.get_instance_id() != first_id, "parked lane: the respawn is a NEW instance")
+		t.check(fresh.get_parent() == lane, "parked lane: the respawn is the lane's child")
+		t.check(lane.target() == fresh, "parked lane: target() is the respawned car")
+		t.check(fresh.is_in_group(&"targets") and fresh.is_in_group(&"vehicles"),
+			"parked lane: respawn in targets + vehicles")
+		t.check(not fresh.is_in_group(&"enemies"), "parked lane: respawn NOT in enemies")
+		t.check(fresh.stats != null and fresh.stats.id == &"ghost", "parked lane: respawn keeps the car id")
+		var fhealth: Node = fresh.get_node(^"Health")
+		t.check(fhealth.hp > 0.0 and is_equal_approx(fhealth.hp, fhealth.max_hp),
+			"parked lane: respawn at full hp")
+		t.check(_labels(fresh).size() == 1, "parked lane: respawn carries its own label")
+	_drop(lane)
+
+## A parked car faces `facing_deg` through its OWN rotation (seated as the
+## heading by Vehicle._ready, root rotation zeroed) — never through a rotated
+## lane, which vehicle.gd could not see.
+func test_parked_lane_facing_is_the_heading() -> void:
+	var lane: Node2D = LaneScript.new()
+	lane.car_id = &"warpig"
+	lane.facing_deg = 180.0
+	lane.position = Vector2(560, 760)
+	t.root.add_child(lane)
+	t.check(is_zero_approx(lane.rotation), "facing: the lane itself stays unrotated")
+	var cars := _cars(lane)
+	t.check(cars.size() == 1, "facing: one car spawned")
+	if cars.is_empty():
+		_drop(lane)
+		return
+	var car: Node2D = cars[0]
+	t.check(absf(angle_difference(car.heading, PI)) < 0.001, "facing: facing_deg 180 → heading PI")
+	t.check(is_zero_approx(car.rotation), "facing: root rotation handed to heading (0)")
+	t.check(is_zero_approx(car.global_rotation), "facing: no inherited rotation under the Vehicle root")
+	t.check(car.global_position.is_equal_approx(lane.global_position), "facing: still parked on the lane origin")
+	_drop(lane)
+	var east: Node2D = LaneScript.new()
+	east.car_id = &"warpig"
+	t.root.add_child(east)
+	cars = _cars(east)
+	t.check(cars.size() == 1 and is_zero_approx((cars[0] as Node2D).heading),
+		"facing: default facing_deg 0 → heading 0")
+	_drop(east)
+
+## A loop lane: GLOBAL marker positions, spawn at marker[0] facing marker[1],
+## the authored throttle on the pedal, the ring painted from the same points.
+func test_loop_lane_spawns_at_first_marker() -> void:
+	var lane: Node2D = LaneScript.new()
+	lane.car_id = &"hammertoe"
+	lane.throttle = 0.9
+	lane.position = Vector2(960, -200)
+	var offsets: Array[Vector2] = [Vector2(0, -800), Vector2(260, -400), Vector2(260, 400),
+		Vector2(0, 800), Vector2(-260, 400), Vector2(-260, -400)]
+	for off in offsets:
+		var m := Marker2D.new()
+		m.position = off
+		lane.add_child(m)
+	t.root.add_child(lane)
+	var cars := _cars(lane)
+	t.check(cars.size() == 1, "loop lane: exactly one Vehicle child")
+	if cars.is_empty():
+		_drop(lane)
+		return
+	var car: Node2D = cars[0]
+	var m0: Marker2D = lane.get_child(0)
+	var m1: Marker2D = lane.get_child(1)
+	t.check(car.get_parent() == lane, "loop lane: the car is the lane's child")
+	t.check(car.global_position.is_equal_approx(m0.global_position),
+		"loop lane: spawns at marker[0]'s GLOBAL position")
+	var want := (m1.global_position - m0.global_position).angle()
+	t.check(absf(angle_difference(car.heading, want)) < 0.001, "loop lane: heading faces marker[1]")
+	t.check(is_zero_approx(car.rotation), "loop lane: root rotation handed to heading")
+	t.check(car.is_in_group(&"targets") and not car.is_in_group(&"enemies"),
+		"loop lane: targets, never enemies")
+	var driver: Node = car.get_driver()
+	t.check(is_equal_approx(driver.throttle, 0.9), "loop lane: driver.throttle = 0.9")
+	var intent: Dictionary = driver.get_intent(car, 1.0 / 60.0)
+	t.check(is_equal_approx(float(intent.get("throttle", -9.0)), 0.9),
+		"loop lane: get_intent reports 0.9 on the authored loop")
+	var pts: PackedVector2Array = lane._points
+	t.check(pts.size() == offsets.size(), "loop lane: every Marker2D collected")
+	t.check(pts.size() > 2 and pts[2].is_equal_approx(lane.global_position + offsets[2]),
+		"loop lane: points are GLOBAL positions")
+	await t.process_frame
+	t.check(_cars(lane).size() == 1, "loop lane: one car after a frame")
+	t.check(lane.target() == car, "loop lane: target() is the live car")
+	_drop(lane)
+
+## No .tres for the id: push_error, nothing spawned, nothing to respawn.
+func test_lane_without_stats_spawns_nothing() -> void:
+	var lane: Node2D = LaneScript.new()
+	lane.car_id = &"no_such_car"
+	t.root.add_child(lane)
+	await t.process_frame
+	t.check(_cars(lane).is_empty(), "missing stats: no car spawned")
+	t.check(lane.target() == null, "missing stats: target() is null")
+	t.check(lane.get_child_count() == 0, "missing stats: the lane stays empty")
+	_drop(lane)
+
+## target_reset: group props die into remains and come back whole through
+## apply_arena_state after `delay`; a prop outside the group stays dead.
+func test_target_reset_revives_group_props() -> void:
+	var world := Node2D.new()
+	var crate: Node = BlockScene.instantiate()
+	crate.deco = &"crate"
+	crate.size = Vector2(96, 96)
+	crate.max_hp = 60.0
+	crate.position = Vector2(0, -700)
+	crate.add_to_group(&"gallery_reset")
+	world.add_child(crate)
+	var wreck: Node = DerelictScene.instantiate()
+	wreck.position = Vector2(600, 320)
+	wreck.add_to_group(&"gallery_reset")
+	world.add_child(wreck)
+	var bystander: Node = BlockScene.instantiate()  # NOT in the group
+	bystander.deco = &"barrel"
+	bystander.max_hp = 30.0
+	bystander.position = Vector2(-640, 60)
+	world.add_child(bystander)
+	var reset: Node = ResetScript.new()
+	reset.delay = 0.05
+	world.add_child(reset)
+	t.root.add_child(world)
+	t.check(reset.watch_group == &"gallery_reset", "reset: default group is gallery_reset")
+	await t.process_frame  # deferred collection
+	for prop in [crate, wreck, bystander]:
+		prop.get_node(^"Health").kill()
+	await t.process_frame
+	await t.process_frame
+	t.check(is_instance_valid(crate) and is_instance_valid(wreck), "reset: props survive death as remains")
+	t.check(crate.collision_layer == 0 and wreck.collision_layer == 0,
+		"reset: props are collisionless remains during the delay")
+	t.check((int(crate.capture_arena_state([])["flags"]) & 1) == 0, "reset: crate reads dead during the delay")
+	t.check((int(wreck.capture_arena_state([])["flags"]) & 1) == 0, "reset: wreck reads dead during the delay")
+	await t.create_timer(0.1).timeout
+	await t.process_frame
+	t.check(crate.collision_layer != 0, "reset: crate collision restored")
+	t.check((int(crate.capture_arena_state([])["flags"]) & 1) != 0, "reset: crate reads alive")
+	t.check(is_equal_approx(crate.get_node(^"Health").hp, 60.0), "reset: crate hp refilled")
+	t.check(crate.visible, "reset: crate visible")
+	t.check(wreck.collision_layer != 0, "reset: wreck collision restored")
+	t.check((int(wreck.capture_arena_state([])["flags"]) & 1) != 0, "reset: wreck reads alive")
+	t.check(is_equal_approx(wreck.get_node(^"Health").hp, 50.0), "reset: wreck hp refilled")
+	t.check(bystander.collision_layer == 0
+		and (int(bystander.capture_arena_state([])["flags"]) & 1) == 0,
+		"reset: a prop outside the group stays dead")
+	_drop(world)
+
+## gallery_deco: paint only — defaults per the card, no collision, no children.
+func test_gallery_deco_range_tick_is_paint_only() -> void:
+	var deco: Node2D = DecoScript.new()
+	deco.text = "400"
+	t.root.add_child(deco)
+	await t.process_frame
+	t.check(deco.kind == &"range_tick", "deco: range_tick is the default kind")
+	t.check(deco.size == Vector2(896, 8), "deco: default size 896x8")
+	t.check(deco.text == "400", "deco: text export holds the distance")
+	t.check(not (deco is CollisionObject2D) and deco.get_child_count() == 0,
+		"deco: paint only — no collision body, no children")
+	_drop(deco)

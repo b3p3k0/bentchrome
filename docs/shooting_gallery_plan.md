@@ -33,7 +33,7 @@ Approved by Kevin on 2026-10-07. Decisions locked that day: entry through the Dr
 2. `SceneFlow.GALLERY := "res://levels/gallery/shooting_gallery.tscn"` + `to_gallery()`; `TRACKS[GALLERY] = &"bgm_menu"`; `car_select` confirm gains an `== &"gallery"` branch before the tutorial fallthrough. The level stays OUTSIDE `CAMPAIGN` (contract-exempt, like Driver's Ed).
 3. `levels/gallery/shooting_gallery.gd` extends `combat_level.gd` by path: `super()`, pin `suppress_group_win`, god the player's Health and rack, `arm_all_once()`, wire `ExitZone` → `exit_confirm` (prompt "LEAVE THE GALLERY?") → unpause + `to_title()`. No `_process` override. Nothing is added to `vehicle.gd`.
 4. `vehicles/target_vehicle.tscn` inherits `vehicle.tscn`: `faction = &"targets"`, Driver = `victory_lap_driver.gd`, Camera2D off. Target cars are in `vehicles` (hittable, lockable, radar, StatusReceiver) but never `enemies` (no roster row, no win latch, no re-roll). `victory_lap_driver` gains one instance var `throttle := -1.0` (negative = `LAP_THROTTLE`), leaving the stadium default untouched.
-5. `levels/gallery/target_lane.gd` (Node2D): exports `car_id`, `throttle`, `respawn_seconds`; Marker2D children = loop points, painted as a dashed closed loop in `_draw`. Spawns the car as ITS OWN child (so `face_spawns_inward` never sees it): `stats = load(.tres)`, `set_loop`, `driver.throttle`, then `add_child`; `Health.died` → timer → re-instantiate (guard `is_inside_tree()`). No markers = parked target. Attaches an HP label per spawn.
+5. `levels/gallery/target_lane.gd` (Node2D): exports `car_id`, `throttle`, `respawn_seconds`; Marker2D children = loop points, painted as a dashed closed loop in `_draw`. Spawns the car as ITS OWN child (so `face_spawns_inward` never sees it): `stats = load(.tres)`, `set_loop`, `driver.throttle`, the car's own `rotation` (loop = toward marker[1], parked = `facing_deg`; lanes are always authored unrotated), then `add_child`; `Health.died` → timer → re-instantiate (guard `is_inside_tree()`). No markers = parked target. Attaches an HP label per spawn.
 6. `environment/hp_label.gd` is the one HP label (`bind(health)`, `refresh()`, `static attach(parent, health, y)`), used by the dummy and the lanes.
 7. `target_dummy.gd` gains `@export var respawn_seconds := 0.0`; 0 = today's `queue_free`; >0 = hide + disable `Col` + leave `dummies`, then write `hp = max_hp` and restore.
 8. `levels/gallery/target_reset.gd` (Node): for every member of group `gallery_reset` with `apply_arena_state` and a `Health` child, `died` → `delay` s → `apply_arena_state({"flags":1,"hp":1.0}, false)`. The gallery authors only deco'd blocks, so the un-reset plain-slab `_vis.color` never shows.
@@ -81,7 +81,7 @@ Flat 2816×2816 asphalt yard using the Driver's Ed Boundary / Asphalt / GridFloo
 | Wreck1-3 (`gallery_reset`) | derelict_car 50 HP | (600,320), (640,−40), (580,−420) |
 | TargetReset | target_reset `delay 6` | |
 | LaneSlow / LaneFast | target_lane `hammertoe` 0.45 / `mrghastly` 0.9, respawn 3, 8-marker ovals (±260 × ±800) | (960,−200) / (−960,−200) |
-| LaneParkW / LaneParkE | target_lane `ghost` / `warpig`, no markers, respawn 3 | (−560,760) / (560,760) |
+| LaneParkW / LaneParkE | target_lane `ghost` / `warpig`, no markers, respawn 3, unrotated; `facing_deg` 0 / 180 | (−560,760) / (560,760) |
 | ConeW / ConeE, LightSW / LightSE, HUD | clutter cone; street_deco; `ui/hud.tscn` | (±470,700); (±420,1200) |
 
 Roster masses for ram feel: mrghastly 2, ghost 6, hammertoe 15, warpig 13.
