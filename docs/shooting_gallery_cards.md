@@ -82,7 +82,7 @@ git diff --check
 
 ## Card G-3 — Scene and level shell
 
-Status: pending.
+Status: accepted (RA full pass after one revision: wreck row moved into the [488, 600] alley clear of LaneSlow; a 40 s headless lap probe left every wreck and barrel at full HP; smoke PASS, tests PASS 17162 checks). Playtest note: LaneFast\'s bike skims Barrel1 at ~111 px center-to-center without contact; if the chain ever pops on its own, nudge the trio east by 80 px.
 
 Goal: the flat yard and its script, structural tests, lint-list update, and capture for Kevin's veto pass.
 

@@ -414,3 +414,173 @@ func test_gallery_deco_range_tick_is_paint_only() -> void:
 	t.check(not (deco is CollisionObject2D) and deco.get_child_count() == 0,
 		"deco: paint only — no collision body, no children")
 	_drop(deco)
+
+# ---------------------------------------------------------------- card G-3
+
+## Structural locks on the yard scene itself — instantiated, never tree-
+## entered (no physics, no _ready side effects), freed after inspection.
+const SCENE := "res://levels/gallery/shooting_gallery.tscn"
+
+func _walk(node: Node, out: Array) -> void:
+	out.append(node)
+	for child in node.get_children():
+		_walk(child, out)
+
+func _script_path(n: Node) -> String:
+	var sc: Script = n.get_script() as Script
+	return sc.resource_path if sc else ""
+
+## The combat_level shell with a player, the HUD, and nothing hostile: zero
+## Enemy* children, no FloorZone (flat yard), no GoliathLoop for the lap
+## driver's sibling scan to stumble on, the tunnel open (no ExitGate) with
+## the ExitZone listening for cars.
+func test_scene_shell_structure() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var player: Node = scene.get_node_or_null("Vehicle")
+	t.check(player != null, "gallery: has a Vehicle spawn")
+	t.check(scene.get_node_or_null("HUD") != null, "gallery: bakes the HUD")
+	var n := scene.get_child_count()
+	t.check(n >= 2 and scene.get_child(n - 2).name == "Vehicle" and scene.get_child(n - 1).name == "HUD",
+		"gallery: the last two children are Vehicle then HUD")
+	if player != null:
+		t.check((player as Node2D).position.is_equal_approx(Vector2(0, 1000)), "gallery: player spawns at (0, 1000)")
+		t.check(absf(angle_difference((player as Node2D).rotation, -PI * 0.5)) < 0.001,
+			"gallery: player authored facing north")
+	var enemies := 0
+	for child in scene.get_children():
+		if String(child.name).begins_with("Enemy"):
+			enemies += 1
+	t.check(enemies == 0, "gallery: bakes zero enemies")
+	var script: Script = scene.get_script()
+	t.check(script != null and String(script.get(&"EXIT_PROMPT")) == "LEAVE THE GALLERY?",
+		"gallery: the exit prompt asks about the gallery")
+	var reaches_shell := false
+	while script != null:
+		if script.resource_path == "res://levels/combat_level.gd":
+			reaches_shell = true
+			break
+		script = script.get_base_script()
+	t.check(reaches_shell, "gallery: root extends combat_level.gd")
+	var nodes: Array = []
+	_walk(scene, nodes)
+	var floor_zones := 0
+	var loops := 0
+	for node in nodes:
+		if _script_path(node).ends_with("floor_zone.gd") or String(node.scene_file_path).ends_with("floor_zone.tscn"):
+			floor_zones += 1
+		if node.name == "GoliathLoop":
+			loops += 1
+	t.check(floor_zones == 0, "gallery: no FloorZone anywhere (flat yard)")
+	t.check(loops == 0, "gallery: no GoliathLoop node for the lap driver to adopt")
+	var zone: Node = scene.get_node_or_null("ExitZone")
+	t.check(zone is Area2D and zone.collision_mask == 1, "gallery: ExitZone listens for cars")
+	t.check(scene.get_node_or_null("ExitGate") == null, "gallery: no ExitGate — the tunnel is always open")
+	for deco_name in ["TunnelDeco", "ExitText", "ExitSign", "Helipad"]:
+		t.check(scene.get_node_or_null(deco_name) != null, "gallery: has %s" % deco_name)
+	scene.free()
+
+func test_scene_boundary_segments() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var boundary: Node = scene.get_node_or_null("Boundary")
+	t.check(boundary is StaticBody2D and boundary.collision_layer == 2, "gallery: Boundary rides the wall layer")
+	if boundary != null:
+		for wall_name in ["SouthCol", "WestCol", "EastCol", "NorthWCol", "NorthECol", "JambWCol", "JambECol", "CapCol"]:
+			t.check(boundary.get_node_or_null(wall_name) != null, "gallery: Boundary has %s" % wall_name)
+	scene.free()
+
+## Every dummy comes back: four or more, all respawning.
+func test_scene_dummies_respawn() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var dummies := 0
+	for child in scene.get_children():
+		if _script_path(child).ends_with("target_dummy.gd"):
+			dummies += 1
+			t.check(float(child.respawn_seconds) > 0.0, "gallery: %s respawns" % child.name)
+	t.check(dummies >= 4, "gallery: fields %d dummies (>=4)" % dummies)
+	scene.free()
+
+## The yardage painted on each tick IS its distance from the firing line.
+func test_scene_range_ticks_measure_from_firing_line() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var ticks := 0
+	for child in scene.get_children():
+		if not String(child.name).begins_with("Tick"):
+			continue
+		ticks += 1
+		t.check(child.get_script() == DecoScript and child.kind == &"range_tick",
+			"gallery: %s is a range_tick" % child.name)
+		var want := str(roundi(absf((child as Node2D).position.y - 700.0)))
+		t.check(String(child.text) == want, "gallery: %s reads %s (text '%s')" % [child.name, want, child.text])
+	t.check(ticks >= 3, "gallery: %d range ticks (>=3)" % ticks)
+	scene.free()
+
+## Exactly four lanes: two ovals with their markers, two parked, four distinct
+## real roster cars, every lane unrotated with a pedal in (0, 1].
+func test_scene_lanes() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var lanes: Array = []
+	for child in scene.get_children():
+		if child.get_script() == LaneScript:
+			lanes.append(child)
+	t.check(lanes.size() == 4, "gallery: exactly 4 target lanes (%d)" % lanes.size())
+	var ids := {}
+	var looped := 0
+	var parked := 0
+	for lane in lanes:
+		ids[lane.car_id] = true
+		t.check(ResourceLoader.exists("res://data/vehicles/%s.tres" % lane.car_id),
+			"gallery: %s car '%s' has stats" % [lane.name, lane.car_id])
+		t.check(is_zero_approx((lane as Node2D).rotation), "gallery: %s authored unrotated" % lane.name)
+		t.check(float(lane.throttle) > 0.0 and float(lane.throttle) <= 1.0,
+			"gallery: %s throttle in (0, 1]" % lane.name)
+		t.check(float(lane.respawn_seconds) > 0.0, "gallery: %s respawns" % lane.name)
+		var markers := 0
+		for m in lane.get_children():
+			if m is Marker2D:
+				markers += 1
+		if markers >= 6:
+			looped += 1
+		elif markers == 0:
+			parked += 1
+		else:
+			t.check(false, "gallery: %s has %d markers — neither a loop nor parked" % [lane.name, markers])
+	t.check(ids.size() == 4, "gallery: lane car ids are distinct (%d)" % ids.size())
+	t.check(looped == 2, "gallery: exactly 2 loop lanes (%d)" % looped)
+	t.check(parked == 2, "gallery: exactly 2 parked lanes (%d)" % parked)
+	var east: Node = scene.get_node_or_null("LaneParkE")
+	var west: Node = scene.get_node_or_null("LaneParkW")
+	t.check(east != null and is_equal_approx(float(east.facing_deg), 180.0), "gallery: LaneParkE faces west (180)")
+	t.check(west != null and is_zero_approx(float(west.facing_deg)), "gallery: LaneParkW faces east (0)")
+	scene.free()
+
+## The cover comes back through target_reset: a barrel chain and a wreck row
+## in the group, every block carrying a deco (the plain slab never shows).
+func test_scene_reset_group_and_decos() -> void:
+	var scene: Node = (load(SCENE) as PackedScene).instantiate()
+	var barrels := 0
+	var wrecks := 0
+	var blocks := 0
+	var reset := 0
+	for child in scene.get_children():
+		var path := _script_path(child)
+		if child.get_script() == ResetScript:
+			reset += 1
+		if path.ends_with("destructible_block.gd"):
+			blocks += 1
+			t.check(String(child.deco) != "", "gallery: %s has a deco" % child.name)
+			if child.deco == &"barrel" and child.is_in_group(&"gallery_reset"):
+				barrels += 1
+		elif path.ends_with("derelict_car.gd") and child.is_in_group(&"gallery_reset"):
+			wrecks += 1
+			# The wreck row lives in the alley between the tick bars (end x 448)
+			# and LaneSlow's west leg (x 700): ≥ 40 px past the bars, ≥ 100 px
+			# body-edge clearance to the loop line, or the lapping heavy rams
+			# a wreck every circuit and the bench reads as noise.
+			var wx: float = (child as Node2D).position.x
+			t.check(wx >= 448.0 + 40.0 and wx <= 700.0 - 100.0,
+				"gallery: %s x %.0f sits in the wreck alley [488, 600]" % [child.name, wx])
+	t.check(reset == 1, "gallery: one TargetReset node")
+	t.check(blocks >= 5, "gallery: %d destructible blocks (>=5, the cover wall)" % blocks)
+	t.check(barrels >= 3, "gallery: %d barrels in gallery_reset (>=3)" % barrels)
+	t.check(wrecks >= 3, "gallery: %d derelicts in gallery_reset (>=3)" % wrecks)
+	scene.free()

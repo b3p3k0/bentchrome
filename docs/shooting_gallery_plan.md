@@ -78,7 +78,7 @@ Flat 2816×2816 asphalt yard using the Driver's Ed Boundary / Asphalt / GridFloo
 | Dummy400 / Dummy800 / Dummy1200 / DummyFar | target_dummy `respawn_seconds 3` | (−200,300), (0,−100), (200,−500); (0,−860) behind the wall for pierce and punch-through |
 | Cover wall (group `gallery_reset`) | destructible_block barrier 80 HP ×2, crate 60 HP ×2, fence 15 HP center | y = −700, x = −352 / −224 / 0 / 224 / 352 |
 | Barrel1-3 (`gallery_reset`) | destructible_block barrel 30 HP, chainable | (−640,60), (−560,110), (−480,60) |
-| Wreck1-3 (`gallery_reset`) | derelict_car 50 HP | (600,320), (640,−40), (580,−420) |
+| Wreck1-3 (`gallery_reset`) | derelict_car 50 HP; x kept in [488, 600] so the row clears the tick bars (448) and LaneSlow's west leg (700) by ≥ 100 px body-edge to line | (520,320), (540,−40), (500,−420) |
 | TargetReset | target_reset `delay 6` | |
 | LaneSlow / LaneFast | target_lane `hammertoe` 0.45 / `mrghastly` 0.9, respawn 3, 8-marker ovals (±260 × ±800) | (960,−200) / (−960,−200) |
 | LaneParkW / LaneParkE | target_lane `ghost` / `warpig`, no markers, respawn 3, unrotated; `facing_deg` 0 / 180 | (−560,760) / (560,760) |
