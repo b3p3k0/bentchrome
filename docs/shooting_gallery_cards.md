@@ -20,7 +20,7 @@ Files: `docs/shooting_gallery_plan.md`, `docs/shooting_gallery_cards.md`.
 
 ## Card G-1 — Shared target pieces
 
-Status: pending.
+Status: accepted (RA full pass; smoke PASS, tests PASS 17014 checks).
 
 Goal: make dummies respawnable, share the HP label, give the lap driver a per-instance throttle, and make the exit prompt reusable, with zero behavior change for every existing caller.
 

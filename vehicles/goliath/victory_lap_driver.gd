@@ -8,6 +8,10 @@ static var LAP_THROTTLE := 0.8
 static var LAP_ARRIVE := 260.0
 static var LAP_STEER_GAIN := 2.2
 
+## Per-instance pedal; negative = the stadium's LAP_THROTTLE. The gallery's
+## target lanes set it so a heavy and a light car lap at different speeds.
+var throttle := -1.0
+
 var _points: PackedVector2Array = PackedVector2Array()
 var _idx := 0
 
@@ -26,7 +30,7 @@ func get_intent(vehicle, delta: float) -> Dictionary:
 		_idx = (_idx + 1) % _points.size()
 	var want := (_points[_idx] - own).angle()
 	return {
-		"throttle": LAP_THROTTLE,
+		"throttle": throttle if throttle >= 0.0 else LAP_THROTTLE,
 		"steer": clampf(angle_difference(vehicle.heading, want) * LAP_STEER_GAIN, -1.0, 1.0),
 		"fire_mg": false,
 		"fire_selected": false,

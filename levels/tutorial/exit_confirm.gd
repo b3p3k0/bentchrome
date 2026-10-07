@@ -11,8 +11,9 @@ signal cancelled   # keep practicing
 const AMBER := Color(1.0, 0.85, 0.2)
 const DIM_TEXT := Color(0.55, 0.58, 0.62)
 const PANEL_BG := Color(0.07, 0.07, 0.09)
-const PROMPT := "LEAVE DRIVER'S ED?"
 const OPTIONS := ["HIT THE ROAD", "KEEP PRACTICING"]
+
+var prompt := "LEAVE DRIVER'S ED?"  # callers override before add_child (the gallery asks its own)
 
 var _index := 1  # KEEP PRACTICING
 var _entries: Array[Label] = []
@@ -89,7 +90,7 @@ func _build_ui() -> void:
 	margin.add_child(vbox)
 
 	var caption := Label.new()
-	caption.text = PROMPT
+	caption.text = prompt
 	caption.add_theme_font_size_override("font_size", 26)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.modulate = AMBER

@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://environment/target_dummy.gd" id="1_dummy"]
 [ext_resource type="Script" path="res://vehicles/health.gd" id="2_health"]
+[ext_resource type="Script" path="res://environment/hp_label.gd" id="3_label"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_dummy"]
 size = Vector2(56, 56)
@@ -21,6 +22,7 @@ script = ExtResource("2_health")
 max_hp = 60.0
 
 [node name="Label" type="Label" parent="."]
+script = ExtResource("3_label")
 offset_left = -16.0
 offset_top = -64.0
 text = "60"
