@@ -144,7 +144,7 @@ git diff --check
 
 ## Card G-5 — Docs closeout
 
-Status: pending.
+Status: accepted (RA full pass; every number grep-checked against the scene and scripts; the "special slot reads 1" claim tightened to "every slot" after a rack probe; LESSONS_LEARNED.md entry added by RA).
 
 Goal: agent-facing and player-facing docs match the runtime.
 

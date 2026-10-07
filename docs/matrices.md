@@ -664,6 +664,32 @@ Yard fixtures: CENTER helipad (`tutorial_deco` kind `helipad`, 380px worn H-ring
 
 ---
 
+## Shooting Gallery (weapon range knobs)
+
+Sources: `levels/gallery/shooting_gallery.gd` (god flags, `EXIT_PROMPT`), `target_lane.gd` / `target_reset.gd` / `gallery_deco.gd` exports and static vars, `environment/target_dummy.gd` (`respawn_seconds`), `environment/hp_label.gd`, `vehicles/goliath/victory_lap_driver.gd` statics; yard geography in `levels/gallery/shooting_gallery.tscn` (2816×2816, flat, zero enemies, no FloorZone, no ExitGate). Outside `CAMPAIGN` — contract-exempt, no interstitial, end screen never auto-advances; `tests/test_spawn_distance.gd` instantiates it for coverage. Entry: title → SINGLE PLAYER → mode select DRIVER'S ED → sign-up dialog SHOOTING GALLERY → car select, difficulty skipped (`GameState.game_mode` = `gallery`, `Difficulty.tier` pinned HARD so every damage number is the ×1.0 truth; F2 is the companion). Exit: the always-open north tunnel → confirm (KEEP PRACTICING default) → title; pause-menu Quit works any time. Target cars are faction `targets` — in `vehicles`, never `enemies` (no roster row, no win latch, no re-roll). Stickers and economy never earn here.
+
+| Knob | Value | Where | Detail |
+|---|---|---|---|
+| `respawn_seconds` (dummies) | 3 s | Dummy400/800/1200/Far, shooting_gallery.tscn | death hides the body, disables `Col`, leaves `dummies`; back at full HP with the label refreshed after the delay (`target_dummy.gd` default 0 = the classic free-on-death, unchanged everywhere else) |
+| `respawn_seconds` (lanes) | 3 s | all four `target_lane`s, shooting_gallery.tscn | the car frees itself on death (`Vehicle._on_died`); the lane re-instantiates a fresh one after the delay (`is_inside_tree()` guard — the timer outlives a scene swap) |
+| `delay` | 6 s | `TargetReset`, shooting_gallery.tscn (`target_reset.gd`) | cover wall / barrels / wrecks in group `gallery_reset` revive via `apply_arena_state({"flags": 1, "hp": 1.0}, false)` — the LAN resurrection seam; props outside the group are never touched |
+| `throttle` | 0.45 / 0.9 | LaneSlow (hammertoe) / LaneFast (mrghastly) | per-instance lap pedal on `victory_lap_driver.throttle` (negative = `LAP_THROTTLE` 0.8, the stadium default, untouched); the parked lanes keep the export default 0.6 but have no loop, so the driver reports zero intent |
+| `LAP_ARRIVE` | 260 px | victory_lap_driver.gd | marker arrival radius, shared with the stadium victory lap — `LAP_STEER_GAIN` 2.2 likewise |
+| `facing_deg` | 0 / 180 | LaneParkW (ghost) / LaneParkE (warpig) | parked nose direction (0 = east, 180 = west), set as the CAR's rotation; lanes are ALWAYS authored unrotated — `_ready` warns on a rotated lane; a lapping car faces its second marker instead |
+| `label_y` | −70 px | target_lane.gd | HP label top edge, car-relative, via `hp_label.attach` |
+| `LOOP_COLOR` / `LOOP_WIDTH` / `LOOP_DASH` | (0.92, 0.92, 0.88, 0.45) / 3 / 18 | target_lane.gd | the dashed closed loop painted through the Marker2D children — the authored ring IS the driven ring |
+| `Health.god` + `WeaponRack.god` + `arm_all_once` | on, unconditionally | shooting_gallery.gd `_ready` | the DEVGOD precedent: hull never loses HP, no slot ever decrements, every slot reads "1" on the HUD (probe-verified); the real 2 s `Vehicle.WEAPON_LOCK` and MG overheat still run; skipped when `_player == null` (mp_managed shell / shot probe) |
+| HARD pin | `Difficulty.Tier.HARD` | mode_select.gd `_commit_sub_choice` | only the `&"gallery"` row touches the tier; the two Driver's Ed lanes leave it alone |
+| `EXIT_PROMPT` | "LEAVE THE GALLERY?" | shooting_gallery.gd | handed to `exit_confirm.gd` `prompt` (default "LEAVE DRIVER'S ED?"); re-entry re-prompts, leaving unpauses FIRST then `SceneFlow.to_title()` |
+| cover wall HP | barrier 80 / crate 60 / fence 15 | WallBarrierW/E, WallCrateW/E, WallFence | 160×40 barriers, 96×96 crates, 352×12 fence, all at y −700 |
+| barrel HP | 30 | Barrel1-3 | 44×44, chainable (`BLASTS` barrel 130 px / 25 dmg) |
+| derelict HP | 50 | Wreck1-3 (`derelict_car.gd` default) | chars into a husk, revived by `TargetReset` |
+| dummy HP | 60 | target_dummy.tscn `Health.max_hp` | the label reads it back after every respawn |
+
+Yard fixtures: helipad (`tutorial_deco` kind `helipad`, 380px) at (0, 1000) — the player boots on it facing north — with 2 streetlight pools at (±420, 1200); firing line (`road_marks` stop_line, x −448…448) at y 700 flanked by cones at (±470, 700), a dashed range axis (0, 660 → −640); range ticks (`gallery_deco` `range_tick` 896×8) Tick400 / Tick800 / Tick1200 at y 300 / −100 / −500 with Dummy400 (−200, 300), Dummy800 (0, −100), Dummy1200 (200, −500); cover wall at y −700, x −352 / −224 / 0 / 224 / 352 (barrier / crate / fence / crate / barrier) with DummyFar (0, −860) behind it for pierce and punch-through; barrel trio (−640, 60) / (−560, 110) / (−480, 60); wreck row (520, 320) / (540, −40) / (500, −420) — x kept in [488, 600] so the row clears the tick bars (448) and LaneSlow's west leg (700); LaneSlow (960, −200) and LaneFast (−960, −200) with 8-marker ±260×±800 ovals; LaneParkW (−560, 760) and LaneParkE (560, 760); TunnelDeco (0, −1408) / ExitText (0, −1120) / ExitSign (0, −1480, z 1) / ExitZone (0, −1560, 300×120, mask 1) in the open throat. Roster masses for ram feel: mrghastly 2, ghost 6, warpig 13, hammertoe 15.
+
+---
+
 ## Route 666 Roulette (chase mode knobs)
 
 Sources: `levels/chase/*.gd` static vars, `game/robbery.gd`, `ui/hud_chase.gd`, `ui/speed_lines.gd`. Course distance d = −world_y; north is up. **The gap is the health bar**: every speed below is a fraction of ONE number, `SpeedBand.road_top()` — the car's controller ceiling on asphalt (garage build + road terrain profile in, boost out), read live.
