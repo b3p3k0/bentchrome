@@ -4,6 +4,8 @@ Cards are strict review boundaries. RA accepts one before DA starts the next.
 
 ## Card TD-1 — Durable designation
 
+Status: accepted by RA on 2026-10-07.
+
 Goal: add per-vehicle target ownership without changing weapon or HUD behavior.
 
 Likely files:
@@ -30,6 +32,8 @@ git diff --check
 
 ## Card TD-2 — Weapon cutover
 
+Status: pending.
+
 Goal: make every existing nearest-lock weapon consume the shared designation.
 
 Likely files:
@@ -53,6 +57,8 @@ git diff --check
 ```
 
 ## Card TD-3 — VCR marker and closeout
+
+Status: pending.
 
 Goal: show the local player's off-screen designation as two overlapping chevrons and close behavior documentation.
 

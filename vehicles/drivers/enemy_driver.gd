@@ -1288,5 +1288,10 @@ func set_duel_assignment(target: Node2D) -> void:
 func get_duel_target() -> Node2D:
 	return _duel_target as Node2D if _duel_target != null and is_instance_valid(_duel_target) else null
 
+## TargetDesignator consumes the same committed rival the movement/fire ladder
+## already uses. Liveness and roster membership remain component-owned checks.
+func get_target_preference(_vehicle) -> Node2D:
+	return _target as Node2D if _target != null and is_instance_valid(_target) else null
+
 func _duel_active(vehicle) -> bool:
 	return _target_is_live(vehicle, _duel_target)

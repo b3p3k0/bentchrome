@@ -6,3 +6,8 @@ extends Node
 
 func get_intent(_vehicle, _delta: float) -> Dictionary:
 	return {"throttle": 0.0, "steer": 0.0, "fire_mg": false, "fire_selected": false, "weapon_prev": false, "weapon_next": false, "handbrake": false}
+
+## Optional designation source. Ordinary/player/network drivers return no
+## preference, so the vehicle's TargetDesignator uses stable nearest instead.
+func get_target_preference(_vehicle) -> Node2D:
+	return null

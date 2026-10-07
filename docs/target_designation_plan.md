@@ -2,6 +2,14 @@
 
 Goal: give every combat vehicle one durable designated opponent, route tracking and locking weapons through that designation, and distinguish the local player's off-screen target with a two-chevron VCR fast-forward marker.
 
+## Progress
+
+| Card | State | Evidence |
+|---|---|---|
+| TD-1 — Durable designation | Accepted by RA | Full suite: `TESTS: PASS (16936 checks)`; `git diff --check` clean |
+| TD-2 — Weapon cutover | Pending | — |
+| TD-3 — VCR marker and closeout | Pending | — |
+
 ## Current state
 
 - `game/targeting.gd` provides stateless nearest-vehicle queries.

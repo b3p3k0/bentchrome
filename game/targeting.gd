@@ -8,6 +8,39 @@ extends RefCounted
 
 const Floors := preload("res://game/floors.gd")
 
+## True only for a living vehicle other than `exclude`. Kept independent of
+## range/floor/cone so designation and individual weapon constraints compose.
+static func is_live_other(exclude: Node, candidate: Variant) -> bool:
+	if candidate == null or not is_instance_valid(candidate) or candidate == exclude:
+		return false
+	if not candidate is Node2D or not candidate.is_in_group(&"vehicles"):
+		return false
+	if candidate.has_method(&"get_hp") and candidate.get_hp() <= 0.0:
+		return false
+	return true
+
+## Shared range/floor eligibility for later designation consumers. This does
+## not replace the legacy nearest queries, whose behavior remains unchanged.
+static func is_eligible_other(from: Vector2, exclude: Node, candidate: Variant,
+		max_dist: float, same_floor_as: Node = null) -> bool:
+	if not is_live_other(exclude, candidate):
+		return false
+	if same_floor_as != null and not Floors.same_floor(same_floor_as, candidate):
+		return false
+	return from.distance_to(candidate.global_position) < max_dist
+
+## Reads the component-owned designation without inventing a fallback. Callers
+## that support non-vehicle fixtures can distinguish a missing component and
+## retain their existing nearest query.
+static func designated_target(vehicle: Node) -> Node2D:
+	if vehicle == null or not is_instance_valid(vehicle):
+		return null
+	var designator := vehicle.get_node_or_null(^"TargetDesignator")
+	if designator == null or not designator.has_method(&"get_target"):
+		return null
+	var target: Variant = designator.get_target()
+	return target as Node2D if is_live_other(vehicle, target) else null
+
 static func nearest_other(from: Vector2, exclude: Node, max_dist: float,
 		same_floor_as: Node = null) -> Node2D:
 	var tree := Engine.get_main_loop() as SceneTree

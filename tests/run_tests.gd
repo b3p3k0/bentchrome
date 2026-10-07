@@ -21,6 +21,7 @@ const SUITES := [
 	preload("res://tests/test_mg_heat.gd"),
 	preload("res://tests/test_specials_data.gd"),
 	preload("res://tests/test_tracking_scale.gd"),
+	preload("res://tests/test_target_designator.gd"),
 	preload("res://tests/test_enemy_driver.gd"),
 	preload("res://tests/test_ai_fight_director.gd"),
 	preload("res://tests/test_final_duel.gd"),
