@@ -58,7 +58,7 @@ git diff --check
 
 ## Card TD-3 — VCR marker and closeout
 
-Status: pending.
+Status: accepted by RA on 2026-10-07 after source-comment and behavior-document closeout.
 
 Goal: show the local player's off-screen designation as two overlapping chevrons and close behavior documentation.
 

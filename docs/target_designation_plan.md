@@ -8,7 +8,7 @@ Goal: give every combat vehicle one durable designated opponent, route tracking 
 |---|---|---|
 | TD-1 — Durable designation | Accepted by RA | Full suite: `TESTS: PASS (16936 checks)`; `git diff --check` clean |
 | TD-2 — Weapon cutover | Accepted by RA | Full suite: `TESTS: PASS (16947 checks)`; zero production `Targeting.nearest_*` callers |
-| TD-3 — VCR marker and closeout | Pending | — |
+| TD-3 — VCR marker and closeout | Accepted by RA | Isolated-loopback suite: `TESTS: PASS (16980 checks)`; geometry and sensor-bound tests included |
 
 ## Current state
 

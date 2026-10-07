@@ -3,12 +3,14 @@ extends Node2D
 ## Viewer-relative edge awareness. World positions are projected through the
 ## active camera canvas; only combatants outside the centered 720px play square
 ## earn a paint-colored arrow. Arrows share the radar's sensor bound
-## (Vehicles.sensed_others) — off the scope means off the rim too. One node
-## owns/reuses all marker state and draw calls — no per-frame Control churn as
-## opponents cross the boundary.
+## (Vehicles.sensed_others) — off the scope means off the rim too. Ordinary
+## opponents use one arrow; the shared designation uses two slightly overlapping
+## arrows like a VCR fast-forward glyph. One node owns/reuses all marker state
+## and draw calls — no per-frame Control churn as opponents cross the boundary.
 
 const VehiclesHelper := preload("res://vehicles/vehicles.gd")
 const ExplosionScene := preload("res://environment/explosion.tscn")
+const Targeting := preload("res://game/targeting.gd")
 
 const PLAY_RECT := Rect2(280.0, 0.0, 720.0, 720.0)
 const EDGE_INSET := 14.0
@@ -16,10 +18,11 @@ const HYSTERESIS := 6.0
 const MARKER_GAP := 18.0
 const TIP := 9.0
 const WING := 6.0
+const TARGET_TRIANGLE_OFFSET := 10.0  # 15px-long triangles overlap by 5px
 const HIT_BURST_SCALE := 0.22
 const HIT_BURST_COOLDOWN_MS := 250
 
-var _states: Dictionary = {}  # instance id -> {ref, visible, pos, angle, color, outline}
+var _states: Dictionary = {}  # id -> {ref, visible, designated, pos, angle, color, outline}
 var _draw_records: Array = []
 var _last_burst_ms: Dictionary = {}  # victim instance id -> last confirmation
 
@@ -38,6 +41,7 @@ func _process(_delta: float) -> void:
 	var viewer_screen := world_to_screen(canvas, viewer.global_position)
 	if not PLAY_RECT.has_point(viewer_screen):
 		viewer_screen = PLAY_RECT.get_center()
+	var designated := Targeting.designated_target(viewer)
 	var seen: Dictionary = {}
 	_draw_records.clear()
 	for car_v in VehiclesHelper.sensed_others(tree, viewer):
@@ -60,6 +64,7 @@ func _process(_delta: float) -> void:
 			visible_now = not PLAY_RECT.grow(-HYSTERESIS).has_point(screen)
 		state.ref = car
 		state.visible = visible_now
+		state.designated = car == designated
 		if visible_now:
 			var edge_rect := PLAY_RECT.grow(-EDGE_INSET)
 			var pos := edge_intersection(viewer_screen, screen, edge_rect)
@@ -85,16 +90,12 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	for rec_v in _draw_records:
 		var rec: Dictionary = rec_v
-		var rot := Transform2D(float(rec.angle), rec.pos)
-		var pts := PackedVector2Array([
-			rot * Vector2(TIP, 0.0),
-			rot * Vector2(-WING, -WING),
-			rot * Vector2(-WING, WING),
-		])
-		draw_colored_polygon(pts, rec.color)
-		var closed := pts.duplicate()
-		closed.append(pts[0])
-		draw_polyline(closed, rec.outline, 2.0, true)
+		for pts_v in marker_triangles(rec.pos, float(rec.angle), bool(rec.designated)):
+			var pts: PackedVector2Array = pts_v
+			draw_colored_polygon(pts, rec.color)
+			var closed := pts.duplicate()
+			closed.append(pts[0])
+			draw_polyline(closed, rec.outline, 2.0, true)
 
 func is_tracking(car: Node) -> bool:
 	if car == null or not is_instance_valid(car):
@@ -151,6 +152,24 @@ static func contrast_outline(color: Color) -> Color:
 
 static func marker_color(car: Node) -> Color:
 	return VehiclesHelper.paint_color(car)
+
+## Screen-space geometry for one ordinary arrow or the designation's VCR
+## fast-forward pair. The pair remains one overlap-spreading record; only its
+## paint expands into rear/front same-direction triangles here.
+static func marker_triangles(pos: Vector2, angle: float, designated: bool) -> Array:
+	var axis := Vector2.RIGHT.rotated(angle)
+	var offsets := [0.0]
+	if designated:
+		offsets = [-TARGET_TRIANGLE_OFFSET * 0.5, TARGET_TRIANGLE_OFFSET * 0.5]
+	var out: Array = []
+	for offset in offsets:
+		var rot := Transform2D(angle, pos + axis * float(offset))
+		out.append(PackedVector2Array([
+			rot * Vector2(TIP, 0.0),
+			rot * Vector2(-WING, -WING),
+			rot * Vector2(-WING, WING),
+		]))
+	return out
 
 ## Spread close markers along the edge they already occupy; bearings remain in
 ## order and no marker can leak into the opaque gutters.

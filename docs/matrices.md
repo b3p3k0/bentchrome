@@ -85,6 +85,8 @@ Source: `resources/stat_curves.gd` — linear lerp across 1-10.
 
 Sources: `weapons/weapon_mount.gd` + `vehicles/vehicle.tscn` (MG), `data/weapons/missile_*.tres`, `data/weapons/mine_*.tres`, `vehicles/weapon_rack.gd` (ammo), `environment/mine.gd` (mine behavior). Max range = speed × lifetime. AI fires the MG at 3× cooldown (`ai_cooldown_scale`); every non-MG weapon runs on the same flat 2s bay lock the player has (`Vehicle.WEAPON_LOCK`). Non-special ammo slots are uncapped.
 
+**Shared lock:** `TargetDesignator` holds one live opponent per vehicle. Ordinary drivers start with the nearest and switch only when a challenger is more than `SWITCH_DISTANCE_MARGIN` 96px closer; AI publishes its already-committed combat target. Tracking projectiles, Taser, and Leap validate that designation against their own reach, floor, cone, and LoS rules. A failed constraint yields no lock, not a second choice. The local viewer's sensed off-screen designation paints as two 15px triangles offset 10px along the bearing, producing 5px of VCR-style overlap; ordinary markers remain single.
+
 | Weapon | Dmg | Speed | Rate/Cooldown | Tracking | Max Range | Start/Cap | Notes |
 |---|---|---|---|---|---|---|---|
 | Machine Gun | 2/shot | 1100 | 12 shots/s | none | 1320 | ∞ | Heat 4.8/shot (≈21-shot burst to lock at 100); cools 28/s, unlocks below 35% |
@@ -281,6 +283,7 @@ Sources: `vehicles/vehicle.gd`, `game/combat.gd`, `weapons/projectile.gd`, `vehi
 | Driveable hill | one root / one skin / eight faces | `DriveableHill`: compact pull 180; footprint = summit size + grade length; corner leg = grade length ÷ 2; substrate-reset + terrain skin; NW relief 0.22, projection 1.55, slope darkening 0.06, crest 0.10/18px, foot 0.12/20px, shadow (12,14)/0.20; all connector pairs generated; seam props carry both floor bits |
 | Terrace chamfer | solid right triangle | top-side corner cap carries obstacle + BOTH terrace bits; reusable `TerraceChamfer` follows the Goliath's Arena buttress convention |
 | Arena radar | live combatants within `2200 × viewer radar_range_scale × target detectability` px (`Vehicles.sensed_others` — edge arrows share the bound; HP sidebar stays map-wide) | vehicle `body_color` + contrast outline; dots same-floor, chevrons above/below; includes LAN humans; no difficulty/DEVGOD gate; Route 666 GPS excluded |
+| Target designation | nearest live opponent; switch margin 96px | one durable target per vehicle; AI reuses its committed target; weapon constraints yield no lock rather than redirect; sensed off-screen target uses the overlapping double-triangle marker |
 | DEVGOD (Developer Options) | immune, ∞ ammo | Developer Mode master-gates every effect while preserving the stored toggle; pits/deep water still kill but the life is comped |
 | Jump-mine pop | vz 450 | ~0.7s air |
 | Mine sensing | land 52px / jump 26px | land paint remains 14px; only the damaging mine has proximity reach |

@@ -4,6 +4,8 @@ extends RefCounted
 
 const TrackerScript := preload("res://ui/offscreen_tracker.gd")
 const RadarScript := preload("res://ui/radar.gd")
+const DesignatorScript := preload("res://game/target_designator.gd")
+const EnemyDriverScript := preload("res://vehicles/drivers/enemy_driver.gd")
 
 var t
 
@@ -43,6 +45,46 @@ func test_canvas_transform_and_contrast() -> void:
 		"tracker: dark paint gets a light outline")
 	t.check(TrackerScript.contrast_outline(Color(1.0, 0.9, 0.2)).r < 0.1,
 		"tracker: bright paint gets a dark outline")
+
+func test_marker_geometry_is_single_or_overlapping_vcr_pair() -> void:
+	var pos := Vector2(900, 360)
+	var angle := deg_to_rad(25.0)
+	var axis := Vector2.RIGHT.rotated(angle)
+	var single: Array = TrackerScript.marker_triangles(pos, angle, false)
+	var pair: Array = TrackerScript.marker_triangles(pos, angle, true)
+	t.check(single.size() == 1, "tracker geometry: ordinary marker is one triangle")
+	t.check(pair.size() == 2, "tracker geometry: designation is a two-triangle VCR pair")
+	var first: PackedVector2Array = pair[0]
+	var second: PackedVector2Array = pair[1]
+	var first_dir := (first[0] - (first[1] + first[2]) * 0.5).normalized()
+	var second_dir := (second[0] - (second[1] + second[2]) * 0.5).normalized()
+	t.check(first_dir.is_equal_approx(axis) and second_dir.is_equal_approx(axis),
+		"tracker geometry: both designation triangles point toward the opponent")
+	var first_center := (first[0] + first[1] + first[2]) / 3.0
+	var second_center := (second[0] + second[1] + second[2]) / 3.0
+	var separation: Vector2 = second_center - first_center
+	t.check(is_equal_approx(separation.dot(axis), TrackerScript.TARGET_TRIANGLE_OFFSET)
+		and absf(separation.dot(axis.orthogonal())) < 0.001,
+		"tracker geometry: VCR pair offset follows only the marker axis")
+	t.check(TrackerScript.TARGET_TRIANGLE_OFFSET < TrackerScript.TIP + TrackerScript.WING
+		and not Geometry2D.intersect_polygons(first, second).is_empty(),
+		"tracker geometry: rear and front triangles deliberately overlap")
+
+func test_vcr_pair_stays_inside_play_rim() -> void:
+	var inset := TrackerScript.PLAY_RECT.grow(-TrackerScript.EDGE_INSET)
+	var center := TrackerScript.PLAY_RECT.get_center()
+	for target in [Vector2(1500, center.y), Vector2(-500, center.y),
+			Vector2(center.x, -500), Vector2(1500, -500)]:
+		var pos := TrackerScript.edge_intersection(center, target, inset)
+		var angle: float = (target - center).angle()
+		for triangle_v in TrackerScript.marker_triangles(pos, angle, true):
+			var triangle: PackedVector2Array = triangle_v
+			for point in triangle:
+				t.check(point.x >= TrackerScript.PLAY_RECT.position.x
+					and point.x <= TrackerScript.PLAY_RECT.end.x
+					and point.y >= TrackerScript.PLAY_RECT.position.y
+					and point.y <= TrackerScript.PLAY_RECT.end.y,
+					"tracker geometry: VCR triangle stays inside play rim")
 
 func test_radar_roster_is_sensor_bounded_live_and_paint_matched() -> void:
 	var viewer := StubCar.new()
@@ -123,6 +165,59 @@ func test_live_roster_hides_onscreen_and_cleans_dead() -> void:
 	tracker.free()
 	enemy.free()
 	viewer.free()
+
+func test_designation_decorates_only_existing_offscreen_record() -> void:
+	var viewer := StubCar.new()
+	viewer.position = TrackerScript.PLAY_RECT.get_center()
+	viewer.add_to_group(&"local_player")
+	viewer.add_to_group(&"vehicles")
+	var driver = EnemyDriverScript.new()
+	driver.name = "Driver"
+	viewer.add_child(driver)
+	var designator = DesignatorScript.new()
+	designator.name = "TargetDesignator"
+	viewer.add_child(designator)
+	var marked := StubCar.new()
+	marked.position = Vector2(1400, 360)
+	marked.add_to_group(&"vehicles")
+	var ordinary := StubCar.new()
+	ordinary.position = Vector2(1400, 520)
+	ordinary.add_to_group(&"vehicles")
+	var onscreen := StubCar.new()
+	onscreen.position = TrackerScript.PLAY_RECT.get_center() + Vector2(100, 0)
+	onscreen.add_to_group(&"vehicles")
+	var unsensed := StubCar.new()
+	unsensed.position = Vector2(50000, -50000)
+	unsensed.add_to_group(&"vehicles")
+	var tracker = TrackerScript.new()
+	for node in [viewer, marked, ordinary, onscreen, unsensed, tracker]:
+		t.root.add_child(node)
+	driver._adopt_target(marked)
+	tracker._process(0.0)
+	var marked_records: Array = tracker._draw_records.filter(
+		func(rec: Dictionary) -> bool: return rec.ref == marked)
+	var ordinary_records: Array = tracker._draw_records.filter(
+		func(rec: Dictionary) -> bool: return rec.ref == ordinary)
+	t.check(marked_records.size() == 1 and bool(marked_records[0].designated)
+		and TrackerScript.marker_triangles(marked_records[0].pos,
+			float(marked_records[0].angle), true).size() == 2,
+		"tracker designation: sensed offscreen target gets one double-marker record")
+	t.check(ordinary_records.size() == 1 and not bool(ordinary_records[0].designated)
+		and TrackerScript.marker_triangles(ordinary_records[0].pos,
+			float(ordinary_records[0].angle), false).size() == 1,
+		"tracker designation: ordinary opponent keeps one triangle")
+	driver._adopt_target(onscreen)
+	tracker._process(0.0)
+	t.check(not tracker.is_tracking(onscreen),
+		"tracker designation: on-screen target gains no marker")
+	driver._adopt_target(unsensed)
+	tracker._process(0.0)
+	t.check(not tracker.is_tracking(unsensed)
+		and tracker._draw_records.all(func(rec: Dictionary) -> bool: return rec.ref != unsensed),
+		"tracker designation: unsensed target gains no marker record")
+	for node in [tracker, unsensed, onscreen, ordinary, marked, viewer]:
+		t.root.remove_child(node)
+		node.free()
 
 ## Sensor-range churn must never re-connect: leaving reach prunes the marker
 ## state, but the combat_hit connection's lifetime is the CAR's lifetime — a
